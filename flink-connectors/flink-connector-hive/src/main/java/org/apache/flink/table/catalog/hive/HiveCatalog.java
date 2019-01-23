@@ -28,6 +28,7 @@ import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
 import org.apache.flink.table.plan.stats.ColumnStats;
@@ -66,7 +67,7 @@ public class HiveCatalog extends HiveCatalogBase {
 		LOG.info("Created HiveCatalog '{}'", catalogName);
 	}
 
-	// ------ tables ------
+	// ------ tables and views ------
 
 	@Override
 	public CatalogTable getTable(ObjectPath path) throws TableNotExistException {
@@ -101,6 +102,8 @@ public class HiveCatalog extends HiveCatalogBase {
 					new ObjectPath(dbName, tableName)));
 		}
 	}
+
+	// ------ tables ------
 
 	@Override
 	public void createTable(ObjectPath path, CatalogTable table, boolean ignoreIfExists)
@@ -145,6 +148,18 @@ public class HiveCatalog extends HiveCatalogBase {
 	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
 		// Hive metastore client doesn't support renaming yet
 		throw new UnsupportedOperationException();
+	}
+
+	// ------ views ------
+
+	@Override
+	public void createView(ObjectPath viewPath, CatalogView view, boolean ignoreIfExists) {
+		createTable(viewPath, view, ignoreIfExists);
+	}
+
+	@Override
+	public void alterView(ObjectPath viewPath, CatalogView newView, boolean ignoreIfNotExists) {
+		alterTable(viewPath, newView, ignoreIfNotExists);
 	}
 
 	// ------ table and column stats ------

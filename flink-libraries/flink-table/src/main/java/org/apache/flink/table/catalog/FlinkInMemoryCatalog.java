@@ -84,6 +84,8 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 	}
 
+	// ------ tables ------
+
 	@Override
 	public void createTable(ObjectPath tableName, CatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
@@ -106,15 +108,6 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException {
-		if (tableExists(tableName)) {
-			tables.remove(tableName);
-		} else if (!ignoreIfNotExists) {
-			throw new TableNotExistException(catalogName, tableName.getFullName());
-		}
-	}
-
-	@Override
 	public void alterTable(ObjectPath tableName, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
 		if (tableExists(tableName)) {
 			tables.put(tableName, newTable);
@@ -129,6 +122,17 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 
 		if (tableExists(tableName)) {
 			tables.put(new ObjectPath(tableName.getDbName(), newTableName), tables.remove(tableName));
+		} else if (!ignoreIfNotExists) {
+			throw new TableNotExistException(catalogName, tableName.getFullName());
+		}
+	}
+
+	// ------ tables and views ------
+
+	@Override
+	public void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException {
+		if (tableExists(tableName)) {
+			tables.remove(tableName);
 		} else if (!ignoreIfNotExists) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
 		}
@@ -165,6 +169,18 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public boolean tableExists(ObjectPath path) {
 		return dbExists(path.getDbName()) && tables.containsKey(path);
+	}
+
+	// ------ views ------
+
+	@Override
+	public void createView(ObjectPath viewPath, CatalogView view, boolean ignoreIfExists) throws TableAlreadyExistException, DatabaseNotExistException {
+		createTable(viewPath, view, ignoreIfExists);
+	}
+
+	@Override
+	public void alterView(ObjectPath viewPath, CatalogView newView, boolean ignoreIfNotExists) throws TableNotExistException {
+		alterTable(viewPath, newView, ignoreIfNotExists);
 	}
 
 	// ------ table and column stats ------

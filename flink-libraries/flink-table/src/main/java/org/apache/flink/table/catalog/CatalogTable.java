@@ -43,7 +43,7 @@ public class CatalogTable {
 	// Schema of the table (column names and types)
 	private final TableSchema tableSchema;
 	// Properties of the table
-	private Map<String, String> properties = new HashMap<>();
+	private final Map<String, String> properties;
 	// RichTableSchema of the table
 	private RichTableSchema richTableSchema;
 	// Statistics of the table
@@ -79,8 +79,7 @@ public class CatalogTable {
 		this.tableStats = tableStats;
 		this.properties = properties;
 		this.isStreaming = isStreaming;
-		this.richTableSchema =
-			new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
+		this.richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
 	}
 
 	public CatalogTable(
@@ -204,7 +203,7 @@ public class CatalogTable {
 
 		CatalogTable that = (CatalogTable) o;
 
-		return Objects.equals(tableType, that.tableType) &&
+		return tableType.equals(that.tableType) &&
 			Objects.equals(tableSchema, that.tableSchema) &&
 			Objects.equals(tableStats, that.tableStats) &&
 			isPartitioned == that.isPartitioned &&

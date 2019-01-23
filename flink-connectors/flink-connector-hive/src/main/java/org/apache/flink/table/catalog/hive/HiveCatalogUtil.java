@@ -38,6 +38,7 @@ import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
@@ -149,10 +150,19 @@ public class HiveCatalogUtil {
 		Table hiveTable = new Table();
 		hiveTable.setSd(sd);
 		hiveTable.setPartitionKeys(partitionKeys);
-		hiveTable.setTableType(TableType.MANAGED_TABLE.name());
 		hiveTable.setDbName(tablePath.getDbName());
 		hiveTable.setTableName(tablePath.getObjectName());
 		hiveTable.setCreateTime((int) (System.currentTimeMillis() / 1000));
+
+		// Distinguish Table v.s. Virtual View
+		if (table instanceof CatalogView) {
+			CatalogView view = (CatalogView) table;
+			hiveTable.setViewOriginalText(view.getOriginalQuery());
+			hiveTable.setViewExpandedText(view.getExpandedQuery());
+			hiveTable.setTableType(TableType.VIRTUAL_VIEW.name());
+		} else {
+			hiveTable.setTableType(TableType.MANAGED_TABLE.name());
+		}
 
 		// Create Hive table doesn't include TableStats
 		hiveTable.setParameters(table.getProperties());
@@ -201,7 +211,9 @@ public class HiveCatalogUtil {
 	 * Create an CatalogTable from Hive table.
 	 */
 	static CatalogTable createCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
-		return new CatalogTable(
+		TableType tableType = TableType.valueOf(hiveTable.getTableType());
+
+		CatalogTable table = new CatalogTable(
 			"hive",
 			tableSchema,
 			getPropertiesFromHiveTable(hiveTable),
@@ -216,6 +228,12 @@ public class HiveCatalogUtil {
 			(long) hiveTable.getCreateTime(),
 			(long) hiveTable.getLastAccessTime(),
 			false);
+
+		if (tableType == TableType.VIRTUAL_VIEW) {
+			return CatalogView.createCatalogView(table, hiveTable.getViewOriginalText(), hiveTable.getViewExpandedText());
+		} else {
+			return table;
+		}
 	}
 
 	/**

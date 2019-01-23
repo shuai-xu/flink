@@ -19,7 +19,6 @@
 package org.apache.flink.table.catalog.hive;
 
 import org.apache.flink.table.catalog.CatalogTestBase;
-import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 
 import org.junit.After;
@@ -43,8 +42,8 @@ public class HiveCatalogTest extends CatalogTestBase {
 
 	@After
 	public void close() {
-		catalog.dropTable(new ObjectPath(db1, t1), true);
-		catalog.dropTable(new ObjectPath(db2, t2), true);
+		catalog.dropTable(path1, true);
+		catalog.dropTable(path2, true);
 		catalog.dropDatabase(db1, true);
 		catalog.dropDatabase(db2, true);
 	}

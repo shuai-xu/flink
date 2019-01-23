@@ -55,6 +55,8 @@ import static org.junit.Assert.assertTrue;
  * Base for unit tests of a specific catalog, like FlinkInMemoryCatalog and HiveCatalog.
  */
 public abstract class CatalogTestBase {
+
+	protected final String testCatalogName = "test-catalog";
 	protected final String db1 = "db1";
 	protected final String db2 = "db2";
 
@@ -73,9 +75,6 @@ public abstract class CatalogTestBase {
 
 	@Test
 	public void testCreateTable() {
-		assertTrue(catalog.listAllTables().isEmpty());
-		assertFalse(catalog.tableExists(path1));
-
 		catalog.createDatabase(db1, createDb(), false);
 
 		// Non-partitioned table
@@ -211,21 +210,6 @@ public abstract class CatalogTestBase {
 		assertEquals(catalog.getTable(path1), table);
 
 		newTable = createAnotherPartitionedTable();
-		catalog.alterTable(path1, newTable, false);
-
-		assertNotEquals(table, catalog.getTable(path1));
-		assertEquals(newTable, catalog.getTable(path1));
-	}
-
-	@Test
-	public void testAlterTable_withTableStats() {
-		CatalogTable table = createTable();
-		catalog.createDatabase(db1, createDb(), false);
-		catalog.createTable(path1, table, false);
-
-		assertEquals(catalog.getTable(path1), table);
-
-		CatalogTable newTable = createAnotherTable();
 		catalog.alterTable(path1, newTable, false);
 
 		assertNotEquals(table, catalog.getTable(path1));
@@ -371,6 +355,93 @@ public abstract class CatalogTestBase {
 	@Test
 	public void testAlterTableStats_TableNotExistExceptio_ignore() {
 		catalog.alterTableStats(new ObjectPath("non", "exist"), null, true);
+	}
+
+	// ------ views ------
+
+	@Test
+	public void testCreateView() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		assertFalse(catalog.tableExists(path1));
+
+		CatalogView view = createView();
+		catalog.createView(path1, view, false);
+
+		assertTrue(catalog.getTable(path1) instanceof CatalogView);
+		assertEquals(view, catalog.getTable(path1));
+	}
+
+	@Test(expected = DatabaseNotExistException.class)
+	public void testCreateView_DatabaseNotExistException() {
+		assertFalse(catalog.dbExists(db1));
+
+		catalog.createView(nonExistTablePath, createView(), false);
+	}
+
+	@Test(expected = TableAlreadyExistException.class)
+	public void testCreateView_TableAlreadyExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createView(path1, createView(), false);
+		catalog.createView(path1, createView(), false);
+	}
+
+	@Test
+	public void testCreateView_TableAlreadyExist_ignored() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		CatalogView view = createView();
+		catalog.createView(path1, view, false);
+
+		assertTrue(catalog.getTable(path1) instanceof CatalogView);
+		assertEquals(view, catalog.getTable(path1));
+
+		catalog.createView(path1, createAnotherView(), true);
+
+		assertTrue(catalog.getTable(path1) instanceof CatalogView);
+		assertEquals(view, catalog.getTable(path1));
+	}
+
+	@Test
+	public void testDropView() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createView(path1, createView(), false);
+
+		assertTrue(catalog.tableExists(path1));
+
+		catalog.dropTable(path1, false);
+
+		assertFalse(catalog.tableExists(path1));
+	}
+
+	@Test
+	public void testAlterView() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		CatalogView view = createView();
+		catalog.createView(path1, view, false);
+
+		assertEquals(view, catalog.getTable(path1));
+
+		CatalogView newView = createAnotherView();
+		catalog.alterTable(path1, newView, false);
+
+		assertTrue(catalog.getTable(path1) instanceof CatalogView);
+		assertNotEquals(view, catalog.getTable(path1));
+		assertEquals(newView, catalog.getTable(path1));
+	}
+
+	@Test(expected = TableNotExistException.class)
+	public void testAlterView_TableNotExistException() {
+		catalog.alterTable(nonExistDbPath, createTable(), false);
+	}
+
+	@Test
+	public void testAlterView_TableNotExist_ignored() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.alterView(nonExistTablePath, createView(), true);
+
+		assertFalse(catalog.tableExists(nonExistTablePath));
 	}
 
 	// ------ databases ------
@@ -745,6 +816,20 @@ public abstract class CatalogTestBase {
 				DataTypes.STRING
 			}
 		);
+	}
+
+	protected CatalogView createView() {
+		return CatalogView.createCatalogView(
+			createTable(),
+			String.format("select * from %s", t1),
+			String.format("select * from %s.%s", testCatalogName, path1.getFullName()));
+	}
+
+	protected CatalogView createAnotherView() {
+		return CatalogView.createCatalogView(
+			createAnotherTable(),
+			String.format("select * from %s", t2),
+			String.format("select * from %s.%s", testCatalogName, path2.getFullName()));
 	}
 
 	protected Map<String, String> getTableProperties() {

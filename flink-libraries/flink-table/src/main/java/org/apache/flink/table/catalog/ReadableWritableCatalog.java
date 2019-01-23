@@ -116,7 +116,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException;
 
 	/**
-	 * Modifies an existing newTable.
+	 * Modifies an existing table.
 	 * Note that TableStats in the CatalogTable will not be used for alteration.
 	 * Use {@link #alterTableStats(ObjectPath, TableStats, boolean)} to alter table stats.
 	 *
@@ -125,7 +125,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 * @param ignoreIfNotExists Flag to specify behavior if the table does not exist:
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
-	 * @throws TableNotExistException   thrown if the new table does not exist
+	 * @throws TableNotExistException   thrown if the table does not exist
 	 */
 	void alterTable(ObjectPath tableName, CatalogTable newTable, boolean ignoreIfNotExists)
 		throws TableNotExistException;
@@ -144,6 +144,32 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
 		throws TableNotExistException, DatabaseNotExistException;
 
+	// ----- views ------
+
+	/**
+	 * Creates a view.
+	 *
+	 * @param viewPath		Path of the view
+	 * @param view			The CatalogView to create
+	 * @param ignoreIfExists    Flag to specify behavior if a table/view with the given name already exists:
+	 *                       if set to false, it throws a TableAlreadyExistException,
+	 *                       if set to true, nothing happens.
+	 * @throws TableAlreadyExistException thrown if table already exists and ignoreIfExists is false
+	 * @throws DatabaseNotExistException thrown if the database that this table belongs to doesn't exist
+	 */
+	void createView(ObjectPath viewPath, CatalogView view, boolean ignoreIfExists) throws TableAlreadyExistException, DatabaseNotExistException;
+
+	/**
+	 * Modifies an existing newView.
+	 *
+	 * @param viewPath         Path of the newView to modify.
+	 * @param newView             The new newView which replaces the existing newView.
+	 * @param ignoreIfNotExists Flag to specify behavior if the newView does not exist:
+	 *                          if set to false, throw an exception,
+	 *                          if set to true, nothing happens.
+	 * @throws TableNotExistException   thrown if the newView does not exist
+	 */
+	void alterView(ObjectPath viewPath, CatalogView newView, boolean ignoreIfNotExists) throws TableNotExistException;
 
 	// ------ table and column stats ------
 

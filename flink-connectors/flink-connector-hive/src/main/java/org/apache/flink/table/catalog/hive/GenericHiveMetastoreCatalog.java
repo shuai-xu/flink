@@ -27,6 +27,7 @@ import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.plan.stats.TableStats;
 
@@ -56,7 +57,7 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 		LOG.info("Created GenericHiveMetastoreCatalog '{}'", catalogName);
 	}
 
-	// ------ tables ------
+	// ------ tables and views ------
 
 	@Override
 	public CatalogTable getTable(ObjectPath path) throws TableNotExistException {
@@ -64,6 +65,8 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 
 		return GenericHiveMetastoreCatalogUtil.createCatalogTable(hiveTable);
 	}
+
+	// ------ tables ------
 
 	@Override
 	public void createTable(ObjectPath path, CatalogTable table, boolean ignoreIfExists) throws TableAlreadyExistException, DatabaseNotExistException {
@@ -101,6 +104,18 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 
 	@Override
 	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	// ------ views ------
+
+	@Override
+	public void createView(ObjectPath viewPath, CatalogView view, boolean ignoreIfExists) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void alterView(ObjectPath viewPath, CatalogView newView, boolean ignoreIfNotExists) {
 		throw new UnsupportedOperationException();
 	}
 

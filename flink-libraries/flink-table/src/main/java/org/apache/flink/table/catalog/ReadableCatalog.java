@@ -77,7 +77,7 @@ public interface ReadableCatalog extends Closeable {
 	 */
 	boolean dbExists(String dbName);
 
-	// ------ tables ------
+	// ------ tables and views ------
 
 	/**
 	 * Gets paths of all tables registered in all databases of the catalog. An empty list is returned if no table is registered.
@@ -110,7 +110,7 @@ public interface ReadableCatalog extends Closeable {
 	 */
 	boolean tableExists(ObjectPath path);
 
-	// ------ tables ------
+	// ------ table and column stats ------
 
 	/**
 	 * Gets TableStats of a table. This only works for non-partitioned tables.

@@ -143,7 +143,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		}
 	}
 
-	// ------ tables ------
+	// ------ tables and views------
 
 	@Override
 	public void dropTable(ObjectPath path, boolean ignoreIfNotExists) throws TableNotExistException {
