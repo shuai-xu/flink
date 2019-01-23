@@ -1078,6 +1078,17 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Gets the names of all views registered in the default database.
+    *
+    * @return A list of the names of all registered views.
+    */
+  def listViews(): Array[String] = {
+    catalogManager.getDefaultCatalog.listViews(catalogManager.getDefaultDatabaseName)
+      .map(op => op.getObjectName)
+      .toArray
+  }
+
+  /**
     * Gets the names of all functions registered in this environment.
     */
   def listUserDefinedFunctions(): Array[String] = {

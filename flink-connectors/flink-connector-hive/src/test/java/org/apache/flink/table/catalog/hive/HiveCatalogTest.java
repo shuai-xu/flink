@@ -44,6 +44,7 @@ public class HiveCatalogTest extends CatalogTestBase {
 	public void close() {
 		catalog.dropTable(path1, true);
 		catalog.dropTable(path2, true);
+		catalog.dropTable(path3, true);
 		catalog.dropDatabase(db1, true);
 		catalog.dropDatabase(db2, true);
 	}

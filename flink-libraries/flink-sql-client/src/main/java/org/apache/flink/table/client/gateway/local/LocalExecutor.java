@@ -214,6 +214,14 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
+	public List<String> listViews(SessionContext session) throws SqlExecutionException {
+		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+			.createEnvironmentInstance()
+			.getTableEnvironment();
+		return Arrays.asList(tableEnv.listViews());
+	}
+
+	@Override
 	public List<String> listUserDefinedFunctions(SessionContext session) throws SqlExecutionException {
 		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
 			.createEnvironmentInstance()

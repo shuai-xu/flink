@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
+import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.MetaException;
@@ -194,6 +195,22 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (TException e) {
 			throw new FlinkHiveException(
 				String.format("Failed to check if table %s exists in database %s", path.getObjectName(), path.getDbName()), e);
+		}
+	}
+
+	// ------ views ------
+
+	@Override
+	public List<ObjectPath> listViews(String dbName) throws DatabaseNotExistException {
+		try {
+			return client.getTables(dbName, null, TableType.VIRTUAL_VIEW).stream()
+				.map(t -> new ObjectPath(dbName, t))
+				.collect(Collectors.toList());
+		} catch (UnknownDBException e) {
+			throw new DatabaseNotExistException(catalogName, dbName);
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed to list tables in database %s", dbName), e);
 		}
 	}
 

@@ -130,11 +130,11 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	// ------ tables and views ------
 
 	@Override
-	public void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException {
-		if (tableExists(tableName)) {
-			tables.remove(tableName);
+	public void dropTable(ObjectPath path, boolean ignoreIfNotExists) throws TableNotExistException {
+		if (tableExists(path)) {
+			tables.remove(path);
 		} else if (!ignoreIfNotExists) {
-			throw new TableNotExistException(catalogName, tableName.getFullName());
+			throw new TableNotExistException(catalogName, path.getFullName());
 		}
 	}
 
@@ -172,6 +172,20 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	// ------ views ------
+
+	@Override
+	public List<ObjectPath> listViews(String dbName) throws DatabaseNotExistException {
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(dbName), "dbName cannot be null or empty");
+
+		if (!dbExists(dbName)) {
+			throw new DatabaseNotExistException(catalogName, dbName);
+		}
+
+		return tables.keySet().stream()
+			.filter(k -> k.getDbName().equals(dbName))
+			.filter(k -> (tables.get(k) instanceof CatalogView))
+			.collect(Collectors.toList());
+	}
 
 	@Override
 	public void createView(ObjectPath viewPath, CatalogView view, boolean ignoreIfExists) throws TableAlreadyExistException, DatabaseNotExistException {

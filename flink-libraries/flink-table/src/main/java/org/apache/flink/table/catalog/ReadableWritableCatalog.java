@@ -86,6 +86,20 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists)
 		throws DatabaseNotExistException;
 
+	// ------ tables and views ------
+
+	/**
+	 * Deletes a table or view.
+	 *
+	 * @param objectName         Path of the table or view to delete.
+	 * @param ignoreIfNotExists Flag to specify behavior if the table or view does not exist:
+	 *                          if set to false, throw an exception,
+	 *                          if set to true, nothing happens.
+	 * @throws TableNotExistException    thrown if the table or view does not exist
+	 */
+	void dropTable(ObjectPath objectName, boolean ignoreIfNotExists) throws TableNotExistException;
+
+
 	// ------ tables ------
 
 	/**
@@ -103,17 +117,6 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 */
 	void createTable(ObjectPath tableName, CatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException;
-
-	/**
-	 * Deletes a table.
-	 *
-	 * @param tableName         Path of the table to delete.
-	 * @param ignoreIfNotExists Flag to specify behavior if the table does not exist:
-	 *                          if set to false, throw an exception,
-	 *                          if set to true, nothing happens.
-	 * @throws TableNotExistException    thrown if the table does not exist
-	 */
-	void dropTable(ObjectPath tableName, boolean ignoreIfNotExists) throws TableNotExistException;
 
 	/**
 	 * Modifies an existing table.

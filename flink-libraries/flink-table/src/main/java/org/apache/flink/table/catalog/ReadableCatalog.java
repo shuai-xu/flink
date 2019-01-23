@@ -95,20 +95,31 @@ public interface ReadableCatalog extends Closeable {
 	List<ObjectPath> listTables(String dbName) throws DatabaseNotExistException;
 
 	/**
-	 * Gets a catalog table registered in this ObjectPath.
+	 * Gets a CatalogTable or CatalogView registered in this ObjectPath.
 	 *
-	 * @param tableName		Path of the table.
-	 * @throws TableNotExistException    thrown if the table does not exist in the catalog.
+	 * @param objectName		Path of the table or view.
+	 * @throws TableNotExistException    thrown if the target does not exist in the catalog.
 	 * @return The requested table.
 	 */
-	CatalogTable getTable(ObjectPath tableName) throws TableNotExistException;
+	CatalogTable getTable(ObjectPath objectName) throws TableNotExistException;
 
 	/**
-	 * Checks if a table exists in this catalog.
+	 * Checks if a table or view exists in this catalog.
 	 *
-	 * @param path			Path of the table.
+	 * @param path			Path of the table or view.
 	 */
 	boolean tableExists(ObjectPath path);
+
+	// ------ views ------
+
+	/**
+	 * Gets paths of all views registered in this database. An empty list is returned if none is registered.
+	 *
+	 * @return A list of the names of all registered  views in this database.
+	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog.
+	 */
+	List<ObjectPath> listViews(String dbName) throws DatabaseNotExistException;
+
 
 	// ------ table and column stats ------
 

@@ -64,6 +64,7 @@ public abstract class CatalogTestBase {
 	protected final String t2 = "t2";
 	protected final ObjectPath path1 = new ObjectPath(db1, t1);
 	protected final ObjectPath path2 = new ObjectPath(db2, t2);
+	protected final ObjectPath path3 = new ObjectPath(db1, t2);
 	protected final ObjectPath nonExistDbPath = ObjectPath.fromString("non.exist");
 	protected final ObjectPath nonExistTablePath = ObjectPath.fromString("db1.nonexist");
 
@@ -442,6 +443,19 @@ public abstract class CatalogTestBase {
 		catalog.alterView(nonExistTablePath, createView(), true);
 
 		assertFalse(catalog.tableExists(nonExistTablePath));
+	}
+
+	@Test
+	public void testListView() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		assertTrue(catalog.listAllTables().isEmpty());
+
+		catalog.createView(path1, createView(), false);
+		catalog.createTable(path3, createTable(), false);
+
+		assertEquals(2, catalog.listTables(db1).size());
+		assertEquals(Arrays.asList(path1), catalog.listViews(db1));
 	}
 
 	// ------ databases ------
