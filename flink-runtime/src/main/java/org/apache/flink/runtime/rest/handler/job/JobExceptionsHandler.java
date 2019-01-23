@@ -30,9 +30,11 @@ import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.JobExceptionsInfo;
 import org.apache.flink.runtime.rest.messages.JobIDPathParameter;
-import org.apache.flink.runtime.rest.messages.JobMessageParameters;
 import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
+import org.apache.flink.runtime.rest.messages.job.JobExceptionsEndFilterQueryParameter;
+import org.apache.flink.runtime.rest.messages.job.JobExceptionsMessageParameters;
+import org.apache.flink.runtime.rest.messages.job.JobExceptionsStartFilterQueryParameter;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.util.FixedSortedSet;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
@@ -46,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -53,7 +56,7 @@ import java.util.concurrent.Executor;
 /**
  * Handler serving the job exceptions.
  */
-public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExceptionsInfo, JobMessageParameters> implements JsonArchivist {
+public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExceptionsInfo, JobExceptionsMessageParameters> implements JsonArchivist {
 
 	static final int MAX_NUMBER_EXCEPTION_TO_REPORT = 200;
 
@@ -62,7 +65,7 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 			GatewayRetriever<? extends RestfulGateway> leaderRetriever,
 			Time timeout,
 			Map<String, String> responseHeaders,
-			MessageHeaders<EmptyRequestBody, JobExceptionsInfo, JobMessageParameters> messageHeaders,
+			MessageHeaders<EmptyRequestBody, JobExceptionsInfo, JobExceptionsMessageParameters> messageHeaders,
 			ExecutionGraphCache executionGraphCache,
 			Executor executor) {
 
@@ -77,19 +80,23 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 	}
 
 	@Override
-	protected JobExceptionsInfo handleRequest(HandlerRequest<EmptyRequestBody, JobMessageParameters> request, AccessExecutionGraph executionGraph) {
-		return createJobExceptionsInfo(executionGraph);
+	protected JobExceptionsInfo handleRequest(HandlerRequest<EmptyRequestBody, JobExceptionsMessageParameters> request, AccessExecutionGraph executionGraph) {
+		List<Long> startList = request.getQueryParameter(JobExceptionsStartFilterQueryParameter.class);
+		List<Long> endList = request.getQueryParameter(JobExceptionsEndFilterQueryParameter.class);
+		Long start = startList.isEmpty() ? -1L : startList.get(0);
+		Long end = endList.isEmpty() ? System.currentTimeMillis() : endList.get(0);
+		return createJobExceptionsInfo(executionGraph, start, end);
 	}
 
 	@Override
 	public Collection<ArchivedJson> archiveJsonWithPath(AccessExecutionGraph graph) throws IOException {
-		ResponseBody json = createJobExceptionsInfo(graph);
+		ResponseBody json = createJobExceptionsInfo(graph, -1L, System.currentTimeMillis());
 		String path = getMessageHeaders().getTargetRestEndpointURL()
 			.replace(':' + JobIDPathParameter.KEY, graph.getJobID().toString());
 		return Collections.singletonList(new ArchivedJson(path, json));
 	}
 
-	private static JobExceptionsInfo createJobExceptionsInfo(AccessExecutionGraph executionGraph) {
+	private static JobExceptionsInfo createJobExceptionsInfo(AccessExecutionGraph executionGraph, Long start, Long end) {
 		ErrorInfo rootException = executionGraph.getFailureInfo();
 		String rootExceptionMessage = null;
 		Long rootTimestamp = null;
@@ -113,7 +120,8 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 						jobVertex,
 						executionVertex,
 						task);
-				if (executionExceptionInfo != null) {
+				if (executionExceptionInfo != null && executionExceptionInfo.getTimestamp() >= start
+					&& executionExceptionInfo.getTimestamp() <= end) {
 					taskExceptionList.add(executionExceptionInfo);
 					numExceptionsSofar++;
 				}
@@ -128,7 +136,8 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 						jobVertex,
 						executionVertex,
 						task);
-					if (executionExceptionInfo != null) {
+					if (executionExceptionInfo != null && executionExceptionInfo.getTimestamp() >= start
+						&& executionExceptionInfo.getTimestamp() <= end) {
 						taskExceptionList.add(executionExceptionInfo);
 						numExceptionsSofar++;
 					}

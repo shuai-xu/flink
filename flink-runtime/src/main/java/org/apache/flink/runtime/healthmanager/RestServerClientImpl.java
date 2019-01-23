@@ -48,6 +48,7 @@ import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionInfosHeaders;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionsInfos;
 import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
+import org.apache.flink.runtime.rest.messages.job.JobExceptionsMessageParameters;
 import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
 import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptInfo;
 import org.apache.flink.runtime.rest.messages.job.UpdatingJobRequest;
@@ -145,7 +146,8 @@ public class RestServerClientImpl implements RestServerClient {
 						JobGraphOverviewInfo.VertexConfigInfo jobGraphVertexConfig = vertexId2Config.getValue();
 						JobVertexID vertexID = JobVertexID.fromHexString(vertexId2Config.getKey());
 						VertexConfig vertexConfig = new VertexConfig(jobGraphVertexConfig.getParallelism(), jobGraphVertexConfig.getMaxParallelism(),
-							jobGraphVertexConfig.getResourceSpec().convertToResourceSpec(), jobGraphVertexConfig.getNodeIds());
+							jobGraphVertexConfig.getResourceSpec().convertToResourceSpec(), jobGraphVertexConfig.getNodeIds(),
+							jobGraphVertexConfig.getCoLocationGroupId());
 						vertexConfigs.put(vertexID, vertexConfig);
 						List<JobVertexID> inputVertexIds = jobGraphOverviewInfo.getInputNodes().get(vertexId2Config.getKey()).stream().map(vertexIdStr -> JobVertexID.fromHexString(vertexIdStr)).collect(Collectors.toList());
 						inputNodes.put(vertexID, inputVertexIds);
@@ -182,10 +184,16 @@ public class RestServerClientImpl implements RestServerClient {
 
 	@Override
 	public Map<JobVertexID, List<JobException>> getFailover(JobID jobID, long startTime, long endTime) throws Exception {
-		final JobExceptionsHeaders jobExceptionsHeaders = JobExceptionsHeaders.getInstance();
-		final JobMessageParameters jobMessageParameters = jobExceptionsHeaders.getUnresolvedMessageParameters();
-		jobMessageParameters.jobPathParameter.resolve(jobID);
-		return sendRequest(jobExceptionsHeaders, jobMessageParameters, EmptyRequestBody.getInstance()).thenApply(
+		final JobExceptionsHeaders headers = JobExceptionsHeaders.getInstance();
+		final JobExceptionsMessageParameters parameters = headers.getUnresolvedMessageParameters();
+		parameters.jobPathParameter.resolve(jobID);
+		List<Long> startList = new ArrayList<>();
+		startList.add(startTime);
+		List<Long> endList = new ArrayList<>();
+		endList.add(endTime);
+		parameters.start.resolve(startList);
+		parameters.end.resolve(endList);
+		return sendRequest(headers, parameters, EmptyRequestBody.getInstance()).thenApply(
 			(JobExceptionsInfo exceptionsInfo) -> {
 				List<JobExceptionsInfo.ExecutionExceptionInfo> exceptions = exceptionsInfo.getAllExceptions();
 				Map<JobVertexID, List<JobException>> jobVertexId2exceptions = new HashMap<>();

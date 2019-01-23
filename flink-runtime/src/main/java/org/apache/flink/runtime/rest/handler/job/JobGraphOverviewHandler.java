@@ -36,6 +36,7 @@ import org.apache.flink.runtime.rest.messages.MessageHeaders;
 import org.apache.flink.runtime.rest.messages.ResourceSpecInfo;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
+import org.apache.flink.util.AbstractID;
 
 import javax.annotation.Nonnull;
 
@@ -77,6 +78,7 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 					List<Integer> nodeIds;
 					JobVertexID vertexID = vertex.getID();
 					if (vertex.getOperatorDescriptors() != null) {
+						vertex.getCoLocationGroup().getId();
 						nodeIds = vertex.getOperatorDescriptors().stream().map(op -> op.getNodeId()).collect(Collectors.toList());
 					} else {
 						nodeIds = new ArrayList<>();
@@ -96,8 +98,9 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 						resourceSpec.getStateSize(),
 						resourceSpec.getExtendedResources()
 					);
+					AbstractID coLocationGroupId = vertex.getCoLocationGroup() != null ? vertex.getCoLocationGroup().getId() : null;
 					JobGraphOverviewInfo.VertexConfigInfo vertexConfigInfo = new JobGraphOverviewInfo.VertexConfigInfo(vertexID, vertex.getName(),
-						vertex.getParallelism(), vertex.getMaxParallelism(), resourceSpecInfo, nodeIds
+						vertex.getParallelism(), vertex.getMaxParallelism(), resourceSpecInfo, nodeIds, coLocationGroupId
 						);
 					vertexConfigs.put(vertexID.toString(), vertexConfigInfo);
 					inputNodes.put(vertexID.toString(), inputVertexId);

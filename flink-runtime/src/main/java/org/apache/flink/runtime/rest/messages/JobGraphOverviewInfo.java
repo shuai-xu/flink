@@ -21,8 +21,11 @@ package org.apache.flink.runtime.rest.messages;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.handler.job.JobGraphOverviewHandler;
+import org.apache.flink.runtime.rest.messages.json.AbstractIDDeserializer;
+import org.apache.flink.runtime.rest.messages.json.AbstractIDSerializer;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDDeserializer;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDSerializer;
+import org.apache.flink.util.AbstractID;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnore;
@@ -110,6 +113,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		public static final String FIELD_NAME_MAX_PARALLELISM = "max-parallelism";
 		public static final String FIELD_NAME_RESOURCE_SPEC = "resource-spec";
 		public static final String FIELD_NAME_NODE_IDS = "nodeIds";
+		public static final String FIELD_NAME_COLOCATION_GROUP_ID = "co-location_id";
 
 		@JsonProperty(FIELD_NAME_VERTEX_ID)
 		@JsonSerialize(using = JobVertexIDSerializer.class)
@@ -130,6 +134,10 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		@JsonProperty(FIELD_NAME_NODE_IDS)
 		private final List<Integer> nodeIds;
 
+		@JsonProperty(FIELD_NAME_COLOCATION_GROUP_ID)
+		@JsonSerialize(using = AbstractIDSerializer.class)
+		private final AbstractID coLocationGroupId;
+
 		@JsonCreator
 		public VertexConfigInfo(
 			@JsonDeserialize(using = JobVertexIDDeserializer.class) @JsonProperty(FIELD_NAME_VERTEX_ID) JobVertexID id,
@@ -137,13 +145,16 @@ public class JobGraphOverviewInfo implements ResponseBody {
 			@JsonProperty(FIELD_NAME_PARALLELISM) int parallelism,
 			@JsonProperty(FIELD_NAME_MAX_PARALLELISM) int maxParallelism,
 			@JsonProperty(FIELD_NAME_RESOURCE_SPEC) ResourceSpecInfo resourceSpec,
-			@JsonProperty(FIELD_NAME_NODE_IDS) List<Integer> nodeIds) {
+			@JsonProperty(FIELD_NAME_NODE_IDS) List<Integer> nodeIds,
+			@JsonProperty(FIELD_NAME_COLOCATION_GROUP_ID) @JsonDeserialize(using = AbstractIDDeserializer.class)
+				AbstractID coLocationGroupId) {
 			this.id = checkNotNull(id);
 			this.name = checkNotNull(name);
 			this.parallelism = parallelism;
 			this.maxParallelism = maxParallelism;
 			this.resourceSpec = resourceSpec;
 			this.nodeIds = nodeIds;
+			this.coLocationGroupId = coLocationGroupId;
 		}
 
 		@JsonIgnore
@@ -176,6 +187,11 @@ public class JobGraphOverviewInfo implements ResponseBody {
 			return nodeIds;
 		}
 
+		@JsonIgnore
+		public AbstractID getCoLocationGroupId() {
+			return coLocationGroupId;
+		}
+
 		@Override
 		public boolean equals(Object o) {
 			if (this == o) {
@@ -191,12 +207,13 @@ public class JobGraphOverviewInfo implements ResponseBody {
 				Objects.equals(name, that.name) &&
 				parallelism == that.parallelism &&
 				Objects.equals(resourceSpec, that.resourceSpec) &&
-				Objects.equals(nodeIds, that.nodeIds);
+				Objects.equals(nodeIds, that.nodeIds) &&
+				Objects.equals(coLocationGroupId, that.coLocationGroupId);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(id, name, parallelism, resourceSpec, nodeIds);
+			return Objects.hash(id, name, parallelism, resourceSpec, nodeIds, coLocationGroupId);
 		}
 	}
 
