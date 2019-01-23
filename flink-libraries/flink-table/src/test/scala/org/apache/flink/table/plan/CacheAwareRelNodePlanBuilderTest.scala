@@ -43,7 +43,7 @@ import org.apache.flink.test.util.TestBaseUtils
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{After, Before, Test}
+import org.junit.{After, Before, Ignore, Test}
 
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
@@ -87,6 +87,7 @@ class CacheCsvTableFactory extends BatchTableSourceFactory[BaseRow]
     java.util.Collections.emptyList()
 }
 
+@Ignore
 @RunWith(classOf[Parameterized])
 class CacheAwareRelNodePlanBuilderTest(
   factory: TableFactory,

@@ -20,13 +20,14 @@ package org.apache.flink.table.temptable
 
 import java.io.File
 import java.nio.file.Files
+
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.junit.{Assert, Ignore, Test}
 
-import org.junit.{Assert, Test}
-
+@Ignore
 class TableServiceExceptionTest extends BatchTestBase {
 
   @Test
