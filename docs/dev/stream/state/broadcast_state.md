@@ -161,7 +161,7 @@ across all tasks. Ignoring this rule would break the consistency guarantees of t
 often difficult to debug results.
 
 <div class="alert alert-info">
-  <strong>Attention:</strong> The logic implemented in `processBroadcast()` must have the same determinstic behavior 
+  <strong>Attention:</strong> The logic implemented in `processBroadcast()` must have the same deterministic behavior 
   across all parallel instances!
 </div>
 
@@ -192,29 +192,31 @@ new KeyedBroadcastProcessFunction<Color, Item, Rule, String>() {
     // store partial matches, i.e. first elements of the pair waiting for their second element
     // we keep a list as we may have many first elements waiting
     private final MapStateDescriptor<String, List<Item>> mapStateDesc =
-	    new MapStateDescriptor<>(
-	        "items",
-	        BasicTypeInfo.STRING_TYPE_INFO, 
-	        new ListTypeInfo<>(Item.class));
+        new MapStateDescriptor<>(
+            "items",
+            BasicTypeInfo.STRING_TYPE_INFO, 
+            new ListTypeInfo<>(Item.class));
 
     // identical to our ruleStateDescriptor above
     private final MapStateDescriptor<String, Rule> ruleStateDescriptor = 
         new MapStateDescriptor<>(
-    	    "RulesBroadcastState",
-    		BasicTypeInfo.STRING_TYPE_INFO,
-    		TypeInformation.of(new TypeHint<Rule>() {}));
+            "RulesBroadcastState",
+            BasicTypeInfo.STRING_TYPE_INFO,
+            TypeInformation.of(new TypeHint<Rule>() {}));
 
-	@Override
-	public void processBroadcastElement(Rule value, 
-	                                    Context ctx, 
-	                                    Collector<String> out) throws Exception {
-	    ctx.getBroadcastState(ruleStateDescriptor).put(value.name, value);
-	}
+    @Override
+    public void processBroadcastElement(
+        Rule value, 
+        Context ctx, 
+        Collector<String> out) throws Exception {
+        ctx.getBroadcastState(ruleStateDescriptor).put(value.name, value);
+    }
 
-	@Override
-	public void processElement(Item value, 
-	                           ReadOnlyContext ctx, 
-	                           Collector<String> out) throws Exception {
+    @Override
+    public void processElement(
+        Item value, 
+        ReadOnlyContext ctx, 
+        Collector<String> out) throws Exception {
 
         final MapState<String, List<Item>> state = getRuntimeContext().getMapState(mapStateDesc);
         final Shape shape = value.getShape();
@@ -223,7 +225,7 @@ new KeyedBroadcastProcessFunction<Color, Item, Rule, String>() {
                 ctx.getBroadcastState(ruleStateDescriptor).immutableEntries()) {
             final String ruleName = entry.getKey();
             final Rule rule = entry.getValue();
-    
+
             List<Item> stored = state.get(ruleName);
             if (stored == null) {
                 stored = new ArrayList<>();
@@ -240,14 +242,14 @@ new KeyedBroadcastProcessFunction<Color, Item, Rule, String>() {
             if (shape.equals(rule.first)) {
                 stored.add(value);
             }
-    
+
             if (stored.isEmpty()) {
                 state.remove(ruleName);
             } else {
                 state.put(ruleName, stored);
             }
         }
-	}
+    }
 }
 {% endhighlight %}
 
