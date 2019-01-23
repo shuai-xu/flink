@@ -361,6 +361,65 @@ Sink(fields=[a1, b, c1])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testMultiSinksWithUDTF">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalFilter(condition=[>($0, 50)])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], total_c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, view3]])
+   +- LogicalProject(a=[$0], total_c=[0])
+      +- LogicalTableScan(table=[[builtin, default, view1]])
+
+LogicalFilter(condition=[<($0, 50)])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], total_c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, view3]])
+   +- LogicalProject(a=[$0], total_c=[0])
+      +- LogicalTableScan(table=[[builtin, default, view1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[Sink(fields=[a, total_c])
++- Union(all=[true], union=[a, total_c])
+   :- Calc(select=[a, total_c])
+   :  +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_COUNT(count$0) AS total_c])
+   :     +- Exchange(distribution=[hash[a, b]])
+   :        +- LocalHashAggregate(groupBy=[a, b], select=[a, b, Partial_COUNT(f0) AS count$0])
+   :           +- HashAggregate(isMerge=[true], groupBy=[a, b, f0], select=[a, b, f0])
+   :              +- Exchange(distribution=[hash[a, b, f0]])
+   :                 +- LocalHashAggregate(groupBy=[a, b, f0], select=[a, b, f0])
+   :                    +- Calc(select=[a, b, f0], where=[>(a, 50)])
+   :                       +- Correlate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
+   :                          +- Calc(select=[a, -(b, MOD(b, 300)) AS b, c])
+   :                             +- Calc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+   :                                +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+   +- Calc(select=[a, 0 AS total_c])
+      +- Calc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), >(a, 50))])
+         +- Calc(select=[a, b])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+
+Sink(fields=[a, total_c])
++- Union(all=[true], union=[a, total_c])
+   :- Calc(select=[a, total_c])
+   :  +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b, Final_COUNT(count$0) AS total_c])
+   :     +- Exchange(distribution=[hash[a, b]])
+   :        +- LocalHashAggregate(groupBy=[a, b], select=[a, b, Partial_COUNT(f0) AS count$0])
+   :           +- HashAggregate(isMerge=[true], groupBy=[a, b, f0], select=[a, b, f0])
+   :              +- Exchange(distribution=[hash[a, b, f0]])
+   :                 +- LocalHashAggregate(groupBy=[a, b, f0], select=[a, b, f0])
+   :                    +- Calc(select=[a, b, f0], where=[<(a, 50)])
+   :                       +- Correlate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
+   :                          +- Calc(select=[a, -(b, MOD(b, 300)) AS b, c])
+   :                             +- Calc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+   :                                +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+   +- Calc(select=[a, 0 AS total_c])
+      +- Calc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <(a, 50))])
+         +- Calc(select=[a, b])
+            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testMultiSinksSplitOnUnion1">
     <Resource name="planBefore">
       <![CDATA[

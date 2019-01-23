@@ -28,7 +28,7 @@ import org.apache.flink.util.Preconditions
 import com.google.common.collect.Sets
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel._
-import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.core.{TableFunctionScan, TableScan}
 import org.apache.calcite.rel.logical.LogicalTableScan
 
 import java.util
@@ -273,12 +273,17 @@ class RelNodeBlockPlanBuilder private(tEnv: TableEnvironment) {
       currentBlock: RelNodeBlock,
       createNewBlock: Boolean): Unit = {
     val hasDiffBlockOutputNodes = node2Wrapper(node).hasMultipleBlockOutputNodes
+    val isTableFunctionScan = node.isInstanceOf[TableFunctionScan]
+    // TableFunctionScan cannot be optimized individually,
+    // so TableFunctionScan is not a break-point even though it has multiple parents
+    val isBreakPoint = hasDiffBlockOutputNodes && !isTableFunctionScan
+
     if (isUnionAllAsBreakPointDisabled && isUnionAllNode(node)) {
       // Does not create new block for union all node, delay the creation operation to its inputs.
-      val createNewBlockForChildren = if (hasDiffBlockOutputNodes) true else createNewBlock
+      val createNewBlockForChildren = if (isBreakPoint) true else createNewBlock
       node.getInputs.foreach(child => buildBlock(child, currentBlock, createNewBlockForChildren))
     } else {
-      if (createNewBlock || hasDiffBlockOutputNodes) {
+      if (createNewBlock || isBreakPoint) {
         val childBlock = node2Block.getOrElseUpdate(node, new RelNodeBlock(node, tEnv))
         currentBlock.addChild(childBlock)
         node.getInputs.foreach(child => buildBlock(child, childBlock, createNewBlock = false))

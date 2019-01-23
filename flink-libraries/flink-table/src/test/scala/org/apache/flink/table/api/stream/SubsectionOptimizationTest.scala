@@ -22,7 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.util.TableTestBase
+import org.apache.flink.table.util.{TableFunc1, TableTestBase}
 
 import org.junit.{Before, Test}
 
@@ -161,6 +161,31 @@ class SubsectionOptimizationTest extends TableTestBase {
     val table6 = table4.join(table5, 'a1 === 'a3).select('a1, 'b, 'c1)
     table5.writeToSink(new CsvTableSink("/tmp/1"))
     table6.writeToSink(new CsvTableSink("/tmp/2"))
+    util.verifyPlan()
+  }
+
+  @Test
+  def testMultiSinksWithUDTF(): Unit = {
+    util.tableEnv.registerFunction("split", new TableFunc1)
+    val view1 =
+      """
+        |SELECT  a, b - MOD(b, 300) AS b, c FROM SmallTable3
+        |WHERE b >= UNIX_TIMESTAMP('${startTime}')
+      """.stripMargin
+    util.tableEnv.registerTable("view1", util.tableEnv.sqlQuery(view1))
+
+    val view2 = "SELECT a, b, c1 AS c FROM view1, LATERAL TABLE(split(c)) AS T(c1) WHERE c <> '' "
+    util.tableEnv.registerTable("view2", util.tableEnv.sqlQuery(view2))
+
+    val view3 = "SELECT a, b, COUNT(DISTINCT c) AS total_c FROM view2 GROUP BY a, b"
+    util.tableEnv.registerTable("view3", util.tableEnv.sqlQuery(view3))
+
+    val table = util.tableEnv.sqlQuery(
+      "SELECT a, total_c FROM view3 UNION ALL SELECT a, 0 AS total_c FROM view1")
+
+    table.filter('a > 50).writeToSink(new CsvTableSink("file1"))
+    table.filter('a < 50).writeToSink(new CsvTableSink("file2"))
+
     util.verifyPlan()
   }
 

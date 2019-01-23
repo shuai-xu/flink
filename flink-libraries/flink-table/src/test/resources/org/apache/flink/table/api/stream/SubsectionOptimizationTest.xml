@@ -359,6 +359,57 @@ StreamExecSink(fields=[a1, b, c1])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testMultiSinksWithUDTF">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalFilter(condition=[>($0, 50)])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], total_c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, view3]])
+   +- LogicalProject(a=[$0], total_c=[0])
+      +- LogicalTableScan(table=[[builtin, default, view1]])
+
+LogicalFilter(condition=[<($0, 50)])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], total_c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, view3]])
+   +- LogicalProject(a=[$0], total_c=[0])
+      +- LogicalTableScan(table=[[builtin, default, view1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[a, total_c])
++- StreamExecUnion(all=[true], union=[a, total_c])
+   :- StreamExecCalc(select=[a, total_c])
+   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
+   :     +- StreamExecExchange(distribution=[hash[a, b]])
+   :        +- StreamExecCalc(select=[a, b, f0], where=[>(a, 50)])
+   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
+   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
+   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+   :                    +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+   +- StreamExecCalc(select=[a, 0 AS total_c])
+      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), >(a, 50))])
+         +- StreamExecCalc(select=[a, b])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecSink(fields=[a, total_c])
++- StreamExecUnion(all=[true], union=[a, total_c])
+   :- StreamExecCalc(select=[a, total_c])
+   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
+   :     +- StreamExecExchange(distribution=[hash[a, b]])
+   :        +- StreamExecCalc(select=[a, b, f0], where=[<(a, 50)])
+   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
+   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
+   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+   :                    +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+   +- StreamExecCalc(select=[a, 0 AS total_c])
+      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <(a, 50))])
+         +- StreamExecCalc(select=[a, b])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testMultiSinksSplitOnUnion1">
     <Resource name="planBefore">
       <![CDATA[
