@@ -92,7 +92,7 @@ export class JobOverviewComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.jobService.jobDetail$.pipe(
+    this.jobService.jobDetailLatest$.pipe(
       takeUntil(this.destroy$),
     ).subscribe(data => {
       if (!data || !data.plan || !data.verticesDetail) {

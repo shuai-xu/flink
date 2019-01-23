@@ -25,16 +25,16 @@
           Vertex<ng-container *ngIf="canToggleExpand">({{nodeInfo.node.cardinality}} Operators)</ng-container>
         </span>
         <span *ngIf="nodeInfo.expanded">
-          Parallel: {{verticesDetail?.parallelism}} <nz-divider nzType="vertical"></nz-divider> InQ: {{(verticesDetail?.inQueue | percent) || '-'}} <nz-divider nzType="vertical"></nz-divider> OutQ: {{(verticesDetail?.outQueue | percent) || '-'}}
+          Parallel: {{verticesDetail?.parallelism}}
+          <nz-divider nzType="vertical"></nz-divider> InQ: {{(verticesDetail?.inQueue | percent) || '-'}}
+          <nz-divider nzType="vertical"></nz-divider> OutQ: {{(verticesDetail?.outQueue | percent) || '-'}}
         </span>
       </span>
-      </h4>
-      <div *ngIf="canToggleExpand" class="toggle-expand" (click)="toggleExpand($event)">
-        <a>
+        <a *ngIf="canToggleExpand" class="toggle-expand" (click)="toggleExpand($event)">
           <i *ngIf="!nodeInfo.expanded" nz-icon type="plus" theme="outline"></i>
           <i *ngIf="nodeInfo.expanded" nz-icon type="minus" theme="outline"></i>
         </a>
-      </div>
+      </h4>
     </div>
     <div class="group-body">
       <h5 class="sub-title" *ngIf="!canToggleExpand && verticesDetail?.name && verticesDetail?.name.length > 125; else fullVerticesName"

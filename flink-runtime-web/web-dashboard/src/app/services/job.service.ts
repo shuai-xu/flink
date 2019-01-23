@@ -17,7 +17,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { ConfigService } from './config.service';
-import { forkJoin, ReplaySubject } from 'rxjs';
+import { forkJoin, ReplaySubject, Subject } from 'rxjs';
 import { flatMap, map } from 'rxjs/operators';
 import {
   JobBackpressureInterface,
@@ -52,6 +52,7 @@ export class JobService {
   selectedVertexNode$ = new ReplaySubject<NodesItemCorrectInterface>(1);
   jobDetail: JobDetailCorrectInterface;
   jobDetail$ = new ReplaySubject<JobDetailCorrectInterface>(1);
+  jobDetailLatest$ = new Subject<JobDetailCorrectInterface>();
   listOfNavigation = [
     { title: 'Detail', pathOrParam: 'detail' },
     { title: 'SubTasks', pathOrParam: 'subtasks' },
@@ -63,6 +64,12 @@ export class JobService {
   ];
 
   constructor(private httpClient: HttpClient, private configService: ConfigService) {
+  }
+
+  setJobDetail(data: JobDetailCorrectInterface) {
+    this.jobDetail = data;
+    this.jobDetail$.next(data);
+    this.jobDetailLatest$.next(data);
   }
 
   cancelJob(jobId) {
@@ -113,6 +120,7 @@ export class JobService {
           vertex_id  : node.id,
           name       : node.description,
           metric_name: null,
+          virtual    : true,
           inputs     : node.inputs ? node.inputs.map(i => {
             return {
               operator_id: i.id,

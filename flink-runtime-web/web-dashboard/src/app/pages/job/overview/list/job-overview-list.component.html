@@ -18,7 +18,7 @@
   class="no-border small"
   [nzSize]="'small'"
   [nzData]="nodes"
-  [nzScroll]="{x:((1810+left)+'px')}"
+  [nzScroll]="{x:((1780+left)+'px')}"
   [nzFrontPagination]="false"
   [nzShowPagination]="false">
   <thead (nzSortChange)="sort($event)" nzSingleSort>
@@ -26,7 +26,7 @@
       <th nzLeft="0px" [nzWidth]="left+'px'">Name</th>
       <th nzSortKey="detail.status" nzShowSort nzWidth="120px">Status</th>
       <th nzSortKey="detail.metrics.buffers-in-pool-usage-max" nzShowSort nzWidth="100px">In Queue</th>
-      <th nzSortKey="detail.metrics.buffers-out-pool-usage-max" nzShowSort nzWidth="150px">Out Queue</th>
+      <th nzSortKey="detail.metrics.buffers-out-pool-usage-max" nzShowSort nzWidth="120px">Out Queue</th>
       <th nzSortKey="detail.metrics.delay" nzShowSort nzWidth="100px">Delay(ms)</th>
       <th nzSortKey="detail.metrics.tps" nzShowSort nzWidth="100px">TPS</th>
       <th nzSortKey="detail.metrics.read-bytes" nzShowSort nzWidth="150px">Bytes Received</th>

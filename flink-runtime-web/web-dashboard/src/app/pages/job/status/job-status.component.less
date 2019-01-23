@@ -13,7 +13,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 @import "theme";
 
 :host {
@@ -29,9 +28,14 @@
 }
 
 .name {
+  h2 {
+    max-width: calc(100% - 160px);
+  }
+
   h2, flink-job-badge {
     display: inline-block;
   }
+
   nz-divider {
     margin: 0 12px;
   }
@@ -41,8 +45,10 @@
   display: inline-block;
   font-size: 14px;
   line-height: 22px;
+
   span {
     line-height: 22px;
+
     &:last-child {
       margin-left: 8px;
       font-weight: 700;
@@ -53,6 +59,7 @@
 
 .status {
   margin-bottom: 12px;
+
   nz-divider {
     margin: 0 24px;
   }

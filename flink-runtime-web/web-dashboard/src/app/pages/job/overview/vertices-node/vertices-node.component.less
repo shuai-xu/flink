@@ -83,6 +83,7 @@
   border: 1px solid @nzg-group-node-stroke;
   font-size: 12px;
   background: @nzg-group-node-fill;
+  overflow:hidden;
 
   &:hover {
     .node-title {
@@ -105,16 +106,10 @@
     padding: 5px;
   }
 
-  .toggle-expand {
-    position: absolute;
-    right: 10px;
-    top: 0;
-    height: 24px;
-    line-height: 24px;
-
-    a {
-      color: @nzg-group-title-color;
-    }
+  a.toggle-expand {
+    display: inline-block;
+    float: right;
+    color: @nzg-group-title-color;
   }
 
   .node-title {
@@ -146,12 +141,12 @@
     word-break: break-all;
     color: @nzg-base-node-color;
     line-height: 14px;
+    min-height: 70px;
   }
 
   .attr-wrap {
-    position: absolute;
-    left: 8px;
-    bottom: 8px;
+    padding:8px 0 0 0;
+    width: 100%;
     color: @nzg-base-node-color;
 
     .attr {

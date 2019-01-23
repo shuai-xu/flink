@@ -205,6 +205,7 @@ export interface OperatorsItem {
   name: string;
   inputs: VerticesDetailInputsItem[];
   metric_name: string;
+  virtual?: boolean;
 }
 
 export interface VerticesDetailInputsItem {

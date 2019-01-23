@@ -18,29 +18,32 @@
   <nz-table
     class="no-border"
     [nzSize]="'small'"
+    [nzScroll]="{x:'1250px'}"
     [nzData]="listOfJob"
     [nzFrontPagination]="false"
     [nzShowPagination]="false">
     <thead (nzSortChange)="sort($event)" nzSingleSort>
       <tr>
-        <th>Job Name</th>
-        <th nzShowSort nzSortKey="start-time">Start Time</th>
-        <th nzShowSort nzSortKey="duration">Duration</th>
-        <th nzShowSort nzSortKey="end-time">End Time</th>
-        <th>Tasks</th>
-        <th nzShowSort nzSortKey="state">Status</th>
+        <th [nzLeft]="'0px'" [nzWidth]="'300px'">Job Name</th>
+        <th nzShowSort nzSortKey="start-time" [nzWidth]="'200px'">Start Time</th>
+        <th nzShowSort nzSortKey="duration" [nzWidth]="'150px'">Duration</th>
+        <th nzShowSort nzSortKey="end-time" [nzWidth]="'200px'">End Time</th>
+        <th [nzWidth]="'200px'">Tasks</th>
+        <th nzShowSort nzSortKey="state" [nzRight]="'0px'" [nzWidth]="'200px'">Status</th>
       </tr>
     </thead>
     <tbody>
       <tr *ngFor="let job of listOfJob; trackBy:trackJobBy;" (click)="navigateToJob(job.jid)" class="clickable">
-        <td>{{ job.name }}</td>
+        <td [nzLeft]="'0px'">
+          <div class="name" nz-tooltip [nzTitle]="job.name">{{ job.name }}</div>
+        </td>
         <td>{{ job["start-time"] | nzHumanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
         <td>{{ job.duration | nzHumanizeDuration:'s'}}</td>
         <td>{{ job["end-time"] | nzHumanizeDate: 'yyyy-MM-dd HH:mm:ss' }}</td>
         <td>
           <flink-task-badge [tasks]="job.tasks"></flink-task-badge>
         </td>
-        <td>
+        <td [nzRight]="'0px'">
           <flink-job-badge [state]="job.state"></flink-job-badge>
         </td>
       </tr>

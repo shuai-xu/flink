@@ -43,8 +43,7 @@ export class JobComponent implements OnInit, OnDestroy {
         return this.jobService.loadJobWithVerticesDetail(this.activatedRoute.snapshot.params.jid);
       })
     ).subscribe(data => {
-      this.jobService.jobDetail = data;
-      this.jobService.jobDetail$.next(data);
+      this.jobService.setJobDetail(data);
       this.isLoading = false;
       this.refreshing = false;
     });

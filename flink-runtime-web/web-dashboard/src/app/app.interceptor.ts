@@ -29,8 +29,10 @@ export class AppInterceptor implements HttpInterceptor {
     return next.handle(req).pipe(
       catchError((res) => {
         const errorMessage = res && res.error && res.error[ 'errors' ] && res.error[ 'errors' ][ 0 ];
-        this.injector.get(StatusService).infoList.push(errorMessage);
-        return throwError(errorMessage);
+        if (errorMessage) {
+          this.injector.get(StatusService).infoList.push(errorMessage);
+          return throwError(errorMessage);
+        }
       }));
   }
 }

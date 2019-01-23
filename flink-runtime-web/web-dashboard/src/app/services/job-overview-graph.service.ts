@@ -23,7 +23,7 @@ import {
   RenderGraphInfo,
   RenderGroupNodeInfo,
   RenderNodeInfo,
-  RenderMetaedgeInfo
+  RenderMetaedgeInfo, MetanodeImpl
 } from '@ng-zorro/ng-plus/graph';
 import { JobDetailCorrectInterface, NodesItemCorrectInterface, OperatorsItem, SubtaskMetricsItem, VerticesMetrics } from 'flink-interfaces';
 
@@ -86,14 +86,8 @@ const opNodeHeightFunction = (renderNodeInfo: RenderNodeInfo): number => {
 };
 
 const canToggleExpand = (renderNodeInfo: RenderGroupNodeInfo): boolean => {
-  const nodes = renderNodeInfo.node.metagraph.nodes();
-  if (nodes.length === 1) {
-    const ids = nodes[ 0 ].split('/');
-    if (ids[ 0 ] === ids[ 1 ]) {
-      return false;
-    }
-  }
-  return true;
+  const children = (renderNodeInfo.node as MetanodeImpl).getChildren();
+  return !(children.length === 1 && children[ 0 ].attr[ 'virtual' ]);
 };
 
 export const graphTimeoutRange = scaleLinear().domain([ 50, 100, 300, 500 ])
@@ -156,16 +150,16 @@ export class JobOverviewGraphService {
   }
 
   initGraph(graphComponent: NzGraphComponent, data: JobDetailCorrectInterface) {
-    if (this.graphComponent) {
-      this.graphComponent.clean();
-    }
     const graphDef = this.parseGraphData(data);
-    this.graphComponent = graphComponent;
     this.cleanDetailCache();
     graphComponent.buildGraph(graphDef)
     .then(graph => graphComponent.buildRenderGraphInfo(graph))
     .then(() => {
+      if (this.graphComponent) {
+        this.graphComponent.clean();
+      }
       graphComponent.build();
+      this.graphComponent = graphComponent;
       setTimeout(() => {
         graphComponent.fit(0, .8);
       }, (data.plan && data.plan.nodes) ? graphTimeoutRange(data.plan.nodes.length) : 200);
@@ -229,7 +223,7 @@ export class JobOverviewGraphService {
       displayName = vertices.name;
     }
 
-    if (vertices.metrics && vertices.metrics[ 'buffers-in-pool-usage-max' ]) {
+    if (vertices.metrics && Number.isFinite(vertices.metrics[ 'buffers-in-pool-usage-max' ])) {
       inQueue = vertices.metrics[ 'buffers-in-pool-usage-max' ] === -1
         ? null
         : vertices.metrics[ 'buffers-in-pool-usage-max' ];
@@ -240,7 +234,7 @@ export class JobOverviewGraphService {
       );
     }
 
-    if (vertices.metrics && vertices.metrics[ 'buffers-out-pool-usage-max' ]) {
+    if (vertices.metrics && Number.isFinite(vertices.metrics[ 'buffers-out-pool-usage-max' ])) {
       outQueue = vertices.metrics[ 'buffers-out-pool-usage-max' as keyof VerticesMetrics ] === -1
         ? null
         : vertices.metrics[ 'buffers-out-pool-usage-max' ];
