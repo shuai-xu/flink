@@ -84,6 +84,8 @@ public final class TableServiceUtil {
 			.setServiceNativeMemoryMb(config.getInteger(TABLE_SERVICE_NATIVE_MEMORY_MB))
 			.setServiceCpuCores(config.getDouble(TABLE_SERVICE_CPU_CORES));
 
+		tableServiceDescriptor.getConfiguration().addAll(config);
+
 		tableServiceDescriptor.getConfiguration().setInteger(TABLE_SERVICE_READY_RETRY_TIMES, config.getInteger(TABLE_SERVICE_READY_RETRY_TIMES));
 		tableServiceDescriptor.getConfiguration().setLong(TABLE_SERVICE_READY_RETRY_BACKOFF_MS, config.getLong(TABLE_SERVICE_READY_RETRY_BACKOFF_MS));
 		if (config.getString(TABLE_SERVICE_STORAGE_ROOT_PATH) != null) {

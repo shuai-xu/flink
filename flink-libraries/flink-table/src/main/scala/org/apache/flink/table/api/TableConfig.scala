@@ -335,8 +335,11 @@ class TableConfig {
   /**
     * Defines the FlinkTableServiceFactoryDescriptor for TableService.
     */
-  private var tableServiceFactoryDescriptor: FlinkTableServiceFactoryDescriptor =
-    TableServiceUtil.getDefaultTableServiceFactoryDescriptor
+  private var tableServiceFactoryDescriptor: FlinkTableServiceFactoryDescriptor = {
+    val desc = TableServiceUtil.getDefaultTableServiceFactoryDescriptor
+    desc.getTableProperties.addAll(getConf)
+    desc
+  }
 
   def getTableServiceFactoryDescriptor(): FlinkTableServiceFactoryDescriptor =
     tableServiceFactoryDescriptor

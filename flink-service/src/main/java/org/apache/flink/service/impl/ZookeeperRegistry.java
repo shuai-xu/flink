@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
@@ -69,9 +68,17 @@ public class ZookeeperRegistry implements ServiceRegistry, Watcher {
 		if (customData != null && customData.length > 0) {
 			serviceInfo.setCustomData(customData);
 		}
-		List<String> paths = Arrays.asList(zkRootPath, serviceInfo.getServiceName(), serviceInfo.getInstanceId());
 
-		String path = paths.stream().collect(Collectors.joining("/"));
+		List<String> paths = new ArrayList<>();
+		for (String subDir : zkRootPath.split("/")) {
+			if (!subDir.isEmpty()) {
+				paths.add(subDir);
+			}
+		}
+		paths.add(serviceInfo.getServiceName());
+		paths.add(serviceInfo.getInstanceId());
+
+		String path = paths.stream().collect(Collectors.joining("/", "/", ""));
 		try {
 			if (zooKeeper.exists(path, false) != null) {
 				zooKeeper.delete(path, -1);
@@ -86,7 +93,7 @@ public class ZookeeperRegistry implements ServiceRegistry, Watcher {
 
 	private void createPath(List<String> folders) {
 
-		String path = folders.stream().collect(Collectors.joining("/"));
+		String path = folders.stream().collect(Collectors.joining("/", "/", ""));
 
 		try {
 			if (zooKeeper.exists(path, false) == null) {

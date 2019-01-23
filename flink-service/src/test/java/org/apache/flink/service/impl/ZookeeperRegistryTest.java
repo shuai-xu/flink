@@ -54,7 +54,7 @@ public class ZookeeperRegistryTest {
 		Assert.assertEquals("test_service", instances.get(0).getServiceName());
 		Assert.assertEquals("1", instances.get(0).getInstanceId());
 		Assert.assertEquals("127.0.0.1", instances.get(0).getServiceIp());
-		Assert.assertEquals(1011, instances.get(0).getServiceIp());
+		Assert.assertEquals(1011, instances.get(0).getServicePort());
 		Assert.assertEquals("test_service", instances.get(0).getServiceName());
 		Assert.assertArrayEquals(new byte[1], instances.get(0).getCustomData());
 		zookeeperRegistry.close();
