@@ -122,10 +122,11 @@ The value associated with a user key can be retrieved using `get(UK)`. The itera
 and values can be retrieved using `entries()`, `keys()`, and `values()` respectively. You can retrieve the first and
 last entry of the stored mappings, using `firstEntry()`, and `lastEntry()`, respectively. The head iterable view for mappings,
 tail iterable view and sub iterable view of the current sorted mappings can be retrieved by `headIterator()`,
-`tailIterator` and `subIterator`. **`Be careful when using SortedMapState. For RocksDBStateBackend, 
-we only support BytewiseComparator. The comparison of the serialized forms are identical to that of the objects only 
-when the numbers to compare are both not negative. Serializers under org.apache.flink.table.typeutils.ordered 
-would be helpful if you want to use SortedMapState.`**
+`tailIterator()` and `subIterator()`. **Be careful when using SortedMapState. For RocksDBStateBackend, 
+we only support `BytewiseComparator`. The comparison result of `BytewiseComparator` on heap objects is consistent with 
+the comparison result after serializeation. Taking numbers as an example, the comparison result of the serialized forms is 
+consistent with that of the numbers, only when the numbers to compare are both not negative. Serializers under 
+`org.apache.flink.table.typeutils.ordered` would be helpful if you want to use SortedMapState.**
 
 All types of state also have a method `clear()` that clears the state for the currently
 active key, i.e. the key of the input element.
