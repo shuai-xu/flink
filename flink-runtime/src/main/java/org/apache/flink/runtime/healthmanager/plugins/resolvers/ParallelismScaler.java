@@ -32,6 +32,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.RescaleJobParallelism;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexBackPressure;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayIncreasing;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
@@ -247,6 +248,8 @@ public class ParallelismScaler implements Resolver {
 	public Action resolve(List<Symptom> symptomList) {
 		LOGGER.debug("Start resolving.");
 
+		JobUnstable jobUnstableSymptom = null;
+
 		// symptoms for parallelism rescaling
 		JobVertexFrequentFullGC jobVertexFrequentFullGC = null;
 		JobVertexFailover jobVertexFailover = null;
@@ -261,6 +264,10 @@ public class ParallelismScaler implements Resolver {
 		JobVertexOverParallelized jobVertexOverParallelized = null;
 
 		for (Symptom symptom : symptomList) {
+
+			if (symptom == JobUnstable.INSTANCE) {
+				jobUnstableSymptom = JobUnstable.INSTANCE;
+			}
 
 			if (symptom instanceof JobVertexFrequentFullGC) {
 				jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
@@ -298,7 +305,7 @@ public class ParallelismScaler implements Resolver {
 			}
 		}
 
-		if (jobVertexFrequentFullGC != null || jobVertexFailover != null) {
+		if (jobUnstableSymptom != null || jobVertexFrequentFullGC != null || jobVertexFailover != null) {
 			LOGGER.debug("Job is not stable, should not rescale parallelism.");
 			return null;
 		}

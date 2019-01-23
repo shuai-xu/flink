@@ -21,11 +21,11 @@ package org.apache.flink.runtime.healthmanager.plugins.symptoms;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 
 /**
- * Symptom indicating job stable.
+ * Symptom indicating job is not stable.
  */
-public class JobStable implements Symptom {
+public class JobUnstable implements Symptom {
 
-	public static final JobStable INSTANCE = new JobStable();
+	public static final JobUnstable INSTANCE = new JobUnstable();
 
-	private JobStable() {}
+	private JobUnstable() {}
 }
