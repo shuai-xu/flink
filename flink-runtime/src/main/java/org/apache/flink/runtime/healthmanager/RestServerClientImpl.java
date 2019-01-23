@@ -161,7 +161,6 @@ public class RestServerClientImpl implements RestServerClient {
 		}
 	}
 
-	//JobAllSubtaskCurrentAttemptsHandler
 	@Override
 	public JobStatus getJobStatus(JobID jobId) throws Exception {
 		final JobAllSubtaskCurrentAttemptsInfoHeaders headers =
@@ -199,19 +198,15 @@ public class RestServerClientImpl implements RestServerClient {
 				Map<JobVertexID, List<JobException>> jobVertexId2exceptions = new HashMap<>();
 				for (JobExceptionsInfo.ExecutionExceptionInfo exception : exceptions) {
 					JobVertexID jobVertexID = JobVertexID.fromHexString(exception.getVertexID());
-					if (exception.getTimestamp() >= startTime && exception.getTimestamp() <= endTime) {
-						JobException vertexException = new JobException(exception.getException());
-						List<JobException> vertexExceptions;
-						if (jobVertexId2exceptions.containsKey(jobVertexID)) {
-							vertexExceptions = jobVertexId2exceptions.get(jobVertexID);
-						} else {
-							vertexExceptions = new ArrayList<>();
-						}
-						vertexExceptions.add(vertexException);
-						jobVertexId2exceptions.put(jobVertexID, vertexExceptions);
+					JobException vertexException = new JobException(exception.getException());
+					List<JobException> vertexExceptions;
+					if (jobVertexId2exceptions.containsKey(jobVertexID)) {
+						vertexExceptions = jobVertexId2exceptions.get(jobVertexID);
 					} else {
-						continue;
+						vertexExceptions = new ArrayList<>();
 					}
+					vertexExceptions.add(vertexException);
+					jobVertexId2exceptions.put(jobVertexID, vertexExceptions);
 				}
 				return jobVertexId2exceptions;
 			}
@@ -356,7 +351,7 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public Map<Long, Exception> getTotalResourceLimitExceptions() throws java.lang.Exception {
+	public Map<Long, Exception> getTotalResourceLimitExceptions() throws Exception {
 		final TotalResourceLimitExceptionInfosHeaders headers = TotalResourceLimitExceptionInfosHeaders.getInstance();
 		final EmptyMessageParameters param = headers.getUnresolvedMessageParameters();
 		Map<Long, Exception> result = new HashMap<>();

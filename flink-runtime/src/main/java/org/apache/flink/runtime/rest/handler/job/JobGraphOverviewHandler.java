@@ -78,7 +78,6 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 					List<Integer> nodeIds;
 					JobVertexID vertexID = vertex.getID();
 					if (vertex.getOperatorDescriptors() != null) {
-						vertex.getCoLocationGroup().getId();
 						nodeIds = vertex.getOperatorDescriptors().stream().map(op -> op.getNodeId()).collect(Collectors.toList());
 					} else {
 						nodeIds = new ArrayList<>();

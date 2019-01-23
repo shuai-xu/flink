@@ -21,24 +21,26 @@ package org.apache.flink.runtime.rest.messages;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.messages.json.JobVertexIDDeserializer;
+import org.apache.flink.runtime.rest.messages.json.JobVertexIDSerializer;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * ResourceSpec Info class.
  */
-public class ExecutionVertexIDInfo implements ResponseBody, Serializable {
+public class ExecutionVertexIDInfo implements ResponseBody{
 
 	public static final String FIELD_NAME_VERTEX_ID = "vertex-id";
 	public static final String FIELD_NAME_TASK_INDEX = "task-index";
 
 	@JsonProperty(FIELD_NAME_VERTEX_ID)
+	@JsonSerialize(using = JobVertexIDSerializer.class)
 	private final JobVertexID jobVertexID;
 
 	@JsonProperty(FIELD_NAME_TASK_INDEX)
