@@ -24,7 +24,6 @@ import org.apache.flink.service.ServiceInstance;
 import org.apache.flink.service.ServiceRegistry;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
-import org.apache.flink.table.temptable.FlinkTableService;
 import org.apache.flink.table.temptable.TableServiceException;
 import org.apache.flink.table.temptable.TableServiceOptions;
 import org.apache.flink.table.temptable.util.BytesUtil;
@@ -84,6 +83,8 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private ServiceRegistry registry;
 
+	private String tableServiceId;
+
 	public void setRegistry(ServiceRegistry registry) {
 		this.registry = registry;
 	}
@@ -93,7 +94,7 @@ public class TableServiceClient implements LifeCycleAware {
 	}
 
 	public List<Integer> getPartitions(String tableName) {
-		List<ServiceInstance> serviceInfoList = getRegistry().getAllInstances(FlinkTableService.class.getSimpleName());
+		List<ServiceInstance> serviceInfoList = getRegistry().getAllInstances(tableServiceId);
 		List<Integer> partitions = new ArrayList<>();
 		if (serviceInfoList != null) {
 			for (ServiceInstance serviceInfo : serviceInfoList) {
@@ -189,6 +190,10 @@ public class TableServiceClient implements LifeCycleAware {
 	@Override
 	public void open(Configuration config) throws Exception{
 
+		tableServiceId = config.getString(TableServiceOptions.TABLE_SERVICE_ID);
+
+		logger.info("TableServiceClient open with tableServiceId = " + tableServiceId);
+
 		if (getRegistry() != null) {
 			getRegistry().open(config);
 		}
@@ -244,7 +249,7 @@ public class TableServiceClient implements LifeCycleAware {
 		lastTableName = tableName;
 		lastPartitionIndex = partitionIndex;
 		lastTablePartitionOffset = 0;
-		serviceInfoList = getRegistry().getAllInstances(FlinkTableService.class.getSimpleName());
+		serviceInfoList = getRegistry().getAllInstances(tableServiceId);
 
 		if (serviceInfoList == null || serviceInfoList.isEmpty()) {
 			logger.error("fetch serviceInfoList fail");
@@ -296,9 +301,10 @@ public class TableServiceClient implements LifeCycleAware {
 
 	public boolean isReady() {
 
-		List<ServiceInstance> serviceInfoList = getRegistry().getAllInstances(FlinkTableService.class.getSimpleName());
+		List<ServiceInstance> serviceInfoList = getRegistry().getAllInstances(tableServiceId);
 
 		if (serviceInfoList == null || serviceInfoList.isEmpty()) {
+			logger.info("serviceInfoList is empty");
 			return false;
 		}
 

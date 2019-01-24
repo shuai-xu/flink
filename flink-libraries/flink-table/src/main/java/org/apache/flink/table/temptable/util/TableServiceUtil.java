@@ -32,8 +32,6 @@ import org.apache.flink.table.temptable.TableServiceException;
 import org.apache.flink.table.temptable.rpc.TableServiceClient;
 import org.apache.flink.table.util.TableProperties;
 
-import java.util.UUID;
-
 import static org.apache.flink.table.temptable.TableServiceOptions.TABLE_SERVICE_CLASS_NAME;
 import static org.apache.flink.table.temptable.TableServiceOptions.TABLE_SERVICE_CLIENT_READ_BUFFER_SIZE;
 import static org.apache.flink.table.temptable.TableServiceOptions.TABLE_SERVICE_CLIENT_WRITE_BUFFER_SIZE;
@@ -63,7 +61,7 @@ public final class TableServiceUtil {
 			.setNativeMemoryInMB(serviceDescriptor.getServiceNativeMemoryMb())
 			.build();
 
-		DataStream<BaseRow> ds = env.addSource(new FlinkTableServiceFunction(serviceDescriptor, UUID.randomUUID().toString()))
+		DataStream<BaseRow> ds = env.addSource(new FlinkTableServiceFunction(serviceDescriptor))
 			.setParallelism(serviceDescriptor.getServiceParallelism())
 			.setMaxParallelism(serviceDescriptor.getServiceParallelism());
 

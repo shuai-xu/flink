@@ -25,6 +25,7 @@ import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.table.plan.util.LogicalNodeUtil
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.temptable.TableServiceOptions
 import org.apache.flink.table.util.TableProperties
 
 import _root_.scala.collection.JavaConverters._
@@ -91,6 +92,10 @@ class CacheAwareRelNodePlanBuilder(tEnv: TableEnvironment) {
           val tableProperties = properties.get
           tableProperties.putTableNameIntoProperties(name)
           tableProperties.putSchemaIntoProperties(schema.get)
+          tableProperties.setString(
+            TableServiceOptions.TABLE_SERVICE_ID,
+            tEnv.tableServiceManager.getTableServiceId()
+          )
           sink.createBatchTableSink(tableProperties.toMap)
         }
         case _ => throw new RuntimeException("Do not supported: " + tableFactory)
@@ -106,6 +111,10 @@ class CacheAwareRelNodePlanBuilder(tEnv: TableEnvironment) {
           val tableProperties = properties.get
           tableProperties.putTableNameIntoProperties(name)
           tableProperties.putSchemaIntoProperties(schema.get)
+          tableProperties.setString(
+            TableServiceOptions.TABLE_SERVICE_ID,
+            tEnv.tableServiceManager.getTableServiceId()
+          )
           sink.createBatchTableSource(tableProperties.toMap)
         }
         case _ => throw new RuntimeException("Do not supported: " + tableFactory)

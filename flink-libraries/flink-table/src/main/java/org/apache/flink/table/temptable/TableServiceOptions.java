@@ -101,9 +101,9 @@ public final class TableServiceOptions {
 
 	/**
 	 * Specify the id of the TableService instance.
-	 * This configuration is package private because it should be used internally..
+	 * This configuration should be used internally.
 	 */
-	static final ConfigOption<String> TABLE_SERVICE_ID =
+	public static final ConfigOption<String> TABLE_SERVICE_ID =
 		key("flink.service.table.service.id")
 		.noDefaultValue();
 

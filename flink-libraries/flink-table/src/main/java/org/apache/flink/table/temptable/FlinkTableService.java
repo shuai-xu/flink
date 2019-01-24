@@ -46,8 +46,12 @@ public class FlinkTableService extends UserDefinedService {
 
 	private ServiceRegistry registry;
 
+	private String tableServiceId;
+
 	@Override
 	public void open(Configuration config) throws Exception {
+		tableServiceId = config.getString(TableServiceOptions.TABLE_SERVICE_ID);
+		logger.info("start table service with id:" + tableServiceId);
 		registry = getServiceContext().getRegistry();
 		registry.open(config);
 		manager = new TableServiceImpl(getServiceContext());
@@ -95,13 +99,13 @@ public class FlinkTableService extends UserDefinedService {
 	private void addInstance() {
 		int subIndex = getServiceContext().getIndexOfCurrentInstance();
 		int parallelism = getServiceContext().getNumberOfInstances();
-		registry.addInstance(this.getClass().getSimpleName(), subIndex + "_" + parallelism, serviceIP, servicePort, null);
+		registry.addInstance(tableServiceId, subIndex + "_" + parallelism, serviceIP, servicePort, null);
 	}
 
 	private void removeInstance() {
 		int subIndex = getServiceContext().getIndexOfCurrentInstance();
 		int parallelism = getServiceContext().getNumberOfInstances();
-		registry.removeInstance(this.getClass().getSimpleName(),  subIndex + "_" + parallelism);
+		registry.removeInstance(tableServiceId,  subIndex + "_" + parallelism);
 	}
 
 	@Override

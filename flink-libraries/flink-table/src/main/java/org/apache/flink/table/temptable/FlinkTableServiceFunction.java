@@ -54,9 +54,8 @@ public class FlinkTableServiceFunction extends RichParallelSourceFunction<BaseRo
 
 	private volatile boolean closed;
 
-	public FlinkTableServiceFunction(ServiceDescriptor serviceDescriptor, String tableServiceId) {
+	public FlinkTableServiceFunction(ServiceDescriptor serviceDescriptor) {
 		this.serviceDescriptor = serviceDescriptor;
-		this.tableServiceId = tableServiceId;
 	}
 
 	@Override
@@ -85,6 +84,7 @@ public class FlinkTableServiceFunction extends RichParallelSourceFunction<BaseRo
 	@Override
 	public void open(Configuration parameters) throws Exception {
 		super.open(parameters);
+		tableServiceId = serviceDescriptor.getConfiguration().getString(TableServiceOptions.TABLE_SERVICE_ID);
 		service = (UserDefinedService) Class.forName(serviceDescriptor.getServiceClassName()).newInstance();
 		service.setServiceContext(new ServiceContext() {
 			@Override
@@ -107,7 +107,6 @@ public class FlinkTableServiceFunction extends RichParallelSourceFunction<BaseRo
 				return getRuntimeContext().getIndexOfThisSubtask();
 			}
 		});
-		serviceDescriptor.getConfiguration().setString(TableServiceOptions.TABLE_SERVICE_ID, tableServiceId);
 		service.open(serviceDescriptor.getConfiguration());
 		executorService = Executors.newFixedThreadPool(1);
 		logger.info("TableService " + getRuntimeContext().getTaskNameWithSubtasks() + " opened");

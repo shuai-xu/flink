@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.temptable
 
+import java.util.UUID
+
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.common.JobSubmissionResult
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
@@ -46,6 +48,8 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
   private[flink] var submitResult: JobSubmissionResult = _
 
   private var tableServiceEnv: StreamExecutionEnvironment = _
+
+  private lazy val tableServiceId: String = UUID.randomUUID().toString
 
   def getTableServiceFactory(): Option[TableFactory] = {
     Option(tEnv.getConfig.getTableServiceFactoryDescriptor().getTableFactory)
@@ -113,12 +117,15 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
     }
   }
 
+  def getTableServiceId(): String = tableServiceId
+
   @VisibleForTesting
   private[flink] def startTableServiceJobInternally(descriptor: ServiceDescriptor): Unit = {
     if (!tableServiceStarted) {
       val executionEnv = StreamExecutionEnvironment.getExecutionEnvironment
       executionEnv.setRestartStrategy(
         RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 500L))
+      descriptor.getConfiguration.setString(TableServiceOptions.TABLE_SERVICE_ID, tableServiceId)
       TableServiceUtil.createTableServiceJob(executionEnv, descriptor)
       submitResult = executionEnv.submit("FlinkTableServiceJob")
       tableServiceEnv = executionEnv
