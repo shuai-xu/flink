@@ -196,7 +196,8 @@ object CodeGenUtils {
     */
   def isInternalClass(clazz: Class[_], t: DataType): Boolean =
     clazz != classOf[Object] && clazz != classOf[Row] &&
-      clazz == TypeConverters.createInternalTypeInfoFromDataType(t).getTypeClass
+      (classOf[BaseRow].isAssignableFrom(clazz) ||
+        clazz == TypeConverters.createInternalTypeInfoFromDataType(t).getTypeClass)
 
   def qualifyMethod(method: Method): String =
     method.getDeclaringClass.getCanonicalName + "." + method.getName
