@@ -80,16 +80,16 @@ public interface ReadableCatalog extends Closeable {
 	// ------ tables and views ------
 
 	/**
-	 * Gets paths of all tables registered in all databases of the catalog. An empty list is returned if no table is registered.
+	 * Gets paths of all tables and views registered in all databases of the catalog. An empty list is returned if none is registered.
 	 *
-	 * @return A list of the names of all registered tables in all databases in the catalog.
+	 * @return A list of the names of all registered tables and views in all databases in the catalog.
 	 */
 	List<ObjectPath> listAllTables();
 
 	/**
-	 * Gets paths of all tables registered in this database. An empty list is returned if no table is registered.
+	 * Gets paths of all tables and views registered in this database. An empty list is returned if none is registered.
 	 *
-	 * @return A list of the names of all registered tables in this database.
+	 * @return A list of the names of all registered tables and views in this database.
 	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog.
 	 */
 	List<ObjectPath> listTables(String dbName) throws DatabaseNotExistException;

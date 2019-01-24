@@ -455,6 +455,7 @@ public abstract class CatalogTestBase {
 		catalog.createTable(path3, createTable(), false);
 
 		assertEquals(2, catalog.listTables(db1).size());
+		assertEquals(new HashSet<>(Arrays.asList(path1, path3)), new HashSet<>(catalog.listTables(db1)));
 		assertEquals(Arrays.asList(path1), catalog.listViews(db1));
 	}
 

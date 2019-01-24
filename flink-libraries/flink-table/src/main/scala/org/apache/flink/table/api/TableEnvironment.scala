@@ -1069,9 +1069,9 @@ abstract class TableEnvironment(
   }
 
   /**
-    * Gets the names of all tables registered in the default database.
+    * Gets the names of all tables and views registered in the default database.
     *
-    * @return A list of the names of all registered tables.
+    * @return A list of the names of all registered tables and views.
     */
   def listTables(): Array[String] = {
     catalogManager.getDefaultCatalog.listTables(catalogManager.getDefaultDatabaseName)

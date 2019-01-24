@@ -41,7 +41,7 @@ public interface Executor {
 	Map<String, String> getSessionProperties(SessionContext session) throws SqlExecutionException;
 
 	/**
-	 * Lists all tables in the default database.
+	 * Lists all tables and views in the default database.
 	 */
 	List<String> listTables(SessionContext session) throws SqlExecutionException;
 
