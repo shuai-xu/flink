@@ -67,6 +67,9 @@ public class StreamNode implements Serializable {
 	private List<StreamEdge> inEdges = new ArrayList<StreamEdge>();
 	private List<StreamEdge> outEdges = new ArrayList<StreamEdge>();
 
+	private List<StreamControlEdge> inControlEdges = new ArrayList<>();
+	private List<StreamControlEdge> outControlEdges = new ArrayList<>();
+
 	private final Class<? extends AbstractInvokable> jobVertexClass;
 
 	private InputFormat<?, ?> inputFormat;
@@ -135,6 +138,30 @@ public class StreamNode implements Serializable {
 		}
 
 		return inEdgeIndices;
+	}
+
+	public void addInControlEdge(StreamControlEdge controlEdge) {
+		if (controlEdge.getTargetId() != getId()) {
+			throw new IllegalArgumentException("Destination id doesn't match the StreamNode id");
+		} else {
+			inControlEdges.add(controlEdge);
+		}
+	}
+
+	public void addOutControlEdge(StreamControlEdge controlEdge) {
+		if (controlEdge.getSourceId() != getId()) {
+			throw new IllegalArgumentException("Source id doesn't match the StreamNode id");
+		} else {
+			outControlEdges.add(controlEdge);
+		}
+	}
+
+	public List<StreamControlEdge> getInControlEdges() {
+		return inControlEdges;
+	}
+
+	public List<StreamControlEdge> getOutControlEdges() {
+		return outControlEdges;
 	}
 
 	public int getId() {
@@ -308,6 +335,10 @@ public class StreamNode implements Serializable {
 
 	public void setUserHash(String userHash) {
 		this.userHash = userHash;
+	}
+
+	public Map<StreamEdge, ReadPriority> getReadPriorityHints() {
+		return readPriorityHintMap;
 	}
 
 	public ReadPriority getReadPriorityHint(StreamEdge inEdge) {

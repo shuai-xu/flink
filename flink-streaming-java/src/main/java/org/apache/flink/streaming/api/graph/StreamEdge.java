@@ -77,6 +77,11 @@ public class StreamEdge implements Serializable {
 	 */
 	private final DamBehavior damBehavior;
 
+	/**
+	 * The scheduling mode between the target and source vertex.
+	 */
+	private StreamSchedulingMode schedulingMode;
+
 	@VisibleForTesting
 	public StreamEdge(StreamNode sourceVertex, StreamNode targetVertex, int typeNumber,
 			List<String> selectedNames, StreamPartitioner<?> outputPartitioner, OutputTag outputTag) {
@@ -138,12 +143,20 @@ public class StreamEdge implements Serializable {
 		return this.damBehavior;
 	}
 
+	public StreamSchedulingMode getSchedulingMode() {
+		return schedulingMode;
+	}
+
 	public void setPartitioner(StreamPartitioner<?> partitioner) {
 		this.outputPartitioner = partitioner;
 	}
 
 	public void setDataExchangeMode(DataExchangeMode dataExchangeMode) {
 		this.dataExchangeMode = dataExchangeMode;
+	}
+
+	public void setSchedulingMode(StreamSchedulingMode schedulingMode) {
+		this.schedulingMode = schedulingMode;
 	}
 
 	@Override

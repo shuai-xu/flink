@@ -23,7 +23,7 @@ import org.apache.flink.runtime.jobgraph.EdgeID;
 import java.util.Objects;
 
 /**
- * An control edge in the streaming topology to expresses scheduling dependencies.
+ * An control edge in the stream topology to expresses scheduling dependencies.
  * Data is not transmitted on the edge and the target vertex on the edge is dependent
  * on the source vertex. One edge like this does not necessarily gets converted to a
  * connection between two job vertices (due to chaining/optimization).
@@ -36,30 +36,39 @@ public class StreamControlEdge implements java.io.Serializable {
 
 	private final String edgeName;
 
-	private final StreamNode sourceVertex;
-	private final StreamNode targetVertex;
+	private final int sourceId;
+	private final int targetId;
 
 	private final ControlType controlType;
 
+	private final String sourceOperatorName;
+	private final String targetOperatorName;
+
 	public StreamControlEdge(StreamNode sourceVertex, StreamNode targetVertex, ControlType controlType) {
-		this.sourceVertex = sourceVertex;
-		this.targetVertex = targetVertex;
+		this.sourceId = sourceVertex.getId();
+		this.targetId = targetVertex.getId();
 		this.controlType = controlType;
+		this.sourceOperatorName = sourceVertex.getOperatorName();
+		this.targetOperatorName = targetVertex.getOperatorName();
 
 		this.edgeID = new EdgeID();
 		this.edgeName = sourceVertex + "_" + targetVertex + "_" + controlType;
 	}
 
 	public EdgeID getEdgeID() {
-		return this.edgeID;
+		return edgeID;
 	}
 
-	public StreamNode getSourceVertex() {
-		return this.sourceVertex;
+	public int getSourceId() {
+		return sourceId;
 	}
 
-	public StreamNode getTargetVertex() {
-		return this.targetVertex;
+	public int getTargetId() {
+		return targetId;
+	}
+
+	public ControlType getControlType() {
+		return controlType;
 	}
 
 	@Override
@@ -83,7 +92,7 @@ public class StreamControlEdge implements java.io.Serializable {
 
 	@Override
 	public String toString() {
-		return "(" + sourceVertex.getId() + " -> " + targetVertex.getId() +
+		return "(" + (sourceOperatorName + "-" + sourceId) + " -> " + (targetOperatorName + "-" + targetId) +
 				", controlType=" + controlType.name() + ", edgeID=" + edgeID + ')';
 	}
 }

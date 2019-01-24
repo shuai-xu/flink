@@ -33,8 +33,10 @@ import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
 import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
+import org.apache.flink.runtime.jobgraph.ControlType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.FormatUtil;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -44,6 +46,7 @@ import org.apache.flink.runtime.jobgraph.MultiInputOutputFormatVertex;
 import org.apache.flink.runtime.jobgraph.OperatorDescriptor;
 import org.apache.flink.runtime.jobgraph.OperatorEdgeDescriptor;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.jobgraph.SchedulingMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
 import org.apache.flink.runtime.jobgraph.tasks.JobCheckpointingSettings;
@@ -96,6 +99,7 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -182,6 +186,8 @@ public class StreamingJobGraphGenerator {
 		setChaining(hashes, legacyHashes);
 
 		connectEdges();
+
+		connectControlEdges();
 
 		setTags();
 
@@ -1234,9 +1240,84 @@ public class StreamingJobGraphGenerator {
 			// set strategy name so that web interface can show it.
 			jobEdge.setShipStrategyName(partitioner.toString());
 
+			// set scheduling hint of the job edge
+			final SchedulingMode schedulingMode;
+			switch (edge.getSchedulingMode()) {
+				case CONCURRENT:
+					schedulingMode = SchedulingMode.CONCURRENT;
+					break;
+				case SEQUENTIAL:
+					schedulingMode = SchedulingMode.SEQUENTIAL;
+					break;
+				case AUTO:
+					if (ExecutionMode.PIPELINED.equals(executionMode)) {
+						schedulingMode = SchedulingMode.CONCURRENT;
+					} else if (ExecutionMode.BATCH.equals(executionMode)) {
+						schedulingMode = SchedulingMode.SEQUENTIAL;
+					} else {
+						throw new UnsupportedOperationException("Not Support " + edge.getDataExchangeMode() + " exchanged mode.");
+					}
+					break;
+				default:
+					throw new UnsupportedOperationException("Not Support " + edge.getSchedulingMode() + " scheduling type.");
+			}
+			jobEdge.setSchedulingMode(schedulingMode);
+
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("CONNECTED: {} - {} -> {}", partitioner.getClass().getSimpleName(),
 					edge.getSourceId(), edge.getTargetId());
+			}
+		}
+	}
+
+	private void connectControlEdges() {
+		// transform to the control edges of the job graph from the control edges of the stream graph
+		Map<JobVertex, Map<JobVertex, Set<ControlType>>> edgeControlTypes = new HashMap<>();
+		for (StreamNode streamNode : streamGraph.getStreamNodes()) {
+			for (StreamControlEdge controlEdge : streamNode.getInControlEdges()) {
+				JobVertex sourceVertex = nodeToJobVertexMap.get(controlEdge.getSourceId());
+				JobVertex targetVertex = nodeToJobVertexMap.get(controlEdge.getTargetId());
+
+				if (!sourceVertex.getID().equals(targetVertex.getID())) {
+					Map<JobVertex, Set<ControlType>> controlTypeMap = edgeControlTypes.computeIfAbsent(sourceVertex, k -> new HashMap());
+					Set<ControlType> controlTypes = controlTypeMap.computeIfAbsent(targetVertex, k -> new HashSet<>());
+					controlTypes.add(controlEdge.getControlType());
+				}
+			}
+		}
+
+		// convert inverse dependencies
+		Iterator<JobVertex> itVertex = jobGraph.getVertices().iterator();
+		while (itVertex.hasNext()) {
+			JobVertex producer = itVertex.next();
+			for (IntermediateDataSet dataSet : producer.getProducedDataSets()) {
+				for (JobEdge edge : dataSet.getConsumers()) {
+					JobVertex consumer = edge.getTarget();
+					if (!edgeControlTypes.containsKey(consumer) || !edgeControlTypes.get(consumer).containsKey(producer)) {
+						continue;
+					}
+
+					edgeControlTypes.get(consumer).remove(producer);
+
+					Map<JobVertex, Set<ControlType>> controlTypeMap = edgeControlTypes.computeIfAbsent(producer, k -> new HashMap<>());
+					Set<ControlType> controlTypes = controlTypeMap.computeIfAbsent(consumer, k -> new HashSet<>());
+					controlTypes.clear();
+					controlTypes.add(ControlType.CONCURRENT);
+				}
+			}
+		}
+
+		// connect the control edges between job vertices
+		for (JobVertex sourceVertex : edgeControlTypes.keySet()) {
+			for (Map.Entry<JobVertex, Set<ControlType>> entry : edgeControlTypes.get(sourceVertex).entrySet()) {
+				JobVertex targetVertex = entry.getKey();
+				final ControlType controlType;
+				if (entry.getValue().contains(ControlType.CONCURRENT)) {
+					controlType = ControlType.CONCURRENT;
+				} else {
+					controlType = ControlType.START_ON_FINISH;
+				}
+				targetVertex.connectControlEdge(sourceVertex, controlType);
 			}
 		}
 	}

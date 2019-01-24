@@ -31,8 +31,7 @@ import java.util.Map;
 public class JobEdge implements java.io.Serializable {
 
 	private static final long serialVersionUID = 1L;
-	
-	
+
 	/** The vertex connected to this edge. */
 	private final JobVertex target;
 
@@ -58,7 +57,10 @@ public class JobEdge implements java.io.Serializable {
 
 	/** This cache helps to reduce the calculation load of consumer vertices for each partition */
 	private transient Map<Integer, Collection<ExecutionVertexID>> consumerExecutionVerticesCache;
-	
+
+	/** The scheduling mode between the target vertex and the source of this edge. */
+	private SchedulingMode schedulingMode;
+
 	/**
 	 * Constructs a new job edge, that connects an intermediate result to a consumer task.
 	 * 
@@ -206,6 +208,14 @@ public class JobEdge implements java.io.Serializable {
 	 */
 	public void setOperatorLevelCachingDescription(String operatorLevelCachingDescription) {
 		this.operatorLevelCachingDescription = operatorLevelCachingDescription;
+	}
+
+	public SchedulingMode getSchedulingMode() {
+		return schedulingMode;
+	}
+
+	public void setSchedulingMode(SchedulingMode schedulingMode) {
+		this.schedulingMode = schedulingMode;
 	}
 
 	/**

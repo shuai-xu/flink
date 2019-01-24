@@ -27,7 +27,9 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.runtime.jobgraph.ControlType;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
+import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -192,7 +194,76 @@ public class StreamGraphGenerator {
 			}
 		}
 
+		// set scheduling dependencies
+		setSchedulingDependencies();
+
 		return streamGraph;
+	}
+
+	private void setSchedulingDependencies() {
+		// set scheduling mode for all stream edges
+		for (StreamNode node : streamGraph.getStreamNodes()) {
+			for (StreamEdge inEdge : node.getInEdges()) {
+				final StreamSchedulingMode schedulingMode;
+
+				if (DamBehavior.FULL_DAM.equals(inEdge.getDamBehavior())) {
+					schedulingMode = StreamSchedulingMode.SEQUENTIAL;
+				} else {
+					switch (inEdge.getDataExchangeMode()) {
+						case PIPELINED:
+							schedulingMode = StreamSchedulingMode.CONCURRENT;
+							break;
+						case BATCH:
+							schedulingMode = StreamSchedulingMode.SEQUENTIAL;
+							break;
+						case AUTO:
+							schedulingMode = StreamSchedulingMode.AUTO;
+							break;
+						default:
+							throw new UnsupportedOperationException("Not Support " + inEdge.getDataExchangeMode() + " exchanged mode.");
+					}
+				}
+				inEdge.setSchedulingMode(schedulingMode);
+			}
+		}
+
+		// add control edges
+		for (StreamNode currentNode : streamGraph.getStreamNodes()) {
+			Map<ReadPriority, List<StreamNode>> readPriorityMap = new HashMap<>();
+			for (Map.Entry<StreamEdge, ReadPriority> entry : currentNode.getReadPriorityHints().entrySet()) {
+				readPriorityMap.computeIfAbsent(entry.getValue(), k -> new ArrayList())
+						.add(streamGraph.getStreamNode(entry.getKey().getSourceId()));
+			}
+
+			List<StreamNode> laterScheduledInputNodes = readPriorityMap.get(ReadPriority.LOWER);
+			if (laterScheduledInputNodes != null && laterScheduledInputNodes.size() > 0 && readPriorityMap.size() > 1) {
+				for (Map.Entry<StreamEdge, ReadPriority> entry : currentNode.getReadPriorityHints().entrySet()) {
+					if (ReadPriority.LOWER.equals(entry.getValue())) {
+						continue;
+					}
+
+					StreamNode firstScheduledInputNode = streamGraph.getStreamNode(entry.getKey().getSourceId());
+					for (StreamNode laterScheduledInputNode : laterScheduledInputNodes) {
+						streamGraph.addControlEdge(
+								firstScheduledInputNode.getId(), laterScheduledInputNode.getId(), ControlType.START_ON_FINISH);
+					}
+				}
+
+				for (StreamNode laterScheduledInputNode : laterScheduledInputNodes) {
+					for (StreamEdge outEdge : currentNode.getOutEdges()) {
+						if (DamBehavior.MATERIALIZING.equals(outEdge.getDamBehavior())) {
+							streamGraph.addControlEdge(laterScheduledInputNode.getId(), outEdge.getTargetId(), ControlType.CONCURRENT);
+						}
+					}
+				}
+			} else {
+				for (StreamEdge outEdge : currentNode.getOutEdges()) {
+					if (DamBehavior.MATERIALIZING.equals(outEdge.getDamBehavior())) {
+						outEdge.setSchedulingMode(StreamSchedulingMode.SEQUENTIAL);
+					}
+				}
+			}
+		}
 	}
 
 	/**

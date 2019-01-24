@@ -41,7 +41,7 @@ public class PartitionTransformation<T> extends StreamTransformation<T> {
 
 	private final StreamTransformation<T> input;
 	private final StreamPartitioner<T> partitioner;
-	private final DataExchangeMode dataExchangeMode;
+	private DataExchangeMode dataExchangeMode;
 
 	/**
 	 * Creates a new {@code PartitionTransformation} from the given input and
@@ -90,6 +90,13 @@ public class PartitionTransformation<T> extends StreamTransformation<T> {
 	 */
 	public DataExchangeMode getDataExchangeMode() {
 		return dataExchangeMode;
+	}
+
+	/**
+	 * Sets the dataExchangeMode.
+	 */
+	public void setDataExchangeMode(DataExchangeMode dataExchangeMode) {
+		this.dataExchangeMode = dataExchangeMode;
 	}
 
 	@Override

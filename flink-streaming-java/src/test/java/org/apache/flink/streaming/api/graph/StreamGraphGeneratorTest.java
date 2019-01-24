@@ -32,6 +32,8 @@ import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
+import org.apache.flink.runtime.jobgraph.ControlType;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.streaming.api.datastream.ConnectedStreams;
@@ -42,7 +44,9 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironmentFactory;
+import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
+import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -53,6 +57,7 @@ import org.apache.flink.streaming.api.operators.StreamSource;
 import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
+import org.apache.flink.streaming.api.transformations.PartitionTransformation;
 import org.apache.flink.streaming.api.transformations.SideOutputTransformation;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation;
@@ -68,6 +73,7 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.streaming.util.EvenOddOutputSelector;
 import org.apache.flink.streaming.util.NoOpIntMap;
+import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
 
 import org.junit.Test;
@@ -75,6 +81,8 @@ import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
+import javax.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -1032,6 +1040,171 @@ public class StreamGraphGeneratorTest {
 		}
 	}
 
+	@Test
+	public void testSchedulingDependencies() {
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+
+			DataStream<Integer> aggregation1 = source1.process(new NoOpProcess());
+			((OneInputTransformation) aggregation1.getTransformation()).setDamBehavior(DamBehavior.FULL_DAM);
+			DataStream<Integer> map1 = aggregation1.map(new NoOpIntMap());
+
+			DataStream<Integer> forward1 = map1.forward();
+			((PartitionTransformation) forward1.getTransformation()).setDataExchangeMode(DataExchangeMode.PIPELINED);
+			DataStream<Integer> map2 = forward1.map(new NoOpIntMap());
+
+			DataStream<Integer> forward2 = map2.forward();
+			((PartitionTransformation) forward2.getTransformation()).setDataExchangeMode(DataExchangeMode.BATCH);
+			DataStream<Integer> map3 = forward2.map(new NoOpIntMap());
+			DataStreamSink sink1 = map3.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			Map<Integer, StreamSchedulingMode> expectedSchedulingModes = new HashMap<>();
+
+			verifySchedulingDependencies(graph, source1.getId(), null, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(source1.getId(), StreamSchedulingMode.AUTO).toMap();
+			verifySchedulingDependencies(graph, aggregation1.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(aggregation1.getId(), StreamSchedulingMode.SEQUENTIAL).toMap();
+			verifySchedulingDependencies(graph, map1.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(map1.getId(), StreamSchedulingMode.CONCURRENT).toMap();
+			verifySchedulingDependencies(graph, map2.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(map2.getId(), StreamSchedulingMode.SEQUENTIAL).toMap();
+			verifySchedulingDependencies(graph, map3.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(map3.getId(), StreamSchedulingMode.AUTO).toMap();
+			verifySchedulingDependencies(graph, sink1.getId(), expectedSchedulingModes, null);
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+			DataStream<Integer> source2 = env.fromElements(1, 10);
+
+			DataStream<Integer> process1 = source1.union(source2).process(new NoOpProcess());
+			((OneInputTransformation) process1.getTransformation()).setDamBehavior(DamBehavior.MATERIALIZING);
+			DataStreamSink sink1 = process1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			Map<Integer, StreamSchedulingMode> expectedSchedulingModes = new HashMap<>();
+
+			verifySchedulingDependencies(graph, source1.getId(), null, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(source1.getId(), StreamSchedulingMode.AUTO)
+					.put(source2.getId(), StreamSchedulingMode.AUTO).toMap();
+			verifySchedulingDependencies(graph, process1.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(process1.getId(), StreamSchedulingMode.SEQUENTIAL).toMap();
+			verifySchedulingDependencies(graph, sink1.getId(), expectedSchedulingModes, null);
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+
+			DataStream<Integer> filter1 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> filter2 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> filter3 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> filter4 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> hashJoin1 = filter1.union(filter2).connect(filter3.union(filter4)).process(new NoOpCoProcessFuntion());
+			TwoInputTransformation hashJoin1Transformation = ((TwoInputTransformation) hashJoin1.getTransformation());
+			hashJoin1Transformation.setReadOrderHint(ReadOrder.INPUT2_FIRST);
+			hashJoin1Transformation.setDamBehavior(DamBehavior.MATERIALIZING);
+
+			DataStream<Integer> map1 = hashJoin1.map(new NoOpIntMap());
+			DataStreamSink sink1 = map1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			Map<Integer, StreamSchedulingMode> expectedSchedulingModes = new HashMap<>();
+			Map<Integer, ControlType> expectedControlEdges = new HashMap<>();
+
+			verifySchedulingDependencies(graph, source1.getId(), null, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(source1.getId(), StreamSchedulingMode.AUTO)
+					.toMap();
+			expectedControlEdges = new MapFiller<>(expectedControlEdges)
+					.put(filter3.getId(), ControlType.START_ON_FINISH)
+					.put(filter4.getId(), ControlType.START_ON_FINISH)
+					.toMap();
+			verifySchedulingDependencies(graph, filter1.getId(), expectedSchedulingModes, expectedControlEdges);
+			verifySchedulingDependencies(graph, filter2.getId(), expectedSchedulingModes, expectedControlEdges);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(source1.getId(), StreamSchedulingMode.AUTO).toMap();
+			verifySchedulingDependencies(graph, filter3.getId(), expectedSchedulingModes, null);
+			verifySchedulingDependencies(graph, filter4.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(filter1.getId(), StreamSchedulingMode.AUTO)
+					.put(filter2.getId(), StreamSchedulingMode.AUTO)
+					.put(filter3.getId(), StreamSchedulingMode.AUTO)
+					.put(filter4.getId(), StreamSchedulingMode.AUTO)
+					.toMap();
+			verifySchedulingDependencies(graph, hashJoin1.getId(), expectedSchedulingModes, null);
+
+			expectedControlEdges = new MapFiller<>(expectedControlEdges)
+					.put(filter1.getId(), ControlType.CONCURRENT)
+					.put(filter2.getId(), ControlType.CONCURRENT)
+					.toMap();
+			verifySchedulingDependencies(graph, map1.getId(),
+					new MapFiller<>(expectedSchedulingModes).put(hashJoin1.getId(), StreamSchedulingMode.AUTO).toMap(),
+					expectedControlEdges);
+
+			verifySchedulingDependencies(graph, sink1.getId(),
+					new MapFiller<>(expectedSchedulingModes).put(map1.getId(), StreamSchedulingMode.AUTO).toMap(),
+					null);
+		}
+	}
+
+	private void verifySchedulingDependencies(
+			StreamGraph graph,
+			Integer nodeId,
+			@Nullable Map<Integer, StreamSchedulingMode> expectedSchedulingModes,
+			@Nullable Map<Integer, ControlType> expectedControlEdges) {
+
+		StreamNode node = graph.getStreamNode(nodeId);
+		expectedSchedulingModes = (expectedSchedulingModes == null) ? new HashMap<>() : expectedSchedulingModes;
+		expectedControlEdges = (expectedControlEdges == null) ? new HashMap<>() : expectedControlEdges;
+
+		assertEquals(expectedSchedulingModes.size(), node.getInEdges().size());
+		for (StreamEdge inEdge : node.getInEdges()) {
+			assertEquals(expectedSchedulingModes.get(inEdge.getSourceId()), inEdge.getSchedulingMode());
+		}
+
+		assertEquals(expectedControlEdges.size(), node.getInControlEdges().size());
+		for (StreamControlEdge controlEdge : node.getInControlEdges()) {
+			ControlType expectedControlType = expectedControlEdges.get(controlEdge.getSourceId());
+			assertEquals(expectedControlType, controlEdge.getControlType());
+
+			boolean assertSourceOutControlEdge = false;
+			StreamNode sourceNode = graph.getStreamNode(controlEdge.getSourceId());
+			for (StreamControlEdge sourceOutControlEdge : sourceNode.getOutControlEdges()) {
+				if (sourceOutControlEdge == controlEdge) {
+					assertSourceOutControlEdge = true;
+				}
+			}
+			assertTrue(assertSourceOutControlEdge);
+		}
+	}
+
 	private static class OutputTypeConfigurableOperationWithTwoInputs
 			extends AbstractStreamOperator<Integer>
 			implements TwoInputStreamOperator<Integer, Integer, Integer>, OutputTypeConfigurable<Integer> {
@@ -1151,11 +1324,32 @@ public class StreamGraphGeneratorTest {
 		}
 	}
 
-	static class NoOpSinkFunction implements SinkFunction<Integer> {
+	private static class NoOpSinkFunction implements SinkFunction<Integer> {
 
 	}
 
-	static class TestStreamEnvironment extends StreamExecutionEnvironment {
+	private static class NoOpProcess extends ProcessFunction<Integer, Integer> {
+
+		@Override
+		public void processElement(Integer value, Context ctx, Collector<Integer> out) throws Exception {
+
+		}
+	}
+
+	private static class NoOpCoProcessFuntion extends CoProcessFunction<Integer, Integer, Integer> {
+
+		@Override
+		public void processElement1(Integer value, Context ctx, Collector<Integer> out) {
+
+		}
+
+		@Override
+		public void processElement2(Integer value, Context ctx, Collector<Integer> out) {
+
+		}
+	}
+
+	private static class TestStreamEnvironment extends StreamExecutionEnvironment {
 
 		private TestStreamEnvironment() {
 
@@ -1190,6 +1384,25 @@ public class StreamGraphGeneratorTest {
 		@Override
 		public String triggerSavepoint(String jobId, String path) throws Exception {
 			return null;
+		}
+	}
+
+	private static class MapFiller<K, V> {
+
+		private Map<K, V> map;
+
+		public MapFiller(Map<K, V> map) {
+			this.map = map;
+			this.map.clear();
+		}
+
+		public MapFiller<K, V> put(K key, V value) {
+			map.put(key, value);
+			return this;
+		}
+
+		public Map<K, V> toMap() {
+			return map;
 		}
 	}
 }

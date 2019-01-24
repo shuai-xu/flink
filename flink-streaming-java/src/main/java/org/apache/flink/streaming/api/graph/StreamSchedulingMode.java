@@ -15,12 +15,14 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobgraph;
+package org.apache.flink.streaming.api.graph;
+
+import org.apache.flink.api.common.ExecutionMode;
 
 /**
- * Defines the type of scheduling dependency between two operators of a stream edge.
+ * Defines the scheduling mode between two operators of a stream edge.
  */
-public enum SchedulingType {
+public enum StreamSchedulingMode {
 
 	/**
 	 * The consumer and producer will be start at the same time.
@@ -28,7 +30,13 @@ public enum SchedulingType {
 	CONCURRENT,
 
 	/**
-	 * the consumer will be started when the producer is consumable.
+	 * The consumer will be started when the producer is consumable.
 	 */
-	SEQUENTIAL
+	SEQUENTIAL,
+
+	/**
+	 * Indicates to schedule based on {@link ExecutionMode} and later chaining. If {@link ExecutionMode}
+	 * is BATCH and the stream edge is a outer edge of a chain, it is SEQUENTIAL. Otherwise, it is CONCURRENT.
+	 */
+	AUTO
 }

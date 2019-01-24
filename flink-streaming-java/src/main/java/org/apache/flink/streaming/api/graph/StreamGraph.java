@@ -34,6 +34,7 @@ import org.apache.flink.api.java.typeutils.MissingTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.optimizer.plan.StreamingPlan;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
+import org.apache.flink.runtime.jobgraph.ControlType;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -583,6 +584,18 @@ public class StreamGraph extends StreamingPlan {
 
 			return edge;
 		}
+	}
+
+	public StreamControlEdge addControlEdge(Integer sourceVertexID, Integer targetVertexID, ControlType controlType) {
+		StreamNode sourceNode = getStreamNode(sourceVertexID);
+		StreamNode targetNode = getStreamNode(targetVertexID);
+
+		StreamControlEdge controlEdge = new StreamControlEdge(sourceNode, targetNode, controlType);
+
+		getStreamNode(controlEdge.getSourceId()).addOutControlEdge(controlEdge);
+		getStreamNode(controlEdge.getTargetId()).addInControlEdge(controlEdge);
+
+		return controlEdge;
 	}
 
 	public <T> void addOutputSelector(Integer vertexID, OutputSelector<T> outputSelector) {

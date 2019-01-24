@@ -72,6 +72,12 @@ public class JobVertex implements java.io.Serializable {
 	/** List of edges with incoming data. One per Reader. */
 	private final ArrayList<JobEdge> inputs = new ArrayList<JobEdge>();
 
+	/** List of incoming control edges. */
+	private final ArrayList<JobControlEdge> inControlEdges = new ArrayList<>();
+
+	/** List of outcoming control edges. */
+	private final ArrayList<JobControlEdge> outControlEdges = new ArrayList<>();
+
 	/** Number of subtasks to split this task into at runtime.*/
 	private int parallelism = ExecutionConfig.PARALLELISM_DEFAULT;
 
@@ -400,6 +406,14 @@ public class JobVertex implements java.io.Serializable {
 		return this.inputs;
 	}
 
+	public List<JobControlEdge> getInControlEdges() {
+		return this.inControlEdges;
+	}
+
+	public List<JobControlEdge> getOutControlEdges() {
+		return this.outControlEdges;
+	}
+
 	/**
 	 * Associates this vertex with a slot sharing group for scheduling. Different vertices in the same
 	 * slot sharing group can run one subtask each in the same slot.
@@ -535,6 +549,14 @@ public class JobVertex implements java.io.Serializable {
 	public void connectIdInput(IntermediateDataSetID dataSetId, DistributionPattern distPattern) {
 		JobEdge edge = new JobEdge(dataSetId, this, distPattern);
 		this.inputs.add(edge);
+	}
+
+	public JobControlEdge connectControlEdge(JobVertex sourceVertex, ControlType controlType) {
+		JobControlEdge controlEdge = new JobControlEdge(sourceVertex, this, controlType);
+		sourceVertex.outControlEdges.add(controlEdge);
+		this.inControlEdges.add(controlEdge);
+
+		return controlEdge;
 	}
 
 	// --------------------------------------------------------------------------------------------
