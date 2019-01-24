@@ -112,6 +112,8 @@ public class HiveCatalogUtil {
 	 */
 	private static final long MILLIS_PER_DAY = 86400000; // = 24 * 60 * 60 * 1000
 
+	private static final String DECIMAL_TYPE_NAME_FORMAT = "decimal(%d,%d)";
+
 	/**
 	 * Create a Hive table from CatalogTable.
 	 */
@@ -659,7 +661,7 @@ public class HiveCatalogUtil {
 		} else if (internalType instanceof TimestampType) {
 			return serdeConstants.TIMESTAMP_TYPE_NAME;
 		} else if (internalType instanceof DecimalType) {
-			return internalType.toString();
+			return String.format(DECIMAL_TYPE_NAME_FORMAT, ((DecimalType) internalType).precision(), ((DecimalType) internalType).scale());
 		} else if (internalType.equals(ByteArrayType.INSTANCE)) {
 			return serdeConstants.BINARY_TYPE_NAME;
 		} else {
