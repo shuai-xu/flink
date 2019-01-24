@@ -19,6 +19,7 @@
 package org.apache.flink.api.scala
 
 import java.io.{BufferedReader, File, FileOutputStream}
+import java.util.concurrent.atomic.AtomicBoolean
 
 import org.apache.flink.api.java.{JarHelper, ScalaShellRemoteEnvironment, ScalaShellRemoteStreamEnvironment}
 import org.apache.flink.configuration.Configuration
@@ -103,6 +104,8 @@ class FlinkILoop(
     (scalaBenv,scalaSenv,scalaBTEnv,scalaSTEnv)
   }
 
+  val isShutdown: AtomicBoolean = new AtomicBoolean(false)
+
   def saveEnvAsContext(): Unit = {
     remoteSenv.setAsContext()
   }
@@ -171,8 +174,10 @@ class FlinkILoop(
   }
 
   override def closeInterpreter(): Unit = {
-    super.closeInterpreter()
-    scalaBTEnv.tableServiceManager.close()
+    if (isShutdown.compareAndSet(false, true)) {
+      super.closeInterpreter()
+      scalaBTEnv.close()
+    }
   }
 
   /**

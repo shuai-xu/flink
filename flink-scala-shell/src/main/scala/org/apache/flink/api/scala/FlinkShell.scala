@@ -249,6 +249,10 @@ object FlinkShell {
     settings.usejavacp.value = true
     settings.Yreplsync.value = true
 
+    Runtime.getRuntime.addShutdownHook(new Thread {
+      override def run(): Unit = repl.closeInterpreter()
+    })
+
     try {
       repl.process(settings)
     } finally {

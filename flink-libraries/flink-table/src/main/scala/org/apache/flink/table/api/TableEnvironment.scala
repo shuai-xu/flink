@@ -48,7 +48,6 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.util.TableProperties
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
 
 import org.apache.calcite.config.Lex
@@ -67,6 +66,7 @@ import org.apache.commons.lang3.StringUtils
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
+import _root_.java.util.concurrent.atomic.AtomicBoolean
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._
@@ -126,6 +126,8 @@ abstract class TableEnvironment(
 
   // a manager for table service
   private[flink] val tableServiceManager = new FlinkTableServiceManager(this)
+
+  private val closed: AtomicBoolean = new AtomicBoolean(false)
 
   // the configuration for SqlToRelConverter
   private[flink] lazy val sqlToRelConverterConfig: SqlToRelConverter.Config = {
@@ -1408,7 +1410,9 @@ abstract class TableEnvironment(
     * services. Users should invoke this method if possible to avoid resource leak.
     */
   def close(): Unit = {
-    tableServiceManager.close()
+    if (closed.compareAndSet(false, true)) {
+      tableServiceManager.close()
+    }
   }
 
   /** Returns a unique temporary attribute name. */
