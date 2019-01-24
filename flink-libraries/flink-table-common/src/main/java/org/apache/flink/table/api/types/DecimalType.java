@@ -117,9 +117,6 @@ public class DecimalType extends AtomicType {
 
 	@Override
 	public String toString() {
-		return "DecimalType{" +
-			"precision=" + precision +
-			", scale=" + scale +
-			'}';
+		return "decimal(" + precision + "," + scale + ')';
 	}
 }
