@@ -31,7 +31,6 @@ import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.metrics.Counter;
-import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -229,7 +228,7 @@ public abstract class AbstractStreamOperator<OUT>
 	}
 
 	@Override
-	public MetricGroup getMetricGroup() {
+	public OperatorMetricGroup getMetricGroup() {
 		return metrics;
 	}
 

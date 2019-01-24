@@ -18,6 +18,9 @@
 
 package org.apache.flink.runtime.metrics;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Collection of metric names.
  */
@@ -28,8 +31,6 @@ public class MetricNames {
 	private static final String SUFFIX_RATE = "PerSecond";
 	private static final String SUFFIX_OPERATOR = "Operator";
 
-	public static final String IO_NUM_TPS = "tps";
-	public static final String IO_NUM_DELAY = "delay";
 	public static final String IO_NUM_RECORDS_IN = "numRecordsIn";
 	public static final String IO_NUM_RECORDS_OUT = "numRecordsOut";
 	public static final String IO_NUM_RECORDS_IN_RATE = IO_NUM_RECORDS_IN + SUFFIX_RATE;
@@ -70,7 +71,41 @@ public class MetricNames {
 	public static final String TASK_LATENCY = "taskLatency";
 	public static final String SOURCE_LATENCY = "sourceLatency";
 
+	// Metrics source may use
+	public static final String IO_NUM_TPS = "tps";
+	public static final String IO_NUM_DELAY = "delay";
+	public static final String IO_FETCHED_DELAY = "fetched_delay";
+	public static final String IO_NO_DATA_DELAY = "no_data_delay";
+	public static final String IO_PARTITION_LATENCY = "partitionLatency";
+	public static final String IO_PARTITION_COUNT = "partitionCount";
+
 	public static final String PROCESS_TREE = "ProcessTree";
 	public static final String CPU = "CPU";
 	public static final String MEMORY = "Memory";
+
+	public static final Set<String> SOURCE_FRAMEWORK_METRICS = new HashSet<String>() {{
+		add(IO_NUM_TPS);
+		add(IO_NUM_DELAY);
+		add(IO_FETCHED_DELAY);
+		add(IO_NO_DATA_DELAY);
+		add(IO_PARTITION_COUNT);
+	}};
+
+	public static final Set<String> SOURCE_FRAMEWORK_METRIC_SCOPE = new HashSet<String>() {{
+		add(IO_PARTITION_LATENCY);
+	}};
+
+	public static final Set<String> OPERATOR_METRICS_REPORTED_TO_MASTER = new HashSet<String>() {{
+		add(IO_NUM_TPS);
+		add(IO_NUM_DELAY);
+		add(IO_FETCHED_DELAY);
+		add(IO_NO_DATA_DELAY);
+		add(IO_NUM_OPERATOR_RECORDS_IN);
+		add(IO_NUM_OPERATOR_RECORDS_OUT);
+		add(IO_PARTITION_COUNT);
+	}};
+
+	public static final Set<String> OPERATOR_METRICS_SCOPE_REPORTED_TO_MASTER = new HashSet<String>() {{
+		add(IO_PARTITION_LATENCY);
+	}};
 }

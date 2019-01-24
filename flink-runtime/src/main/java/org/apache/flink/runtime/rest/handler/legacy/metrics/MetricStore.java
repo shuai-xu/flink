@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.rest.handler.legacy.metrics;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.dump.MetricDump;
 import org.apache.flink.runtime.metrics.dump.QueryScopeInfo;
 
@@ -231,6 +232,15 @@ public class MetricStore {
 					 */
 					addMetric(subtask.metrics, operatorInfo.operatorId + "." + name, metric);
 					addMetric(task.metrics, operatorInfo.subtaskIndex + "." + operatorInfo.operatorName + "." + name, metric);
+
+					// Expose some source metrics directly for auto scaling
+					// Warning: If there are multiple sources in one task, these metrics may cause conflict
+					if (MetricNames.SOURCE_FRAMEWORK_METRICS.contains(name) ||
+						(!info.scope.isEmpty() && MetricNames.SOURCE_FRAMEWORK_METRIC_SCOPE.contains(info.scope))) {
+
+						addMetric(subtask.metrics, name, metric);
+					}
+
 					break;
 				default:
 					LOG.debug("Invalid metric dump category: " + info.getCategory());

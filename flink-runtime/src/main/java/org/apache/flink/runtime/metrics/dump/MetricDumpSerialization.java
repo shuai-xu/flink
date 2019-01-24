@@ -41,10 +41,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_DELAY;
-import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_OPERATOR_RECORDS_IN;
-import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_OPERATOR_RECORDS_OUT;
-import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_TPS;
+import static org.apache.flink.runtime.metrics.MetricNames.OPERATOR_METRICS_REPORTED_TO_MASTER;
+import static org.apache.flink.runtime.metrics.MetricNames.OPERATOR_METRICS_SCOPE_REPORTED_TO_MASTER;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_JM;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_JOB;
 import static org.apache.flink.runtime.metrics.dump.QueryScopeInfo.INFO_CATEGORY_OPERATOR;
@@ -119,14 +117,8 @@ public class MetricDumpSerialization {
 		 */
 		private boolean shouldDump(QueryScopeInfo scopeInfo, String name) {
 			if (scopeInfo.getCategory() == INFO_CATEGORY_OPERATOR) {
-				if (name.equals(IO_NUM_TPS) ||
-					name.equals(IO_NUM_DELAY) ||
-					name.equals(IO_NUM_OPERATOR_RECORDS_IN) ||
-					name.equals(IO_NUM_OPERATOR_RECORDS_OUT)) {
-					return true;
-				}
-
-				return false;
+				return OPERATOR_METRICS_REPORTED_TO_MASTER.contains(name) ||
+					(!scopeInfo.scope.isEmpty() && OPERATOR_METRICS_SCOPE_REPORTED_TO_MASTER.contains(scopeInfo.scope));
 			}
 			return true;
 		}

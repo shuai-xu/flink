@@ -94,6 +94,10 @@ public class SourceStreamTask<OUT, SRC extends SourceFunction<OUT>, OP extends S
 
 			((ExternallyInducedSource<?, ?>) source).setCheckpointTrigger(triggerHook);
 		}
+
+		// Use output counter of source operator as input counter of this source task
+		getEnvironment().getMetricGroup().getIOMetricGroup().reuseRecordsInputCounter(
+			headOperator.getMetricGroup().getIOMetricGroup().getNumRecordsOutCounter());
 	}
 
 	@Override
