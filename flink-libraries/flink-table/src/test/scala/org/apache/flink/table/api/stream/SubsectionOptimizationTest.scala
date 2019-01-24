@@ -21,6 +21,7 @@ package org.apache.flink.table.api.stream
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.runtime.utils.TemporalTableUtils.TestingTemporalTableSource
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.{TableFunc1, TableTestBase}
 
@@ -190,6 +191,43 @@ class SubsectionOptimizationTest extends TableTestBase {
   }
 
   @Test
+  def testMultiSinksWithWindow(): Unit = {
+    util.addTable[(Int, Double, Int)](
+      "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
+
+    val query1 =
+      """
+        |SELECT
+        |    a,
+        |    SUM (CAST (c AS DOUBLE)) AS sum_c,
+        |    CAST(TUMBLE_END(rowtime, INTERVAL '15' SECOND) as INTEGER) AS `time`,
+        |    CAST(TUMBLE_START(rowtime, INTERVAL '15' SECOND) as INTEGER) AS window_start,
+        |    CAST(TUMBLE_END (rowtime, INTERVAL '15' SECOND) as INTEGER) AS window_end
+        |FROM
+        |    MyTable
+        |GROUP BY
+        |    TUMBLE (rowtime, INTERVAL '15' SECOND), a
+      """.stripMargin
+
+    val query2 =
+      """
+        |SELECT
+        |    a,
+        |    SUM (CAST (c AS DOUBLE)) AS sum_c,
+        |    CAST(TUMBLE_END(rowtime, INTERVAL '15' SECOND) as INTEGER) AS `time`
+        |FROM
+        |    MyTable
+        |GROUP BY
+        |    TUMBLE (rowtime, INTERVAL '15' SECOND), a
+      """.stripMargin
+
+    util.tableEnv.sqlQuery(query1).writeToSink(new CsvTableSink("file1"))
+    util.tableEnv.sqlQuery(query2).writeToSink(new CsvTableSink("file2"))
+
+    util.verifyPlan()
+  }
+
+  @Test
   def testMultiSinksSplitOnUnion1(): Unit = {
     util.addTable[(Int, Long, String)]("SmallTable1", 'd, 'e, 'f)
     val scan1 = util.tableEnv.scan("SmallTable3").select('a, 'c)
@@ -313,6 +351,39 @@ class SubsectionOptimizationTest extends TableTestBase {
     util.tableEnv.registerTable("table6", table6)
     val table7 = util.tableEnv.sqlQuery("select a1, b1, c1 from table1, table6 where a1 = a3")
     table7.writeToSink(new CsvTableSink("/tmp/1"))
+    util.verifyPlan()
+  }
+
+  @Test
+  def testSingleSinkWithTemporalTableSource(): Unit = {
+    util.addTable[(Int, Double, Int)](
+      "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
+    util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
+
+    val query =
+      """
+        |SELECT
+        |    HOP_START(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE),
+        |    HOP_END(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE),
+        |    name1,
+        |    name2,
+        |    AVG(b) as avg_b
+        |FROM(
+        |    SELECT
+        |       t2.name as name1, t3.name as name2, t1.b, t1.rowtime
+        |    FROM
+        |        MyTable t1
+        |    INNER join
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t2
+        |        ON t1.a = t2.id
+        |    INNER JOIN
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t3
+        |    ON t1.c = t3.id
+        |) d
+        |    GROUP BY HOP(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE), name1, name2
+      """.stripMargin
+    util.tableEnv.sqlQuery(query).writeToSink(new CsvTableSink("file1"))
+
     util.verifyPlan()
   }
 

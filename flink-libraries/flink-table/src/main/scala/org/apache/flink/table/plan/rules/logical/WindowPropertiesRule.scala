@@ -284,5 +284,13 @@ object WindowPropertiesRules {
     }
   }
 
+  def hasGroupFunction(node: RexNode): Boolean = {
+    node match {
+      case c: RexCall if c.getOperator.isGroup => true
+      case c: RexCall => c.operands.exists(hasGroupFunction)
+      case _ => false
+    }
+  }
+
 }
 

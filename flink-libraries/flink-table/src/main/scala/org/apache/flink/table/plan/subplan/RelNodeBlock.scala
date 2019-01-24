@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.subplan
 import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment, TableException}
 import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite.Sink
+import org.apache.flink.table.plan.rules.logical.WindowPropertiesRules
 import org.apache.flink.table.plan.schema.RelTable
 import org.apache.flink.table.plan.util.{SubplanReuseContext, SubplanReuseShuttle}
 import org.apache.flink.util.Preconditions
@@ -28,8 +29,9 @@ import org.apache.flink.util.Preconditions
 import com.google.common.collect.Sets
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel._
-import org.apache.calcite.rel.core.{TableFunctionScan, TableScan}
+import org.apache.calcite.rel.core.{Aggregate, Project, Snapshot, TableFunctionScan, TableScan, Union}
 import org.apache.calcite.rel.logical.LogicalTableScan
+import org.apache.calcite.rex.RexNode
 
 import java.util
 
@@ -135,7 +137,7 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
 
   def isUpdateAsRetraction: Boolean = updateAsRetract
 
-  def getChildBlockOutputNode(node: RelNode): Option[RelNodeBlock] = {
+  def getChildBlock(node: RelNode): Option[RelNodeBlock] = {
     val find = children.filter(_.outputNode.equals(node))
     if (find.isEmpty) {
       None
@@ -159,7 +161,7 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
   private class RelNodeBlockShuttle extends RelShuttleImpl {
 
     override def visitChild(parent: RelNode, i: Int, child: RelNode): RelNode = {
-      val block = getChildBlockOutputNode(parent)
+      val block = getChildBlock(parent)
       block match {
         case Some(b) => b.getNewOutputNode.get
         case _ => super.visitChild(parent, i, child)
@@ -167,7 +169,7 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
     }
 
     override def visitChildren(rel: RelNode): RelNode = {
-      val block = getChildBlockOutputNode(rel)
+      val block = getChildBlock(rel)
       block match {
         case Some(b) => b.getNewOutputNode.get
         case _ => super.visitChildren(rel)
@@ -264,38 +266,56 @@ class RelNodeBlockPlanBuilder private(tEnv: TableEnvironment) {
 
   private def buildBlockPlan(node: RelNode): RelNodeBlock = {
     val currentBlock = new RelNodeBlock(node, tEnv)
-    buildBlock(node, currentBlock, createNewBlock = false)
+    buildBlock(node, currentBlock, createNewBlockWhenMeetValidBreakPoint = false)
     currentBlock
   }
 
   private def buildBlock(
       node: RelNode,
       currentBlock: RelNodeBlock,
-      createNewBlock: Boolean): Unit = {
+      createNewBlockWhenMeetValidBreakPoint: Boolean): Unit = {
     val hasDiffBlockOutputNodes = node2Wrapper(node).hasMultipleBlockOutputNodes
-    val isTableFunctionScan = node.isInstanceOf[TableFunctionScan]
-    // TableFunctionScan cannot be optimized individually,
-    // so TableFunctionScan is not a break-point even though it has multiple parents
-    val isBreakPoint = hasDiffBlockOutputNodes && !isTableFunctionScan
+    val validBreakPoint = isValidBreakPoint(node)
 
-    if (isUnionAllAsBreakPointDisabled && isUnionAllNode(node)) {
-      // Does not create new block for union all node, delay the creation operation to its inputs.
-      val createNewBlockForChildren = if (isBreakPoint) true else createNewBlock
-      node.getInputs.foreach(child => buildBlock(child, currentBlock, createNewBlockForChildren))
+    if (validBreakPoint && (createNewBlockWhenMeetValidBreakPoint || hasDiffBlockOutputNodes)) {
+      val childBlock = node2Block.getOrElseUpdate(node, new RelNodeBlock(node, tEnv))
+      currentBlock.addChild(childBlock)
+      node.getInputs.foreach {
+        child => buildBlock(child, childBlock, createNewBlockWhenMeetValidBreakPoint = false)
+      }
     } else {
-      if (createNewBlock || isBreakPoint) {
-        val childBlock = node2Block.getOrElseUpdate(node, new RelNodeBlock(node, tEnv))
-        currentBlock.addChild(childBlock)
-        node.getInputs.foreach(child => buildBlock(child, childBlock, createNewBlock = false))
-      } else {
-        node.getInputs.foreach(child => buildBlock(child, currentBlock, createNewBlock = false))
+      val newCreateNewBlockWhenMeetValidBreakPoint =
+        createNewBlockWhenMeetValidBreakPoint || hasDiffBlockOutputNodes && !validBreakPoint
+      node.getInputs.foreach {
+        child => buildBlock(child, currentBlock, newCreateNewBlockWhenMeetValidBreakPoint)
       }
     }
   }
 
-  private def isUnionAllNode(node: RelNode): Boolean = node match {
-    case unionRel: org.apache.calcite.rel.core.Union => unionRel.all
-    case _ => false
+  /**
+    * TableFunctionScan/Snapshot/Window Aggregate cannot be optimized individually,
+    * so TableFunctionScan/Snapshot/Window Aggregate is not a break-point
+    * even though it has multiple parents.
+    */
+  private def isValidBreakPoint(node: RelNode): Boolean = node match {
+    case _: TableFunctionScan | _: Snapshot => false
+    case union: Union if union.all => !isUnionAllAsBreakPointDisabled
+    case project: Project => project.getProjects.forall(p => !hasWindowGroup(p))
+    case agg: Aggregate =>
+      agg.getInput match {
+        case project: Project =>
+          agg.getGroupSet.forall { group =>
+            val p = project.getProjects.get(group)
+            !hasWindowGroup(p)
+          }
+        case _ => true
+      }
+    case _ => true
+  }
+
+  private def hasWindowGroup(rexNode: RexNode): Boolean = {
+    WindowPropertiesRules.hasGroupAuxiliaries(rexNode) ||
+      WindowPropertiesRules.hasGroupFunction(rexNode)
   }
 
   private def buildBlockOutputNodes(sinks: Seq[RelNode]): Unit = {

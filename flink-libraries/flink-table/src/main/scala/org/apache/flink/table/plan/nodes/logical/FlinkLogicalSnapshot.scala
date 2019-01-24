@@ -17,16 +17,17 @@
  */
 package org.apache.flink.table.plan.nodes.logical
 
+import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
+import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.util.FlinkRexUtil
+
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode}
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.Snapshot
 import org.apache.calcite.rel.logical.LogicalSnapshot
 import org.apache.calcite.rel.metadata.{RelMdCollation, RelMetadataQuery}
+import org.apache.calcite.rel.{RelCollation, RelCollationTraitDef, RelNode}
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.util.FlinkRexUtil
 
 import java.util
 import java.util.function.Supplier
@@ -37,7 +38,7 @@ class FlinkLogicalSnapshot(
     child: RelNode,
     period: RexNode)
   extends Snapshot(cluster, traits, child, period)
-    with FlinkLogicalRel {
+  with FlinkLogicalRel {
 
   override def copy(
     traitSet: RelTraitSet,
