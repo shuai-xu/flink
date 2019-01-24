@@ -84,7 +84,7 @@ class StreamExecOverAggregate(
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     // by default, assume cost is proportional to number of rows
     val rowCnt: Double = estimateRowCount(mq)
-    val count = (rowType.getFieldCount - 1) * 1.0 / inputNode.getRowType.getFieldCount
+    val count = (getRowType.getFieldCount - 1) * 1.0 / inputNode.getRowType.getFieldCount
     planner.getCostFactory.makeCost(rowCnt, rowCnt * count, 0)
   }
 

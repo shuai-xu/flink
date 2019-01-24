@@ -513,6 +513,11 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
     val fmq = FlinkRelMetadataQuery.reuseOrCreate(mq)
     val childUpdateMono = fmq.getRelModifiedMonotonicity(input)
 
+    // If child monotonicity is null, we should return early.
+    if (childUpdateMono == null) {
+      return null
+    }
+
     // if partitionBy a update field or partitionBy a field whose mono is null, just return null
     if (partitionKey.exists(
       e => {

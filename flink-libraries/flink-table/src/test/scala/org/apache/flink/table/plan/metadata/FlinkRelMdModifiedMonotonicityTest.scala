@@ -18,16 +18,17 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo
+import org.apache.calcite.rel.RelCollations
 import org.apache.flink.table.api.functions.ScalarFunction
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.sql.AggSqlFunctions
-import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-
 import org.apache.calcite.rel.core.JoinRelType
+import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.sql.validate.SqlMonotonicity._
+import org.apache.calcite.util.ImmutableBitSet
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalRank
+import org.apache.flink.table.plan.util.ConstantRankRange
 import org.junit.Assert._
 import org.junit.Test
 
@@ -257,6 +258,22 @@ class FlinkRelMdModifiedMonotonicityTest extends FlinkRelMdHandlerTestBase {
     val join2 = relBuilder.push(left).push(right).join(JoinRelType.INNER,
       relBuilder.call(EQUALS, relBuilder.field(2, 0, 0), relBuilder.field(2, 1, 1))).build()
     assertEquals(null, mq.getRelModifiedMonotonicity(join2))
+  }
+
+  @Test
+  def testGetRelMonotonicityOnRank(): Unit = {
+    // test input monotonicity is null.
+    val logicalRank = new FlinkLogicalRank(
+      cluster,
+      logicalTraits,
+      flinkLogicalWindowAgg,
+      SqlStdOperatorTable.ROW_NUMBER,
+      ImmutableBitSet.of(), // without partition columns
+      RelCollations.of(1),
+      ConstantRankRange(1, 3),
+      outputRankFunColumn = false
+    )
+    assertEquals(null, mq.getRelModifiedMonotonicity(logicalRank))
   }
 }
 
