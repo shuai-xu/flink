@@ -127,7 +127,7 @@ export class NzGraph {
    */
   setEdge(links: NodesItemLinkInterface[]) {
     links.forEach(l => {
-      l[ 'width' ] = l[ 'ship_strategy' ].length * 3;
+      l[ 'width' ] = l[ 'ship_strategy' ] ? l[ 'ship_strategy' ].length * 3 : 3;
       this.graph.setEdge(l.source, l.target, l as any);
     });
   }

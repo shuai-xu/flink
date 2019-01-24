@@ -44,7 +44,7 @@
               </div>
             </td>
             <td>
-              <a nz-popconfirm (nzOnConfirm)="deleteJar(jar)" nzTitle="Are you sure delete this jar?">Delete</a>
+              <a nz-popconfirm (click)="$event.stopPropagation();" (nzOnConfirm)="deleteJar(jar)" nzTitle="Are you sure delete this jar?">Delete</a>
             </td>
           </tr>
           <tr [nzExpand]="expandedMap[jar.id]">
@@ -121,9 +121,9 @@
   </div>
 </ng-template>
 <nz-drawer
-  [nzWidth]="800"
+  [nzHeight]="'100%'"
   [nzVisible]="visible"
-  nzPlacement="right"
+  nzPlacement="top"
   nzTitle="Plan Visualization"
   (nzOnClose)="close()">
   <flink-dagre></flink-dagre>

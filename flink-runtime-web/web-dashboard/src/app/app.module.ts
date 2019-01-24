@@ -25,10 +25,8 @@ import { Router } from '@angular/router';
 
 import { NZ_MONACO_EDITOR_CONFIG, NzMonacoEditorConfig, NzMonacoEditorTheme } from '@ng-zorro/ng-plus';
 import { NgZorroAntdModule, NZ_I18N, en_US, NZ_ICONS } from 'ng-zorro-antd';
-
 import { StatusService, ConfigService } from 'flink-services';
 import { ShareModule } from 'flink-share/share.module';
-
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AppInterceptor } from './app.interceptor';
@@ -54,6 +52,8 @@ import {
   CheckCircleOutline,
   DashboardOutline,
   EllipsisOutline,
+  AlignLeftOutline,
+  FullscreenExitOutline,
   FolderOutline,
   LoginOutline,
   PlayCircleOutline,
@@ -141,6 +141,8 @@ import {
         VerticalRightOutline,
         RollbackOutline,
         SyncOutline,
+        AlignLeftOutline,
+        FullscreenExitOutline,
         MinusOutline,
         FileTextOutline,
         FullscreenOutline,

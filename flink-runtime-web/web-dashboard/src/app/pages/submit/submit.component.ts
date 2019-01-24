@@ -80,6 +80,8 @@ export class SubmitComponent implements OnInit, OnDestroy {
     }
     if (jar.entry && jar.entry[ 0 ] && jar.entry[ 0 ].name) {
       this.validateForm.get('entryClass').setValue(jar.entry[ 0 ].name);
+    } else{
+      this.validateForm.get('entryClass').setValue(null);
     }
   }
 
@@ -132,20 +134,16 @@ export class SubmitComponent implements OnInit, OnDestroy {
       savepointPath        : [ null ],
       allowNonRestoredState: [ null ]
     });
-    if (this.isYarn) {
+    this.statusService.refresh$.pipe(
+      takeUntil(this.destroy$),
+      flatMap(() => this.jarService.loadJarList())
+    ).subscribe(data => {
       this.isLoading = false;
-    } else {
-      this.statusService.refresh$.pipe(
-        takeUntil(this.destroy$),
-        flatMap(() => this.jarService.loadJarList())
-      ).subscribe(data => {
-        this.isLoading = false;
-        this.listOfJar = data.files;
-        this.address = data.address;
-      }, () => {
-        this.isLoading = false;
-      });
-    }
+      this.listOfJar = data.files;
+      this.address = data.address;
+    }, () => {
+      this.isLoading = false;
+    });
   }
 
   ngOnDestroy() {
