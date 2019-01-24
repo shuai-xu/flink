@@ -69,7 +69,7 @@ class PrintTableSink(tz: TimeZone)
   * Implementation of the SinkFunction writing every tuple to the standard output.
   *
   */
-class PrintSinkFunction(tz: TimeZone, ignoreFlag: Boolean)
+class PrintSinkFunction(tz: TimeZone, ignoreFlag: Boolean = false)
   extends RichSinkFunction[JTuple2[JBool, Row]] {
 
   private var prefix: String = _
