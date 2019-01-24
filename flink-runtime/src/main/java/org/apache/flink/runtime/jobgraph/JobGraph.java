@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.InvalidProgramException;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobType;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
@@ -76,17 +77,20 @@ public class JobGraph implements Serializable {
 	/** The configuration for scheduling. It's not visible to tasks. */
 	private final Configuration schedulingConfiguration = new Configuration();
 
-	/** ID of this job. May be set if specific job id is desired (e.g. session management) */
+	/** ID of this job. May be set if specific job id is desired (e.g. session management). */
 	private final JobID jobID;
 
 	/** Name of this job. */
 	private final String jobName;
 
+	/** The type of this job. */
+	private JobType jobType;
+
 	/** The number of seconds after which the corresponding ExecutionGraph is removed at the
 	 * job manager after it has been executed. */
 	private long sessionTimeout = 0;
 
-	/** flag to enable queued scheduling */
+	/** flag to enable queued scheduling. */
 	private boolean allowQueuedScheduling;
 
 	/** Placement constraints of this job. */
@@ -97,10 +101,10 @@ public class JobGraph implements Serializable {
 
 	// --- checkpointing ---
 
-	/** Job specific execution config */
+	/** Job specific execution config. */
 	private SerializedValue<ExecutionConfig> serializedExecutionConfig;
 
-	/** The settings for the job checkpoints */
+	/** The settings for the job checkpoints. */
 	private JobCheckpointingSettings snapshotSettings;
 
 	/** Savepoint restore settings. */
@@ -242,7 +246,7 @@ public class JobGraph implements Serializable {
 	}
 
 	/**
-	 * Returns the {@link ExecutionConfig}
+	 * Returns the {@link ExecutionConfig}.
 	 *
 	 * @return ExecutionConfig
 	 */
@@ -292,9 +296,26 @@ public class JobGraph implements Serializable {
 		this.jobVersion = newJobVersion;
 	}
 
+	/**
+	 * This method should be replace by setJobType.
+	 */
+	@Deprecated
 	@VisibleForTesting
 	public void setScheduleMode(ScheduleMode scheduleMode) {
 		this.schedulingConfiguration.setString(ScheduleMode.class.getName(), scheduleMode.toString());
+		if (scheduleMode == ScheduleMode.EAGER) {
+			setJobType(JobType.INFINITE_STREAM);
+		} else {
+			setJobType(JobType.FINITE_STREAM);
+		}
+	}
+
+	public void setJobType(JobType jobType) {
+		this.jobType = jobType;
+	}
+
+	public JobType getJobType() {
+		return jobType;
 	}
 
 	/**

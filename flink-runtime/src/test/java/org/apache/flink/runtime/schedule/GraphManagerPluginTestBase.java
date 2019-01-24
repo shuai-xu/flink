@@ -18,10 +18,12 @@
 
 package org.apache.flink.runtime.schedule;
 
+import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.util.TestLogger;
 
 import java.util.ArrayList;
@@ -71,6 +73,11 @@ public class GraphManagerPluginTestBase extends TestLogger {
 		public ExecutionVertexStatus getExecutionVertexStatus(ExecutionVertexID executionVertexID) {
 			ExecutionVertex ev = vertices.get(executionVertexID);
 			return new ExecutionVertexStatus(executionVertexID, ev.getExecutionState());
+		}
+
+		@Override
+		public ExecutionState getExecutionJobVertexStatus(JobVertexID jobVertexID) {
+			return executionGraph.getJobVertex(jobVertexID).getAggregateState();
 		}
 
 		@Override

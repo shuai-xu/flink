@@ -365,6 +365,19 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 		}
 
 		@Override
+		public ExecutionState getExecutionJobVertexStatus(JobVertexID jobVertexID) {
+			checkNotNull(jobVertexID);
+
+			ExecutionJobVertex vertex = executionGraph.getJobVertex(jobVertexID);
+			if (vertex == null) {
+				throw new IllegalArgumentException("Cannot find any vertex with id " + jobVertexID);
+			}
+
+			return vertex.getAggregateState();
+		}
+
+
+		@Override
 		public ResultPartitionStatus getResultPartitionStatus(IntermediateDataSetID resultID, int partitionNumber) {
 			checkNotNull(resultID);
 			IntermediateResult result = executionGraph.getAllIntermediateResults().get(resultID);

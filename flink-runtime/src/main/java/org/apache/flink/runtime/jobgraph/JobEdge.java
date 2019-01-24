@@ -228,6 +228,14 @@ public class JobEdge implements java.io.Serializable {
 		}
 	}
 
+	public SchedulingMode getSchedulingMode() {
+		return schedulingMode;
+	}
+
+	public void setSchedulingMode(SchedulingMode schedulingMode) {
+		this.schedulingMode = schedulingMode;
+	}
+
 	public Collection<ExecutionVertexID> getConsumerExecutionVertices(int partitionNumber) {
 		if (consumerExecutionVerticesCache == null) {
 			consumerExecutionVerticesCache = new HashMap<>();

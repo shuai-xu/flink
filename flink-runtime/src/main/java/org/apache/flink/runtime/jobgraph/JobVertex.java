@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
+import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * The base class for job vertexes.
@@ -540,6 +541,8 @@ public class JobVertex implements java.io.Serializable {
 		JobEdge edge = new JobEdge(dataSet, this, distPattern);
 		this.inputs.add(edge);
 		dataSet.addConsumer(edge);
+		edge.setSchedulingMode(
+				partitionType == ResultPartitionType.PIPELINED ? SchedulingMode.CONCURRENT : SchedulingMode.SEQUENTIAL);
 		return edge;
 	}
 

@@ -20,7 +20,6 @@ package org.apache.flink.runtime.schedule;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
-import org.apache.flink.runtime.jobgraph.ScheduleMode;
 
 import java.io.Serializable;
 
@@ -45,19 +44,7 @@ public class GraphManagerPluginFactory implements Serializable {
 
 		String graphManagerPluginClassName = configuration.getString(JobManagerOptions.GRAPH_MANAGER_PLUGIN);
 		if (graphManagerPluginClassName == null) {
-			// if no given plugin, use default plugin regarding to schedule mode
-			ScheduleMode scheduleMode = ScheduleMode.valueOf(
-				configuration.getString(ScheduleMode.class.getName(), ScheduleMode.LAZY_FROM_SOURCES.toString()));
-			switch (scheduleMode) {
-				case EAGER:
-					graphManagerPlugin = new EagerSchedulingPlugin();
-					break;
-				case LAZY_FROM_SOURCES:
-					graphManagerPlugin = new StepwiseSchedulingPlugin();
-					break;
-				default:
-					throw new IllegalArgumentException("Unknown schedule mode: " + scheduleMode);
-			}
+			graphManagerPlugin = new ConcurrentGroupGraphManagerPlugin();
 		} else {
 			try {
 				@SuppressWarnings("rawtypes")

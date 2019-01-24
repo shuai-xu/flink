@@ -18,8 +18,10 @@
 
 package org.apache.flink.runtime.schedule;
 
+import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.util.Collection;
 
@@ -50,6 +52,14 @@ public interface VertexScheduler {
 	 * @return status of the execution vertex
 	 */
 	ExecutionVertexStatus getExecutionVertexStatus(ExecutionVertexID executionVertexID);
+
+	/**
+	 * Get the status of the execution job vertex.
+	 *
+	 * @param jobVertexID id of the vertex to query
+	 * @return status of the execution job vertex
+	 */
+	ExecutionState getExecutionJobVertexStatus(JobVertexID jobVertexID);
 
 	/**
 	 * Get the status of the result partition.
