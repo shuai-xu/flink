@@ -94,6 +94,10 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	/** wait buffer metrics */
 	private SumAndCount nsWaitBufferTime;
 
+	private boolean traceTriggered = false;
+
+	private long waitOutputForCurrentRecord = 0L;
+
 	public InternalResultPartition(
 		String owningTaskName,
 		TaskActions taskActions, // actions on the owning task
@@ -200,6 +204,8 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 
 		serializer.serializeRecord(serializationDelegate);
 
+		beginTracing();
+
 		boolean pruneAfterCopying = false;
 
 		if (isBroadcast) {
@@ -216,6 +222,8 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 		if (pruneAfterCopying) {
 			serializer.prune();
 		}
+
+		endTracing();
 	}
 
 	@Override
@@ -223,6 +231,8 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 		serializationDelegate.setInstance(record);
 
 		serializer.serializeRecord(serializationDelegate);
+
+		beginTracing();
 
 		if (isBroadcast) {
 			tryFinishCurrentBufferBuilder(targetChannel, true);
@@ -235,6 +245,8 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 		if (isBroadcast) {
 			tryFinishCurrentBufferBuilder(targetChannel, true);
 		}
+
+		endTracing();
 	}
 
 	@Override
@@ -440,10 +452,10 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 		checkState(!bufferBuilders[targetChannel].isPresent() || bufferBuilders[targetChannel].get().isFinished());
 
 		final BufferBuilder bufferBuilder;
-		if (enableTracingMetrics && (resultCounter++ % tracingMetricsInterval == 0)) {
+		if (traceTriggered) {
 			final long start = System.nanoTime();
 			bufferBuilder = getBufferProvider().requestBufferBuilderBlocking();
-			nsWaitBufferTime.update(System.nanoTime() - start);
+			waitOutputForCurrentRecord += System.nanoTime() - start;
 		} else {
 			bufferBuilder = getBufferProvider().requestBufferBuilderBlocking();
 		}
@@ -569,6 +581,21 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 
 		if (enableTracingMetrics) {
 			this.nsWaitBufferTime = metrics.getNsWaitBufferTime();
+		}
+	}
+
+	private void beginTracing() {
+		if (enableTracingMetrics && (resultCounter++ % tracingMetricsInterval == 0)) {
+			traceTriggered = true;
+			waitOutputForCurrentRecord = 0L;
+		} else {
+			traceTriggered = false;
+		}
+	}
+
+	private void endTracing() {
+		if (traceTriggered) {
+			nsWaitBufferTime.update(waitOutputForCurrentRecord);
 		}
 	}
 }
