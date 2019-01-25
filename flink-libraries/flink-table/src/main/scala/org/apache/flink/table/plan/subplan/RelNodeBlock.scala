@@ -23,7 +23,7 @@ import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.rules.logical.WindowPropertiesRules
 import org.apache.flink.table.plan.schema.RelTable
-import org.apache.flink.table.plan.util.{SubplanReuseContext, SubplanReuseShuttle}
+import org.apache.flink.table.plan.util.{DefaultRelShuttle, SubplanReuseContext, SubplanReuseShuttle}
 import org.apache.flink.util.Preconditions
 
 import com.google.common.collect.Sets
@@ -158,21 +158,12 @@ class RelNodeBlock(val outputNode: RelNode, tEnv: TableEnvironment) {
     outputNode.accept(shuttle)
   }
 
-  private class RelNodeBlockShuttle extends RelShuttleImpl {
-
-    override def visitChild(parent: RelNode, i: Int, child: RelNode): RelNode = {
-      val block = getChildBlock(parent)
-      block match {
-        case Some(b) => b.getNewOutputNode.get
-        case _ => super.visitChild(parent, i, child)
-      }
-    }
-
-    override def visitChildren(rel: RelNode): RelNode = {
+  private class RelNodeBlockShuttle extends DefaultRelShuttle {
+    override def visit(rel: RelNode): RelNode = {
       val block = getChildBlock(rel)
       block match {
         case Some(b) => b.getNewOutputNode.get
-        case _ => super.visitChildren(rel)
+        case _ => super.visit(rel)
       }
     }
   }

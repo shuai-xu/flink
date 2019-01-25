@@ -26,14 +26,18 @@ import scala.collection.JavaConversions._
 class DefaultRelShuttle extends RelShuttle {
 
   override def visit(rel: RelNode): RelNode = {
-    rel.getInputs.zipWithIndex.foreach {
-      case (input, index) =>
+    var change = false
+    val newInputs = rel.getInputs.map {
+      input =>
         val newInput = input.accept(this)
-        if (input ne newInput) {
-          rel.replaceInput(index, newInput)
-        }
+        change = change || (input ne newInput)
+        newInput
     }
-    rel
+    if (change) {
+      rel.copy(rel.getTraitSet, newInputs)
+    } else {
+      rel
+    }
   }
 
   override def visit(intersect: LogicalIntersect): RelNode = visit(intersect.asInstanceOf[RelNode])

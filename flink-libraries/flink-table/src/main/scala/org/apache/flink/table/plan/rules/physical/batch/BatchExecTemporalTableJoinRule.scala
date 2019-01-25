@@ -17,19 +17,17 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
+import org.apache.flink.table.plan.nodes.common.CommonTemporalTableJoin
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecTemporalTableJoin
-import org.apache.flink.table.plan.schema.TableSourceTable
-import org.apache.flink.table.plan.util.TemporalJoinUtil.containsTemporalJoinCondition
-import org.apache.flink.table.sources.LookupableTableSource
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
-import org.apache.calcite.rel.core.TableScan
+import org.apache.flink.table.plan.rules.physical.common.{BaseSnapshotOnCalcTableScanRule, BaseSnapshotOnTableScanRule}
+import org.apache.flink.table.sources.TableSource
+
+import org.apache.calcite.plan.RelOptRule
 import org.apache.calcite.rex.{RexNode, RexProgram}
 
 object BatchExecTemporalTableJoinRule {
@@ -37,97 +35,52 @@ object BatchExecTemporalTableJoinRule {
   val SNAPSHOT_ON_CALC_TABLESCAN: RelOptRule = new SnapshotOnCalcTableScanRule
 
   class SnapshotOnTableScanRule
-    extends RelOptRule(
-      operand(
-        classOf[FlinkLogicalJoin],
-        operand(classOf[FlinkLogicalRel], any()),
-        operand(classOf[FlinkLogicalSnapshot],
-                operand(classOf[TableScan], any()))),
-      "BatchExecSnapshotOnTableScanRule") {
+    extends BaseSnapshotOnTableScanRule("BatchExecSnapshotOnTableScanRule") {
 
-    override def matches(call: RelOptRuleCall): Boolean = {
-      val join = call.rel[FlinkLogicalJoin](0)
-      val tableScan = call.rel[TableScan](3)
-      BatchExecTemporalTableJoinRule.matches(join, tableScan)
+    override protected def transform(
+        join: FlinkLogicalJoin,
+        input: FlinkLogicalRel,
+        tableSource: TableSource,
+        period: RexNode,
+        calcProgram: Option[RexProgram]): CommonTemporalTableJoin = {
+      doTransform(join, input, tableSource, period, calcProgram)
     }
-
-    override def onMatch(call: RelOptRuleCall): Unit = {
-      val join = call.rel[FlinkLogicalJoin](0)
-      val input = call.rel[FlinkLogicalRel](1)
-      val snapshot = call.rel[FlinkLogicalSnapshot](2)
-      val tableScan = call.rel[FlinkLogicalTableSourceScan](3)
-
-      val temporalJoin = transform(join, input, tableScan, snapshot.getPeriod, None)
-      call.transformTo(temporalJoin)
-    }
-
   }
 
   class SnapshotOnCalcTableScanRule
-    extends RelOptRule(
-      operand(
-        classOf[FlinkLogicalJoin],
-        operand(classOf[FlinkLogicalRel], any()),
-        operand(classOf[FlinkLogicalSnapshot],
-                operand(classOf[FlinkLogicalCalc],
-                        operand(classOf[TableScan], any())))),
-      "BatchExecSnapshotOnCalcTableScanRule") {
+    extends BaseSnapshotOnCalcTableScanRule("BatchExecSnapshotOnCalcTableScanRule") {
 
-    override def matches(call: RelOptRuleCall): Boolean = {
-      val join = call.rel[FlinkLogicalJoin](0)
-      val tableScan = call.rel[TableScan](4)
-      BatchExecTemporalTableJoinRule.matches(join, tableScan)
-    }
-
-    override def onMatch(call: RelOptRuleCall): Unit = {
-      val join = call.rel[FlinkLogicalJoin](0)
-      val input = call.rel[FlinkLogicalRel](1)
-      val snapshot = call.rel[FlinkLogicalSnapshot](2)
-      val calc = call.rel[FlinkLogicalCalc](3)
-      val tableScan = call.rel[FlinkLogicalTableSourceScan](4)
-      val temporalJoin = transform(
-        join, input, tableScan, snapshot.getPeriod, Some(calc.getProgram))
-      call.transformTo(temporalJoin)
+    override protected def transform(
+        join: FlinkLogicalJoin,
+        input: FlinkLogicalRel,
+        tableSource: TableSource,
+        period: RexNode,
+        calcProgram: Option[RexProgram]): CommonTemporalTableJoin = {
+      doTransform(join, input, tableSource, period, calcProgram)
     }
 
   }
 
-  private def matches(join: FlinkLogicalJoin, tableScan: TableScan): Boolean = {
-    // shouldn't match temporal table function join
-    if (containsTemporalJoinCondition(join.getCondition)) {
-      return false
-    }
-    if (!tableScan.isInstanceOf[FlinkLogicalTableSourceScan]) {
-      throw new TableException(
-        "Temporal table join only support join on a TableSource " +
-          "not on a DataStream or an intermediate query")
-    }
-    // currently temporal table join only support LookupableTableSource
-    val tableSourceTable: TableSourceTable = tableScan.getTable.unwrap(classOf[TableSourceTable])
-    tableSourceTable.tableSource.isInstanceOf[LookupableTableSource[_]]
-  }
-
-  private def transform(
-    join: FlinkLogicalJoin,
-    input: FlinkLogicalRel,
-    tableScan: FlinkLogicalTableSourceScan,
-    period: RexNode,
-    calcProgram: Option[RexProgram]): BatchExecTemporalTableJoin = {
+  private def doTransform(
+      join: FlinkLogicalJoin,
+      input: FlinkLogicalRel,
+      tableSource: TableSource,
+      period: RexNode,
+      calcProgram: Option[RexProgram]): BatchExecTemporalTableJoin = {
 
     val joinInfo = join.analyzeCondition
 
     val cluster = join.getCluster
     val typeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
-    val tableSource = tableScan.tableSource
-    val tableRowType = typeFactory.buildLogicalRowType(tableSource.getTableSchema, true)
+    val tableRowType = typeFactory.buildLogicalRowType(
+      tableSource.getTableSchema, isStreaming = false)
 
     val providedTrait = join.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     var requiredTrait = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
 
     // if partitioning enabled, use the join key as partition key
     tableSource match {
-      case ps: DefinedDistribution if ps.getPartitionField() != null &&
-        !joinInfo.pairs().isEmpty =>
+      case ps: DefinedDistribution if ps.getPartitionField() != null && !joinInfo.pairs().isEmpty =>
         requiredTrait = requiredTrait.plus(FlinkRelDistribution.hash(joinInfo.leftKeys))
       case _ =>
     }

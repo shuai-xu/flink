@@ -21,7 +21,6 @@ package org.apache.flink.table.plan.subplan
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.logical.LogicalNode
@@ -105,6 +104,7 @@ object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
 
   /**
     * Infer UpdateAsRetraction property for each block.
+    * NOTES: this method should not change the original RelNode tree.
     *
     * @param block              The [[RelNodeBlock]] instance.
     * @param retractionFromSink Whether the sink need update as retraction messages.
@@ -121,13 +121,14 @@ object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
         }
     }
 
-    block.getPlan match {
+    val blockLogicalPlan = block.getPlan
+    blockLogicalPlan match {
       case n: Sink =>
         val optimizedPlan = tEnv.optimize(n, retractionFromSink)
         block.setOptimizedPlan(optimizedPlan)
 
       case o =>
-        val optimizedPlan = tEnv.optimize(o, retractionFromSink)
+        val optimizedPlan = tEnv.optimize(o, retractionFromSink, isSinkBlock = false)
         val rowType = optimizedPlan.getRowType
         val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
         val name = tEnv.createUniqueTableName()
@@ -216,7 +217,10 @@ object StreamDAGOptimizer extends AbstractDAGOptimizer[StreamTableEnvironment] {
     val monotonicity = FlinkRelMetadataQuery
       .reuseOrCreate(tEnv.getRelBuilder.getCluster.getMetadataQuery)
       .getRelModifiedMonotonicity(relNode)
-    val statistic = FlinkStatistic.builder.uniqueKeys(uniqueKeys).monotonicity(monotonicity).build()
+    val statistic = FlinkStatistic.builder()
+      .uniqueKeys(uniqueKeys)
+      .monotonicity(monotonicity)
+      .build()
 
     val table = new IntermediateRelNodeTable(
       relNode,

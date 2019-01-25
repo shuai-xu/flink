@@ -23,12 +23,16 @@ LogicalProject(a=[$0])
    +- LogicalTableScan(table=[[builtin, default, t2]])
 
 == Optimized Logical Plan ==
+StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc], reuse_id=[2])
+
+StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc], reuse_id=[3])
+
 StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc], reuse_id=[1])
 :- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
 :  :- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-:  :  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
+:  :  +- Reused(reference_id=[2])
 :  +- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
-:     +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc])
+:     +- Reused(reference_id=[3])
 +- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
    +- StreamExecDataStreamScan(table=[[builtin, default, t3]], retract=[true], accMode=[Acc])
 
@@ -47,9 +51,9 @@ StreamExecSink(fields=[total_min], retract=[false], accMode=[AccRetract])
 StreamExecSink(fields=[a], retract=[false], accMode=[Acc])
 +- StreamExecUnion(all=[true], union=[a], retract=[false], accMode=[Acc])
    :- StreamExecCalc(select=[a], retract=[false], accMode=[Acc])
-   :  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[false], accMode=[Acc])
+   :  +- Reused(reference_id=[2])
    +- StreamExecCalc(select=[d], retract=[false], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[false], accMode=[Acc])
+      +- Reused(reference_id=[3])
 
 == Physical Execution Plan ==
  : Data Source
@@ -110,30 +114,22 @@ StreamExecSink(fields=[a], retract=[false], accMode=[Acc])
 													ship_strategy : FORWARD
 
 													 : Operator
-														content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
+														content : Calc(select: (a))
 														ship_strategy : FORWARD
 
 														 : Operator
-															content : Calc(select: (a))
+															content : Calc(select: (d))
 															ship_strategy : FORWARD
 
-															 : Operator
-																content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
+															 : Data Sink
+																content : Sink: TestingUpsertTableSink(keys=())
 																ship_strategy : FORWARD
 
-																 : Operator
-																	content : Calc(select: (d))
+																 : Data Sink
+																	content : Sink: TestingRetractTableSink
 																	ship_strategy : FORWARD
 
 																	 : Data Sink
 																		content : Sink: TestingUpsertTableSink(keys=())
 																		ship_strategy : FORWARD
-
-																		 : Data Sink
-																			content : Sink: TestingRetractTableSink
-																			ship_strategy : FORWARD
-
-																			 : Data Sink
-																				content : Sink: TestingUpsertTableSink(keys=())
-																				ship_strategy : FORWARD
 

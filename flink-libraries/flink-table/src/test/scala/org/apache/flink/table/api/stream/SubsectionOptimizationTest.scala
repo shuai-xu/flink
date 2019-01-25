@@ -22,8 +22,9 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.TemporalTableUtils.TestingTemporalTableSource
+import org.apache.flink.table.runtime.utils.{TestingRetractTableSink, TestingUpsertTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
-import org.apache.flink.table.util.{TableFunc1, TableTestBase}
+import org.apache.flink.table.util.{TableFunc0, TableFunc1, TableTestBase}
 
 import org.junit.{Before, Test}
 
@@ -223,6 +224,76 @@ class SubsectionOptimizationTest extends TableTestBase {
 
     util.tableEnv.sqlQuery(query1).writeToSink(new CsvTableSink("file1"))
     util.tableEnv.sqlQuery(query2).writeToSink(new CsvTableSink("file2"))
+
+    util.verifyPlan()
+  }
+
+  @Test
+  def testMultiSinksWithTemporalTableSource(): Unit = {
+    util.addTable[(Int, Double, Int)](
+      "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
+    util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
+
+    val query1 =
+      """
+        |SELECT
+        |    HOP_START(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE),
+        |    HOP_END(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE),
+        |    name1,
+        |    name2,
+        |    AVG(b) as avg_b
+        |FROM(
+        |    SELECT
+        |       t2.name as name1, t3.name as name2, t1.b, t1.rowtime
+        |    FROM
+        |        MyTable t1
+        |    INNER join
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t2
+        |        ON t1.a = t2.id
+        |    INNER JOIN
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t3
+        |    ON t1.c = t3.id
+        |) d
+        |    GROUP BY HOP(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE), name1, name2
+      """.stripMargin
+    util.tableEnv.sqlQuery(query1).writeToSink(new CsvTableSink("file1"))
+
+    val query2 =
+      """
+        |SELECT
+        |    HOP_START(rowtime, INTERVAL '10' SECOND, INTERVAL '3' MINUTE),
+        |    HOP_END(rowtime, INTERVAL '10' SECOND, INTERVAL '3' MINUTE),
+        |    name1,
+        |    AVG(b) as avg_b
+        |FROM(
+        |    SELECT
+        |       t2.name as name1, t1.b, t1.rowtime
+        |    FROM
+        |        MyTable t1
+        |    INNER join
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t2
+        |        ON t1.a = t2.id
+        |) d
+        |    GROUP BY HOP(rowtime, INTERVAL '10' SECOND, INTERVAL '3' MINUTE), name1
+      """.stripMargin
+    util.tableEnv.sqlQuery(query2).writeToSink(new CsvTableSink("file2"))
+
+    util.verifyPlan()
+  }
+
+  @Test
+  def testRetractAndUpsertSinkWithUDTF(): Unit = {
+    val func0 = new TableFunc0
+    util.addTable[(Int, Long, String)]("MyTable", 'id, 'num, 'text, 'proctime.proctime)
+    val table = util.tableEnv.scan("MyTable")
+    val t = table.join(func0('text))
+      .window(Over orderBy 'proctime preceding UNBOUNDED_ROW as 'w)
+      .select('num, 'id.count over 'w as 'cnt, 'proctime)
+
+    val retractSink = new TestingRetractTableSink
+    t.where('num < 5).select('num, 'cnt).writeToSink(retractSink)
+    val upsertSink = new TestingUpsertTableSink(Array())
+    t.where('num >= 5).select('num, 'cnt).writeToSink(upsertSink)
 
     util.verifyPlan()
   }

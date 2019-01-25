@@ -228,6 +228,58 @@ class SubsectionOptimizationTest extends TableTestBase {
   }
 
   @Test
+  def testMultiSinksWithTemporalTableSource(): Unit = {
+    util.addTable[(Int, Double, Int, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
+    util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
+
+    val query1 =
+      """
+        |SELECT
+        |    HOP_START(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE),
+        |    HOP_END(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE),
+        |    name1,
+        |    name2,
+        |    AVG(b) as avg_b
+        |FROM(
+        |    SELECT
+        |       t2.name as name1, t3.name as name2, t1.b, t1.rowtime
+        |    FROM
+        |        MyTable t1
+        |    INNER join
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t2
+        |        ON t1.a = t2.id
+        |    INNER JOIN
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t3
+        |    ON t1.c = t3.id
+        |) d
+        |    GROUP BY HOP(rowtime, INTERVAL '60' SECOND, INTERVAL '3' MINUTE), name1, name2
+      """.stripMargin
+    util.tableEnv.sqlQuery(query1).writeToSink(new CsvTableSink("file1"))
+
+    val query2 =
+      """
+        |SELECT
+        |    HOP_START(rowtime, INTERVAL '10' SECOND, INTERVAL '3' MINUTE),
+        |    HOP_END(rowtime, INTERVAL '10' SECOND, INTERVAL '3' MINUTE),
+        |    name1,
+        |    AVG(b) as avg_b
+        |FROM(
+        |    SELECT
+        |       t2.name as name1, t1.b, t1.rowtime
+        |    FROM
+        |        MyTable t1
+        |    INNER join
+        |        TemporalSource FOR SYSTEM_TIME AS OF PROCTIME() as t2
+        |        ON t1.a = t2.id
+        |) d
+        |    GROUP BY HOP(rowtime, INTERVAL '10' SECOND, INTERVAL '3' MINUTE), name1
+      """.stripMargin
+    util.tableEnv.sqlQuery(query2).writeToSink(new CsvTableSink("file2"))
+
+    util.verifyPlan()
+  }
+
+  @Test
   def testMultiSinksSplitOnUnion1(): Unit = {
     util.addTable[(Int, Long, String)]("SmallTable1", 'd, 'e, 'f)
     val scan1 = util.tableEnv.scan("SmallTable3").select('a, 'c)
