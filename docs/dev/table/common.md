@@ -90,7 +90,7 @@ tableEnv.execute()
 </div>
 
 **Notes:** 
-1. Table API and SQL queries can be easily integrated with and embedded into DataStream programs. Have a look at the [Integration with DataStream and DataSet API](#integration-with-datastream-and-dataset-api) section to learn how DataStreams and DataSets can be converted into Tables and vice versa.
+1. Table API and SQL queries can be easily integrated with and embedded into DataStream programs. Have a look at the [Integration with DataStream API](#integration-with-datastream-api) section to learn how DataStreams and DataSets can be converted into Tables and vice versa.
 2. For bounded stream job, we should always use `TableEnvironment.execute()` to submit and run the job.
 
 {% top %}
@@ -164,7 +164,7 @@ An input table can be registered from various sources:
 
 * an existing `Table` object, usually the result of a Table API or SQL query.
 * a `TableSource`, which accesses external data, such as a file, database, or messaging system. 
-* a `DataStream` from a DataStream program. Registering a `DataStream` is discussed in the [Integration with DataStream and DataSet API](#integration-with-datastream-and-dataset-api) section.
+* a `DataStream` from a DataStream program. Registering a `DataStream` is discussed in the [Integration with DataStream API](#integration-with-datastream-and-dataset-api) section.
 
 An output table can be registered using a `TableSink`.
 
@@ -548,7 +548,7 @@ A Table API or SQL query is translated when:
 
 * a `Table` is emitted to a `TableSink`, i.e., when `Table.writeToSink()` or `Table.insertInto()` is called.
 * a SQL update query is specified, i.e., when `TableEnvironment.sqlUpdate()` is called.
-* a `Table` is converted into a `DataStream`(see [Integration with DataStream and DataSet API](#integration-with-dataStream-and-dataSet-api)).
+* a `Table` is converted into a `DataStream`(see [Integration with DataStream API](#integration-with-datastream-api)).
 
 Once translated, a Table API or SQL query is handled like a regular DataStream program and is executed when `StreamExecutionEnvironment.execute()` is called.
 
