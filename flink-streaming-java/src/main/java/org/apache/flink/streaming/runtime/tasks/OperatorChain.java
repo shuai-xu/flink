@@ -1332,6 +1332,8 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 			if (--unfinishedInputEdges == 0) {
 				operator.endInput();
 				endSuccessorsInput();
+			} else if (unfinishedInputEdges < 0) {
+				throw new RuntimeException("This input side is finished already, unexpected endInput invoked");
 			}
 		}
 
@@ -1424,6 +1426,8 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 						listener.notifySelectionChanged();
 					}
 				}
+			} else if (unfinishedInputEdges1 < 0) {
+				throw new RuntimeException("This input side is finished already, unexpected endInput invoked");
 			}
 			if (unfinishedInputEdges1 == 0 && unfinishedInputEdges2 == 0) {
 				endSuccessorsInput();
@@ -1440,6 +1444,8 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 						listener.notifySelectionChanged();
 					}
 				}
+			} else if (unfinishedInputEdges2 < 0) {
+				throw new RuntimeException("This input side is finished already, unexpected endInput invoked");
 			}
 			if (unfinishedInputEdges1 == 0 && unfinishedInputEdges2 == 0) {
 				endSuccessorsInput();
@@ -1465,10 +1471,6 @@ public class OperatorChain implements StreamStatusMaintainer, InputSelector {
 				endInput2();
 			} else {
 				throw new RuntimeException("Unknown stream edge type number " + inputEdge.getTypeNumber());
-			}
-
-			if (unfinishedInputEdges1 == 0 && unfinishedInputEdges2 == 0) {
-				endSuccessorsInput();
 			}
 		}
 

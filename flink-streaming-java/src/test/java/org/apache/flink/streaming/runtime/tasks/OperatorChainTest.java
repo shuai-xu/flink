@@ -74,13 +74,13 @@ public class OperatorChainTest {
 	/**
 	 * Test multiple head chaining.
 	 *<p>
-	 *     ------- chain -------
-	 *     |                   |
-	 * 0 --+---> 3 ------> 4 --+---> 5
-	 *     |     ^         ^   |
-	 *     |     |         |   |
-	 *     |     2         |   |
-	 *     ----------------+----
+	 *     ------- chain ---------------
+	 *     |                           |
+	 * 0 --+---> 3 ------> 4 ------> 5 |
+	 *     |     ^         ^           |
+	 *     |     |         |           |
+	 *     |     2         |           |
+	 *     ----------------+------------
 	 *                     |
 	 *                     1
 	 *</p>
@@ -92,14 +92,14 @@ public class OperatorChainTest {
 		final StreamSource<String, DummySourceFunction> dummySource = new StreamSource<>(new DummySourceFunction());
 		final OneInputStreamOperator<String, String> union = new DummyUnionStreamOperator();
 		final TwoInputStreamOperator<String, String, String> twoInput = new DummyTwoInputStreamOperator();
-		final StreamSink<String> dummySink = new StreamSink<>(new DummySinkFunction());
+		final StreamSink<String> dummySink = new DummySinkOperator(new DummySinkFunction());
 
 		StreamNode sourceOutOfChainVertexDummy = new StreamNode(0, null, dummySource, "source out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
 		StreamNode anotherSourceOutOfChainVertexDummy = new StreamNode(1, null, dummySource, "another source out of chain dummy", new LinkedList<>(), SourceStreamTask.class);
 		StreamNode sourceInChainVertexDummy = new StreamNode(2, null, dummySource, "source in chain dummy", new LinkedList<>(), SourceStreamTask.class);
 		StreamNode unionVertexDummy = new StreamNode(3, null, union, "union dummy", new LinkedList<>(), OneInputStreamTask.class);
 		StreamNode twoInputVertexDummy = new StreamNode(4, null, twoInput, "two input dummy", new LinkedList<>(), TwoInputStreamTask.class);
-//		StreamNode sinkDummy = new StreamNode(null, 5, null, dummySink, "sink dummy", new LinkedList<>(), OneInputStreamTask.class);
+		StreamNode sinkDummy = new StreamNode(5, null, dummySink, "sink dummy", new LinkedList<>(), OneInputStreamTask.class);
 
 		final List<StreamEdge> inEdges = new LinkedList<>();
 		inEdges.add(new StreamEdge(sourceOutOfChainVertexDummy, unionVertexDummy, 1, new LinkedList<>(), new BroadcastPartitioner<>(), null /* output tag */));
@@ -148,19 +148,25 @@ public class OperatorChainTest {
 		final StreamConfig operatorConfig4 = new StreamConfig(new Configuration());
 		operatorConfig4.setOperatorID(new OperatorID());
 		operatorConfig4.setStreamOperator(twoInput);
-//		operatorConfig4.setNonChainedOutputs(
-//			Collections.singletonList(
-//				new StreamEdge(
-//					twoInputVertexDummy,
-//					sinkDummy,
-//					1,
-//					new LinkedList<>(),
-//					new BroadcastPartitioner<>(),
-//					null /* output tag */)));
+		operatorConfig4.setChainedOutputs(
+			Collections.singletonList(
+				new StreamEdge(
+					twoInputVertexDummy,
+					sinkDummy,
+					1,
+					new LinkedList<>(),
+					new BroadcastPartitioner<>(),
+					null /* output tag */)));
 
 		operatorConfig4.setTypeSerializerOut(mock(TypeSerializer.class));
 		operatorConfig4.setBufferTimeout(0);
 		chainedTaskConfigs.put(4, operatorConfig4);
+
+		final StreamConfig operatorConfig5 = new StreamConfig(new Configuration());
+		operatorConfig5.setOperatorID(new OperatorID());
+		operatorConfig5.setStreamOperator(dummySink);
+		operatorConfig5.setBufferTimeout(0);
+		chainedTaskConfigs.put(5, operatorConfig5);
 
 		streamConfig.setChainedNodeConfigs(chainedTaskConfigs);
 
@@ -237,6 +243,7 @@ public class OperatorChainTest {
 		assertTrue(unionOperator.endInputInvoked);
 		assertTrue(twoInputOperator.endInput1Invoked);
 		assertTrue(twoInputOperator.endInput2Invoked);
+
 	}
 
 	/**
@@ -635,6 +642,29 @@ public class OperatorChainTest {
 		public void endInput2() {
 			if (!endInput2Invoked) {
 				endInput2Invoked = true;
+			} else {
+				fail("End input should only be invoked once");
+			}
+		}
+	}
+
+	private static class DummySinkOperator extends StreamSink<String> {
+		boolean endInputInvoked = false;
+		List<String> records = new ArrayList<>();
+
+		public DummySinkOperator(SinkFunction<String> sinkFunction) {
+			super(sinkFunction);
+		}
+
+		@Override
+		public void processElement(StreamRecord<String> element) throws Exception {
+			records.add(element.getValue());
+		}
+
+		@Override
+		public void endInput() {
+			if (!endInputInvoked) {
+				endInputInvoked = true;
 			} else {
 				fail("End input should only be invoked once");
 			}

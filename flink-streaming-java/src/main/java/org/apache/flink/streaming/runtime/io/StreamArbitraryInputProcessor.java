@@ -134,7 +134,7 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 				while (!inputSelectionChanged && inputFetcher.fetchAndProcess()) {}
 
 				if (inputFetcher.isFinished()) {
-					LOG.info("Input fetcher {} is finished", inputFetcher);
+					LOG.info("Input fetcher {} {} is finished", inputFetcher, inputFetcher.getInputSelection());
 					inputFetcher.cleanup();
 					inputFetchers.remove(inputFetcher);
 					selectedInputFetchers.remove(inputFetcher);
@@ -241,7 +241,7 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 
 		inputFetchers.add(inputGateFetcher);
 
-		LOG.info("Bind a first of two input operator {} to {}", operator, inputGate);
+		LOG.info("Bind the edge {} of a first of two input operator {} to {}", streamEdge, operator, inputGate);
 	}
 
 	public <IN> void bindSecondOfTwoInputOperator(
@@ -277,7 +277,7 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 
 		inputFetchers.add(inputGateFetcher);
 
-		LOG.info("Bind a second of two input operator {} to {}", operator, inputGate);
+		LOG.info("Bind the edge {} of a second of two input operator {} to {}", streamEdge, operator, inputGate);
 	}
 
 	public <IN> void bindSourceOperator(
@@ -329,6 +329,8 @@ public class StreamArbitraryInputProcessor implements SelectionChangedListener, 
 					if (inputFetcher.moreAvailable() || inputFetcher.isFinished()) {
 						enqueueInputFetcher(inputFetcher);
 					}
+				} else {
+					LOG.info("The selected edge {} is finished already", inputSelection);
 				}
 			}
 			LOG.info("Select inputs {}", inputSelections);
