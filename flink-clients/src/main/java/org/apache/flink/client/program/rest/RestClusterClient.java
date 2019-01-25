@@ -352,7 +352,7 @@ public class RestClusterClient<T> extends ClusterClient<T> implements NewCluster
 					try {
 						if (!jar.getFileSystem().isDistributedFS()) {
 							jarFileNames.add(jar.getName());
-							filesToUpload.add(new FileUpload(Paths.get(jar.toUri()), RestConstants.CONTENT_TYPE_JAR));
+							filesToUpload.add(new FileUpload(Paths.get(jar.getPath()), RestConstants.CONTENT_TYPE_JAR));
 						}
 					} catch (IOException e) {
 						throw new CompletionException(new FlinkException("Failed to upload jars.", e));
@@ -364,7 +364,7 @@ public class RestClusterClient<T> extends ClusterClient<T> implements NewCluster
 					Path file = new Path(artifacts.getValue().filePath);
 					if (!file.getFileSystem().isDistributedFS()) {
 						artifactFileNames.add(new JobSubmitRequestBody.DistributedCacheFile(artifacts.getKey(), new Path(artifacts.getValue().filePath).getName()));
-						filesToUpload.add(new FileUpload(Paths.get(file.toUri()), RestConstants.CONTENT_TYPE_BINARY));
+						filesToUpload.add(new FileUpload(Paths.get(file.getPath()), RestConstants.CONTENT_TYPE_BINARY));
 					}
 				} catch (IOException e) {
 					throw new CompletionException(new FlinkException("Failed to upload artifacts.", e));

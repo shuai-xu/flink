@@ -23,10 +23,11 @@ import org.apache.flink.api.common.aggregators.AggregatorRegistry;
 import org.apache.flink.api.common.aggregators.AggregatorWithName;
 import org.apache.flink.api.common.aggregators.ConvergenceCriterion;
 import org.apache.flink.api.common.aggregators.LongSumAggregator;
-import org.apache.flink.api.common.cache.DistributedCache.DistributedCacheEntry;
+import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.distributions.DataDistribution;
 import org.apache.flink.api.common.operators.util.UserCodeWrapper;
 import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.AlgorithmOptions;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
@@ -49,6 +50,7 @@ import org.apache.flink.optimizer.plan.SourcePlanNode;
 import org.apache.flink.optimizer.plan.WorksetIterationPlanNode;
 import org.apache.flink.optimizer.plan.WorksetPlanNode;
 import org.apache.flink.optimizer.util.Utils;
+import org.apache.flink.runtime.client.ClientUtils;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.iterative.convergence.WorksetEmptyConvergenceCriterion;
@@ -83,6 +85,9 @@ import org.apache.flink.util.Visitor;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -91,7 +96,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * This component translates the optimizer's resulting {@link org.apache.flink.optimizer.plan.OptimizedPlan}
@@ -106,6 +111,8 @@ import java.util.Map.Entry;
  */
 public class JobGraphGenerator implements Visitor<PlanNode> {
 	
+	private static final Logger LOG = LoggerFactory.getLogger(JobGraphGenerator.class);
+
 	public static final String MERGE_ITERATION_AUX_TASKS_KEY = "compiler.merge-iteration-aux";
 	
 	private static final boolean mergeIterationAuxTasks =
@@ -243,10 +250,12 @@ public class JobGraphGenerator implements Visitor<PlanNode> {
 			vertex.setSlotSharingGroup(sharingGroup);
 		}
 
-		// add registered cache file into job configuration
-		for (Entry<String, DistributedCacheEntry> e : program.getOriginalPlan().getCachedFiles()) {
-			graph.addUserArtifact(e.getKey(), e.getValue());
-		}
+
+		Collection<Tuple2<String, DistributedCache.DistributedCacheEntry>> userArtifacts =
+			program.getOriginalPlan().getCachedFiles().stream()
+			.map(entry -> Tuple2.of(entry.getKey(), entry.getValue()))
+			.collect(Collectors.toList());
+		ClientUtils.addUserArtifactEntries(userArtifacts, graph);
 
 		// release all references again
 		this.vertices = null;

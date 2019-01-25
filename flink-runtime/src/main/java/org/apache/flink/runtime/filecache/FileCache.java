@@ -40,9 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -54,15 +52,17 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * The FileCache is used to create the local files for the registered cache files when a task is deployed.
- * The files will be removed when the task is unregistered after a 5 second delay.
- * A given file x will be placed in "{@code <system-tmp-dir>/tmp_<jobID>/}".
+ * The FileCache is used to access registered cache files when a task is deployed.
+ *
+ * <p>Files and zipped directories are retrieved from the {@link PermanentBlobService}. The life-cycle of these files
+ * is managed by the blob-service.
+ *
+ * <p>Retrieved directories will be expanded in "{@code <system-tmp-dir>/tmp_<jobID>/}"
+ * and deleted when the task is unregistered after a 5 second delay, unless a new task requests the file in the meantime.
  */
 public class FileCache {
 
@@ -307,26 +307,8 @@ public class FileCache {
 			final File file = blobService.getFile(jobID, blobKey);
 
 			if (isDirectory) {
-				try (ZipInputStream zis = new ZipInputStream(new FileInputStream(file))) {
-					ZipEntry entry;
-					while ((entry = zis.getNextEntry()) != null) {
-						String fileName = entry.getName();
-						Path newFile = new Path(target, fileName);
-						if (entry.isDirectory()) {
-							target.getFileSystem().mkdirs(newFile);
-						} else {
-							try (FSDataOutputStream fsDataOutputStream = target.getFileSystem()
-									.create(newFile, FileSystem.WriteMode.NO_OVERWRITE)) {
-								IOUtils.copyBytes(zis, fsDataOutputStream, false);
-							}
-							//noinspection ResultOfMethodCallIgnored
-							new File(newFile.getPath()).setExecutable(isExecutable);
-						}
-						zis.closeEntry();
-					}
-				}
-				Files.delete(file.toPath());
-				return target;
+				Path directory = FileUtils.expandDirectory(new Path(file.getAbsolutePath()), target);
+				return directory;
 			} else {
 				//noinspection ResultOfMethodCallIgnored
 				file.setExecutable(isExecutable);

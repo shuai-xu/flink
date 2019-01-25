@@ -20,7 +20,6 @@ package org.apache.flink.streaming.api.graph;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.ExecutionMode;
-import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.OutputFormat;
@@ -31,6 +30,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.runtime.checkpoint.CheckpointRetentionPolicy;
 import org.apache.flink.runtime.checkpoint.MasterTriggerRestoreHook;
+import org.apache.flink.runtime.client.ClientUtils;
 import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.ControlType;
@@ -200,9 +200,7 @@ public class StreamingJobGraphGenerator {
 		setSchedulerConfiguration();
 
 		// add registered cache file into job configuration
-		for (Tuple2<String, DistributedCache.DistributedCacheEntry> e : streamGraph.getCachedFiles()) {
-			jobGraph.addUserArtifact(e.f0, e.f1);
-		}
+		ClientUtils.addUserArtifactEntries(streamGraph.getCachedFiles(), jobGraph);
 
 		// set the ExecutionConfig last when it has been finalized
 		try {
