@@ -100,7 +100,7 @@ val source: KafkaTableSource = Kafka010JsonTableSource.builder()
 
 #### Optional Configuration
 
-* **Time Attributes:** Please see the sections on [configuring a rowtime attribute](#configure-a-rowtime-attribute) and [configuring a processing time attribute](#configure-a-processing-time-attribute).
+* **Time Attributes:** Please see the sections on [configuring a rowtime attribute](#configuring-a-rowtime-attribute) and [configuring a processing time attribute](#configuring-a-processing-time-attribute).
 
 * **Explicit JSON parse schema:** By default, the JSON records are parsed with the table schema. You can configure an explicit JSON schema and provide a mapping from table schema fields to JSON fields as shown in the following example.
 
@@ -115,7 +115,7 @@ KafkaTableSource source = Kafka010JsonTableSource.builder()
   // ...
   // set Table schema
   .withSchema(TableSchema.builder()
-    .field("sensorId", DataTypes.LONG
+    .field("sensorId", DataTypes.LONG)
     .field("temperature", DataTypes.DOUBLE).build())
   // set JSON parsing schema
   .forJsonSchema(TableSchema.builder()
@@ -368,7 +368,7 @@ A table schema field of type `ROWTIME_INDICATOR` can be declared as rowtime attr
 
 * the name of the field, 
 * a `TimestampExtractor` that computes the actual value for the attribute (usually from one or more other attributes), and
-* a `WatermarkStrategy` that specifies how watermarks are generated for the the rowtime attribute.
+* a `WatermarkStrategy` that specifies how watermarks are generated for the rowtime attribute.
 
 The following example shows how to configure a rowtime attribute.
 
