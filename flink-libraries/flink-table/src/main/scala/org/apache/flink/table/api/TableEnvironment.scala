@@ -306,11 +306,11 @@ abstract class TableEnvironment(
   /**
     * Get the default registered catalog.
     *
-    * @return ReadableWritableCatalog
+    * @return ReadableCatalog
     */
   @throws[CatalogNotExistException]
-  def getDefaultCatalog(): ReadableWritableCatalog = {
-    catalogManager.getCatalog(getDefaultCatalogName()).asInstanceOf[ReadableWritableCatalog]
+  def getDefaultCatalog(): ReadableCatalog = {
+    catalogManager.getCatalog(getDefaultCatalogName())
   }
 
   /**
@@ -544,7 +544,7 @@ abstract class TableEnvironment(
   def registerTable(name: String, catalogTable: CatalogTable): Unit = {
     val catalog = getDefaultCatalog()
     val path = new ObjectPath(getDefaultDatabaseName(), name)
-    catalog.createTable(path, catalogTable, false)
+    catalog.asInstanceOf[ReadableWritableCatalog].createTable(path, catalogTable, false)
   }
 
   /**
@@ -574,7 +574,7 @@ abstract class TableEnvironment(
     * @param catalogTable The table to register.
     */
   def registerOrReplaceTable(name: String, catalogTable: CatalogTable): Unit = {
-    val catalog = getDefaultCatalog()
+    val catalog = getDefaultCatalog().asInstanceOf[ReadableWritableCatalog]
     val path = new ObjectPath(getDefaultDatabaseName(),name)
 
     catalog.dropTable(path, true)
@@ -590,7 +590,7 @@ abstract class TableEnvironment(
     */
   @throws[TableAlreadyExistException]
   private[flink] def registerTableInternal(name: String, table: AbstractTable): Unit = {
-    catalogManager.getCatalog(catalogManager.getDefaultCatalogName)
+    getDefaultCatalog()
       .asInstanceOf[ReadableWritableCatalog]
       .createTable(
         new ObjectPath(catalogManager.getDefaultDatabaseName, name),
@@ -608,7 +608,7 @@ abstract class TableEnvironment(
     * @param table The table that replaces the previous table.
     */
   protected def replaceRegisteredTable(name: String, table: AbstractTable): Unit = {
-    catalogManager.getCatalog(catalogManager.getDefaultCatalogName)
+    getDefaultCatalog()
       .asInstanceOf[ReadableWritableCatalog]
       .alterTable(
         new ObjectPath(catalogManager.getDefaultDatabaseName, name),
@@ -1065,7 +1065,7 @@ abstract class TableEnvironment(
     * @return A list of the names of all registered databases.
     */
   def listDatabases(): Array[String] = {
-    catalogManager.getDefaultCatalog.listDatabases().asScala.toArray
+    getDefaultCatalog.listDatabases().asScala.toArray
   }
 
   /**
@@ -1074,7 +1074,7 @@ abstract class TableEnvironment(
     * @return A list of the names of all registered tables and views.
     */
   def listTables(): Array[String] = {
-    catalogManager.getDefaultCatalog.listTables(catalogManager.getDefaultDatabaseName)
+    getDefaultCatalog.listTables(catalogManager.getDefaultDatabaseName)
       .map(op => op.getObjectName)
       .toArray
   }
@@ -1085,7 +1085,7 @@ abstract class TableEnvironment(
     * @return A list of the names of all registered views.
     */
   def listViews(): Array[String] = {
-    catalogManager.getDefaultCatalog.listViews(catalogManager.getDefaultDatabaseName)
+    getDefaultCatalog.listViews(catalogManager.getDefaultDatabaseName)
       .map(op => op.getObjectName)
       .toArray
   }
@@ -1385,12 +1385,10 @@ abstract class TableEnvironment(
                                       table: AbstractTable,
                                       replace: Boolean): Unit = {
     if (replace) {
-      catalogManager.getCatalog(catalogManager.getDefaultCatalogName)
-        .asInstanceOf[ReadableWritableCatalog]
+      getDefaultCatalog().asInstanceOf[ReadableWritableCatalog]
         .dropTable(new ObjectPath(catalogManager.getDefaultDatabaseName, name), true)
     }
-    catalogManager.getCatalog(catalogManager.getDefaultCatalogName)
-      .asInstanceOf[ReadableWritableCatalog]
+    getDefaultCatalog().asInstanceOf[ReadableWritableCatalog]
       .createTable(
         new ObjectPath(catalogManager.getDefaultDatabaseName, name),
         createFlinkTempTable(table),

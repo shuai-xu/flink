@@ -157,7 +157,7 @@ class TableEnvironmentTest extends TableTestBase {
   }
 
   def registerTestTable(tEnv: TableEnvironment): Unit = {
-    val catalog = tEnv.getDefaultCatalog()
+    val catalog = tEnv.getDefaultCatalog().asInstanceOf[ReadableWritableCatalog]
 
     catalog.createTable(
       new ObjectPath(tEnv.getDefaultDatabaseName(), "t1"),
