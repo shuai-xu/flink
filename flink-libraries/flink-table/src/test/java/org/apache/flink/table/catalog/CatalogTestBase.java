@@ -34,7 +34,9 @@ import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -71,6 +73,9 @@ public abstract class CatalogTestBase {
 	protected static ReadableWritableCatalog catalog;
 
 	public abstract String getTableType();
+
+	@Rule
+	public ExpectedException exception = ExpectedException.none();
 
 	// ------ tables ------
 
@@ -113,17 +118,20 @@ public abstract class CatalogTestBase {
 		assertEquals(path1.getFullName(), tables.get(0).getFullName());
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testCreateTable_DatabaseNotExistException() {
 		assertFalse(catalog.dbExists(db1));
 
+		exception.expect(DatabaseNotExistException.class);
 		catalog.createTable(nonExistTablePath, createTable(), false);
 	}
 
-	@Test(expected = TableAlreadyExistException.class)
+	@Test
 	public void testCreateTable_TableAlreadyExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createTable(), false);
+
+		exception.expect(TableAlreadyExistException.class);
 		catalog.createTable(path1, createTable(), false);
 	}
 
@@ -141,14 +149,17 @@ public abstract class CatalogTestBase {
 		assertEquals(table, catalog.getTable(path1));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testGetTable_TableNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(TableNotExistException.class);
 		catalog.getTable(nonExistTablePath);
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testGetTable_TableNotExistException_NoDb() {
+		exception.expect(TableNotExistException.class);
 		catalog.getTable(nonExistTablePath);
 	}
 
@@ -175,8 +186,9 @@ public abstract class CatalogTestBase {
 		assertFalse(catalog.tableExists(path1));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testDropTable_TableNotExistException() {
+		exception.expect(TableNotExistException.class);
 		catalog.dropTable(nonExistDbPath, false);
 	}
 
@@ -217,8 +229,9 @@ public abstract class CatalogTestBase {
 		assertEquals(newTable, catalog.getTable(path1));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testAlterTable_TableNotExistException() {
+		exception.expect(TableNotExistException.class);
 		catalog.alterTable(nonExistDbPath, createTable(), false);
 	}
 
@@ -243,10 +256,11 @@ public abstract class CatalogTestBase {
 
 	// ------ table and column stats ------
 
-	@Test (expected = TableNotExistException.class)
+	@Test
 	public void testGetTableStats_TableNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 
+		exception.expect(TableNotExistException.class);
 		catalog.getTableStats(path1);
 	}
 
@@ -343,13 +357,15 @@ public abstract class CatalogTestBase {
 		assertEquals(new TableStats().toString(), catalog.getTableStats(path1).toString());
 	}
 
-	@Test (expected = TableNotExistException.class)
+	@Test
 	public void testAlterTableStats_TableNotExistException() {
+		exception.expect(TableNotExistException.class);
 		catalog.alterTableStats(new ObjectPath(catalog.getDefaultDatabaseName(), "nonexist"), null, false);
 	}
 
-	@Test (expected = TableNotExistException.class)
+	@Test
 	public void testAlterTableStats_TableNotExistExceptio_2() {
+		exception.expect(TableNotExistException.class);
 		catalog.alterTableStats(new ObjectPath("non", "exist"), null, false);
 	}
 
@@ -373,17 +389,20 @@ public abstract class CatalogTestBase {
 		assertEquals(view, catalog.getTable(path1));
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testCreateView_DatabaseNotExistException() {
 		assertFalse(catalog.dbExists(db1));
 
+		exception.expect(DatabaseNotExistException.class);
 		catalog.createView(nonExistTablePath, createView(), false);
 	}
 
-	@Test(expected = TableAlreadyExistException.class)
+	@Test
 	public void testCreateView_TableAlreadyExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createView(path1, createView(), false);
+
+		exception.expect(TableAlreadyExistException.class);
 		catalog.createView(path1, createView(), false);
 	}
 
@@ -432,8 +451,9 @@ public abstract class CatalogTestBase {
 		assertEquals(newView, catalog.getTable(path1));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testAlterView_TableNotExistException() {
+		exception.expect(TableNotExistException.class);
 		catalog.alterTable(nonExistDbPath, createTable(), false);
 	}
 
@@ -468,9 +488,11 @@ public abstract class CatalogTestBase {
 		assertEquals(2, catalog.listDatabases().size());
 	}
 
-	@Test(expected = DatabaseAlreadyExistException.class)
+	@Test
 	public void testCreateDb_DatabaseAlreadyExistException() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(DatabaseAlreadyExistException.class);
 		catalog.createDatabase(db1, createDb(), false);
 	}
 
@@ -491,8 +513,9 @@ public abstract class CatalogTestBase {
 		assertEquals(new HashSet<>(Arrays.asList(db1, catalog.getDefaultDatabaseName())), new HashSet<>(dbs));
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testGetDb_DatabaseNotExistException() {
+		exception.expect(DatabaseNotExistException.class);
 		catalog.getDatabase("nonexistent");
 	}
 
@@ -507,8 +530,9 @@ public abstract class CatalogTestBase {
 		assertFalse(catalog.listDatabases().contains(db1));
 	}
 
-	@Test (expected = DatabaseNotExistException.class)
+	@Test
 	public void testDropDb_DatabaseNotExistException() {
+		exception.expect(DatabaseNotExistException.class);
 		catalog.dropDatabase(db1, false);
 	}
 
@@ -531,8 +555,9 @@ public abstract class CatalogTestBase {
 		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(newDb.getProperties().entrySet()));
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testAlterDb_DatabaseNotExistException() {
+		exception.expect(DatabaseNotExistException.class);
 		catalog.alterDatabase("nonexistent", createDb(), false);
 	}
 
@@ -574,24 +599,30 @@ public abstract class CatalogTestBase {
 		assertEquals(createAnotherPartition(), catalog.getPartition(path1, createAnotherPartitionSpec()));
 	}
 
-	@Test (expected = TableNotExistException.class)
+	@Test
 	public void testCreateParition_TableNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(TableNotExistException.class);
 		catalog.createPartition(path1, createPartition(), false);
 	}
 
-	@Test (expected = TableNotPartitionedException.class)
+	@Test
 	public void testCreateParition_TableNotPartitionedException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createTable(), false);
+
+		exception.expect(TableNotPartitionedException.class);
 		catalog.createPartition(path1, createPartition(), false);
 	}
 
-	@Test (expected = PartitionAlreadyExistException.class)
+	@Test
 	public void testCreateParition_PartitionAlreadExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createPartitionedTable(), false);
 		catalog.createPartition(path1, createPartition(), false);
+
+		exception.expect(PartitionAlreadyExistException.class);
 		catalog.createPartition(path1, createPartition(), false);
 	}
 
@@ -616,23 +647,29 @@ public abstract class CatalogTestBase {
 		assertEquals(Arrays.asList(), catalog.listPartitions(path1));
 	}
 
-	@Test (expected = TableNotExistException.class)
+	@Test
 	public void testDropPartition_TableNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(TableNotExistException.class);
 		catalog.dropPartition(path1, createPartitionSpec(), false);
 	}
 
-	@Test (expected = TableNotPartitionedException.class)
+	@Test
 	public void testDropPartition_TableNotPartitionedException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createTable(), false);
+
+		exception.expect(TableNotPartitionedException.class);
 		catalog.dropPartition(path1, createPartitionSpec(), false);
 	}
 
-	@Test (expected = PartitionNotExistException.class)
+	@Test
 	public void testDropPartition_PartitionNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createPartitionedTable(), false);
+
+		exception.expect(PartitionNotExistException.class);
 		catalog.dropPartition(path1, createPartitionSpec(), false);
 	}
 
@@ -666,23 +703,29 @@ public abstract class CatalogTestBase {
 		assertEquals("v", cp.getProperties().get("k"));
 	}
 
-	@Test (expected = TableNotExistException.class)
+	@Test
 	public void testAlterPartition_TableNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(TableNotExistException.class);
 		catalog.alterPartition(path1, createPartition(), false);
 	}
 
-	@Test (expected = TableNotPartitionedException.class)
+	@Test
 	public void testAlterPartition_TableNotPartitionedException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createTable(), false);
+
+		exception.expect(TableNotPartitionedException.class);
 		catalog.alterPartition(path1, createPartition(), false);
 	}
 
-	@Test (expected = PartitionNotExistException.class)
+	@Test
 	public void testAlterPartition_PartitionNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createPartitionedTable(), false);
+
+		exception.expect(PartitionNotExistException.class);
 		catalog.alterPartition(path1, createPartition(), false);
 	}
 
@@ -693,22 +736,27 @@ public abstract class CatalogTestBase {
 		catalog.alterPartition(path1, createPartition(), true);
 	}
 
-	@Test (expected = TableNotExistException.class)
+	@Test
 	public void testGetPartition_TableNotExistException() {
+		exception.expect(TableNotExistException.class);
 		catalog.getPartition(path1, createPartitionSpec());
 	}
 
-	@Test (expected = TableNotPartitionedException.class)
+	@Test
 	public void testGetPartition_TableNotPartitionedException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createTable(), false);
+
+		exception.expect(TableNotPartitionedException.class);
 		catalog.getPartition(path1, createPartitionSpec());
 	}
 
-	@Test (expected = PartitionNotExistException.class)
+	@Test
 	public void testGetParition_PartitionNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createPartitionedTable(), false);
+
+		exception.expect(PartitionNotExistException.class);
 		catalog.getPartition(path1, createPartitionSpec());
 	}
 

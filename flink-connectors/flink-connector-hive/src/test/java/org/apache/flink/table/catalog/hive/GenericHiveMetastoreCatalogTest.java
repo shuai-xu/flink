@@ -36,7 +36,9 @@ import org.apache.flink.table.plan.stats.TableStats;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -94,6 +96,9 @@ public class GenericHiveMetastoreCatalogTest {
 		return "generic_hive_metastore";
 	}
 
+	@Rule
+	public ExpectedException exception = ExpectedException.none();
+
 	// ------ tables ------
 
 	@Test
@@ -139,17 +144,20 @@ public class GenericHiveMetastoreCatalogTest {
 		assertEquals(path1.getFullName(), tables.get(0).getFullName());
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testCreateTable_DatabaseNotExistException() {
 		assertFalse(catalog.dbExists(db1));
 
+		exception.expect(DatabaseNotExistException.class);
 		catalog.createTable(nonExistTablePath, createTable(), false);
 	}
 
-	@Test(expected = TableAlreadyExistException.class)
+	@Test
 	public void testCreateTable_TableAlreadyExistException() {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createTable(), false);
+
+		exception.expect(TableAlreadyExistException.class);
 		catalog.createTable(path1, createTable(), false);
 	}
 
@@ -167,14 +175,19 @@ public class GenericHiveMetastoreCatalogTest {
 		assertEquals(table, catalog.getTable(path1));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testGetTable_TableNotExistException() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(TableNotExistException.class);
 		catalog.getTable(nonExistTablePath);
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testGetTable_TableNotExistException_NoDb() {
+		exception.expect(TableNotExistException.class);
+
+		exception.expect(TableNotExistException.class);
 		catalog.getTable(nonExistTablePath);
 	}
 
@@ -201,8 +214,9 @@ public class GenericHiveMetastoreCatalogTest {
 		assertFalse(catalog.tableExists(path1));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testDropTable_TableNotExistException() {
+		exception.expect(TableNotExistException.class);
 		catalog.dropTable(nonExistDbPath, false);
 	}
 
@@ -259,8 +273,9 @@ public class GenericHiveMetastoreCatalogTest {
 		assertEquals(newTable, catalog.getTable(path1));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testAlterTable_TableNotExistException() {
+		exception.expect(TableNotExistException.class);
 		catalog.alterTable(nonExistDbPath, createTable(), false);
 	}
 
@@ -292,9 +307,11 @@ public class GenericHiveMetastoreCatalogTest {
 		assertEquals(2, catalog.listDatabases().size());
 	}
 
-	@Test(expected = DatabaseAlreadyExistException.class)
+	@Test
 	public void testCreateDb_DatabaseAlreadyExistException() {
 		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(DatabaseAlreadyExistException.class);
 		catalog.createDatabase(db1, createDb(), false);
 	}
 
@@ -315,8 +332,9 @@ public class GenericHiveMetastoreCatalogTest {
 		assertEquals(new HashSet<>(Arrays.asList(db1, catalog.getDefaultDatabaseName())), new HashSet<>(dbs));
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testGetDb_DatabaseNotExistException() {
+		exception.expect(DatabaseNotExistException.class);
 		catalog.getDatabase("nonexistent");
 	}
 
@@ -331,8 +349,9 @@ public class GenericHiveMetastoreCatalogTest {
 		assertFalse(catalog.listDatabases().contains(db1));
 	}
 
-	@Test (expected = DatabaseNotExistException.class)
+	@Test
 	public void testDropDb_DatabaseNotExistException() {
+		exception.expect(DatabaseNotExistException.class);
 		catalog.dropDatabase(db1, false);
 	}
 
@@ -355,8 +374,9 @@ public class GenericHiveMetastoreCatalogTest {
 		assertTrue(catalog.getDatabase(db1).getProperties().entrySet().containsAll(newDb.getProperties().entrySet()));
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testAlterDb_DatabaseNotExistException() {
+		exception.expect(DatabaseNotExistException.class);
 		catalog.alterDatabase("nonexistent", createDb(), false);
 	}
 
@@ -375,8 +395,6 @@ public class GenericHiveMetastoreCatalogTest {
 
 		assertTrue(catalog.dbExists(db1));
 	}
-
-
 
 	// TODO: Code below is copied from CatalogTestBase. Should be removed once GenericHiveMetastoreCatalog is finished.
 	// ------ utilities ------
