@@ -99,9 +99,9 @@ public class ParallelismScalerTest {
 		vertexConfigs1.put(vertex3, vertex3Config1);
 
 		// job graph topology
-		Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
 		inputNodes.put(vertex1, Collections.emptyList());
-		inputNodes.put(vertex2, Arrays.asList(vertex1));
+		inputNodes.put(vertex2, Arrays.asList(Tuple2.of(vertex1, "forward")));
 		inputNodes.put(vertex3, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
@@ -366,9 +366,9 @@ public class ParallelismScalerTest {
 		vertexConfigs2.put(vertex3, vertex3Config2);
 
 		// job graph topology
-		Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
 		inputNodes.put(vertex1, Collections.emptyList());
-		inputNodes.put(vertex2, Arrays.asList(vertex1));
+		inputNodes.put(vertex2, Arrays.asList(Tuple2.of(vertex1, "forward")));
 		inputNodes.put(vertex3, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))

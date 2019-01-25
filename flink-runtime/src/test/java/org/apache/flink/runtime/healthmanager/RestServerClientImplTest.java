@@ -423,7 +423,7 @@ public class RestServerClientImplTest extends TestLogger {
 	private JobGraphOverviewInfo createInfo(JobGraph jobGraph) {
 		Configuration config = jobGraph.getJobConfiguration();
 		Map<String, JobGraphOverviewInfo.VertexConfigInfo> vertexConfigs = new HashMap<>();
-		Map<String, List<String>> inputNodes = new HashMap<>();
+		Map<String, List<JobGraphOverviewInfo.EdgeConfigInfo>> inputNodes = new HashMap<>();
 		for (JobVertex vertex : jobGraph.getVertices()) {
 			List<Integer> nodeIds;
 			JobVertexID vertexID = vertex.getID();
@@ -432,9 +432,11 @@ public class RestServerClientImplTest extends TestLogger {
 			} else {
 				nodeIds = new ArrayList<>();
 			}
-			List<String> inputVertexId;
+			List<JobGraphOverviewInfo.EdgeConfigInfo> inputVertexId;
 			if (vertex.getInputs() != null) {
-				inputVertexId = vertex.getInputs().stream().map(edge -> edge.getSource().getProducer().getID().toString()).collect(Collectors.toList());
+				inputVertexId = vertex.getInputs().stream().map(edge ->
+					new JobGraphOverviewInfo.EdgeConfigInfo(edge.getSource().getProducer().getID().toString(), edge.getShipStrategyName())
+				).collect(Collectors.toList());
 			} else {
 				inputVertexId = new ArrayList<>();
 			}

@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
@@ -445,7 +446,7 @@ public class ParallelismScaler implements Resolver {
 		}
 
 		for (JobVertexID vertexId : jobConfig.getInputNodes().keySet()) {
-			List<JobVertexID> upstreamVertices = jobConfig.getInputNodes().get(vertexId);
+			List<Tuple2<JobVertexID, String>> upstreamVertices = jobConfig.getInputNodes().get(vertexId);
 			if (upstreamVertices.isEmpty()) {
 				// source
 				isSource.put(vertexId, true);
@@ -455,7 +456,7 @@ public class ParallelismScaler implements Resolver {
 			if (upstreamVertices.size() == 1) {
 				// one upstream vertex
 
-				JobVertexID upstreamVertex = upstreamVertices.get(0);
+				JobVertexID upstreamVertex = upstreamVertices.get(0).f0;
 				JobVertexID upstreamSubDagRoot = vertex2SubDagRoot.get(upstreamVertex);
 
 				// add downstream sub dag vertices to upstream sub dag and remove downstream sub dag
@@ -470,10 +471,10 @@ public class ParallelismScaler implements Resolver {
 			} else {
 				// multiple downstream vertex
 
-				for (JobVertexID upstreamVertex : upstreamVertices) {
-					subDagRoot2UpstreamVertices.get(vertexId).add(upstreamVertex);
+				for (Tuple2<JobVertexID, String> upstreamVertex : upstreamVertices) {
+					subDagRoot2UpstreamVertices.get(vertexId).add(upstreamVertex.f0);
 
-					isSink.put(upstreamVertex, false);
+					isSink.put(upstreamVertex.f0, false);
 				}
 			}
 		}

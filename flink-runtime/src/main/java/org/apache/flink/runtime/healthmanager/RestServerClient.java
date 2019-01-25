@@ -210,12 +210,12 @@ public interface RestServerClient {
 		/**
 		 * edges.
 		 */
-		private Map<JobVertexID, List<JobVertexID>> inputNodes;
+		private Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes;
 
 		public JobConfig(
 			Configuration config,
 			Map<JobVertexID, VertexConfig> vertexConfigs,
-			Map<JobVertexID, List<JobVertexID>> inputNodes) {
+			Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes) {
 			this.config = config;
 			this.vertexConfigs = vertexConfigs;
 			this.inputNodes = inputNodes;
@@ -235,7 +235,7 @@ public interface RestServerClient {
 			return vertexConfigs;
 		}
 
-		public Map<JobVertexID, List<JobVertexID>> getInputNodes() {
+		public Map<JobVertexID, List<Tuple2<JobVertexID, String>>> getInputNodes() {
 			return inputNodes;
 		}
 

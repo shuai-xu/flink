@@ -141,7 +141,7 @@ public class RestServerClientImpl implements RestServerClient {
 			return sendRequest(header, parameters, EmptyRequestBody.getInstance()).thenApply(
 				jobGraphOverviewInfo -> {
 					Map<JobVertexID, VertexConfig> vertexConfigs = new HashMap<>();
-					Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+					Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
 					for (Map.Entry<String, JobGraphOverviewInfo.VertexConfigInfo> vertexId2Config: jobGraphOverviewInfo.getVertexConfigs().entrySet()) {
 						JobGraphOverviewInfo.VertexConfigInfo jobGraphVertexConfig = vertexId2Config.getValue();
 						JobVertexID vertexID = JobVertexID.fromHexString(vertexId2Config.getKey());
@@ -149,7 +149,8 @@ public class RestServerClientImpl implements RestServerClient {
 							jobGraphVertexConfig.getResourceSpec().convertToResourceSpec(), jobGraphVertexConfig.getNodeIds(),
 							jobGraphVertexConfig.getCoLocationGroupId());
 						vertexConfigs.put(vertexID, vertexConfig);
-						List<JobVertexID> inputVertexIds = jobGraphOverviewInfo.getInputNodes().get(vertexId2Config.getKey()).stream().map(vertexIdStr -> JobVertexID.fromHexString(vertexIdStr)).collect(Collectors.toList());
+						List<Tuple2<JobVertexID, String>> inputVertexIds = jobGraphOverviewInfo.getInputNodes().get(vertexId2Config.getKey()).stream().map(vertexId2ship ->
+							Tuple2.of(JobVertexID.fromHexString(vertexId2ship.getInputVertexId()), vertexId2ship.getShipStrategyName())).collect(Collectors.toList());
 						inputNodes.put(vertexID, inputVertexIds);
 					}
 					Configuration configuration = new Configuration();

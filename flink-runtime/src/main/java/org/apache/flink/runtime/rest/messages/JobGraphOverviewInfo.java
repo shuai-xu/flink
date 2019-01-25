@@ -54,13 +54,13 @@ public class JobGraphOverviewInfo implements ResponseBody {
 	private final Map<String, VertexConfigInfo> vertexConfigs;
 
 	@JsonProperty(FIELD_NAME_INPUT_NODES)
-	private final Map<String, List<String>> inputNodes;
+	private final Map<String, List<EdgeConfigInfo>> inputNodes;
 
 	@JsonCreator
 	public JobGraphOverviewInfo(
 			@JsonProperty(FIELD_NAME_JOB_CONFIG) Configuration config,
 			@JsonProperty(FIELD_NAME_VERTEX_CONFIG) Map<String, VertexConfigInfo> vertexConfigs,
-			@JsonProperty(FIELD_NAME_INPUT_NODES) Map<String, List<String>> inputNodes) {
+			@JsonProperty(FIELD_NAME_INPUT_NODES) Map<String, List<EdgeConfigInfo>> inputNodes) {
 		this.config = config;
 		this.vertexConfigs = vertexConfigs;
 		this.inputNodes = inputNodes;
@@ -74,7 +74,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		return vertexConfigs;
 	}
 
-	public Map<String, List<String>> getInputNodes() {
+	public Map<String, List<EdgeConfigInfo>> getInputNodes() {
 		return inputNodes;
 	}
 
@@ -214,6 +214,58 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		@Override
 		public int hashCode() {
 			return Objects.hash(id, name, parallelism, resourceSpec, nodeIds, coLocationGroupId);
+		}
+	}
+
+	/**
+	 *
+	 */
+	public static final class EdgeConfigInfo {
+		public static final String FIELD_NAME_INPUT_VERTEX_ID = "input-vertex-id";
+		public static final String FIELD_NAME_SHIP_STRATEGY_NAME = "ship-strategy-name";
+
+		@JsonProperty(FIELD_NAME_INPUT_VERTEX_ID)
+		private final String inputVertexId;
+
+		@JsonProperty(FIELD_NAME_SHIP_STRATEGY_NAME)
+		private final String shipStrategyName;
+
+		@JsonCreator
+		public EdgeConfigInfo(
+			@JsonProperty(FIELD_NAME_INPUT_VERTEX_ID) String inputVertexId,
+			@JsonProperty(FIELD_NAME_SHIP_STRATEGY_NAME) String shipStrategyName) {
+			this.inputVertexId = inputVertexId;
+			this.shipStrategyName = shipStrategyName;
+		}
+
+		@JsonIgnore
+		public String getInputVertexId() {
+			return inputVertexId;
+		}
+
+		@JsonIgnore
+		public String getShipStrategyName() {
+			return shipStrategyName;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+
+			if (null == o || this.getClass() != o.getClass()) {
+				return false;
+			}
+
+			EdgeConfigInfo that = (EdgeConfigInfo) o;
+			return Objects.equals(inputVertexId, that.inputVertexId) &&
+				Objects.equals(shipStrategyName, that.shipStrategyName);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(inputVertexId, shipStrategyName);
 		}
 	}
 

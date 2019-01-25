@@ -91,7 +91,7 @@ public class ExceedMaxResourceLimitResolverTest {
 		vertexConfigs2.put(vertex1, vertex1Config2);
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
-		Map<JobVertexID, List<JobVertexID>> inputNodes = new HashMap<>();
+		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
 		inputNodes.put(vertex1, Collections.emptyList());
 		inputNodes.put(vertex2, Collections.emptyList());
 
