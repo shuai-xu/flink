@@ -33,12 +33,10 @@ import org.apache.flink.runtime.jobgraph.ControlType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
-import org.apache.flink.runtime.jobgraph.JobControlEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.SchedulingMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
-import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 
 import org.junit.Test;
 
@@ -49,6 +47,8 @@ import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for the {@link StepwiseSchedulingPlugin}.
@@ -78,9 +78,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		v4.setInvokableClass(AbstractInvokable.class);
 		v4.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 
-		JobControlEdge controlEdge = new JobControlEdge(v1, v3, ControlType.CONCURRENT);
-		v3.addInputControlEdges(controlEdge);
-		v1.addOutputControlEdges(controlEdge);
+		v3.connectControlEdge(v1, ControlType.CONCURRENT);
 
 		final JobGraph jobGraph = new JobGraph(jobId, "test job", v1, v2, v3, v4);
 
@@ -120,9 +118,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		v4.setInvokableClass(AbstractInvokable.class);
 		v4.connectNewDataSetAsInput(v3, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
 
-		JobControlEdge controlEdge = new JobControlEdge(v1, v3, ControlType.CONCURRENT);
-		v3.addInputControlEdges(controlEdge);
-		v1.addOutputControlEdges(controlEdge);
+		v3.connectControlEdge(v1, ControlType.CONCURRENT);
 
 		final JobGraph jobGraph = new JobGraph(jobId, "test job", v1, v2, v3, v4);
 
@@ -246,9 +242,8 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		v8.connectNewDataSetAsInput(v7, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 		v4.connectNewDataSetAsInput(v8, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 		v9.connectNewDataSetAsInput(v4, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
-		JobControlEdge controlEdge = new JobControlEdge(v3, v8, ControlType.START_ON_FINISH);
-		v3.addOutputControlEdges(controlEdge);
-		v8.addInputControlEdges(controlEdge);
+
+		v8.connectControlEdge(v3, ControlType.START_ON_FINISH);
 
 		final JobGraph jobGraph = new JobGraph(jobId, "test job", v1, v2, v3, v4, v5, v6, v7, v8, v9);
 
@@ -261,7 +256,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 				new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
 
 		Set<ConcurrentSchedulingGroup> schedulingGroups = graphManagerPlugin.getConcurrentSchedulingGroups();
-		assertEquals(5, schedulingGroups.size());
+		assertEquals(6, schedulingGroups.size());
 	}
 
 	/**
@@ -287,9 +282,8 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		v4.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 		v3.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 		v3.connectDataSetAsInput(v2, new IntermediateDataSetID(), DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
-		JobControlEdge controlEdge = new JobControlEdge(v3, v1, ControlType.START_ON_FINISH);
-		v3.addOutputControlEdges(controlEdge);
-		v1.addInputControlEdges(controlEdge);
+
+		v3.connectControlEdge(v1, ControlType.START_ON_FINISH);
 
 		final JobGraph jobGraph = new JobGraph(jobId, "test job", v1, v2, v3, v4);
 
@@ -302,7 +296,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 				new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
 
 		Set<ConcurrentSchedulingGroup> schedulingGroups = graphManagerPlugin.getConcurrentSchedulingGroups();
-		assertEquals(5, schedulingGroups.size());
+		assertEquals(2, schedulingGroups.size());
 	}
 
 	/**
@@ -332,10 +326,9 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		v3.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
 		v4.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 		v4.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
-		v5.connectNewDataSetAsInput(v4, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
-		JobControlEdge controlEdge = new JobControlEdge(v2, v3, ControlType.START_ON_FINISH);
-		v2.addOutputControlEdges(controlEdge);
-		v3.addInputControlEdges(controlEdge);
+		v5.connectNewDataSetAsInput(v4, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
+
+		v2.connectControlEdge(v3, ControlType.START_ON_FINISH);
 
 		final JobGraph jobGraph = new JobGraph(jobId, "test job", v1, v2, v3, v4, v5);
 
@@ -348,7 +341,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		for (ExecutionVertex ev : eg.getAllExecutionVertices()) {
 			executionVertices.add(ev);
 		}
-		final TestExecutionVertexScheduler scheduler = new TestExecutionVertexScheduler(eg, executionVertices);
+		final TestExecutionVertexScheduler scheduler = spy(new TestExecutionVertexScheduler(eg, executionVertices));
 
 		final ConcurrentGroupGraphManagerPlugin graphManagerPlugin = new ConcurrentGroupGraphManagerPlugin();
 		graphManagerPlugin.open(
@@ -363,10 +356,12 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 
 		scheduler.clearScheduledVertices();
 
-		// Set one pipelined partition consumable
-		for (IntermediateResultPartition partition : eg.getAllVertices().get(v1.getID())
-			.getTaskVertices()[0].getProducedPartitions().values()) {
-			partition.markDataProduced();
+		// Set partition consumable
+		for (int i = 0; i < v1.getParallelism(); i++) {
+			for (IntermediateResultPartition partition : eg.getAllVertices().get(v1.getID())
+					.getTaskVertices()[0].getProducedPartitions().values()) {
+				partition.markDataProduced();
+			}
 		}
 		graphManagerPlugin.onResultPartitionConsumable(
 			new ResultPartitionConsumableEvent(v1.getProducedDataSets().get(0).getId(), 0));
@@ -379,16 +374,12 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 
 		scheduler.clearScheduledVertices();
 
-		for (ExecutionVertex ev: eg.getAllVertices().get(v2.getID())
-			.getTaskVertices()) {
-			eg.updateState(new TaskExecutionState(jobId, ev.getCurrentExecutionAttempt().getAttemptId(), ExecutionState.FINISHED));
-		}
-
+		when(scheduler.getExecutionJobVertexStatus(v3.getID())).thenReturn(ExecutionState.FINISHED);
 		graphManagerPlugin.onExecutionVertexStateChanged(
-			new ExecutionVertexStateChangedEvent(new ExecutionVertexID(v2.getID(), 0), ExecutionState.FINISHED));
-		assertEquals(2, scheduler.getScheduledVertices().size());
-		assertTrue(scheduler.getScheduledVertices().contains(new ExecutionVertexID(v4.getID(), 0)));
-		assertTrue(scheduler.getScheduledVertices().contains(new ExecutionVertexID(v4.getID(), 1)));
+				new ExecutionVertexStateChangedEvent(new ExecutionVertexID(v3.getID(), 0), ExecutionState.FINISHED));
+		assertEquals(4, scheduler.getScheduledVertices().size());
+		assertTrue(scheduler.getScheduledVertices().contains(new ExecutionVertexID(v2.getID(), 0)));
+		assertTrue(scheduler.getScheduledVertices().contains(new ExecutionVertexID(v2.getID(), 1)));
 
 		scheduler.clearScheduledVertices();
 

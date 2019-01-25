@@ -64,4 +64,9 @@ public class ExecutionVertexID implements Serializable {
 
 		return result;
 	}
+
+	@Override
+	public String toString() {
+		return jobVertexID + "_" + subTaskIndex;
+	}
 }

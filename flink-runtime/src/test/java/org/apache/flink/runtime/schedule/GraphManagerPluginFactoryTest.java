@@ -48,14 +48,14 @@ public class GraphManagerPluginFactoryTest extends TestLogger {
 		graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
 			jobConfig, this.getClass().getClassLoader());
 		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config);
-		assertTrue(graphManagerPlugin instanceof EagerSchedulingPlugin);
-		assertFalse(graphManagerPlugin.allowLazyDeployment());
+		assertTrue(graphManagerPlugin instanceof ConcurrentGroupGraphManagerPlugin);
+		assertTrue(graphManagerPlugin.allowLazyDeployment());
 
 		jobConfig.setString(ScheduleMode.class.getName(), ScheduleMode.LAZY_FROM_SOURCES.toString());
 		graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
 			jobConfig, this.getClass().getClassLoader());
 		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config);
-		assertTrue(graphManagerPlugin instanceof StepwiseSchedulingPlugin);
+		assertTrue(graphManagerPlugin instanceof ConcurrentGroupGraphManagerPlugin);
 		assertTrue(graphManagerPlugin.allowLazyDeployment());
 
 		jobConfig.setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN,

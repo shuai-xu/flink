@@ -32,6 +32,7 @@ import org.apache.flink.runtime.jobgraph.JobControlEdge;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.SchedulingMode;
 import org.apache.flink.util.FlinkRuntimeException;
 
@@ -59,9 +60,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 	private Map<ExecutionVertexID, Set<ConcurrentSchedulingGroup>> executionToConcurrentSchedulingGroups = new LinkedHashMap<>();
 
-	private Map<JobVertex, Set<JobVertex>> predecessorToSuccessors = new HashMap<>();
+	private Map<JobVertexID, Set<JobVertex>> predecessorToSuccessors = new HashMap<>();
 
-	private Map<JobVertex, JobVertex> successorToPredecessors = new HashMap<>();
+	private Map<JobVertexID, JobVertexID> successorToPredecessors = new HashMap<>();
 
 	private VertexInputTracker inputTracker;
 
@@ -104,7 +105,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 					}
 				}
 				if (!hasConcurrentUpstream) {
-					for (JobControlEdge controlEdge : jobVertex.getInputControlEdges()) {
+					for (JobControlEdge controlEdge : jobVertex.getInControlEdges()) {
 						if (controlEdge.getControlType() == ControlType.CONCURRENT) {
 							hasConcurrentUpstream = true;
 							break;
@@ -119,7 +120,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 						concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getTarget(), visitedJobEdge, visitedControlEdge));
 					}
 				}
-				for (JobControlEdge controlEdge : jobVertex.getOutputControlEdges()) {
+				for (JobControlEdge controlEdge : jobVertex.getOutControlEdges()) {
 					if (controlEdge.getControlType() == ControlType.CONCURRENT &&
 							!visitedControlEdge.contains(controlEdge)) {
 						visitedControlEdge.add(controlEdge);
@@ -136,6 +137,8 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			}
 		}
 
+		LOG.debug("{} vertex group was built for job {}", concurrentJobVertexGroups.size(), jobGraph.getJobID());
+
 		for (ConcurrentJobVertexGroup regionGroup : concurrentJobVertexGroups) {
 			Map<ExecutionVertexID, ConcurrentSchedulingGroup> vertexToSchedulingGroups =
 					buildSchedulingGroupsFromJobVertexGroup(regionGroup);
@@ -150,6 +153,11 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		}
 
 		LOG.info("{} concurrent group was built for job {}", concurrentSchedulingGroups.size(), jobGraph.getJobID());
+		if (LOG.isDebugEnabled()) {
+			for (ConcurrentSchedulingGroup group : concurrentSchedulingGroups) {
+				LOG.debug("Concurrent group has {}", group.getExecutionVertices());
+			}
+		}
 	}
 
 	@Override
@@ -190,38 +198,18 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 	@Override
 	public void onExecutionVertexFailover(ExecutionVertexFailoverEvent event) {
-		final Map<ConcurrentSchedulingGroup, List<ExecutionVertexID>> groupToVertices = new HashMap<>();
-		List<ExecutionVertexID> verticesInMultiGroup = new ArrayList<>();
+		final Set<ConcurrentSchedulingGroup> groupToSchedule = new HashSet<>();
 		for (ExecutionVertexID executionVertexID : event.getAffectedExecutionVertexIDs()) {
 			if (isReadyToSchedule(executionVertexID)) {
 				Set<ConcurrentSchedulingGroup> groupsBelongTo = executionToConcurrentSchedulingGroups.get(executionVertexID);
-				if (groupsBelongTo.size() > 1) {
-					verticesInMultiGroup.add(executionVertexID);
-				} else {
-					List<ExecutionVertexID> executionVertexIDs =
-							groupToVertices.computeIfAbsent(groupsBelongTo.iterator().next(), k -> new ArrayList<>());
-					executionVertexIDs.add(executionVertexID);
-				}
-			}
-		}
-		for (ExecutionVertexID executionVertexID : verticesInMultiGroup) {
-			Set<ConcurrentSchedulingGroup> groupsBelongTo = executionToConcurrentSchedulingGroups.get(executionVertexID);
-			boolean found = false;
-			for (ConcurrentSchedulingGroup schedulingGroup : groupsBelongTo) {
-				List<ExecutionVertexID> vertexIDs = groupToVertices.get(schedulingGroup);
-				if (vertexIDs != null) {
-					if (found) {
-						throw new FlinkRuntimeException("The multi groups for " + executionVertexID
-								+ " should not be scheduled at the same time");
-					}
-					found = true;
-					vertexIDs.add(executionVertexID);
+				if (groupsBelongTo.size() == 1) {
+					groupToSchedule.add(groupsBelongTo.iterator().next());
 				}
 			}
 		}
 
-		for (List<ExecutionVertexID> verticesToSchedule : groupToVertices.values()) {
-			scheduler.scheduleExecutionVertices(verticesToSchedule);
+		for (ConcurrentSchedulingGroup group : groupToSchedule) {
+			scheduler.scheduleExecutionVertices(group.getExecutionVertices());
 		}
 	}
 
@@ -260,12 +248,12 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		Set<JobVertex> concurrentVertices = new HashSet<>();
 		for (JobEdge jobEdge : jobVertex.getInputs()) {
 			if (!visitedJobEdges.contains(jobEdge)) {
-				for (JobControlEdge controlEdge :jobEdge.getSource().getProducer().getOutputControlEdges()) {
+				for (JobControlEdge controlEdge :jobEdge.getSource().getProducer().getOutControlEdges()) {
 					if (controlEdge.getControlType() == ControlType.START_ON_FINISH) {
 						return Collections.emptySet();
 					}
 				}
-				for (JobControlEdge controlEdge :jobEdge.getSource().getProducer().getInputControlEdges()) {
+				for (JobControlEdge controlEdge :jobEdge.getSource().getProducer().getInControlEdges()) {
 					if (controlEdge.getControlType() == ControlType.START_ON_FINISH) {
 						return Collections.emptySet();
 					}
@@ -278,15 +266,17 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			}
 		}
 		for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
-			JobEdge jobEdge = output.getConsumers().get(0);
-			if (!visitedJobEdges.contains(jobEdge) &&
-					jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT) {
-				visitedJobEdges.add(jobEdge);
-				concurrentVertices.add(jobEdge.getTarget());
-				concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getTarget(), visitedJobEdges, visitedControlEdges));
+			if (output.getConsumers().size() > 0) {
+				JobEdge jobEdge = output.getConsumers().get(0);
+				if (!visitedJobEdges.contains(jobEdge) &&
+						jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT) {
+					visitedJobEdges.add(jobEdge);
+					concurrentVertices.add(jobEdge.getTarget());
+					concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getTarget(), visitedJobEdges, visitedControlEdges));
+				}
 			}
 		}
-		for (JobControlEdge controlEdge : jobVertex.getOutputControlEdges()) {
+		for (JobControlEdge controlEdge : jobVertex.getOutControlEdges()) {
 			if (!visitedControlEdges.contains(controlEdge) &&
 					controlEdge.getControlType() == ControlType.CONCURRENT) {
 				visitedControlEdges.add(controlEdge);
@@ -308,7 +298,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 		// Make it one region if exists ALL_TO_ALL edge or ControlEdge.
 		for (JobVertex jobVertex : jobVerticesTopologically) {
-			for (JobControlEdge controlEdge : jobVertex.getOutputControlEdges()) {
+			for (JobControlEdge controlEdge : jobVertex.getOutControlEdges()) {
 				if (controlEdge.getControlType() == ControlType.CONCURRENT) {
 					return makeAllOneSchedulingGroup(jobVerticesTopologically, jobVertexGroup.hasPrecedingGroup());
 				}
@@ -407,14 +397,14 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			return false;
 		}
 
+		JobVertexID predecessorId = successorToPredecessors.get(vertexID.getJobVertexID());
+		if (predecessorId != null && scheduler.getExecutionJobVertexStatus(predecessorId) != ExecutionState.FINISHED) {
+			return false;
+		}
+
 		// source vertices can be scheduled at once
 		if (jobGraph.findVertexByID(vertexID.getJobVertexID()).isInputVertex()) {
 			return true;
-		}
-
-		JobVertex predecessor = successorToPredecessors.get(vertexID.getJobVertexID());
-		if (predecessor != null && scheduler.getExecutionJobVertexStatus(vertexID.getJobVertexID()) != ExecutionState.FINISHED) {
-			return false;
 		}
 
 		// query whether the inputs are ready overall
@@ -426,13 +416,13 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		predecessorToSuccessors.clear();
 
 		for (JobVertex jobVertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
-			for (JobControlEdge controlEdge : jobVertex.getOutputControlEdges()) {
+			for (JobControlEdge controlEdge : jobVertex.getOutControlEdges()) {
 				if (controlEdge.getControlType() == ControlType.START_ON_FINISH) {
 					Set<JobVertex> concurrentAncestors = getAllConcurrentAncestors(controlEdge.getTarget());
 					for (JobVertex ancestor : concurrentAncestors) {
-						successorToPredecessors.put(ancestor, jobVertex);
+						successorToPredecessors.put(ancestor.getID(), jobVertex.getID());
 					}
-					Set<JobVertex> existingSuccessors = predecessorToSuccessors.putIfAbsent(jobVertex, concurrentAncestors);
+					Set<JobVertex> existingSuccessors = predecessorToSuccessors.putIfAbsent(jobVertex.getID(), concurrentAncestors);
 					if (existingSuccessors != null) {
 						existingSuccessors.addAll(concurrentAncestors);
 					}

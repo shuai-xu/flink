@@ -243,6 +243,7 @@ public class FailoverRegionTest extends TestLogger {
 
 		waitUntilExecutionState(ev31.getCurrentExecutionAttempt(), ExecutionState.DEPLOYING, 2000);
 		waitUntilExecutionState(ev32.getCurrentExecutionAttempt(), ExecutionState.DEPLOYING, 2000);
+		waitUntilExecutionState(ev4.getCurrentExecutionAttempt(), ExecutionState.DEPLOYING, 2000);
 
 		ev31.getCurrentExecutionAttempt().fail(new Exception("New fail"));
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev11).getState());
@@ -250,6 +251,7 @@ public class FailoverRegionTest extends TestLogger {
 		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev31).getState());
 
 		ev32.getCurrentExecutionAttempt().cancelingComplete();
+		ev4.getCurrentExecutionAttempt().cancelingComplete();
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev11).getState());
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev22).getState());
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev31).getState());
@@ -303,24 +305,16 @@ public class FailoverRegionTest extends TestLogger {
 
 		JobVertex v1 = new JobVertex("vertex1");
 		JobVertex v2 = new JobVertex("vertex2");
-		JobVertex v3 = new JobVertex("vertex3");
-		JobVertex v4 = new JobVertex("vertex4");
 
 		v1.setParallelism(2);
 		v2.setParallelism(2);
-		v3.setParallelism(2);
-		v4.setParallelism(2);
 
 		v1.setInvokableClass(AbstractInvokable.class);
 		v2.setInvokableClass(AbstractInvokable.class);
-		v3.setInvokableClass(AbstractInvokable.class);
-		v4.setInvokableClass(AbstractInvokable.class);
 
-		v2.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
-		v4.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
-		v4.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v2.connectNewDataSetAsInput(v1, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
 
-		List<JobVertex> ordered = Arrays.asList(v1, v2, v3, v4);
+		List<JobVertex> ordered = Arrays.asList(v1, v2);
 
 		ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraphDirectly(
 				new DummyJobInformation(
@@ -335,24 +329,24 @@ public class FailoverRegionTest extends TestLogger {
 				ordered);
 
 		eg.scheduleForExecution();
-		RestartPipelinedRegionStrategy strategy = (RestartPipelinedRegionStrategy)eg.getFailoverStrategy();
+		RestartPipelinedRegionStrategy strategy = (RestartPipelinedRegionStrategy) eg.getFailoverStrategy();
 
 		ExecutionVertex ev11 = eg.getJobVertex(v1.getID()).getTaskVertices()[0];
 		ExecutionVertex ev12 = eg.getJobVertex(v1.getID()).getTaskVertices()[1];
-		ExecutionVertex ev31 = eg.getJobVertex(v3.getID()).getTaskVertices()[0];
-		ExecutionVertex ev32 = eg.getJobVertex(v3.getID()).getTaskVertices()[1];
+		ExecutionVertex ev21 = eg.getJobVertex(v2.getID()).getTaskVertices()[0];
+		ExecutionVertex ev22 = eg.getJobVertex(v2.getID()).getTaskVertices()[1];
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev11).getState());
-		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev31).getState());
+		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev21).getState());
 
 		ev11.getCurrentExecutionAttempt().fail(new Exception("new fail"));
-		ev31.getCurrentExecutionAttempt().fail(new Exception("new fail"));
+		ev12.getCurrentExecutionAttempt().fail(new Exception("new fail"));
 		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev11).getState());
-		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev31).getState());
+		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev12).getState());
 
-		ev32.getCurrentExecutionAttempt().cancelingComplete();
-		waitUntilFailoverRegionState(strategy.getFailoverRegion(ev31), JobStatus.RUNNING, 1000);
+		ev22.getCurrentExecutionAttempt().cancelingComplete();
+		waitUntilFailoverRegionState(strategy.getFailoverRegion(ev12), JobStatus.RUNNING, 1000);
 
-		ev12.getCurrentExecutionAttempt().cancelingComplete();
+		ev21.getCurrentExecutionAttempt().cancelingComplete();
 		waitUntilFailoverRegionState(strategy.getFailoverRegion(ev11), JobStatus.RUNNING, 1000);
 	}
 
@@ -461,9 +455,8 @@ public class FailoverRegionTest extends TestLogger {
 		ev1.getCurrentExecutionAttempt().fail(new Exception("new fail"));
 		assertEquals(JobStatus.CANCELLING, strategy.getFailoverRegion(ev1).getState());
 
-		// mark cancelingComplete for v1 vertices, as others vertices are still in CREATED state
-		// and can change to CANCELED directly
-		for (ExecutionVertex evs : ev1.getJobVertex().getTaskVertices()) {
+		// mark cancelingComplete for all vertices,
+		for (ExecutionVertex evs : eg.getAllExecutionVertices()) {
 			evs.getCurrentExecutionAttempt().cancelingComplete();
 		}
 		assertEquals(JobStatus.RUNNING, strategy.getFailoverRegion(ev1).getState());

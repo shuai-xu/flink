@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
-import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * The base class for job vertexes.
@@ -575,6 +574,13 @@ public class JobVertex implements java.io.Serializable {
 	}
 
 	public JobControlEdge connectControlEdge(JobVertex sourceVertex, ControlType controlType) {
+		if (controlType == ControlType.START_ON_FINISH) {
+			for (JobControlEdge existingEdge : inControlEdges) {
+				if (existingEdge.getControlType() == ControlType.START_ON_FINISH) {
+					throw new IllegalArgumentException("Target should only have one start on finish control edge.");
+				}
+			}
+		}
 		JobControlEdge controlEdge = new JobControlEdge(sourceVertex, this, controlType);
 		sourceVertex.outControlEdges.add(controlEdge);
 		this.inControlEdges.add(controlEdge);
