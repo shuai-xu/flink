@@ -19,81 +19,81 @@ limitations under the License.
   <TestCase name="testMaxWithRetractOptimizeWithLocalGlobal">
     <Resource name="plan">
       <![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MAX(max$0) AS EXPR$1], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[a1]], retract=[true], accMode=[Acc])
-   +- StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS max$0, COUNT_RETRACT(*) AS count$1], retract=[true], accMode=[Acc])
-      +- StreamExecCalc(select=[a1, a3], retract=[true], accMode=[AccRetract])
-         +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3], retract=[true], accMode=[AccRetract])
-            +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
-               +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0], retract=[true], accMode=[Acc])
-                  +- StreamExecMiniBatchAssigner(interval=[100ms], retract=[true], accMode=[Acc])
-                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MAX(max$0) AS EXPR$1], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[a1]], updateAsRetraction=[true], accMode=[Acc])
+   +- StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS max$0, COUNT_RETRACT(*) AS count$1], updateAsRetraction=[true], accMode=[Acc])
+      +- StreamExecCalc(select=[a1, a3], updateAsRetraction=[true], accMode=[AccRetract])
+         +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3], updateAsRetraction=[true], accMode=[AccRetract])
+            +- StreamExecExchange(distribution=[hash[a1, a2]], updateAsRetraction=[true], accMode=[Acc])
+               +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0], updateAsRetraction=[true], accMode=[Acc])
+                  +- StreamExecMiniBatchAssigner(interval=[100ms], updateAsRetraction=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testMaxWithRetractOptimize">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS EXPR$1], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[a1]], retract=[true], accMode=[AccRetract])
-   +- StreamExecCalc(select=[a1, a3], retract=[true], accMode=[AccRetract])
-      +- StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3], retract=[true], accMode=[AccRetract])
-         +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+StreamExecGroupAggregate(groupBy=[a1], select=[a1, MAX(a3) AS EXPR$1], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[a1]], updateAsRetraction=[true], accMode=[AccRetract])
+   +- StreamExecCalc(select=[a1, a3], updateAsRetraction=[true], accMode=[AccRetract])
+      +- StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3], updateAsRetraction=[true], accMode=[AccRetract])
+         +- StreamExecExchange(distribution=[hash[a1, a2]], updateAsRetraction=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testMinCanNotOptimize">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(a3) AS EXPR$1], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[a1]], retract=[true], accMode=[AccRetract])
-   +- StreamExecCalc(select=[a1, a3], retract=[true], accMode=[AccRetract])
-      +- StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3], retract=[true], accMode=[AccRetract])
-         +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(a3) AS EXPR$1], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[a1]], updateAsRetraction=[true], accMode=[AccRetract])
+   +- StreamExecCalc(select=[a1, a3], updateAsRetraction=[true], accMode=[AccRetract])
+      +- StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS a3], updateAsRetraction=[true], accMode=[AccRetract])
+         +- StreamExecExchange(distribution=[hash[a1, a2]], updateAsRetraction=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testMinCanNotOptimizeWithLocalGlobal">
     <Resource name="plan">
       <![CDATA[
-StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(min$0) AS EXPR$1], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[a1]], retract=[true], accMode=[Acc])
-   +- StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(a3) AS min$0, COUNT_RETRACT(*) AS count$1], retract=[true], accMode=[Acc])
-      +- StreamExecCalc(select=[a1, a3], retract=[true], accMode=[AccRetract])
-         +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3], retract=[true], accMode=[AccRetract])
-            +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
-               +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0], retract=[true], accMode=[Acc])
-                  +- StreamExecMiniBatchAssigner(interval=[100ms], retract=[true], accMode=[Acc])
-                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+StreamExecGlobalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(min$0) AS EXPR$1], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[a1]], updateAsRetraction=[true], accMode=[Acc])
+   +- StreamExecLocalGroupAggregate(groupBy=[a1], select=[a1, MIN_RETRACT(a3) AS min$0, COUNT_RETRACT(*) AS count$1], updateAsRetraction=[true], accMode=[Acc])
+      +- StreamExecCalc(select=[a1, a3], updateAsRetraction=[true], accMode=[AccRetract])
+         +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(max$0) AS a3], updateAsRetraction=[true], accMode=[AccRetract])
+            +- StreamExecExchange(distribution=[hash[a1, a2]], updateAsRetraction=[true], accMode=[Acc])
+               +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MAX(a3) AS max$0], updateAsRetraction=[true], accMode=[Acc])
+                  +- StreamExecMiniBatchAssigner(interval=[100ms], updateAsRetraction=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testMinWithRetractOptimizeWithLocalGlobal">
     <Resource name="plan">
       <![CDATA[
-StreamExecGlobalGroupAggregate(select=[MIN(min$0) AS EXPR$0], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-   +- StreamExecLocalGroupAggregate(select=[MIN(a3) AS min$0, COUNT_RETRACT(*) AS count$1], retract=[true], accMode=[Acc])
-      +- StreamExecCalc(select=[a3], retract=[true], accMode=[AccRetract])
-         +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(min$0) AS a3], retract=[true], accMode=[AccRetract])
-            +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
-               +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS min$0], retract=[true], accMode=[Acc])
-                  +- StreamExecMiniBatchAssigner(interval=[100ms], retract=[true], accMode=[Acc])
-                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+StreamExecGlobalGroupAggregate(select=[MIN(min$0) AS EXPR$0], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[single], updateAsRetraction=[true], accMode=[Acc])
+   +- StreamExecLocalGroupAggregate(select=[MIN(a3) AS min$0, COUNT_RETRACT(*) AS count$1], updateAsRetraction=[true], accMode=[Acc])
+      +- StreamExecCalc(select=[a3], updateAsRetraction=[true], accMode=[AccRetract])
+         +- StreamExecGlobalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(min$0) AS a3], updateAsRetraction=[true], accMode=[AccRetract])
+            +- StreamExecExchange(distribution=[hash[a1, a2]], updateAsRetraction=[true], accMode=[Acc])
+               +- StreamExecLocalGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS min$0], updateAsRetraction=[true], accMode=[Acc])
+                  +- StreamExecMiniBatchAssigner(interval=[100ms], updateAsRetraction=[true], accMode=[Acc])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testMinWithRetractOptimize">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN(a3) AS EXPR$1], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[a1]], retract=[true], accMode=[AccRetract])
-   +- StreamExecCalc(select=[a1, a3], retract=[true], accMode=[AccRetract])
-      +- StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS a3], retract=[true], accMode=[AccRetract])
-         +- StreamExecExchange(distribution=[hash[a1, a2]], retract=[true], accMode=[Acc])
-            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+StreamExecGroupAggregate(groupBy=[a1], select=[a1, MIN(a3) AS EXPR$1], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[a1]], updateAsRetraction=[true], accMode=[AccRetract])
+   +- StreamExecCalc(select=[a1, a3], updateAsRetraction=[true], accMode=[AccRetract])
+      +- StreamExecGroupAggregate(groupBy=[a1, a2], select=[a1, a2, MIN(a3) AS a3], updateAsRetraction=[true], accMode=[AccRetract])
+         +- StreamExecExchange(distribution=[hash[a1, a2]], updateAsRetraction=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

@@ -9,15 +9,15 @@ LogicalProject(a=[$0], b=[$1])
    +- LogicalTableScan(table=[[builtin, default, T]])
 
 == Optimized Logical Plan ==
-StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[false], accMode=[Acc], reuse_id=[1])
+StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[false], accMode=[Acc], reuse_id=[1])
 
-StreamExecSink(fields=[a, b, c, rank_num], retract=[false], accMode=[AccRetract])
-+- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
-   +- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
+StreamExecSink(fields=[a, b, c, rank_num], updateAsRetraction=[false], accMode=[AccRetract])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[AppendFastRank], select=[*, rowNum], updateAsRetraction=[true], accMode=[AccRetract])
+   +- StreamExecExchange(distribution=[hash[b]], updateAsRetraction=[false], accMode=[Acc])
       +- Reused(reference_id=[1])
 
-StreamExecSink(fields=[a, b], retract=[false], accMode=[Acc])
-+- StreamExecCalc(select=[a, b], where=[<(a, 6)], retract=[false], accMode=[Acc])
+StreamExecSink(fields=[a, b], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecCalc(select=[a, b], where=[<(a, 6)], updateAsRetraction=[false], accMode=[Acc])
    +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==

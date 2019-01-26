@@ -77,7 +77,8 @@ class RelTreeWriterImpl(
         case streamRel: StreamPhysicalRel =>
           val traitSet = streamRel.getTraitSet
           printValues.add(
-            Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
+            Pair.of("updateAsRetraction",
+              traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
           printValues.add(
             Pair.of("accMode", traitSet.getTrait(AccModeTraitDef.INSTANCE)))
         case _ => // ignore

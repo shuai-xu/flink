@@ -147,6 +147,7 @@ public class NodeResource {
 		if (maxManagedMem > 0) {
 			sb.append(", maxManagedMem=").append(maxManagedMem);
 		}
+		sb.append("}");
 		return sb.toString();
 	}
 

@@ -36,9 +36,7 @@ object FlinkNodeOptUtil {
     * @param detailLevel        detailLevel defines detail levels for EXPLAIN PLAN.
     * @param withResource       whether including resource information of ExecNode (only apply to
     *                           BatchExecNode node at present)
-    * @param withMemCost        whether including memory cost information of ExecNode (only apply to
-    *                           BatchExecNode node at present)
-    * @param withRelNodeId      whether including ID of the RelNode corresponding to an ExecNode
+    * @param withExecNodeId     whether including ID of ExecNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode corresponding to
     *                           an ExecNode (only apply to StreamPhysicalRel node at present)
     * @return                   explain plan of ExecNode
@@ -47,15 +45,13 @@ object FlinkNodeOptUtil {
       node: ExecNode[_, _],
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       withResource: Boolean = false,
-      withMemCost: Boolean = false, // TODO remove this arg ???
-      withRelNodeId: Boolean = false,
+      withExecNodeId: Boolean = false,
       withRetractTraits: Boolean = false): String = {
     doConvertTreeToString(
       node,
       detailLevel = detailLevel,
       withResource = withResource,
-      withMemCost = withMemCost,
-      withRelNodeId = withRelNodeId,
+      withExecNodeId = withExecNodeId,
       withRetractTraits = withRetractTraits)
   }
 
@@ -66,27 +62,23 @@ object FlinkNodeOptUtil {
     * @param detailLevel        detailLevel defines detail levels for EXPLAIN PLAN.
     * @param withResource       whether including resource information of ExecNode (only apply to
     *                           BatchExecNode node at present)
-    * @param withMemCost        whether including memory cost information of ExecNode (only apply to
-    *                           BatchExecNode node at present)
-    * @param withRelNodeId      whether including ID of the RelNode corresponding to an ExecNode
+    * @param withExecNodeId     whether including ID of ExecNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode corresponding to
-    *                           an ExecNode (only apply to StreamPhyscialRel node at present)
+    *                           an ExecNode (only apply to StreamPhysicalRel node at present)
     * @return                   explain plan of ExecNode
     */
   def dagToString(
       nodes: Seq[ExecNode[_, _]],
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       withResource: Boolean = false,
-      withMemCost: Boolean = false, // TODO remove this arg ???
-      withRelNodeId: Boolean = false,
+      withExecNodeId: Boolean = false,
       withRetractTraits: Boolean = false): String = {
     if (nodes.length == 1) {
       return treeToString(
         nodes.head,
         detailLevel,
         withResource = withResource,
-        withMemCost = withMemCost,
-        withRelNodeId = withRelNodeId,
+        withExecNodeId = withExecNodeId,
         withRetractTraits = withRetractTraits)
     }
 
@@ -118,8 +110,7 @@ object FlinkNodeOptUtil {
             node,
             detailLevel = detailLevel,
             withResource = withResource,
-            withMemCost = withMemCost,
-            withRelNodeId = withRelNodeId,
+            withExecNodeId = withExecNodeId,
             withRetractTraits = withRetractTraits,
             stopExplainNodes = Some(stopExplainNodes),
             reuseInfoMap = Some(reuseInfoMap))
@@ -146,8 +137,7 @@ object FlinkNodeOptUtil {
       node: ExecNode[_, _],
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       withResource: Boolean = false,
-      withMemCost: Boolean = false,
-      withRelNodeId: Boolean = false,
+      withExecNodeId: Boolean = false,
       withRetractTraits: Boolean = false,
       stopExplainNodes: Option[util.Set[ExecNode[_, _]]] = None,
       reuseInfoMap: Option[util.IdentityHashMap[ExecNode[_, _], (Integer, Boolean)]] = None
@@ -159,8 +149,7 @@ object FlinkNodeOptUtil {
       new PrintWriter(sw),
       explainLevel = detailLevel,
       withResource = withResource,
-      withMemCost = withMemCost,
-      withRelNodeId = withRelNodeId,
+      withExecNodeId = withExecNodeId,
       withRetractTraits = withRetractTraits,
       stopExplainNodes = stopExplainNodes,
       reuseInfoMap = reuseInfoMap)

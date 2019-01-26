@@ -150,8 +150,8 @@ object PlanUtil extends Logging {
     val nodeStr = FlinkNodeOptUtil.dagToString(
       nodes,
       SqlExplainLevel.ALL_ATTRIBUTES,
-      withRelNodeId = true,
-      withMemCost = true)
+      withExecNodeId = true,
+      withResource = true)
     writeContentToFile(nodeStr, dumpFilePath)
     if (LOG.isDebugEnabled) {
       LOG.debug(s"dump ExecNode: \n $nodeStr")

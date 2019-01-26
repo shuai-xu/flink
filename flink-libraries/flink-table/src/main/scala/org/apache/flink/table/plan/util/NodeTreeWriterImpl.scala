@@ -19,9 +19,8 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
-import org.apache.flink.table.plan.cost.FlinkBatchCost
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecScan, BatchPhysicalRel}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecScan}
 import org.apache.flink.table.plan.nodes.physical.stream.StreamPhysicalRel
 import org.apache.flink.table.plan.util.FlinkNodeOptUtil.ReuseInfoBuilder
 
@@ -45,8 +44,7 @@ class NodeTreeWriterImpl(
     pw: PrintWriter,
     explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
     withResource: Boolean = false,
-    withMemCost: Boolean = false,
-    withRelNodeId: Boolean = false,
+    withExecNodeId: Boolean = false,
     withRetractTraits: Boolean = false,
     stopExplainNodes: Option[util.Set[ExecNode[_, _]]] = None,
     reuseInfoMap: Option[util.IdentityHashMap[ExecNode[_, _], (Integer, Boolean)]] = None)
@@ -167,22 +165,17 @@ class NodeTreeWriterImpl(
                 Pair.of("shuffleCount", nestedLoopJoin.shuffleBuildCount(mq).toString))
               case _ => // do nothing
             }
-            addResourceToPrint(batchExecNode, printValues)
-        }
-      }
-      if (withMemCost || withResource) {
-        rel match {
-          case batchRel: BatchPhysicalRel =>
-            val memCost = mq.getNonCumulativeCost(batchRel).asInstanceOf[FlinkBatchCost].memory
-            printValues.add(Pair.of("memCost", memCost.asInstanceOf[AnyRef]))
-            printValues.add(Pair.of("rowcount", mq.getRowCount(rel)))
+            printValues.add(Pair.of("resource", batchExecNode.getResource.toString))
+            printValues.add(Pair.of("estimatedTotalMem", batchExecNode.getEstimatedTotalMem))
+            printValues.add(Pair.of("estimatedRowCount", batchExecNode.getEstimatedRowCount))
         }
       }
       if (explainLevel != SqlExplainLevel.NO_ATTRIBUTES) {
         printValues.addAll(values)
       }
 
-      if (withRelNodeId) {
+      if (withExecNodeId) {
+        // use RelNode's id now
         printValues.add(Pair.of("__id__", rel.getId.toString))
       }
 
@@ -191,7 +184,8 @@ class NodeTreeWriterImpl(
           case streamRel: StreamPhysicalRel =>
             val traitSet = streamRel.getTraitSet
             printValues.add(
-              Pair.of("retract", traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
+              Pair.of("updateAsRetraction",
+                traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
             printValues.add(
               Pair.of("accMode", traitSet.getTrait(AccModeTraitDef.INSTANCE)))
           case _ => // ignore
@@ -252,12 +246,6 @@ class NodeTreeWriterImpl(
       case Some(nodes) => !nodes.contains(node)
       case _ => true
     }
-  }
-
-  private def addResourceToPrint(
-      batchExecNode: BatchExecNode[_],
-      printValues: JArrayList[Pair[String, AnyRef]]): Unit = {
-      printValues.add(Pair.of("resource", batchExecNode.getResource.toString))
   }
 
   private def resourceSpecToString(resourceSpec: ResourceSpec): String = {

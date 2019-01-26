@@ -135,23 +135,23 @@ StreamExecCalc(select=[rowtime, id, name, val])
   <TestCase name="testWithPkMultiRowUpdate">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0, COUNT_RETRACT(c) AS TMP_1], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[pk]], retract=[true], accMode=[AccRetract])
-   +- StreamExecLastRow(key=[pk], select=[a, pk, c], retract=[true], accMode=[AccRetract])
-      +- StreamExecExchange(distribution=[hash[pk]], retract=[true], accMode=[Acc])
-         +- StreamExecTableSourceScan(table=[[builtin, default, MyTable]], fields=[a, pk, c], retract=[true], accMode=[Acc])
+StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0, COUNT_RETRACT(c) AS TMP_1], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[pk]], updateAsRetraction=[true], accMode=[AccRetract])
+   +- StreamExecLastRow(key=[pk], select=[a, pk, c], updateAsRetraction=[true], accMode=[AccRetract])
+      +- StreamExecExchange(distribution=[hash[pk]], updateAsRetraction=[true], accMode=[Acc])
+         +- StreamExecTableSourceScan(table=[[builtin, default, MyTable]], fields=[a, pk, c], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testWithPkMultiRowUpdateTransposeWithCalc">
     <Resource name="plan">
       <![CDATA[
-StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[pk]], retract=[true], accMode=[AccRetract])
-   +- StreamExecCalc(select=[pk, a], retract=[true], accMode=[AccRetract])
-      +- StreamExecLastRow(key=[pk], select=[a, pk, c], retract=[true], accMode=[AccRetract])
-         +- StreamExecExchange(distribution=[hash[pk]], retract=[true], accMode=[Acc])
-            +- StreamExecTableSourceScan(table=[[builtin, default, MyTable]], fields=[a, pk, c], retract=[true], accMode=[Acc])
+StreamExecGroupAggregate(groupBy=[pk], select=[pk, COUNT_RETRACT(a) AS TMP_0], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[pk]], updateAsRetraction=[true], accMode=[AccRetract])
+   +- StreamExecCalc(select=[pk, a], updateAsRetraction=[true], accMode=[AccRetract])
+      +- StreamExecLastRow(key=[pk], select=[a, pk, c], updateAsRetraction=[true], accMode=[AccRetract])
+         +- StreamExecExchange(distribution=[hash[pk]], updateAsRetraction=[true], accMode=[Acc])
+            +- StreamExecTableSourceScan(table=[[builtin, default, MyTable]], fields=[a, pk, c], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>
