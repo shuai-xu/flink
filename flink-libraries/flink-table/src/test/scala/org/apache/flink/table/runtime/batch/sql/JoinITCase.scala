@@ -717,6 +717,9 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
 
   @Test
   def testJoinCollation(): Unit = {
+    // TODO enable subplan reuse
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, false)
     checkResult(
       """
         |WITH v1 AS (

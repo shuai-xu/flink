@@ -20,10 +20,12 @@ package org.apache.flink.table.plan.batch.sql
 import org.apache.calcite.tools.ValidationException
 import org.apache.commons.lang3.StringUtils
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.util._
+
 import org.junit.{Before, Test}
 
 class TableFunctionTest extends TableTestBase {
@@ -35,6 +37,8 @@ class TableFunctionTest extends TableTestBase {
     util.tableEnv.registerFunction("funcDyn", new UDTFWithDynamicType0)
 
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, false)
   }
 
   @Test

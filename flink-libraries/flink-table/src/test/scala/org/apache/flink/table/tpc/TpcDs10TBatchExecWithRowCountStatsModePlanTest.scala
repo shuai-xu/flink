@@ -17,20 +17,20 @@
  */
 package org.apache.flink.table.tpc
 
-import java.util
-
 import org.apache.calcite.sql.SqlExplainLevel
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.util
 
 import scala.collection.JavaConversions._
 
 @RunWith(classOf[Parameterized])
 class TpcDs10TBatchExecWithRowCountStatsModePlanTest(
-  caseName: String,
-  explainLevel: SqlExplainLevel,
-  joinReorderEnabled: Boolean,
-  printOptimizedResult: Boolean)
+    caseName: String,
+    explainLevel: SqlExplainLevel,
+    joinReorderEnabled: Boolean,
+    printOptimizedResult: Boolean)
   extends TpcDsBatchExecPlanTest(
     caseName, 10000, STATS_MODE.ROW_COUNT, explainLevel, joinReorderEnabled, printOptimizedResult)
 

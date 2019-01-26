@@ -20,6 +20,7 @@ package org.apache.flink.table.tpc
 
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableConfigOptions
+import org.apache.flink.table.api.scala.BatchTableEnvironment
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
@@ -30,13 +31,12 @@ import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
 import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.sql.SqlExplainLevel
+import org.junit.{Before, Test}
+import org.scalatest.prop.PropertyChecks
 
 import java.util.{Set => JSet}
 
 import scala.collection.JavaConversions._
-
-import org.junit.{Before, Test}
-import org.scalatest.prop.PropertyChecks
 
 abstract class TpcBatchExecPlanTest(
     caseName: String,
@@ -51,7 +51,7 @@ abstract class TpcBatchExecPlanTest(
   with PropertyChecks {
 
   private val util = batchTestUtil()
-  protected val tEnv = util.tableEnv
+  protected val tEnv: BatchTableEnvironment = util.tableEnv
 
   @Before
   def before(): Unit = {
@@ -69,7 +69,7 @@ abstract class TpcBatchExecPlanTest(
       tEnv.alterTableStats(tableName, Some(tableStats))
     }
     // set table config
-    setUpTableConfig()
+    setupTableConfig()
   }
 
   // create a new ParquetTableSource to override `createTableSource` and `getTableStats` methods
@@ -129,9 +129,9 @@ abstract class TpcBatchExecPlanTest(
     }
   }
 
-  def getQuery(): String
+  def getQuery: String
 
-  def setUpTableConfig(): Unit = {
+  def setupTableConfig(): Unit = {
     TpcUtils.disableParquetFilterPushDown(tEnv)
     tEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_JOIN_REORDER_ENABLED, joinReorderEnabled)

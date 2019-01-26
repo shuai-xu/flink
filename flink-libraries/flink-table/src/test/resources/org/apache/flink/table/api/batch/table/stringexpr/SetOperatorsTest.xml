@@ -45,11 +45,11 @@ LogicalTableScan(table=[[builtin, default, UnnamedTable$0]])
       <![CDATA[
 HashSemiJoin(where=[=(c, a1)], join=[a, b, c], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right], tryDistinctBuildRow=[true])
 :- Exchange(distribution=[hash[c]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c], reuse_id=[1])
 +- Exchange(distribution=[broadcast])
    +- LocalHashAggregate(groupBy=[a1], select=[a1])
       +- Calc(select=[a AS a1], where=[=(b, 'two')])
-         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+         +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>

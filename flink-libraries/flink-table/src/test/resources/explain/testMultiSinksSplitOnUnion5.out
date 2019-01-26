@@ -24,26 +24,25 @@ LogicalProject(total_min=[AS($0, 'total_min')])
             +- LogicalTableScan(table=[[builtin, default, t3]])
 
 == Optimized Logical Plan ==
-StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc], reuse_id=[1])
-:- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
-:  :- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-:  :  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
-:  +- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
-:     +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc])
-+- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[builtin, default, t3]], retract=[true], accMode=[Acc])
+StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc], reuse_id=[1])
++- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
+   :- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
+   :  :- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
+   :  :  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
+   :  +- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
+   :     +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc])
+   +- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, t3]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[total_sum], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[TMP_0 AS total_sum], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0], retract=[false], accMode=[Acc])
-      +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- Reused(reference_id=[1])
+      +- Reused(reference_id=[1])
 
 StreamExecSink(fields=[total_min], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[TMP_1 AS total_min], retract=[true], accMode=[AccRetract])
    +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1], retract=[true], accMode=[AccRetract])
-      +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- Reused(reference_id=[1])
+      +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
  : Data Source

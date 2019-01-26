@@ -40,8 +40,8 @@ abstract class TpcDsBatchExecPlanTest(
     TpcDsSchemaProvider.schemaMap,
     TpcDsTableStatsProvider.getTableStatsMap(factor, statsMode)) {
 
-  override def setUpTableConfig(): Unit = {
-    super.setUpTableConfig()
+  override def setupTableConfig(): Unit = {
+    super.setupTableConfig()
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
     tEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, false)
@@ -49,6 +49,6 @@ abstract class TpcDsBatchExecPlanTest(
       10 * 1024 * 1024)
   }
 
-  def getQuery(): String = TpcUtils.getTpcDsQuery(caseName, factor)
+  def getQuery: String = TpcUtils.getTpcDsQuery(caseName, factor)
 
 }

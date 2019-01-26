@@ -25,11 +25,17 @@ import org.apache.flink.table.runtime.utils.TemporalTableUtils.TestingTemporalTa
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.util.{TableFunc1, TableTestBase}
 
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
 
 import java.sql.Timestamp
+import java.util
 
-class SubsectionOptimizationTest extends TableTestBase {
+import scala.collection.JavaConversions._
+
+@RunWith(classOf[Parameterized])
+class SubsectionOptimizationTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   private val util = batchTestUtil()
 
@@ -39,6 +45,9 @@ class SubsectionOptimizationTest extends TableTestBase {
     util.tableEnv.getConfig.setSubsectionOptimization(true)
     util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED, true)
+    // disable subplan reuse to verify subsection optimization result
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, subplanReuseEnabled)
   }
 
   @Test
@@ -496,4 +505,10 @@ class SubsectionOptimizationTest extends TableTestBase {
     util.verifyPlan()
   }
 
+}
+
+object SubsectionOptimizationTest {
+
+  @Parameterized.Parameters(name = "subplanReuseEnabled={0}")
+  def parameters(): util.Collection[Boolean] = List(false, true)
 }

@@ -17,20 +17,20 @@
  */
 package org.apache.flink.table.tpc
 
-import java.util
-
 import org.apache.calcite.sql.SqlExplainLevel
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.util
 
 import scala.collection.JavaConversions._
 
 @RunWith(classOf[Parameterized])
 class TpcDs1TBatchExecWithFullStatsModePlanTest(
-  caseName: String,
-  explainLevel: SqlExplainLevel,
-  joinReorderEnabled: Boolean,
-  printOptimizedResult: Boolean)
+    caseName: String,
+    explainLevel: SqlExplainLevel,
+    joinReorderEnabled: Boolean,
+    printOptimizedResult: Boolean)
   extends TpcDsBatchExecPlanTest(
     caseName, 1000, STATS_MODE.FULL, explainLevel, joinReorderEnabled, printOptimizedResult)
 
@@ -55,6 +55,6 @@ object TpcDs1TBatchExecWithFullStatsModePlanTest {
       "q81", "q82", "q83", "q84", "q85", "q86", "q87", "q88", "q89", "q90",
       "q91", "q92", "q93", "q94", "q95", "q96", "q97", "q98", "q99"
     ).map(Array(_, explainLevel, joinReorderEnabled, printResult))
-    }
+  }
 
 }

@@ -16,48 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testMultiSinks">
-    <Resource name="planBefore">
-      <![CDATA[
-LogicalProject(total_sum=[AS($0, 'total_sum')])
-+- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
-   +- LogicalProject(sum_a=[$0])
-      +- LogicalProject(sum_a=[$1], c=[$0])
-         +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
-            +- LogicalProject(c=[$2], a=[$0])
-               +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
-
-LogicalProject(total_min=[AS($0, 'total_min')])
-+- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
-   +- LogicalProject(sum_a=[$0])
-      +- LogicalProject(sum_a=[$1], c=[$0])
-         +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
-            +- LogicalProject(c=[$2], a=[$0])
-               +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
-]]>
-    </Resource>
-    <Resource name="planAfter">
-      <![CDATA[StreamExecCalc(select=[sum_a], reuse_id=[1])
-+- StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(a) AS sum_a])
-   +- StreamExecExchange(distribution=[hash[c]])
-      +- StreamExecCalc(select=[c, a])
-         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
-
-StreamExecSink(fields=[total_sum])
-+- StreamExecCalc(select=[TMP_0 AS total_sum])
-   +- StreamExecGroupAggregate(select=[SUM_RETRACT(sum_a) AS TMP_0])
-      +- StreamExecExchange(distribution=[single])
-         +- Reused(reference_id=[1])
-
-StreamExecSink(fields=[total_min])
-+- StreamExecCalc(select=[TMP_1 AS total_min])
-   +- StreamExecGroupAggregate(select=[MIN_RETRACT(sum_a) AS TMP_1])
-      +- StreamExecExchange(distribution=[single])
-         +- Reused(reference_id=[1])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testMultiSinks1SQL">
+  <TestCase name="testMultiSinks1SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{}], total_sum=[SUM($0)])
@@ -88,7 +47,37 @@ StreamExecSink(fields=[total_min])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinks2">
+  <TestCase name="testMultiSinks1SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{}], total_sum=[SUM($0)])
++- LogicalProject(sum_a=[$0])
+   +- LogicalTableScan(table=[[builtin, default, table1]])
+
+LogicalAggregate(group=[{}], total_min=[MIN($0)])
++- LogicalProject(sum_a=[$0])
+   +- LogicalTableScan(table=[[builtin, default, table1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecExchange(distribution=[single], reuse_id=[1])
++- StreamExecCalc(select=[sum_a])
+   +- StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(a) AS sum_a])
+      +- StreamExecExchange(distribution=[hash[c]])
+         +- StreamExecCalc(select=[c, a])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecGroupAggregate(select=[SUM_RETRACT(sum_a) AS total_sum])
+   +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecGroupAggregate(select=[MIN_RETRACT(sum_a) AS total_min])
+   +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks2[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalUnion(all=[true])
@@ -135,7 +124,61 @@ StreamExecSink(fields=[a1, b1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinks2SQL">
+  <TestCase name="testMultiSinks2[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+:  +- LogicalFilter(condition=[<=($0, 10)])
+:     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
++- LogicalProject(a=[$2], b1=[$1])
+   +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+      :- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+      :  +- LogicalFilter(condition=[<=($0, 10)])
+      :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable5]])
+
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+:  +- LogicalFilter(condition=[<=($0, 10)])
+:     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
++- LogicalProject(a=[$2], b1=[$1])
+   +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+      :- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+      :  +- LogicalFilter(condition=[<=($0, 10)])
+      :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable5]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecCalc(select=[a AS a1, b AS b1], where=[<=(a, 10)], reuse_id=[1])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecExchange(distribution=[hash[a]], reuse_id=[2])
++- StreamExecCalc(select=[a])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a1, b1])
+   :- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a, b1])
+      +- StreamExecJoin(where=[=(a1, a)], join=[a1, b1, a], joinType=[InnerJoin])
+         :- StreamExecExchange(distribution=[hash[a1]])
+         :  +- Reused(reference_id=[1])
+         +- Reused(reference_id=[2])
+
+StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a1, b1])
+   :- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a, b1])
+      +- StreamExecJoin(where=[=(a1, a)], join=[a1, b1, a], joinType=[InnerJoin])
+         :- StreamExecExchange(distribution=[hash[a1]])
+         :  +- Reused(reference_id=[1])
+         +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks2SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalUnion(all=[true])
@@ -172,7 +215,51 @@ StreamExecSink(fields=[a1, b1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinks3">
+  <TestCase name="testMultiSinks2SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[$0], b1=[$1])
+:  +- LogicalTableScan(table=[[builtin, default, table1]])
++- LogicalProject(a=[$0], b1=[$1])
+   +- LogicalTableScan(table=[[builtin, default, table2]])
+
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[$0], b1=[$1])
+:  +- LogicalTableScan(table=[[builtin, default, table1]])
++- LogicalProject(a=[$0], b1=[$1])
+   +- LogicalTableScan(table=[[builtin, default, table2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecCalc(select=[a, b], where=[<=(a, 10)], reuse_id=[1])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecExchange(distribution=[hash[a]], reuse_id=[2])
++- StreamExecCalc(select=[a])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a, b])
+   :- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a0 AS a, b AS b1])
+      +- StreamExecJoin(where=[=(a0, a)], join=[a, b, a0], joinType=[InnerJoin])
+         :- StreamExecExchange(distribution=[hash[a]])
+         :  +- Reused(reference_id=[1])
+         +- Reused(reference_id=[2])
+
+StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a, b])
+   :- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a0 AS a, b AS b1])
+      +- StreamExecJoin(where=[=(a0, a)], join=[a, b, a0], joinType=[InnerJoin])
+         :- StreamExecExchange(distribution=[hash[a]])
+         :  +- Reused(reference_id=[1])
+         +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks3[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$2], b1=[$1])
@@ -216,7 +303,51 @@ StreamExecSink(fields=[a1, b1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinks3SQL">
+  <TestCase name="testMultiSinks3[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$2], b1=[$1])
++- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+   :- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+   :  +- LogicalFilter(condition=[<=($0, 10)])
+   :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+   +- LogicalTableScan(table=[[builtin, default, SmallTable5]])
+
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+:  +- LogicalFilter(condition=[<=($0, 10)])
+:     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
++- LogicalProject(a=[$2], b1=[$1])
+   +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+      :- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+      :  +- LogicalFilter(condition=[<=($0, 10)])
+      :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable5]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecCalc(select=[a AS a1, b AS b1], where=[<=(a, 10)], reuse_id=[1])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecCalc(select=[a, b1], reuse_id=[2])
++- StreamExecJoin(where=[=(a1, a)], join=[a1, b1, a], joinType=[InnerJoin])
+   :- StreamExecExchange(distribution=[hash[a1]])
+   :  +- Reused(reference_id=[1])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecCalc(select=[a])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[a, b1])
++- Reused(reference_id=[2])
+
+StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a1, b1])
+   :- Reused(reference_id=[1])
+   +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks3SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$2], b1=[$1])
@@ -254,7 +385,45 @@ StreamExecSink(fields=[a1, b1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinks4">
+  <TestCase name="testMultiSinks3SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$2], b1=[$1])
++- LogicalFilter(condition=[=($2, $0)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalTableScan(table=[[builtin, default, table1]])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable5]])
+
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[$0], b1=[$1])
+:  +- LogicalTableScan(table=[[builtin, default, table1]])
++- LogicalProject(a=[$0], b1=[$1])
+   +- LogicalTableScan(table=[[builtin, default, table2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecCalc(select=[a, b], where=[<=(a, 10)], reuse_id=[1])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecCalc(select=[a0 AS a, b AS b1], reuse_id=[2])
++- StreamExecJoin(where=[=(a0, a)], join=[a, b, a0], joinType=[InnerJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- Reused(reference_id=[1])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecCalc(select=[a])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[a, b1])
++- Reused(reference_id=[2])
+
+StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a, b])
+   :- Reused(reference_id=[1])
+   +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks4[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a1=[$0], b=[$1], c2=[AS($3, 'c2')])
@@ -317,7 +486,70 @@ StreamExecSink(fields=[a1, b, c1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinks4SQL">
+  <TestCase name="testMultiSinks4[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a1=[$0], b=[$1], c2=[AS($3, 'c2')])
++- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+   :- LogicalProject(a1=[AS($0, 'a1')], b=[$1])
+   :  +- LogicalFilter(condition=[<=($0, 10)])
+   :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+   +- LogicalProject(a2=[AS($0, 'a2')], c=[$2])
+      +- LogicalFilter(condition=[>=($1, 5)])
+         +- LogicalProject(a=[$0], b=[$1], c=[$2])
+            +- LogicalFilter(condition=[>=($0, 0)])
+               +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+
+LogicalProject(a1=[$2], b=[$3], c1=[$1])
++- LogicalJoin(condition=[=($2, $0)], joinType=[inner])
+   :- LogicalProject(a3=[AS($0, 'a3')], c1=[AS($2, 'c1')])
+   :  +- LogicalFilter(condition=[<($1, 5)])
+   :     +- LogicalProject(a=[$0], b=[$1], c=[$2])
+   :        +- LogicalFilter(condition=[>=($0, 0)])
+   :           +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+   +- LogicalProject(a1=[$0], b=[$1], c2=[AS($3, 'c2')])
+      +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+         :- LogicalProject(a1=[AS($0, 'a1')], b=[$1])
+         :  +- LogicalFilter(condition=[<=($0, 10)])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(a2=[AS($0, 'a2')], c=[$2])
+            +- LogicalFilter(condition=[>=($1, 5)])
+               +- LogicalProject(a=[$0], b=[$1], c=[$2])
+                  +- LogicalFilter(condition=[>=($0, 0)])
+                     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+
+StreamExecCalc(select=[a, b, c], where=[>=(a, 0)], reuse_id=[2])
++- Reused(reference_id=[1])
+
+StreamExecCalc(select=[a1, b, c AS c2], reuse_id=[3])
++- StreamExecJoin(where=[=(a1, a2)], join=[a1, b, a2, c], joinType=[InnerJoin])
+   :- StreamExecExchange(distribution=[hash[a1]])
+   :  +- StreamExecCalc(select=[a AS a1, b], where=[<=(a, 10)])
+   :     +- Reused(reference_id=[1])
+   +- StreamExecExchange(distribution=[hash[a2]])
+      +- StreamExecCalc(select=[a AS a2, c], where=[>=(b, 5)])
+         +- Reused(reference_id=[2])
+
+StreamExecSink(fields=[a1, b, c2])
++- Reused(reference_id=[3])
+
+StreamExecSink(fields=[a1, b, c1])
++- StreamExecCalc(select=[a1, b, c1])
+   +- StreamExecJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a3]])
+      :  +- StreamExecCalc(select=[a AS a3, c AS c1], where=[<(b, 5)])
+      :     +- Reused(reference_id=[2])
+      +- StreamExecExchange(distribution=[hash[a1]])
+         +- StreamExecCalc(select=[a1, b])
+            +- Reused(reference_id=[3])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks4SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a1=[$0], b=[$1], c2=[$3])
@@ -363,7 +595,134 @@ StreamExecSink(fields=[a1, b, c1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksSplitOnUnion1">
+  <TestCase name="testMultiSinks4SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a1=[$0], b=[$1], c2=[$3])
++- LogicalFilter(condition=[=($0, $2)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalTableScan(table=[[builtin, default, table1]])
+      +- LogicalTableScan(table=[[builtin, default, table3]])
+
+LogicalProject(a1=[$2], b=[$3], c1=[$1])
++- LogicalFilter(condition=[=($2, $0)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalTableScan(table=[[builtin, default, table4]])
+      +- LogicalTableScan(table=[[builtin, default, table5]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+
+StreamExecCalc(select=[a, b, c], where=[>=(a, 0)], reuse_id=[2])
++- Reused(reference_id=[1])
+
+StreamExecCalc(select=[a AS a1, b, c AS c2], reuse_id=[3])
++- StreamExecJoin(where=[=(a, a2)], join=[a, b, a2, c], joinType=[InnerJoin])
+   :- StreamExecExchange(distribution=[hash[a]])
+   :  +- StreamExecCalc(select=[a, b], where=[<=(a, 10)])
+   :     +- Reused(reference_id=[1])
+   +- StreamExecExchange(distribution=[hash[a2]])
+      +- StreamExecCalc(select=[a AS a2, c], where=[>=(b, 5)])
+         +- Reused(reference_id=[2])
+
+StreamExecSink(fields=[a1, b, c2])
++- Reused(reference_id=[3])
+
+StreamExecSink(fields=[a1, b, c1])
++- StreamExecCalc(select=[a1, b, c1])
+   +- StreamExecJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a3]])
+      :  +- StreamExecCalc(select=[a AS a3, c AS c1], where=[<(b, 5)])
+      :     +- Reused(reference_id=[2])
+      +- StreamExecExchange(distribution=[hash[a1]])
+         +- StreamExecCalc(select=[a1, b])
+            +- Reused(reference_id=[3])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks[subplanReuseEnabled=false]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(sum_a=[$0])
+      +- LogicalProject(sum_a=[$1], c=[$0])
+         +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
+            +- LogicalProject(c=[$2], a=[$0])
+               +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(sum_a=[$0])
+      +- LogicalProject(sum_a=[$1], c=[$0])
+         +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
+            +- LogicalProject(c=[$2], a=[$0])
+               +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecCalc(select=[sum_a], reuse_id=[1])
++- StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(a) AS sum_a])
+   +- StreamExecExchange(distribution=[hash[c]])
+      +- StreamExecCalc(select=[c, a])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM_RETRACT(sum_a) AS TMP_0])
+      +- StreamExecExchange(distribution=[single])
+         +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecCalc(select=[TMP_1 AS total_min])
+   +- StreamExecGroupAggregate(select=[MIN_RETRACT(sum_a) AS TMP_1])
+      +- StreamExecExchange(distribution=[single])
+         +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(sum_a=[$0])
+      +- LogicalProject(sum_a=[$1], c=[$0])
+         +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
+            +- LogicalProject(c=[$2], a=[$0])
+               +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(sum_a=[$0])
+      +- LogicalProject(sum_a=[$1], c=[$0])
+         +- LogicalAggregate(group=[{0}], sum_a=[SUM($1)])
+            +- LogicalProject(c=[$2], a=[$0])
+               +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecExchange(distribution=[single], reuse_id=[1])
++- StreamExecCalc(select=[sum_a])
+   +- StreamExecGroupAggregate(groupBy=[c], select=[c, SUM(a) AS sum_a])
+      +- StreamExecExchange(distribution=[hash[c]])
+         +- StreamExecCalc(select=[c, a])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM_RETRACT(sum_a) AS TMP_0])
+      +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecCalc(select=[TMP_1 AS total_min])
+   +- StreamExecGroupAggregate(select=[MIN_RETRACT(sum_a) AS TMP_1])
+      +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion1[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(total_sum=[AS($0, 'total_sum')])
@@ -406,7 +765,49 @@ StreamExecSink(fields=[total_min])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksSplitOnUnion2">
+  <TestCase name="testMultiSinksSplitOnUnion1[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecExchange(distribution=[single], reuse_id=[1])
++- StreamExecUnion(all=[true], union=[a])
+   :- StreamExecCalc(select=[a])
+   :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+   +- StreamExecCalc(select=[d])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+      +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecCalc(select=[TMP_1 AS total_min])
+   +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1])
+      +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion2[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(total_sum=[AS($0, 'total_sum')])
@@ -449,7 +850,49 @@ StreamExecSink(fields=[total_min])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksSplitOnUnion3">
+  <TestCase name="testMultiSinksSplitOnUnion2[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecExchange(distribution=[single], reuse_id=[1])
++- StreamExecUnion(all=[true], union=[a])
+   :- StreamExecCalc(select=[a])
+   :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+   +- StreamExecCalc(select=[d])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+      +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecCalc(select=[TMP_1 AS total_min])
+   +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1])
+      +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion3[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(total_sum=[AS($0, 'total_sum')])
@@ -521,7 +964,72 @@ StreamExecSink(fields=[a])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksSplitOnUnion4">
+  <TestCase name="testMultiSinksSplitOnUnion3[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable2]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable2]])
+
+LogicalProject(a=[$0])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+   +- LogicalProject(d=[$0], f=[$2])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecUnion(all=[true], union=[a], reuse_id=[2])
+:- StreamExecCalc(select=[a])
+:  +- StreamExecCalc(select=[a, c])
+:     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
++- StreamExecCalc(select=[d])
+   +- StreamExecCalc(select=[d, f])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecExchange(distribution=[single], reuse_id=[1])
++- StreamExecUnion(all=[true], union=[a])
+   :- Reused(reference_id=[2])
+   +- StreamExecCalc(select=[a])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_2]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+      +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecCalc(select=[TMP_1 AS total_min])
+   +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1])
+      +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[a])
++- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion4[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$0])
@@ -593,7 +1101,72 @@ StreamExecSink(fields=[total_min])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksSplitOnUnion5">
+  <TestCase name="testMultiSinksSplitOnUnion4[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$0])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+   +- LogicalProject(d=[$0], f=[$2])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable2]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecUnion(all=[true], union=[a], reuse_id=[1])
+:- StreamExecCalc(select=[a])
+:  +- StreamExecCalc(select=[a, c])
+:     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
++- StreamExecCalc(select=[d])
+   +- StreamExecCalc(select=[d, f])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[a])
++- Reused(reference_id=[1])
+
+StreamExecExchange(distribution=[single], reuse_id=[2])
++- StreamExecUnion(all=[true], union=[a])
+   :- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_2]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+      +- Reused(reference_id=[2])
+
+StreamExecSink(fields=[total_min])
++- StreamExecCalc(select=[TMP_1 AS total_min])
+   +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1])
+      +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksSplitOnUnion5[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(total_sum=[AS($0, 'total_sum')])
@@ -645,7 +1218,58 @@ StreamExecSink(fields=[total_min])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksWithTemporalTableSource">
+  <TestCase name="testMultiSinksSplitOnUnion5[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable2]])
+
+LogicalProject(total_min=[AS($0, 'total_min')])
++- LogicalAggregate(group=[{}], TMP_1=[MIN($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalUnion(all=[true])
+         :  :- LogicalProject(a=[$0], c=[$2])
+         :  :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         :  +- LogicalProject(d=[$0], f=[$2])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+         +- LogicalProject(a=[$0], c=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecExchange(distribution=[single], reuse_id=[1])
++- StreamExecUnion(all=[true], union=[a])
+   :- StreamExecUnion(all=[true], union=[a])
+   :  :- StreamExecCalc(select=[a])
+   :  :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+   :  +- StreamExecCalc(select=[d])
+   :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+   +- StreamExecCalc(select=[a])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_2]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+      +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecCalc(select=[TMP_1 AS total_min])
+   +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1])
+      +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksWithTemporalTableSource[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[HOP_START($0)], EXPR$1=[HOP_END($0)], name1=[$1], name2=[$2], avg_b=[$3])
@@ -692,7 +1316,54 @@ StreamExecSink(fields=[EXPR$0, EXPR$1, name1, avg_b])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksWithWindow">
+  <TestCase name="testMultiSinksWithTemporalTableSource[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[HOP_START($0)], EXPR$1=[HOP_END($0)], name1=[$1], name2=[$2], avg_b=[$3])
++- LogicalAggregate(group=[{0, 1, 2}], avg_b=[AVG($3)])
+   +- LogicalProject($f0=[HOP($3, 60000, 180000)], name1=[$0], name2=[$1], b=[$2])
+      +- LogicalProject(name1=[$7], name2=[$10], b=[$1], rowtime=[$4])
+         +- LogicalJoin(condition=[=($2, $9)], joinType=[inner])
+            :- LogicalJoin(condition=[=($0, $6)], joinType=[inner])
+            :  :- LogicalTableScan(table=[[builtin, default, MyTable]])
+            :  +- LogicalSnapshot(period=[PROCTIME()])
+            :     +- LogicalTableScan(table=[[builtin, default, TemporalSource, source: [TestingTemporalTableSource(age, id, name)]]])
+            +- LogicalSnapshot(period=[PROCTIME()])
+               +- LogicalTableScan(table=[[builtin, default, TemporalSource, source: [TestingTemporalTableSource(age, id, name)]]])
+
+LogicalProject(EXPR$0=[HOP_START($0)], EXPR$1=[HOP_END($0)], name1=[$1], avg_b=[$2])
++- LogicalAggregate(group=[{0, 1}], avg_b=[AVG($2)])
+   +- LogicalProject($f0=[HOP($2, 10000, 180000)], name1=[$0], b=[$1])
+      +- LogicalProject(name1=[$7], b=[$1], rowtime=[$4])
+         +- LogicalJoin(condition=[=($0, $6)], joinType=[inner])
+            :- LogicalTableScan(table=[[builtin, default, MyTable]])
+            +- LogicalSnapshot(period=[PROCTIME()])
+               +- LogicalTableScan(table=[[builtin, default, TemporalSource, source: [TestingTemporalTableSource(age, id, name)]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecTemporalTableJoin(join=[a, b, c, proctime, rowtime, age, id, name], source=[TestingTemporalTableSource(age, id, name)], on=[a=id], joinType=[InnerJoin], period=[PROCTIME()], reuse_id=[1])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[EXPR$0, EXPR$1, name1, name2, avg_b])
++- StreamExecCalc(select=[w$start AS EXPR$0, w$end AS EXPR$1, name1, name2, avg_b])
+   +- StreamExecGroupWindowAggregate(groupBy=[name1, name2], window=[SlidingGroupWindow('w$, 'rowtime, 180000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[name1, name2, AVG(b) AS avg_b, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+      +- StreamExecExchange(distribution=[hash[name1, name2]])
+         +- StreamExecCalc(select=[rowtime, name AS name1, name0 AS name2, b])
+            +- StreamExecTemporalTableJoin(join=[b, c, rowtime, name, id, name0], source=[TestingTemporalTableSource(age, id, name)], on=[c=age], joinType=[InnerJoin], period=[PROCTIME()])
+               +- StreamExecCalc(select=[b, c, rowtime, name])
+                  +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[EXPR$0, EXPR$1, name1, avg_b])
++- StreamExecCalc(select=[w$start AS EXPR$0, w$end AS EXPR$1, name1, avg_b])
+   +- StreamExecGroupWindowAggregate(groupBy=[name1], window=[SlidingGroupWindow('w$, 'rowtime, 180000.millis, 10000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[name1, AVG(b) AS avg_b, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+      +- StreamExecExchange(distribution=[hash[name1]])
+         +- StreamExecCalc(select=[rowtime, name AS name1, b])
+            +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksWithWindow[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a=[$1], sum_c=[$2], time=[CAST(TUMBLE_END($0)):INTEGER NOT NULL], window_start=[CAST(TUMBLE_START($0)):INTEGER NOT NULL], window_end=[CAST(TUMBLE_END($0)):INTEGER NOT NULL])
@@ -725,7 +1396,7 @@ StreamExecSink(fields=[a, sum_c, time])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testMultiSinksWithUDTF">
+  <TestCase name="testMultiSinksWithUDTF[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalFilter(condition=[>($0, 50)])
@@ -778,7 +1449,91 @@ StreamExecSink(fields=[a, total_c])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testRetractAndUpsertSinkWithUDTF">
+  <TestCase name="testMultiSinksWithUDTF[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalFilter(condition=[>($0, 50)])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], total_c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, view3]])
+   +- LogicalProject(a=[$0], total_c=[0])
+      +- LogicalTableScan(table=[[builtin, default, view1]])
+
+LogicalFilter(condition=[<($0, 50)])
++- LogicalUnion(all=[true])
+   :- LogicalProject(a=[$0], total_c=[$2])
+   :  +- LogicalTableScan(table=[[builtin, default, view3]])
+   +- LogicalProject(a=[$0], total_c=[0])
+      +- LogicalTableScan(table=[[builtin, default, view1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+
+StreamExecCalc(select=[a, b], reuse_id=[2])
++- Reused(reference_id=[1])
+
+StreamExecSink(fields=[a, total_c])
++- StreamExecUnion(all=[true], union=[a, total_c])
+   :- StreamExecCalc(select=[a, total_c])
+   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
+   :     +- StreamExecExchange(distribution=[hash[a, b]])
+   :        +- StreamExecCalc(select=[a, b, f0], where=[>(a, 50)])
+   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
+   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
+   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+   :                    +- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a, 0 AS total_c])
+      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), >(a, 50))])
+         +- Reused(reference_id=[2])
+
+StreamExecSink(fields=[a, total_c])
++- StreamExecUnion(all=[true], union=[a, total_c])
+   :- StreamExecCalc(select=[a, total_c])
+   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
+   :     +- StreamExecExchange(distribution=[hash[a, b]])
+   :        +- StreamExecCalc(select=[a, b, f0], where=[<(a, 50)])
+   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
+   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
+   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+   :                    +- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a, 0 AS total_c])
+      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <(a, 50))])
+         +- Reused(reference_id=[2])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinksWithWindow[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a=[$1], sum_c=[$2], time=[CAST(TUMBLE_END($0)):INTEGER NOT NULL], window_start=[CAST(TUMBLE_START($0)):INTEGER NOT NULL], window_end=[CAST(TUMBLE_END($0)):INTEGER NOT NULL])
++- LogicalAggregate(group=[{0, 1}], sum_c=[SUM($2)])
+   +- LogicalProject($f0=[TUMBLE($4, 15000)], a=[$0], $f2=[CAST($2):DOUBLE])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
+
+LogicalProject(a=[$1], sum_c=[$2], time=[CAST(TUMBLE_END($0)):INTEGER NOT NULL])
++- LogicalAggregate(group=[{0, 1}], sum_c=[SUM($2)])
+   +- LogicalProject($f0=[TUMBLE($4, 15000)], a=[$0], $f2=[CAST($2):DOUBLE])
+      +- LogicalTableScan(table=[[builtin, default, MyTable]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecGroupWindowAggregate(groupBy=[a], window=[TumblingGroupWindow('w$, 'rowtime, 15000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[a, SUM(c) AS sum_c, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime], reuse_id=[1])
++- StreamExecExchange(distribution=[hash[a]])
+   +- StreamExecCalc(select=[rowtime, a, CAST(c) AS c])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[a, sum_c, time, window_start, window_end])
++- StreamExecCalc(select=[a, sum_c, CAST(w$end) AS time, CAST(w$start) AS window_start, CAST(w$end) AS window_end])
+   +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[a, sum_c, time])
++- StreamExecCalc(select=[a, sum_c, CAST(w$end) AS time])
+   +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRetractAndUpsertSinkWithUDTF[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(num=[$0], cnt=[$1])
@@ -815,7 +1570,41 @@ StreamExecSink(fields=[num, cnt])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink1">
+  <TestCase name="testRetractAndUpsertSinkWithUDTF[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(num=[$0], cnt=[$1])
++- LogicalFilter(condition=[<($0, 5)])
+   +- LogicalProject(num=[$1], cnt=[AS(COUNT($0) OVER (ORDER BY $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 'cnt')], proctime=[$3])
+      +- LogicalCorrelate(correlation=[$cor2], joinType=[inner], requiredColumns=[{}])
+         :- LogicalTableScan(table=[[builtin, default, MyTable]])
+         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
+
+LogicalProject(num=[$0], cnt=[$1])
++- LogicalFilter(condition=[>=($0, 5)])
+   +- LogicalProject(num=[$1], cnt=[AS(COUNT($0) OVER (ORDER BY $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 'cnt')], proctime=[$3])
+      +- LogicalCorrelate(correlation=[$cor3], joinType=[inner], requiredColumns=[{}])
+         :- LogicalTableScan(table=[[builtin, default, MyTable]])
+         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecOverAggregate(orderBy=[proctime ASC], window=[ ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[id, num, proctime, COUNT(id) AS w0$o0], reuse_id=[1])
++- StreamExecExchange(distribution=[single])
+   +- StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], correlate=[table(TableFunc0(text))], select=[id,num,proctime], rowType=[RecordType(INTEGER id, BIGINT num, TIME ATTRIBUTE(PROCTIME) proctime)], joinType=[INNER])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+
+StreamExecSink(fields=[num, cnt])
++- StreamExecCalc(select=[num, w0$o0 AS cnt], where=[<(num, 5)])
+   +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[num, cnt])
++- StreamExecCalc(select=[num, w0$o0 AS cnt], where=[>=(num, 5)])
+   +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink1[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(c=[$0], cnt=[AS($1, 'cnt')])
@@ -834,7 +1623,26 @@ LogicalProject(c=[$0], cnt=[AS($1, 'cnt')])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink1SQL">
+  <TestCase name="testSingleSink1[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(c=[$0], cnt=[AS($1, 'cnt')])
++- LogicalAggregate(group=[{0}], TMP_0=[COUNT($1)])
+   +- LogicalProject(c=[$2], b=[$1])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[c, cnt])
++- StreamExecCalc(select=[c, TMP_0 AS cnt])
+   +- StreamExecGroupAggregate(groupBy=[c], select=[c, COUNT(b) AS TMP_0])
+      +- StreamExecExchange(distribution=[hash[c]])
+         +- StreamExecCalc(select=[c, b])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink1SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalAggregate(group=[{0}], cnt=[COUNT($1)])
@@ -851,7 +1659,24 @@ LogicalAggregate(group=[{0}], cnt=[COUNT($1)])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink2">
+  <TestCase name="testSingleSink1SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{0}], cnt=[COUNT($1)])
++- LogicalProject(c=[$2], a=[$0])
+   +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[c, cnt])
++- StreamExecGroupAggregate(groupBy=[c], select=[c, COUNT(a) AS cnt])
+   +- StreamExecExchange(distribution=[hash[c]])
+      +- StreamExecCalc(select=[c, a])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink2[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a1=[$2], b=[$3], c1=[$1])
@@ -892,7 +1717,48 @@ LogicalProject(a1=[$2], b=[$3], c1=[$1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink2SQL">
+  <TestCase name="testSingleSink2[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a1=[$2], b=[$3], c1=[$1])
++- LogicalJoin(condition=[=($2, $0)], joinType=[inner])
+   :- LogicalProject(a3=[AS($0, 'a3')], c1=[AS($2, 'c1')])
+   :  +- LogicalFilter(condition=[<($1, 5)])
+   :     +- LogicalProject(a=[$0], b=[$1], c=[$2])
+   :        +- LogicalFilter(condition=[>=($0, 0)])
+   :           +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+   +- LogicalProject(a1=[$0], b=[$1], c2=[AS($3, 'c2')])
+      +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+         :- LogicalProject(a1=[AS($0, 'a1')], b=[$1])
+         :  +- LogicalFilter(condition=[<=($0, 10)])
+         :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(a2=[AS($0, 'a2')], c=[$2])
+            +- LogicalFilter(condition=[>=($1, 5)])
+               +- LogicalProject(a=[$0], b=[$1], c=[$2])
+                  +- LogicalFilter(condition=[>=($0, 0)])
+                     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[a1, b, c1])
++- StreamExecCalc(select=[a1, b, c1])
+   +- StreamExecJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a3]])
+      :  +- StreamExecCalc(select=[a AS a3, c AS c1], where=[AND(>=(a, 0), <(b, 5))])
+      :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+      +- StreamExecExchange(distribution=[hash[a1]])
+         +- StreamExecCalc(select=[a1, b])
+            +- StreamExecJoin(where=[=(a1, a2)], join=[a1, b, a2], joinType=[InnerJoin])
+               :- StreamExecExchange(distribution=[hash[a1]])
+               :  +- StreamExecCalc(select=[a AS a1, b], where=[<=(a, 10)])
+               :     +- Reused(reference_id=[1])
+               +- StreamExecExchange(distribution=[hash[a2]])
+                  +- StreamExecCalc(select=[a AS a2], where=[AND(>=(a, 0), >=(b, 5))])
+                     +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink2SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a1=[$2], b=[$3], c1=[$1])
@@ -921,7 +1787,36 @@ LogicalProject(a1=[$2], b=[$3], c1=[$1])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink3">
+  <TestCase name="testSingleSink2SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a1=[$2], b=[$3], c1=[$1])
++- LogicalFilter(condition=[=($2, $0)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalTableScan(table=[[builtin, default, table4]])
+      +- LogicalTableScan(table=[[builtin, default, table5]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[a1, b, c1])
++- StreamExecCalc(select=[a1, b, c1])
+   +- StreamExecJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a3]])
+      :  +- StreamExecCalc(select=[a AS a3, c AS c1], where=[AND(>=(a, 0), <(b, 5))])
+      :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+      +- StreamExecExchange(distribution=[hash[a1]])
+         +- StreamExecCalc(select=[a AS a1, b])
+            +- StreamExecJoin(where=[=(a, a2)], join=[a, b, a2], joinType=[InnerJoin])
+               :- StreamExecExchange(distribution=[hash[a]])
+               :  +- StreamExecCalc(select=[a, b], where=[<=(a, 10)])
+               :     +- Reused(reference_id=[1])
+               +- StreamExecExchange(distribution=[hash[a2]])
+                  +- StreamExecCalc(select=[a AS a2], where=[AND(>=(a, 0), >=(b, 5))])
+                     +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink3[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalUnion(all=[true])
@@ -952,7 +1847,37 @@ LogicalUnion(all=[true])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink3SQL">
+  <TestCase name="testSingleSink3[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+:  +- LogicalFilter(condition=[<=($0, 10)])
+:     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
++- LogicalProject(a=[$2], b1=[$1])
+   +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+      :- LogicalProject(a1=[AS($0, 'a1')], b1=[AS($1, 'b1')])
+      :  +- LogicalFilter(condition=[<=($0, 10)])
+      :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+      +- LogicalTableScan(table=[[builtin, default, SmallTable5]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a1, b1])
+   :- StreamExecCalc(select=[a AS a1, b AS b1], where=[<=(a, 10)], reuse_id=[1])
+   :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+   +- StreamExecCalc(select=[a, b1])
+      +- StreamExecJoin(where=[=(a1, a)], join=[a1, b1, a], joinType=[InnerJoin])
+         :- StreamExecExchange(distribution=[hash[a1]])
+         :  +- Reused(reference_id=[1])
+         +- StreamExecExchange(distribution=[hash[a]])
+            +- StreamExecCalc(select=[a])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink3SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalUnion(all=[true])
@@ -978,7 +1903,32 @@ LogicalUnion(all=[true])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink4">
+  <TestCase name="testSingleSink3SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalUnion(all=[true])
+:- LogicalProject(a1=[$0], b1=[$1])
+:  +- LogicalTableScan(table=[[builtin, default, table1]])
++- LogicalProject(a=[$0], b1=[$1])
+   +- LogicalTableScan(table=[[builtin, default, table2]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[a1, b1])
++- StreamExecUnion(all=[true], union=[a, b])
+   :- StreamExecCalc(select=[a, b], where=[<=(a, 10)], reuse_id=[1])
+   :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+   +- StreamExecCalc(select=[a0 AS a, b AS b1])
+      +- StreamExecJoin(where=[=(a0, a)], join=[a, b, a0], joinType=[InnerJoin])
+         :- StreamExecExchange(distribution=[hash[a]])
+         :  +- Reused(reference_id=[1])
+         +- StreamExecExchange(distribution=[hash[a]])
+            +- StreamExecCalc(select=[a])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink4[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a1=[$0], b1=[$3], c1=[$4])
@@ -1030,7 +1980,59 @@ LogicalProject(a1=[$0], b1=[$3], c1=[$4])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSink4SQL">
+  <TestCase name="testSingleSink4[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a1=[$0], b1=[$3], c1=[$4])
++- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+   :- LogicalProject(a1=[AS($0, 'a1')], b=[$1])
+   :  +- LogicalFilter(condition=[<=($0, 10)])
+   :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+   +- LogicalProject(a3=[$0], b1=[AS($3, 'b1')], c1=[$1])
+      +- LogicalJoin(condition=[=($2, $0)], joinType=[inner])
+         :- LogicalProject(a3=[AS($0, 'a3')], c1=[AS($2, 'c1')])
+         :  +- LogicalFilter(condition=[<($1, 5)])
+         :     +- LogicalProject(a=[$0], b=[$1], c=[$2])
+         :        +- LogicalFilter(condition=[>=($0, 0)])
+         :           +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(a1=[$0], b=[$1], c2=[AS($3, 'c2')])
+            +- LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+               :- LogicalProject(a1=[AS($0, 'a1')], b=[$1])
+               :  +- LogicalFilter(condition=[<=($0, 10)])
+               :     +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+               +- LogicalProject(a2=[AS($0, 'a2')], c=[$2])
+                  +- LogicalFilter(condition=[>=($1, 5)])
+                     +- LogicalProject(a=[$0], b=[$1], c=[$2])
+                        +- LogicalFilter(condition=[>=($0, 0)])
+                           +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[a1, b1, c1])
++- StreamExecCalc(select=[a1, b1, c1])
+   +- StreamExecJoin(where=[=(a1, a3)], join=[a1, a3, b1, c1], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a1]])
+      :  +- StreamExecCalc(select=[a AS a1], where=[<=(a, 10)])
+      :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+      +- StreamExecExchange(distribution=[hash[a3]])
+         +- StreamExecCalc(select=[a3, b AS b1, c1])
+            +- StreamExecJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin])
+               :- StreamExecExchange(distribution=[hash[a3]])
+               :  +- StreamExecCalc(select=[a AS a3, c AS c1], where=[AND(>=(a, 0), <(b, 5))])
+               :     +- Reused(reference_id=[1])
+               +- StreamExecExchange(distribution=[hash[a1]])
+                  +- StreamExecCalc(select=[a1, b])
+                     +- StreamExecJoin(where=[=(a1, a2)], join=[a1, b, a2], joinType=[InnerJoin])
+                        :- StreamExecExchange(distribution=[hash[a1]])
+                        :  +- StreamExecCalc(select=[a AS a1, b], where=[<=(a, 10)])
+                        :     +- Reused(reference_id=[1])
+                        +- StreamExecExchange(distribution=[hash[a2]])
+                           +- StreamExecCalc(select=[a AS a2], where=[AND(>=(a, 0), >=(b, 5))])
+                              +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSink4SQL[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(a1=[$0], b1=[$3], c1=[$4])
@@ -1065,7 +2067,42 @@ LogicalProject(a1=[$0], b1=[$3], c1=[$4])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSinkWithTemporalTableSource">
+  <TestCase name="testSingleSink4SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(a1=[$0], b1=[$3], c1=[$4])
++- LogicalFilter(condition=[=($0, $2)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalTableScan(table=[[builtin, default, table1]])
+      +- LogicalTableScan(table=[[builtin, default, table6]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[a1, b1, c1])
++- StreamExecCalc(select=[a AS a1, b1, c1])
+   +- StreamExecJoin(where=[=(a, a3)], join=[a, a3, b1, c1], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a]])
+      :  +- StreamExecCalc(select=[a], where=[<=(a, 10)])
+      :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+      +- StreamExecExchange(distribution=[hash[a3]])
+         +- StreamExecCalc(select=[a3, b AS b1, c1])
+            +- StreamExecJoin(where=[=(a1, a3)], join=[a3, c1, a1, b], joinType=[InnerJoin])
+               :- StreamExecExchange(distribution=[hash[a3]])
+               :  +- StreamExecCalc(select=[a AS a3, c AS c1], where=[AND(>=(a, 0), <(b, 5))])
+               :     +- Reused(reference_id=[1])
+               +- StreamExecExchange(distribution=[hash[a1]])
+                  +- StreamExecCalc(select=[a AS a1, b])
+                     +- StreamExecJoin(where=[=(a, a2)], join=[a, b, a2], joinType=[InnerJoin])
+                        :- StreamExecExchange(distribution=[hash[a]])
+                        :  +- StreamExecCalc(select=[a, b], where=[<=(a, 10)])
+                        :     +- Reused(reference_id=[1])
+                        +- StreamExecExchange(distribution=[hash[a2]])
+                           +- StreamExecCalc(select=[a AS a2], where=[AND(>=(a, 0), >=(b, 5))])
+                              +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSinkWithTemporalTableSource[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(EXPR$0=[HOP_START($0)], EXPR$1=[HOP_END($0)], name1=[$1], name2=[$2], avg_b=[$3])
@@ -1095,7 +2132,7 @@ LogicalProject(EXPR$0=[HOP_START($0)], EXPR$1=[HOP_END($0)], name1=[$1], name2=[
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSinkSplitOnUnion1">
+  <TestCase name="testSingleSinkSplitOnUnion1[subplanReuseEnabled=false]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(total_sum=[AS($0, 'total_sum')])
@@ -1121,7 +2158,89 @@ LogicalProject(total_sum=[AS($0, 'total_sum')])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSingleSinkSplitOnUnion2">
+  <TestCase name="testSingleSinkSplitOnUnion1[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+      +- StreamExecExchange(distribution=[single])
+         +- StreamExecUnion(all=[true], union=[a])
+            :- StreamExecCalc(select=[a])
+            :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+            +- StreamExecCalc(select=[d])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSinkSplitOnUnion2[subplanReuseEnabled=false]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(total_sum=[AS($0, 'total_sum')])
++- LogicalAggregate(group=[{}], TMP_0=[SUM($0)])
+   +- LogicalProject(a=[$0])
+      +- LogicalUnion(all=[true])
+         :- LogicalProject(a=[$0], c=[$2])
+         :  +- LogicalTableScan(table=[[builtin, default, SmallTable3]])
+         +- LogicalProject(d=[$0], f=[$2])
+            +- LogicalTableScan(table=[[builtin, default, SmallTable1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[total_sum])
++- StreamExecCalc(select=[TMP_0 AS total_sum])
+   +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0])
+      +- StreamExecExchange(distribution=[single])
+         +- StreamExecUnion(all=[true], union=[a])
+            :- StreamExecCalc(select=[a])
+            :  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+            +- StreamExecCalc(select=[d])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSinkWithTemporalTableSource[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[HOP_START($0)], EXPR$1=[HOP_END($0)], name1=[$1], name2=[$2], avg_b=[$3])
++- LogicalAggregate(group=[{0, 1, 2}], avg_b=[AVG($3)])
+   +- LogicalProject($f0=[HOP($3, 60000, 180000)], name1=[$0], name2=[$1], b=[$2])
+      +- LogicalProject(name1=[$7], name2=[$10], b=[$1], rowtime=[$4])
+         +- LogicalJoin(condition=[=($2, $9)], joinType=[inner])
+            :- LogicalJoin(condition=[=($0, $6)], joinType=[inner])
+            :  :- LogicalTableScan(table=[[builtin, default, MyTable]])
+            :  +- LogicalSnapshot(period=[PROCTIME()])
+            :     +- LogicalTableScan(table=[[builtin, default, TemporalSource, source: [TestingTemporalTableSource(age, id, name)]]])
+            +- LogicalSnapshot(period=[PROCTIME()])
+               +- LogicalTableScan(table=[[builtin, default, TemporalSource, source: [TestingTemporalTableSource(age, id, name)]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecSink(fields=[EXPR$0, EXPR$1, name1, name2, avg_b])
++- StreamExecCalc(select=[w$start AS EXPR$0, w$end AS EXPR$1, name1, name2, avg_b])
+   +- StreamExecGroupWindowAggregate(groupBy=[name1, name2], window=[SlidingGroupWindow('w$, 'rowtime, 180000.millis, 60000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[name1, name2, AVG(b) AS avg_b, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+      +- StreamExecExchange(distribution=[hash[name1, name2]])
+         +- StreamExecCalc(select=[rowtime, name AS name1, name0 AS name2, b])
+            +- StreamExecTemporalTableJoin(join=[b, c, rowtime, name, id, name0], source=[TestingTemporalTableSource(age, id, name)], on=[c=age], joinType=[InnerJoin], period=[PROCTIME()])
+               +- StreamExecCalc(select=[b, c, rowtime, name])
+                  +- StreamExecTemporalTableJoin(join=[a, b, c, rowtime, id, name], source=[TestingTemporalTableSource(age, id, name)], on=[a=age], joinType=[InnerJoin], period=[PROCTIME()])
+                     +- StreamExecCalc(select=[a, b, c, rowtime])
+                        +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSingleSinkSplitOnUnion2[subplanReuseEnabled=true]">
     <Resource name="planBefore">
       <![CDATA[
 LogicalProject(total_sum=[AS($0, 'total_sum')])

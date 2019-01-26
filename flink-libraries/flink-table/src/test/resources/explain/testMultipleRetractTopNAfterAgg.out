@@ -10,22 +10,21 @@ LogicalProject(category=[$0], shopId=[$1], avg_num=[$2], cnt_num=[$3], rank_num=
       +- LogicalTableScan(table=[[builtin, default, MyView]])
 
 == Optimized Logical Plan ==
-StreamExecCalc(select=[category, shopId, CASE(=($f3, 0), null, sum_num) AS sum_num, max_num, CAST(/(CAST(CASE(=($f3, 0), null, sum_num)), $f3)) AS avg_num, $f3 AS cnt_num], retract=[true], accMode=[AccRetract], reuse_id=[1])
-+- StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, $SUM0(num) AS sum_num, COUNT(num) AS $f3, MAX(num) AS max_num], retract=[true], accMode=[AccRetract])
-   +- StreamExecExchange(distribution=[hash[category, shopId]], retract=[true], accMode=[Acc])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+StreamExecExchange(distribution=[hash[category]], retract=[true], accMode=[AccRetract], reuse_id=[1])
++- StreamExecCalc(select=[category, shopId, CASE(=($f3, 0), null, sum_num) AS sum_num, max_num, CAST(/(CAST(CASE(=($f3, 0), null, sum_num)), $f3)) AS avg_num, $f3 AS cnt_num], retract=[true], accMode=[AccRetract])
+   +- StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, $SUM0(num) AS sum_num, COUNT(num) AS $f3, MAX(num) AS max_num], retract=[true], accMode=[AccRetract])
+      +- StreamExecExchange(distribution=[hash[category, shopId]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[category, shopId, sum_num, max_num, rank_num], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[category, shopId, sum_num, max_num, w0$o0], retract=[true], accMode=[AccRetract])
    +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[sum_num DESC, max_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
-      +- StreamExecExchange(distribution=[hash[category]], retract=[true], accMode=[AccRetract])
-         +- Reused(reference_id=[1])
+      +- Reused(reference_id=[1])
 
 StreamExecSink(fields=[category, shopId, avg_num, cnt_num, rank_num], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[category, shopId, avg_num, cnt_num, w0$o0], retract=[true], accMode=[AccRetract])
    +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[avg_num DESC, cnt_num ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[RetractRank], select=[*, rowNum], retract=[true], accMode=[AccRetract])
-      +- StreamExecExchange(distribution=[hash[category]], retract=[true], accMode=[AccRetract])
-         +- Reused(reference_id=[1])
+      +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
  : Data Source

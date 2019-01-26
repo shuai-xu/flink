@@ -95,13 +95,13 @@ public class TableConfigOptions {
 
 	public static final ConfigOption<Boolean> SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED =
 			key("sql.optimizer.reuse.sub-plan.enabled")
-			.defaultValue(false)
+			.defaultValue(true)
 			.withDescription("When true, the optimizer will try to find out duplicated " +
 				"sub-plan and reuse them.");
 
 	public static final ConfigOption<Boolean> SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED =
 			key("sql.optimizer.reuse.table-source.enabled")
-			.defaultValue(false)
+			.defaultValue(true)
 			.withDescription("When true, the optimizer will try to find out duplicated table-source and reuse them. " +
 				"This works only when " + SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED + " is true.");
 

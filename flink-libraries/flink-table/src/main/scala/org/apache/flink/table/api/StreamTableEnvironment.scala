@@ -44,7 +44,7 @@ import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimize
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.subplan.StreamDAGOptimizer
-import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SameRelObjectShuttle}
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SameRelObjectShuttle, SubplanReuseUtil}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
@@ -707,8 +707,10 @@ abstract class StreamTableEnvironment(
     */
   private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[StreamExecNode[_]] = {
     require(rels.nonEmpty && rels.forall(_.isInstanceOf[StreamExecNode[_]]))
+    // reuse subplan
+    val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
     // convert StreamPhysicalRel DAG to StreamExecNode DAG
-    val nodeDag = rels.map(_.asInstanceOf[StreamExecNode[_]])
+    val nodeDag = reusedPlan.map(_.asInstanceOf[StreamExecNode[_]])
     // call processors
     val dagProcessors = getConfig.getStreamDAGProcessors
     require(dagProcessors != null)

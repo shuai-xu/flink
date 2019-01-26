@@ -64,6 +64,14 @@ class StreamExecExchange(
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
+  /**
+    * Currently, PartitionTransformation wont been reused,
+    * its input transformation will been reused if this is reusable.
+    */
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
+    translateToPlanInternal(tableEnv)
+  }
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
     val input = getInputNodes.get(0).translateToPlan(tableEnv)

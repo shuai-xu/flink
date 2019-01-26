@@ -37,6 +37,8 @@ class RemoveShuffleTest extends TableTestBase {
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))
     util.tableEnv.alterTableStats("x", Some(TableStats(100L)))
     util.tableEnv.alterTableStats("y", Some(TableStats(100L)))
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, false)
   }
 
   @Test

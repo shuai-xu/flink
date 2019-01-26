@@ -370,7 +370,6 @@ class ExplainTest extends TableTestBase {
     assertEquals(expected, result)
   }
 
-
   @Test
   def testSubsectionOptimizationWithUdtf(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment

@@ -23,37 +23,30 @@ LogicalProject(a=[$0])
    +- LogicalTableScan(table=[[builtin, default, t2]])
 
 == Optimized Logical Plan ==
-StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc], reuse_id=[2])
+StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc], reuse_id=[2])
+:- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
+:  +- StreamExecDataStreamScan(table=[[builtin, default, t1]], retract=[true], accMode=[Acc])
++- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
+   +- StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc])
 
-StreamExecDataStreamScan(table=[[builtin, default, t2]], retract=[true], accMode=[Acc], reuse_id=[3])
-
-StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc], reuse_id=[1])
-:- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
-:  :- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-:  :  +- Reused(reference_id=[2])
-:  +- StreamExecCalc(select=[d], retract=[true], accMode=[Acc])
-:     +- Reused(reference_id=[3])
-+- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
-   +- StreamExecDataStreamScan(table=[[builtin, default, t3]], retract=[true], accMode=[Acc])
+StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc], reuse_id=[1])
++- StreamExecUnion(all=[true], union=[a], retract=[true], accMode=[Acc])
+   :- Reused(reference_id=[2])
+   +- StreamExecCalc(select=[a], retract=[true], accMode=[Acc])
+      +- StreamExecDataStreamScan(table=[[builtin, default, t3]], retract=[true], accMode=[Acc])
 
 StreamExecSink(fields=[total_sum], retract=[false], accMode=[Acc])
 +- StreamExecCalc(select=[TMP_0 AS total_sum], retract=[false], accMode=[Acc])
    +- StreamExecGroupAggregate(select=[SUM(a) AS TMP_0], retract=[false], accMode=[Acc])
-      +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- Reused(reference_id=[1])
+      +- Reused(reference_id=[1])
 
 StreamExecSink(fields=[total_min], retract=[false], accMode=[AccRetract])
 +- StreamExecCalc(select=[TMP_1 AS total_min], retract=[true], accMode=[AccRetract])
    +- StreamExecGroupAggregate(select=[MIN(a) AS TMP_1], retract=[true], accMode=[AccRetract])
-      +- StreamExecExchange(distribution=[single], retract=[true], accMode=[Acc])
-         +- Reused(reference_id=[1])
+      +- Reused(reference_id=[1])
 
 StreamExecSink(fields=[a], retract=[false], accMode=[Acc])
-+- StreamExecUnion(all=[true], union=[a], retract=[false], accMode=[Acc])
-   :- StreamExecCalc(select=[a], retract=[false], accMode=[Acc])
-   :  +- Reused(reference_id=[2])
-   +- StreamExecCalc(select=[d], retract=[false], accMode=[Acc])
-      +- Reused(reference_id=[3])
++- Reused(reference_id=[2])
 
 == Physical Execution Plan ==
  : Data Source
@@ -113,23 +106,15 @@ StreamExecSink(fields=[a], retract=[false], accMode=[Acc])
 													content : Map
 													ship_strategy : FORWARD
 
-													 : Operator
-														content : Calc(select: (a))
+													 : Data Sink
+														content : Sink: TestingUpsertTableSink(keys=())
 														ship_strategy : FORWARD
 
-														 : Operator
-															content : Calc(select: (d))
+														 : Data Sink
+															content : Sink: TestingRetractTableSink
 															ship_strategy : FORWARD
 
 															 : Data Sink
 																content : Sink: TestingUpsertTableSink(keys=())
 																ship_strategy : FORWARD
-
-																 : Data Sink
-																	content : Sink: TestingRetractTableSink
-																	ship_strategy : FORWARD
-
-																	 : Data Sink
-																		content : Sink: TestingUpsertTableSink(keys=())
-																		ship_strategy : FORWARD
 

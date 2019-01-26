@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.tpc
 
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
 
 import org.apache.calcite.sql.SqlExplainLevel
@@ -40,6 +41,11 @@ abstract class TpcHBatchExecPlanTest(
     TpcHSchemaProvider.schemaMap,
     TpchTableStatsProvider.getTableStatsMap(factor, statsMode)) {
 
-  def getQuery(): String = TpcUtils.getTpcHQuery(caseName)
+  def getQuery: String = TpcUtils.getTpcHQuery(caseName)
 
+  override def setupTableConfig(): Unit = {
+    super.setupTableConfig()
+    tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, false)
+  }
 }

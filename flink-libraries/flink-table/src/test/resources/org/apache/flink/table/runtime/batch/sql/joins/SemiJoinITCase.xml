@@ -336,7 +336,7 @@ SortMergeSemiJoin(where=[=(b, d)], join=[c, d], joinType=[LeftSemiJoin])
 Calc(select=[c, d])
 +- NestedLoopJoin(where=[=(d, d0)], join=[c, d, d0], joinType=[InnerJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
-   :  +- BoundedStreamScan(table=[[builtin, default, rightT]], fields=[c, d])
+   :  +- BoundedStreamScan(table=[[builtin, default, rightT]], fields=[c, d], reuse_id=[1])
    +- Exchange(distribution=[broadcast])
       +- HashAggregate(isMerge=[true], groupBy=[d], select=[d])
          +- Exchange(distribution=[hash[d]])
@@ -355,7 +355,7 @@ Calc(select=[c, d])
                                              +- LocalSortAggregate(groupBy=[d], select=[d])
                                                 +- Sort(orderBy=[d ASC])
                                                    +- Calc(select=[d])
-                                                      +- BoundedStreamScan(table=[[builtin, default, rightT]], fields=[c, d])
+                                                      +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -734,12 +734,12 @@ SortMergeSemiJoin(where=[AND(=(c, EXPR$0), =(b, d))], join=[c, d], joinType=[Lef
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], isBroadcast=[true], build=[right])
 :- Exchange(distribution=[hash[a, b]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b], reuse_id=[1])
 +- Exchange(distribution=[broadcast])
    +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
       +- Exchange(distribution=[hash[a, b]])
          +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-            +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+            +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -748,11 +748,11 @@ HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoi
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a, b]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b], reuse_id=[1])
 +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
    +- Exchange(distribution=[hash[a, b]])
       +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-         +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+         +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -761,13 +761,13 @@ HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoi
       <![CDATA[
 HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[hash[a, b]], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b], reuse_id=[1])
 +- SortAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
    +- Sort(orderBy=[a ASC, b ASC])
       +- Exchange(distribution=[hash[a, b]])
          +- LocalSortAggregate(groupBy=[a, b], select=[a, b])
             +- Sort(orderBy=[a ASC, b ASC])
-               +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+               +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -776,12 +776,12 @@ HashSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoi
       <![CDATA[
 NestedLoopSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin], build=[right])
 :- Exchange(distribution=[any], exchange_mode=[BATCH])
-:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b], reuse_id=[1])
 +- Exchange(distribution=[broadcast])
    +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
       +- Exchange(distribution=[hash[a, b]])
          +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-            +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+            +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -790,11 +790,11 @@ NestedLoopSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftS
       <![CDATA[
 SortMergeSemiJoin(where=[AND(=(a, a0), =(b, b0))], join=[a, b], joinType=[LeftSemiJoin])
 :- Exchange(distribution=[hash[a, b]])
-:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b], reuse_id=[1])
 +- HashAggregate(isMerge=[true], groupBy=[a, b], select=[a, b])
    +- Exchange(distribution=[hash[a, b]])
       +- LocalHashAggregate(groupBy=[a, b], select=[a, b])
-         +- BoundedStreamScan(table=[[builtin, default, leftT]], fields=[a, b])
+         +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>

@@ -129,6 +129,17 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[c DESC], ran
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testTopNOrderByIncrSum">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum], retract=[false], accMode=[Acc])
++- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
+   +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, INCR_SUM(c) AS sum_c], retract=[false], accMode=[Acc])
+      +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testTopNOrderBySumWithCaseWhen">
     <Resource name="plan">
       <![CDATA[
@@ -186,17 +197,6 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC],
       +- StreamExecExchange(distribution=[hash[a, b]])
          +- StreamExecCalc(select=[a, b, IF(>(c, 10), 1, 0) AS $f2])
             +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testTopNOrderByUDAG">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[sum_c DESC], rankRange=[rankStart=1, rankEnd=10], strategy=[UpdateFastRank[0,1]], select=[*, rowNum], retract=[false], accMode=[Acc])
-+- StreamExecExchange(distribution=[hash[b]], retract=[false], accMode=[Acc])
-   +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, increasing_sum(c) AS sum_c], retract=[false], accMode=[Acc])
-      +- StreamExecExchange(distribution=[hash[a, b]], retract=[true], accMode=[Acc])
-         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], retract=[true], accMode=[Acc])
 ]]>
     </Resource>
   </TestCase>

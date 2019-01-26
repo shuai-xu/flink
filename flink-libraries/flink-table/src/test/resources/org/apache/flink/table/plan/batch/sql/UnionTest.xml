@@ -169,15 +169,15 @@ Calc(select=[a, /(CAST(b0), CAST(b)) AS EXPR$1, /(CAST(b2), CAST(b1)) AS EXPR$2]
    :     :     +- HashJoin(where=[=(a, a0)], join=[a, b, a0, b0], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :     :        :- Exchange(distribution=[hash[a]], exchange_mode=[BATCH])
    :     :        :  +- Calc(select=[a, b], where=[=(c, '2001')])
-   :     :        :     +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+   :     :        :     +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c], reuse_id=[1])
    :     :        +- Exchange(distribution=[broadcast])
    :     :           +- Calc(select=[a, b], where=[=(c, '2002')])
-   :     :              +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+   :     :              +- Reused(reference_id=[1])
    :     +- Calc(select=[a, b], where=[=(c, '2001')])
-   :        +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[a, b, c])
+   :        +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[a, b, c], reuse_id=[2])
    +- Exchange(distribution=[hash[a]], exchange_mode=[BATCH])
       +- Calc(select=[a, b], where=[=(c, '2002')])
-         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[a, b, c])
+         +- Reused(reference_id=[2])
 ]]>
     </Resource>
   </TestCase>

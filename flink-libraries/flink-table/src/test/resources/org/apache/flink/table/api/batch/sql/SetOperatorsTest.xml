@@ -74,9 +74,9 @@ HashAggregate(isMerge=[true], groupBy=[a, b, c], select=[a, b, c])
    +- LocalHashAggregate(groupBy=[a, b, c], select=[a, b, c])
       +- HashSemiJoin(where=[AND(OR(=(a, a0), AND(IS NULL(a), IS NULL(a0))), OR(=(b, b0), AND(IS NULL(b), IS NULL(b0))), OR(=(c, c0), AND(IS NULL(c), IS NULL(c0))))], join=[a, b, c], joinType=[LeftAntiJoin], isBroadcast=[true], build=[right])
          :- Exchange(distribution=[hash[a, b, c]], exchange_mode=[BATCH])
-         :  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+         :  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c], reuse_id=[1])
          +- Exchange(distribution=[broadcast])
-            +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+            +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -97,9 +97,9 @@ LogicalUnion(all=[true])
       <![CDATA[
 Union(all=[true], union=[a])
 :- Calc(select=[a])
-:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c], reuse_id=[1])
 +- Calc(select=[CASE(>(c, 0), b, null) AS EXPR$0])
-   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+   +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -123,10 +123,10 @@ LogicalProject(b=[$1])
 Calc(select=[a, c])
 +- NestedLoopSemiJoin(where=[OR(=(b, b0), IS NULL(=(b, b0)))], join=[a, b, c], joinType=[LeftAntiJoin], build=[right])
    :- Exchange(distribution=[any], exchange_mode=[BATCH])
-   :  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+   :  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c], reuse_id=[1])
    +- Exchange(distribution=[broadcast])
       +- Calc(select=[b], where=[OR(=(b, 6), =(b, 1))])
-         +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
+         +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -147,9 +147,9 @@ LogicalUnion(all=[true])
       <![CDATA[
 Union(all=[true], union=[a])
 :- Calc(select=[a])
-:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
+:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b], reuse_id=[1])
 +- Calc(select=[b])
-   +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
+   +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
