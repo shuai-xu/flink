@@ -154,6 +154,9 @@ public class RestServerClientImpl implements RestServerClient {
 						inputNodes.put(vertexID, inputVertexIds);
 					}
 					Configuration configuration = new Configuration();
+					if (jobGraphOverviewInfo.getConfig() != null) {
+						configuration.addAll(jobGraphOverviewInfo.getConfig());
+					}
 					return new JobConfig(configuration, vertexConfigs, inputNodes);
 				}
 			).get();

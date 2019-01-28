@@ -106,7 +106,7 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 					vertexConfigs.put(vertexID.toString(), vertexConfigInfo);
 					inputNodes.put(vertexID.toString(), inputVertexId);
 				}
-				return new JobGraphOverviewInfo(config, vertexConfigs, inputNodes);
+				return new JobGraphOverviewInfo(config.toMap(), vertexConfigs, inputNodes);
 			}
 		);
 	}

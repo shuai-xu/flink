@@ -25,6 +25,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
@@ -184,6 +185,7 @@ public class RestServerClientImplTest extends TestLogger {
 		try (TestRestServerEndpoint ignored = createRestServerEndpoint(new TestJobGraphOverviewHandler())) {
 			{
 				RestServerClient.JobConfig jobConfig = restServerClientImpl.getJobConfig(jobId);
+				Assert.assertTrue(jobConfig.getConfig().toMap().size() == 5);
 				Assert.assertNotNull(jobConfig);
 			}
 		}
@@ -416,8 +418,16 @@ public class RestServerClientImplTest extends TestLogger {
 		SlotSharingGroup slotSharingGroup = new SlotSharingGroup();
 		sender.setSlotSharingGroup(slotSharingGroup);
 		receiver.setSlotSharingGroup(slotSharingGroup);
+		Configuration configuration = new Configuration();
+		configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, 1 * 32 * 1024);
+		configuration.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, 1 * 32 * 1024);
+		configuration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_CHANNEL, 2);
+		configuration.setInteger(TaskManagerOptions.NETWORK_BUFFERS_PER_SUBPARTITION, 2);
+		configuration.setInteger(TaskManagerOptions.NETWORK_EXTRA_BUFFERS_PER_GATE, 0);
 
-		return new JobGraph("Blocking test job", sender, receiver);
+		JobGraph jobGraphTmp = new JobGraph("Blocking test job", sender, receiver);
+		jobGraphTmp.addCustomConfiguration(configuration);
+		return jobGraphTmp;
 	}
 
 	private JobGraphOverviewInfo createInfo(JobGraph jobGraph) {
@@ -456,7 +466,7 @@ public class RestServerClientImplTest extends TestLogger {
 			vertexConfigs.put(vertexID.toString(), vertexConfigInfo);
 			inputNodes.put(vertexID.toString(), inputVertexId);
 		}
-		return new JobGraphOverviewInfo(config, vertexConfigs, inputNodes);
+		return new JobGraphOverviewInfo(config.toMap(), vertexConfigs, inputNodes);
 	}
 
 }

@@ -18,7 +18,6 @@
 
 package org.apache.flink.runtime.rest.messages;
 
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.handler.job.JobGraphOverviewHandler;
 import org.apache.flink.runtime.rest.messages.json.AbstractIDDeserializer;
@@ -48,7 +47,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 	public static final String FIELD_NAME_INPUT_NODES = "input-nodes";
 
 	@JsonProperty(FIELD_NAME_JOB_CONFIG)
-	private final Configuration config;
+	private final Map<String, String> config;
 
 	@JsonProperty(FIELD_NAME_VERTEX_CONFIG)
 	private final Map<String, VertexConfigInfo> vertexConfigs;
@@ -58,7 +57,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 
 	@JsonCreator
 	public JobGraphOverviewInfo(
-			@JsonProperty(FIELD_NAME_JOB_CONFIG) Configuration config,
+			@JsonProperty(FIELD_NAME_JOB_CONFIG) Map<String, String> config,
 			@JsonProperty(FIELD_NAME_VERTEX_CONFIG) Map<String, VertexConfigInfo> vertexConfigs,
 			@JsonProperty(FIELD_NAME_INPUT_NODES) Map<String, List<EdgeConfigInfo>> inputNodes) {
 		this.config = config;
@@ -66,7 +65,7 @@ public class JobGraphOverviewInfo implements ResponseBody {
 		this.inputNodes = inputNodes;
 	}
 
-	public Configuration getConfig() {
+	public Map<String, String> getConfig() {
 		return config;
 	}
 
