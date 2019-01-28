@@ -43,7 +43,7 @@ object LongHashJoinGenerator {
         joinType == HashJoinType.PROBE_OUTER) &&
         filterNulls.forall(b => b) &&
         keyType.getFieldTypes.length == 1 && {
-      val t = keyType.getFieldTypes()(0)
+      val t = keyType.getInternalTypeAt(0)
       t == DataTypes.LONG || t == DataTypes.INT || t == DataTypes.SHORT || t == DataTypes.BYTE ||
           t == DataTypes.FLOAT || t == DataTypes.DOUBLE ||
           t.isInstanceOf[DateType] || t.isInstanceOf[TimestampType] || t == DataTypes.TIME

@@ -19,21 +19,25 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import java.util
-
 import org.apache.flink.api.common.typeinfo.BasicArrayTypeInfo.STRING_ARRAY_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.java.typeutils.{ObjectArrayTypeInfo, RowTypeInfo}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
+import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.batch.sql.joins.JoinITCaseBase
 import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
+import org.apache.flink.table.sinks.CollectRowTableSink
 import org.apache.flink.types.Row
+
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{Before, Ignore, Test}
+import org.junit.{Assert, Before, Ignore, Test}
 
+import scala.collection.JavaConversions._
 import scala.collection.Seq
 
 @RunWith(classOf[Parameterized])
@@ -62,6 +66,28 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
         row("Hello", "Hallo Welt"),
         row("Hello world", "Hallo Welt")
       ))
+  }
+
+  @Test
+  def testLongHashJoinGenerator(): Unit = {
+    if (expectedJoinType == HashJoin) {
+      val sink = (new CollectRowTableSink).configure(Array("c"), Array(DataTypes.STRING))
+      tEnv.writeToSink(
+        tEnv.sqlQuery("SELECT c FROM SmallTable3, Table5 WHERE b = e"),
+        sink,
+        "collect")
+
+      var haveTwoOp = false
+      env.getStreamGraph.getOperators.foreach(o =>
+        o.f1 match {
+          case two: TwoInputSubstituteStreamOperator[_, _, _] =>
+            Assert.assertTrue(two.code.contains("LongHashJoinOperator"))
+            haveTwoOp = true
+          case _ =>
+        }
+      )
+      Assert.assertTrue(haveTwoOp)
+    }
   }
 
   @Test
