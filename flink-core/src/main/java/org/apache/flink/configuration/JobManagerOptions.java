@@ -90,6 +90,14 @@ public class JobManagerOptions {
 			.withDescription("The maximum number of prior execution attempts kept in history.");
 
 	/**
+	 * The maximum number of prior execution graphs kept in history.
+	 */
+	public static final ConfigOption<Integer> MAX_EXECUTION_GRAPH_HISTORY_SIZE =
+		key("jobmanager.execution.execution-graph-history-size")
+			.defaultValue(1)
+			.withDescription("The maximum number of prior execution graphs kept in history.");
+
+	/**
 	 * The strategy to handle task failures.
 	 * 'full' failover strategy will restart all tasks in the job.
 	 * 'region' failover strategy will restart the tasks in the same region with the failed task.

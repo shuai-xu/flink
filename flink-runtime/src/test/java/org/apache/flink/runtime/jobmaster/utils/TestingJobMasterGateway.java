@@ -57,6 +57,7 @@ import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.update.JobUpdateRequest;
+import org.apache.flink.runtime.util.EvictingBoundedList;
 
 import javax.annotation.Nullable;
 
@@ -181,6 +182,11 @@ public class TestingJobMasterGateway implements JobMasterGateway {
 
 	@Override
 	public CompletableFuture<ArchivedExecutionGraph> requestJob(Time timeout) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public CompletableFuture<EvictingBoundedList<ArchivedExecutionGraph>> requestJobHistories(Time timeout) {
 		throw new UnsupportedOperationException();
 	}
 

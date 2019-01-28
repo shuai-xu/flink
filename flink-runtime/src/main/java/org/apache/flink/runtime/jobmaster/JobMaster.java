@@ -26,6 +26,7 @@ import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.core.io.InputSplitAssigner;
 import org.apache.flink.queryablestate.KvStateID;
@@ -129,6 +130,7 @@ import org.apache.flink.runtime.update.JobUpdateRequest;
 import org.apache.flink.runtime.update.action.JobGraphReplaceAction;
 import org.apache.flink.runtime.update.action.JobGraphUpdateAction;
 import org.apache.flink.runtime.update.action.JobUpdateAction;
+import org.apache.flink.runtime.util.EvictingBoundedList;
 import org.apache.flink.runtime.webmonitor.WebMonitorUtils;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
@@ -239,6 +241,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	private ExecutionGraph executionGraph;
 
 	private boolean inJobUpdate = false;
+
+	private final EvictingBoundedList<ArchivedExecutionGraph> executionGraphHistories;
 
 	/** The graph manager manages the expansion and schedule of graph. */
 	private GraphManager graphManager;
@@ -351,6 +355,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		JobManagerJobMetricGroup jmJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
 		ExecutionGraph eg = createAndRestoreExecutionGraph(jobGraph, jmJobMetricGroup);
+
+		this.executionGraphHistories = new EvictingBoundedList<>(
+			jobMasterConfiguration.getConfiguration().getInteger(JobManagerOptions.MAX_EXECUTION_GRAPH_HISTORY_SIZE));
 
 		assignExecutionGraph(eg, jmJobMetricGroup);
 	}
@@ -528,11 +535,15 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 				((JobGraphUpdateAction) action).updateJobGraph(newJobGraph);
 			} else if (action instanceof JobGraphReplaceAction) {
 				newJobGraph = ((JobGraphReplaceAction) action).getNewJobGraph();
+				newJobGraph.setJobVersion(this.jobGraph.getJobVersion());
 			} else {
 				return FutureUtils.completedExceptionally(
 					new IllegalArgumentException("Unknown job update action: " + action));
 			}
 		}
+
+		// Increase the job version
+		newJobGraph.setJobVersion(newJobGraph.getJobVersion() + 1);
 
 		// update the job with the new JobGraph
 		return updateJob(newJobGraph);
@@ -1176,6 +1187,11 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 	}
 
 	@Override
+	public CompletableFuture<EvictingBoundedList<ArchivedExecutionGraph>> requestJobHistories(Time timeout) {
+		return CompletableFuture.completedFuture(executionGraphHistories);
+	}
+
+	@Override
 	public CompletableFuture<Collection<JobPendingSlotRequestDetail>> requestPendingSlotRequestDetails(@RpcTimeout Time timeout) {
 
 		return slotPoolGateway.requestPendingSlotRequests(timeout)
@@ -1412,6 +1428,12 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 				executionGraph.getState().isTerminalState(),
 				"The job state is " + (executionGraph == null ? null : executionGraph.getState()));
 		checkState(jobManagerJobMetricGroup == null);
+
+		if (this.executionGraph != null) {
+			executionGraphHistories.add(ArchivedExecutionGraph.createFrom(this.executionGraph));
+			log.info("The old execution graph is added to execution graph history store({}/{}).",
+				executionGraphHistories.size(), executionGraphHistories.getSizeLimit());
+		}
 
 		executionGraph = newExecutionGraph;
 		jobManagerJobMetricGroup = newJobManagerJobMetricGroup;

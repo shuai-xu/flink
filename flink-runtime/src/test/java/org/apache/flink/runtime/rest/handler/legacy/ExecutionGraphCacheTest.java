@@ -384,6 +384,7 @@ public class ExecutionGraphCacheTest extends TestLogger {
 			super(
 				jobId,
 				"ExecutionGraphCacheTest",
+				0,
 				Collections.emptyMap(),
 				Collections.emptyList(),
 				new long[0],

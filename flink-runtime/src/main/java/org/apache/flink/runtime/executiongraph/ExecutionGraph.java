@@ -640,6 +640,11 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	}
 
 	@Override
+	public long getJobVersion() {
+		return jobInformation.getJobVersion();
+	}
+
+	@Override
 	public String getJobName() {
 		return jobInformation.getJobName();
 	}

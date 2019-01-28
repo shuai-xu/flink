@@ -58,6 +58,13 @@ public interface AccessExecutionGraph {
 	String getJobName();
 
 	/**
+	 * Returns the job version for the execution graph.
+	 *
+	 * @return job version for this execution graph
+	 */
+	long getJobVersion();
+
+	/**
 	 * Returns the current {@link JobStatus} for this execution graph.
 	 *
 	 * @return job status for this execution graph

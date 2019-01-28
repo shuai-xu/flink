@@ -54,6 +54,9 @@ public class ArchivedExecutionGraph implements AccessExecutionGraph, Serializabl
 	/** The name of the original job graph. */
 	private final String jobName;
 
+	/** The version of the job graph. */
+	private final long jobVersion;
+
 	/** All job vertices that are part of this graph. */
 	private final Map<JobVertexID, ArchivedExecutionJobVertex> tasks;
 
@@ -98,6 +101,7 @@ public class ArchivedExecutionGraph implements AccessExecutionGraph, Serializabl
 	public ArchivedExecutionGraph(
 			JobID jobID,
 			String jobName,
+			long jobVersion,
 			Map<JobVertexID, ArchivedExecutionJobVertex> tasks,
 			List<ArchivedExecutionJobVertex> verticesInCreationOrder,
 			long[] stateTimestamps,
@@ -113,6 +117,7 @@ public class ArchivedExecutionGraph implements AccessExecutionGraph, Serializabl
 
 		this.jobID = Preconditions.checkNotNull(jobID);
 		this.jobName = Preconditions.checkNotNull(jobName);
+		this.jobVersion = jobVersion;
 		this.tasks = Preconditions.checkNotNull(tasks);
 		this.verticesInCreationOrder = Preconditions.checkNotNull(verticesInCreationOrder);
 		this.stateTimestamps = Preconditions.checkNotNull(stateTimestamps);
@@ -142,6 +147,11 @@ public class ArchivedExecutionGraph implements AccessExecutionGraph, Serializabl
 	@Override
 	public String getJobName() {
 		return jobName;
+	}
+
+	@Override
+	public long getJobVersion() {
+		return jobVersion;
 	}
 
 	@Override
@@ -326,6 +336,7 @@ public class ArchivedExecutionGraph implements AccessExecutionGraph, Serializabl
 		return new ArchivedExecutionGraph(
 			executionGraph.getJobID(),
 			executionGraph.getJobName(),
+			executionGraph.getJobVersion(),
 			archivedTasks,
 			archivedVerticesInCreationOrder,
 			timestamps,

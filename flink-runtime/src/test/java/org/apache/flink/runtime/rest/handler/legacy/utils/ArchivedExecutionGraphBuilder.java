@@ -128,6 +128,7 @@ public class ArchivedExecutionGraphBuilder {
 		return new ArchivedExecutionGraph(
 			jobID,
 			jobName,
+			0,
 			tasks,
 			verticesInCreationOrder != null ? verticesInCreationOrder : new ArrayList<>(tasks.values()),
 			stateTimestamps != null ? stateTimestamps : new long[JobStatus.values().length],

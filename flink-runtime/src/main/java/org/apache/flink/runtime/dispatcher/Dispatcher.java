@@ -64,6 +64,7 @@ import org.apache.flink.runtime.rpc.LeaderShipLostHandler;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.update.JobUpdateRequest;
+import org.apache.flink.runtime.util.EvictingBoundedList;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
@@ -498,6 +499,16 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId> impleme
 					return serializableExecutionGraph;
 				}
 			});
+	}
+
+	@Override
+	public CompletableFuture<EvictingBoundedList<ArchivedExecutionGraph>> requestJobHistories(
+		final JobID jobId,
+		final Time timeout) {
+		final CompletableFuture<JobMasterGateway> jobMasterGatewayFuture = getJobMasterGatewayFuture(jobId);
+
+		return jobMasterGatewayFuture.thenCompose(
+			(JobMasterGateway jobMasterGateway) -> jobMasterGateway.requestJobHistories(timeout));
 	}
 
 	@Override

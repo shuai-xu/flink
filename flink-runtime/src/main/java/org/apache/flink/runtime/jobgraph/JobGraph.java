@@ -92,6 +92,9 @@ public class JobGraph implements Serializable {
 	/** Placement constraints of this job. */
 	private List<PlacementConstraint> placementConstraints = new ArrayList<>();
 
+	/** Version of this job. The version will change each time the job is updated. */
+	private long jobVersion = 0L;
+
 	// --- checkpointing ---
 
 	/** Job specific execution config */
@@ -279,6 +282,14 @@ public class JobGraph implements Serializable {
 
 	public void addPlacementConstraint(PlacementConstraint constraint) {
 		this.placementConstraints.add(constraint);
+	}
+
+	public long getJobVersion() {
+		return this.jobVersion;
+	}
+
+	public void setJobVersion(long newJobVersion) {
+		this.jobVersion = newJobVersion;
 	}
 
 	@VisibleForTesting

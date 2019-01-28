@@ -156,6 +156,7 @@ public class ExecutionGraphBuilder {
 		final JobInformation jobInformation = new JobInformation(
 			jobId,
 			jobName,
+			jobGraph.getJobVersion(),
 			jobGraph.getSerializedExecutionConfig(),
 			jobGraph.getJobConfiguration(),
 			jobGraph.getUserJarBlobKeys(),

@@ -24,6 +24,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CompletedCheckpoint;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
+import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -40,6 +41,7 @@ import org.apache.flink.runtime.rpc.RpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcGateway;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.update.JobUpdateRequest;
+import org.apache.flink.runtime.util.EvictingBoundedList;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -226,6 +228,19 @@ public interface RestfulGateway extends RpcGateway {
 			int newParallelism,
 			RescalingBehaviour rescalingBehaviour,
 			@RpcTimeout Time timeout) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * Request the history {@link ArchivedExecutionGraph}s for the given jobId. If there is no such graph, then
+	 * the future is completed with a {@link FlinkJobNotFoundException}.
+	 *
+	 * @param timeout for the rpc call
+	 * @return A Future to previous {@link ArchivedExecutionGraph}s
+	 */
+	default CompletableFuture<EvictingBoundedList<ArchivedExecutionGraph>> requestJobHistories(
+		JobID jobId,
+		@RpcTimeout Time timeout) {
 		throw new UnsupportedOperationException();
 	}
 

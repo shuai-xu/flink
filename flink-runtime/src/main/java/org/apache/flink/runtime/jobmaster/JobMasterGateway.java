@@ -52,6 +52,7 @@ import org.apache.flink.runtime.taskexecutor.slot.SlotOffer;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.update.JobUpdateRequest;
+import org.apache.flink.runtime.util.EvictingBoundedList;
 
 import javax.annotation.Nullable;
 
@@ -88,6 +89,7 @@ public interface JobMasterGateway extends
 	/**
 	 * Request the current JobGraph.
 	 *
+	 * @param timeout for the rpc call
 	 * @return A Future to current {@link JobGraph}
 	 */
 	CompletableFuture<JobGraph> requestJobGraph(Time timeout);
@@ -297,6 +299,14 @@ public interface JobMasterGateway extends
 	 * @return Future which is completed with the {@link ArchivedExecutionGraph} of the executed job
 	 */
 	CompletableFuture<ArchivedExecutionGraph> requestJob(@RpcTimeout Time timeout);
+
+	/**
+	 * Request the histories of the job.
+	 *
+	 * @param timeout for the rpc call
+	 * @return A Future to previous {@link ArchivedExecutionGraph}s
+	 */
+	CompletableFuture<EvictingBoundedList<ArchivedExecutionGraph>> requestJobHistories(@RpcTimeout Time timeout);
 
 	/**
 	 * Request the details of pending slot requests of the current job.
