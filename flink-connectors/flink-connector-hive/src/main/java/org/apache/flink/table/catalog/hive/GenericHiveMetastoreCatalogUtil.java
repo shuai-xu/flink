@@ -22,6 +22,7 @@ import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.Schema;
 import org.apache.flink.table.descriptors.SchemaValidator;
@@ -82,8 +83,14 @@ public class GenericHiveMetastoreCatalogUtil {
 		hiveTable.setTableType(TableType.EXTERNAL_TABLE.name());
 		hiveTable.setCreateTime((int) (System.currentTimeMillis() / 1000));
 		hiveTable.setPartitionKeys(new ArrayList<>());
+
 		hiveTable.setParameters(properties);
 		hiveTable.getParameters().putAll(EXTERNAL_TABLE_PROPERTY);
+
+		// Table comment
+		if (table.getComment() != null) {
+			hiveTable.getParameters().put(CatalogTableConfig.TABLE_COMMENT, table.getComment());
+		}
 
 		return hiveTable;
 	}
@@ -104,6 +111,9 @@ public class GenericHiveMetastoreCatalogUtil {
 			add(SchemaValidator.SCHEMA());
 		}});
 
+		// Table comment
+		String tableComment = properties.remove(CatalogTableConfig.TABLE_COMMENT);
+
 		// Partition keys
 		LinkedHashSet<String> partitionKeys = new LinkedHashSet<>();
 
@@ -118,7 +128,7 @@ public class GenericHiveMetastoreCatalogUtil {
 			properties,
 			new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes()),
 			new TableStats(),
-			null,
+			tableComment,
 			partitionKeys,
 			!partitionKeys.isEmpty(),
 			null,

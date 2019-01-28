@@ -40,6 +40,7 @@ import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -169,6 +170,11 @@ public class HiveCatalogUtil {
 		// Create Hive table doesn't include TableStats
 		hiveTable.setParameters(table.getProperties());
 
+		// Table comment
+		if (table.getComment() != null) {
+			hiveTable.getParameters().put(CatalogTableConfig.TABLE_COMMENT, table.getComment());
+		}
+
 		return hiveTable;
 	}
 
@@ -215,13 +221,19 @@ public class HiveCatalogUtil {
 	static CatalogTable createCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
 		TableType tableType = TableType.valueOf(hiveTable.getTableType());
 
+		// Properties
+		Map<String, String> properties = getPropertiesFromHiveTable(hiveTable);
+
+		// Table comment
+		String tableComment = properties.remove(CatalogTableConfig.TABLE_COMMENT);
+
 		CatalogTable table = new CatalogTable(
 			"hive",
 			tableSchema,
-			getPropertiesFromHiveTable(hiveTable),
+			properties,
 			new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes()),
 			tableStats,
-			null,
+			tableComment,
 			getPartitionCols(hiveTable),
 			hiveTable.getPartitionKeysSize() != 0,
 			null,
