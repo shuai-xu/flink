@@ -111,6 +111,8 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
         Seq(
           row("Hi", "Hallo"),
           row("Hello", "Hallo Welt"),
+          row("Hello", "Hallo Welt"),
+          row("Hello world", "Hallo Welt"),
           row("Hello world", "Hallo Welt")
         ))
     }
