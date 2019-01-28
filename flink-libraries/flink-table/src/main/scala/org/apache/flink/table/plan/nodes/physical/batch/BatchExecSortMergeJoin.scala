@@ -248,17 +248,20 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
           filterNulls)
 
       case SortMergeJoinType.SortLeftJoin | SortMergeJoinType.SortRightJoin =>
-        val (reservedSortMemory, mergeBufferMemory, maxSortMemory, sortKeys) = if (rightSorted) {
-          (leftReservedSortMemorySize,
-              rightReservedSortMemorySize,
-              leftMaxSortMemorySize,
-              leftAllKey.toArray)
-        } else {
-          (rightReservedSortMemorySize,
-              leftReservedSortMemorySize,
-              rightMaxSortMemorySize,
-              rightAllKey.toArray)
-        }
+        val (reservedSortMemory, mergeBufferMemory, maxSortMemory, sortKeys, sortType) =
+          if (rightSorted) {
+            (leftReservedSortMemorySize,
+                rightReservedSortMemorySize,
+                leftMaxSortMemorySize,
+                leftAllKey.toArray,
+                leftType)
+          } else {
+            (rightReservedSortMemorySize,
+                leftReservedSortMemorySize,
+                rightMaxSortMemorySize,
+                rightAllKey.toArray,
+                rightType)
+          }
 
         new OneSideSortMergeJoinOperator(
           reservedSortMemory, maxSortMemory,
@@ -270,7 +273,7 @@ trait BatchExecSortMergeJoinBase extends BatchExecJoinBase {
           ProjectionCodeGenerator.generateProjection(
             CodeGeneratorContext(config), "OneSideSMJProjection",
             rightType, keyType, rightAllKey.toArray),
-          newGeneratedSorter(sortKeys, leftType),
+          newGeneratedSorter(sortKeys, sortType),
           newGeneratedSorter(leftAllKey.indices.toArray, keyType),
           filterNulls)
 

@@ -18,10 +18,13 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
+import org.apache.flink.api.common.ExecutionConfig
+
 import java.util
 import org.apache.flink.api.common.typeinfo.BasicArrayTypeInfo.STRING_ARRAY_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
-import org.apache.flink.api.java.typeutils.{ObjectArrayTypeInfo, RowTypeInfo}
+import org.apache.flink.api.common.typeutils.TypeComparator
+import org.apache.flink.api.java.typeutils.{GenericTypeInfo, ObjectArrayTypeInfo, RowTypeInfo}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.types.DataTypes
@@ -87,6 +90,29 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
         }
       )
       Assert.assertTrue(haveTwoOp)
+    }
+  }
+
+  @Test
+  def testOneSideSmjFieldError(): Unit = {
+    if (expectedJoinType == SortMergeJoin) {
+      registerCollection("PojoSmallTable3", smallData3,
+        new RowTypeInfo(INT_TYPE_INFO, LONG_TYPE_INFO,
+          new GenericTypeInfoWithoutComparator[String](classOf[String])),
+        nullablesOfSmallData3, 'a, 'b, 'c)
+      registerCollection("PojoTable5", data5,
+        new RowTypeInfo(INT_TYPE_INFO, LONG_TYPE_INFO, INT_TYPE_INFO,
+          new GenericTypeInfoWithoutComparator[String](classOf[String]), LONG_TYPE_INFO),
+        nullablesOfData5, 'd, 'e, 'f, 'g, 'h)
+
+      checkResult(
+        "SELECT c, g FROM (SELECT h, g, f, e, d FROM PojoSmallTable3, PojoTable5 WHERE b = e)," +
+            " PojoSmallTable3 WHERE b = e",
+        Seq(
+          row("Hi", "Hallo"),
+          row("Hello", "Hallo Welt"),
+          row("Hello world", "Hallo Welt")
+        ))
     }
   }
 
@@ -798,5 +824,14 @@ object JoinITCase {
   def parameters(): util.Collection[Array[_]] = {
     util.Arrays.asList(
       Array(BroadcastHashJoin), Array(HashJoin), Array(SortMergeJoin), Array(NestedLoopJoin))
+  }
+}
+
+class GenericTypeInfoWithoutComparator[T](clazz: Class[T]) extends GenericTypeInfo[T](clazz) {
+
+  override def createComparator(
+      sortOrderAscending: Boolean,
+      executionConfig: ExecutionConfig): TypeComparator[T] = {
+    throw new RuntimeException("Not expected!")
   }
 }
