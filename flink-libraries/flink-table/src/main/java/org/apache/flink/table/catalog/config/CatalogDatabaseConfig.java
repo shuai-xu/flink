@@ -16,16 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.catalog.hive.config;
+package org.apache.flink.table.catalog.config;
 
 /**
- * Configs of Hive database.
+ * Config for CatalogDatabase.
  */
-public class HiveDbConfig {
-
-	public static final String HIVE_DB_DESCRIPTION = "hive.db.description";
-
-	public static final String HIVE_DB_OWNER_NAME = "hive.db.owner.name";
-
-	public static final String HIVE_DB_LOCATION_URI = "hive.db.location.uri";
+public class CatalogDatabaseConfig {
+	public static final String DATABASE_COMMENT = "comment";
 }

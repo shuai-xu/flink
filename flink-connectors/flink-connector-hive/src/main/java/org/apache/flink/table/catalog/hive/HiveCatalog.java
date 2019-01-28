@@ -25,12 +25,10 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
-import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.ObjectPath;
-import org.apache.flink.table.catalog.hive.config.HiveDbConfig;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 
@@ -38,7 +36,6 @@ import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
-import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
@@ -367,29 +364,5 @@ public class HiveCatalog extends HiveCatalogBase {
 
 	private List<String> getOrderedPartitionValues(Table hiveTable, CatalogPartition.PartitionSpec partitionSpec) {
 		return partitionSpec.getOrderedValues(HiveCatalogUtil.getPartitionKeys(hiveTable.getPartitionKeys()));
-	}
-
-	// ------ databases ------
-
-	@Override
-	protected Database createHiveDatabase(String dbName, CatalogDatabase db) {
-		Map<String, String> prop = db.getProperties();
-
-		return new Database(
-			dbName,
-			prop.remove(HiveDbConfig.HIVE_DB_DESCRIPTION),
-			prop.remove(HiveDbConfig.HIVE_DB_LOCATION_URI),
-			db.getProperties());
-	}
-
-	@Override
-	protected CatalogDatabase createCatalogDatabase(Database hiveDb) {
-		Map<String, String> prop = new HashMap<>(hiveDb.getParameters());
-
-		prop.put(HiveDbConfig.HIVE_DB_LOCATION_URI, hiveDb.getLocationUri());
-		prop.put(HiveDbConfig.HIVE_DB_DESCRIPTION, hiveDb.getDescription());
-		prop.put(HiveDbConfig.HIVE_DB_OWNER_NAME, hiveDb.getOwnerName());
-
-		return new CatalogDatabase(prop);
 	}
 }

@@ -24,6 +24,8 @@ import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
+import org.apache.flink.table.catalog.config.CatalogDatabaseConfig;
+import org.apache.flink.table.catalog.hive.config.HiveDatabaseConfig;
 import org.apache.flink.util.StringUtils;
 
 import org.apache.hadoop.hive.common.StatsSetupConst;
@@ -45,6 +47,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -216,23 +219,6 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 
 	// ------ databases ------
 
-	/**
-	 * Create a Hive database from CatalogDatabase.
-	 *
-	 * @param dbName	Name of the database
-	 * @param db		The given CatalogDatabase
-	 * @return A Hive Database
-	 */
-	protected abstract Database createHiveDatabase(String dbName, CatalogDatabase db);
-
-	/**
-	 * Create a Hive database from CatalogDatabase.
-	 *
-	 * @param hiveDb	The given Hive Database
-	 * @return	A CatalogDatabase
-	 */
-	protected abstract CatalogDatabase createCatalogDatabase(Database hiveDb);
-
 	@Override
 	public void createDatabase(String dbName, CatalogDatabase db, boolean ignoreIfExists) throws DatabaseAlreadyExistException {
 		try {
@@ -314,5 +300,22 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 			throw new FlinkHiveException(
 				String.format("Failed to get database %s", dbName), e);
 		}
+	}
+
+	private Database createHiveDatabase(String dbName, CatalogDatabase db) {
+		Map<String, String> props = db.getProperties();
+		return new Database(
+			dbName,
+			props.remove(CatalogDatabaseConfig.DATABASE_COMMENT),
+			props.remove(HiveDatabaseConfig.HIVE_DB_LOCATION_URI),
+			props);
+	}
+
+	private CatalogDatabase createCatalogDatabase(Database hiveDb) {
+		Map<String, String> props = hiveDb.getParameters();
+		props.put(CatalogDatabaseConfig.DATABASE_COMMENT, hiveDb.getDescription());
+		props.put(HiveDatabaseConfig.HIVE_DB_LOCATION_URI, hiveDb.getLocationUri());
+
+		return new CatalogDatabase(props);
 	}
 }

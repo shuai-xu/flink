@@ -35,7 +35,6 @@ import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.plan.stats.TableStats;
 
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -259,17 +258,5 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 	@Override
 	public boolean partitionExists(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec) {
 		throw new UnsupportedOperationException();
-	}
-
-	// ------ databases ------
-
-	@Override
-	protected Database createHiveDatabase(String dbName, CatalogDatabase db) {
-		return new Database(dbName, null, null, db.getProperties());
-	}
-
-	@Override
-	protected CatalogDatabase createCatalogDatabase(Database hiveDb) {
-		return new CatalogDatabase(hiveDb.getParameters());
 	}
 }
