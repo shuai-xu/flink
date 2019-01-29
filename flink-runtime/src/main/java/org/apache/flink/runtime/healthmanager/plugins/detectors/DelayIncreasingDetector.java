@@ -52,7 +52,7 @@ public class DelayIncreasingDetector implements Detector {
 	private static final Logger LOGGER = LoggerFactory.getLogger(DelayIncreasingDetector.class);
 
 	private static final ConfigOption<Long> DELAY_INCREASING_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.delay-increasing.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.delay-increasing.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Long> DELAY_INCREASING_THRESHOLD =
 		ConfigOptions.key("healthmonitor.delay-increasing.threshold.msps").defaultValue(0L);
 

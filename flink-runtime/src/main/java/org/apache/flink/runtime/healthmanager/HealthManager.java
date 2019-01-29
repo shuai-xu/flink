@@ -25,7 +25,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.healthmanager.metrics.HealthManagerMetricGroup;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.RestServerMetricProvider;
-import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.runtime.metrics.MetricRegistry;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
@@ -134,7 +133,7 @@ public class HealthManager {
 			try {
 				restServerClient.listJob()
 						.stream()
-						.filter(status -> status.getJobState().equals(JobStatus.RUNNING))
+						.filter(status -> !status.getJobState().isGloballyTerminalState())
 						.forEach(status -> runningIds.put(status.getJobId(), status.getJobName()));
 			} catch (Throwable e) {
 				// skip current round check since some wrong in rest server.

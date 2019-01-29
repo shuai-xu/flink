@@ -72,6 +72,8 @@ public abstract class TimelineAggregator {
 				return new RateTimelineAggregator(interval);
 			case RANGE:
 				return new RangeTimelineAggregator(interval);
+			case LATEST:
+				return new LatestTimelineAggregator(interval);
 			default:
 				throw new NotImplementedException("Agg type:" + timelineAggType);
 		}

@@ -51,7 +51,7 @@ public class LowDelayDetector implements Detector {
 	private static final Logger LOGGER = LoggerFactory.getLogger(LowDelayDetector.class);
 
 	private static final ConfigOption<Long> LOW_DELAY_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.low-delay.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.low-delay.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Long> LOW_DELAY_THRESHOLD =
 		ConfigOptions.key("healthmonitor.low-delay.threshold").defaultValue(5 * 60 * 1000L);
 

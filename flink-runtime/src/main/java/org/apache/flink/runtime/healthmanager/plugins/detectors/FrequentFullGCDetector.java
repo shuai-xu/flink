@@ -55,23 +55,24 @@ public class FrequentFullGCDetector implements Detector {
 	private static final String FULL_GC_COUNT_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Count";
 
 	private static final ConfigOption<Integer> FULL_GC_COUNT_THRESHOLD =
-		ConfigOptions.key("healthmonitor.full-gc-detector.threshold").defaultValue(0);
+		ConfigOptions.key("healthmonitor.full-gc-detector.threshold").defaultValue(3);
 	private static final ConfigOption<Long> FULL_GC_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.full-gc-detector.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.full-gc-detector.interval.ms").defaultValue(60 * 1000L);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
+	private HealthMonitor monitor;
 
 	private int gcCountThreshold;
 	private long gcCheckInterval;
 
-	private JobTMMetricSubscription gcMetricMaxSubscription;
-	private JobTMMetricSubscription gcMetricMinSubscription;
+	private JobTMMetricSubscription gcMetricSubscription;
 
 	@Override
 	public void open(HealthMonitor monitor) {
 
+		this.monitor = monitor;
 		jobID = monitor.getJobID();
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
@@ -79,20 +80,14 @@ public class FrequentFullGCDetector implements Detector {
 		gcCountThreshold = monitor.getConfig().getInteger(FULL_GC_COUNT_THRESHOLD);
 		gcCheckInterval = monitor.getConfig().getLong(FULL_GC_CHECK_INTERVAL);
 
-		gcMetricMaxSubscription = metricProvider.subscribeAllTMMetric(jobID, FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.MAX);
-		gcMetricMinSubscription = metricProvider.subscribeAllTMMetric(jobID, FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.MIN);
+		gcMetricSubscription = metricProvider.subscribeAllTMMetric(jobID, FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.RANGE);
 	}
 
 	@Override
 	public void close() {
-		if (metricProvider != null && gcMetricMinSubscription != null) {
-			metricProvider.unsubscribe(gcMetricMinSubscription);
-			gcMetricMinSubscription = null;
-		}
-
-		if (metricProvider != null && gcMetricMaxSubscription != null) {
-			metricProvider.unsubscribe(gcMetricMaxSubscription);
-			gcMetricMaxSubscription = null;
+		if (metricProvider != null && gcMetricSubscription != null) {
+			metricProvider.unsubscribe(gcMetricSubscription);
+			gcMetricSubscription = null;
 		}
 	}
 
@@ -102,20 +97,19 @@ public class FrequentFullGCDetector implements Detector {
 
 		long now = System.currentTimeMillis();
 
-		Map<String, Tuple2<Long, Double>> maxGC = gcMetricMaxSubscription.getValue();
-		Map<String, Tuple2<Long, Double>> minGC = gcMetricMinSubscription.getValue();
-		if (maxGC == null || maxGC.isEmpty() || minGC == null || minGC.isEmpty() || !maxGC.keySet().equals(minGC.keySet())) {
+		Map<String, Tuple2<Long, Double>> gcCount = gcMetricSubscription.getValue();
+		if (gcCount == null || gcCount.isEmpty()) {
 			return null;
 		}
 
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
-		for (String tmId : maxGC.keySet()) {
-			if (now - maxGC.get(tmId).f0 > gcCheckInterval * 2 || now - minGC.get(tmId).f0 > gcCheckInterval * 2) {
+		for (String tmId : gcCount.keySet()) {
+			if (now - gcCount.get(tmId).f0 > gcCheckInterval * 2 || gcCount.get(tmId).f0 < monitor.getLastExecution()) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", jobVertexIDs);
 				continue;
 			}
 
-			double deltaGCCount = maxGC.get(tmId).f1 - minGC.get(tmId).f1;
+			double deltaGCCount = gcCount.get(tmId).f1;
 
 			if (deltaGCCount > gcCountThreshold) {
 				List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
@@ -123,6 +117,7 @@ public class FrequentFullGCDetector implements Detector {
 					jobVertexIDs.addAll(jobExecutionVertexIds.stream().map(ExecutionVertexID::getJobVertexID).collect(Collectors.toList()));
 				}
 			}
+			LOGGER.debug("tm {} gc {}", tmId, gcCount.get(tmId));
 		}
 
 		if (jobVertexIDs != null && !jobVertexIDs.isEmpty()) {

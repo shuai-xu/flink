@@ -53,6 +53,10 @@ public class TaskMetricSubscription extends MetricSubscription<Tuple2<Long, Doub
 
 	@Override
 	public Tuple2<Long, Double> getValue() {
+
+		if (getSubTaskMetricValues().isEmpty()) {
+			return null;
+		}
 		return subtaskAggFunction.getValue(getSubTaskMetricValues());
 	}
 

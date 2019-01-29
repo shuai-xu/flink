@@ -107,7 +107,7 @@ public class OverParallelizedDetector implements Detector {
 			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
 				sourcePartitionCountSubs.put(vertexId,
 					metricProvider.subscribeTaskMetric(
-						jobID, vertexId, SOURCE_PARTITION_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.AVG));
+						jobID, vertexId, SOURCE_PARTITION_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
 				sourcePartitionLatencyCountRangeSubs.put(vertexId,
 					metricProvider.subscribeTaskMetric(
 						jobID, vertexId, SOURCE_PARTITION_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));

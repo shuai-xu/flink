@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
@@ -37,6 +38,8 @@ import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -219,24 +222,27 @@ public class HeapMemoryAdjusterTest {
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
 		long now = System.currentTimeMillis();
-		Map<String, Tuple2<Long, Double>> fullGCs0 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> fullGCs1 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> fullGCs2 = new HashMap<>();
-		fullGCs0.put("tmId", Tuple2.of(now, 0.0));
-		fullGCs1.put("tmId", Tuple2.of(now, 1.0));
-		fullGCs2.put("tmId", Tuple2.of(now, 2.0));
 
-		JobTMMetricSubscription minGcSub = Mockito.mock(JobTMMetricSubscription.class);
-		JobTMMetricSubscription maxGcSub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(minGcSub.getValue()).thenReturn(fullGCs0).thenReturn(fullGCs1).thenReturn(fullGCs2);
-		Mockito.when(maxGcSub.getValue()).thenReturn(fullGCs1).thenReturn(fullGCs2);
+		JobTMMetricSubscription gcSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(gcSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				callCount++;
+				if (callCount <= 2) {
+					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
+					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 4.0));
+					return fullGCs;
+				} else {
+					return new HashMap<>();
+				}
+			}
+		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.anyString(), Mockito.anyLong(), Mockito.eq(TimelineAggType.MIN)))
-			.thenReturn(minGcSub);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.anyString(), Mockito.anyLong(), Mockito.eq(TimelineAggType.MAX)))
-			.thenReturn(maxGcSub);
+			Mockito.any(JobID.class), Mockito.anyString(), Mockito.anyLong(), Mockito.eq(TimelineAggType.RANGE)))
+			.thenReturn(gcSub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
 			.thenReturn(Arrays.asList(executionVertexID1));
@@ -266,6 +272,8 @@ public class HeapMemoryAdjusterTest {
 			executorService,
 			new Configuration()
 		);
+
+		Whitebox.setInternalState(monitor, "lastExecution", 0);
 
 		monitor.start();
 

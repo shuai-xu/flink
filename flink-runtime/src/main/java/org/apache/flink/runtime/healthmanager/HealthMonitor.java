@@ -116,7 +116,7 @@ public class HealthMonitor {
 	private List<Resolver> resolvers;
 	private ActionSelector actionSelector;
 
-	private volatile long lastExecution = 0;
+	private volatile long lastExecution = System.currentTimeMillis();
 
 	private volatile long successActionCount = 0;
 	private volatile long failedActionCount = 0;
