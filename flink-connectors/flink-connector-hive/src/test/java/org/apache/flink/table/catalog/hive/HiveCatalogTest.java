@@ -21,8 +21,6 @@ package org.apache.flink.table.catalog.hive;
 import org.apache.flink.table.catalog.CatalogTestBase;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
@@ -38,20 +36,6 @@ public class HiveCatalogTest extends CatalogTestBase {
 	public static void init() throws IOException {
 		catalog = HiveTestUtils.createHiveCatalog();
 		catalog.open();
-	}
-
-	@After
-	public void close() {
-		catalog.dropTable(path1, true);
-		catalog.dropTable(path2, true);
-		catalog.dropTable(path3, true);
-		catalog.dropDatabase(db1, true);
-		catalog.dropDatabase(db2, true);
-	}
-
-	@AfterClass
-	public static void clean() throws IOException {
-		catalog.close();
 	}
 
 	@Override

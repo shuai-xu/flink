@@ -34,10 +34,13 @@ import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
 
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.IOException;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -76,6 +79,20 @@ public abstract class CatalogTestBase {
 
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
+
+	@After
+	public void close() {
+		catalog.dropTable(path1, true);
+		catalog.dropTable(path2, true);
+		catalog.dropTable(path3, true);
+		catalog.dropDatabase(db1, true);
+		catalog.dropDatabase(db2, true);
+	}
+
+	@AfterClass
+	public static void clean() throws IOException {
+		catalog.close();
+	}
 
 	// ------ tables ------
 

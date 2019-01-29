@@ -56,8 +56,9 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 		assertFalse(catalog.listDatabases().contains(db1));
 	}
 
-	@Test(expected = DatabaseNotExistException.class)
+	@Test
 	public void testRenameNonexistentDb() {
+		exception.expect(DatabaseNotExistException.class);
 		catalog.renameDatabase("nonexisit", db2, false);
 	}
 
@@ -76,14 +77,16 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 		assertEquals(new ObjectPath(path1.getDbName(), path2.getObjectName()), catalog.listAllTables().get(0));
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testRenameTableNonexistentDb() {
+		exception.expect(TableNotExistException.class);
 		catalog.renameTable(nonExistDbPath, "", false);
 	}
 
-	@Test(expected = TableNotExistException.class)
+	@Test
 	public void testRenameNonexistentTable() {
 		catalog.createDatabase(db1, createDb(), false);
+		exception.expect(TableNotExistException.class);
 		catalog.renameTable(nonExistTablePath, path2.getObjectName(), false);
 	}
 }
