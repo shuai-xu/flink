@@ -50,75 +50,106 @@ public class GenericHiveMetastoreCatalogTest extends CatalogTestBase {
 
 	// ------ table and column stats ------
 
+	@Override
 	public void testGetTableStats_TableNotExistException() { }
 
+	@Override
 	public void testAlterTableStats() { }
 
+	@Override
 	public void testAlterTableStats_partitionedTable() { }
 
+	@Override
 	public void testAlterTableStats_TableNotExistException() { }
 
-	public void testAlterTableStats_TableNotExistExceptio_2() { }
-
-	public void testAlterTableStats_TableNotExistExceptio_ignore() { }
+	@Override
+	public void testAlterTableStats_TableNotExistException_ignore() { }
 
 	// ------ views ------
 
+	@Override
 	public void testCreateView() { }
 
+	@Override
 	public void testCreateView_DatabaseNotExistException() { }
 
+	@Override
 	public void testCreateView_TableAlreadyExistException() { }
 
+	@Override
 	public void testCreateView_TableAlreadyExist_ignored() { }
 
+	@Override
 	public void testDropView() { }
 
+	@Override
 	public void testAlterView() { }
 
+	@Override
 	public void testAlterView_TableNotExistException() { }
 
+	@Override
 	public void testAlterView_TableNotExist_ignored() { }
 
+	@Override
 	public void testListView() { }
 
 	// ------ partitions ------
 
+	@Override
 	public void testCreatePartition() { }
 
+	@Override
 	public void testCreateParition_TableNotExistException() { }
 
+	@Override
 	public void testCreateParition_TableNotPartitionedException() { }
 
+	@Override
 	public void testCreateParition_PartitionAlreadExistException() { }
 
+	@Override
 	public void testCreateParition_PartitionAlreadExist_ignored() { }
 
+	@Override
 	public void testDropPartition() { }
 
+	@Override
 	public void testDropPartition_TableNotExistException() { }
 
+	@Override
 	public void testDropPartition_TableNotPartitionedException() { }
 
+	@Override
 	public void testDropPartition_PartitionNotExistException() { }
 
+	@Override
 	public void testDropPartition_PartitionNotExist_ignored() { }
 
+	@Override
 	public void testAlterPartition() { }
 
+	@Override
 	public void testAlterPartition_TableNotExistException() { }
 
+	@Override
 	public void testAlterPartition_TableNotPartitionedException() { }
 
+	@Override
 	public void testAlterPartition_PartitionNotExistException() { }
 
+	@Override
 	public void testAlterPartition_PartitionNotExist_ignored() { }
 
+	@Override
 	public void testGetPartition_TableNotExistException() { }
 
+	@Override
 	public void testGetPartition_TableNotPartitionedException() { }
 
+	@Override
 	public void testGetParition_PartitionNotExistException() { }
 
+	@Override
 	public void testPartitionExists() { }
 }

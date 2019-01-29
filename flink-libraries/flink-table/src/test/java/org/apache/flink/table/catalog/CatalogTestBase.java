@@ -381,13 +381,7 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test
-	public void testAlterTableStats_TableNotExistExceptio_2() {
-		exception.expect(TableNotExistException.class);
-		catalog.alterTableStats(new ObjectPath("non", "exist"), null, false);
-	}
-
-	@Test
-	public void testAlterTableStats_TableNotExistExceptio_ignore() {
+	public void testAlterTableStats_TableNotExistException_ignore() {
 		catalog.alterTableStats(new ObjectPath("non", "exist"), null, true);
 	}
 
