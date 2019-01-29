@@ -26,7 +26,6 @@ import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -425,10 +424,6 @@ public class BuildInScalarFunctions {
 		return (int) (toLong(v)  / DateTimeUtils.MILLIS_PER_DAY);
 	}
 
-	public static int toInt(java.sql.Date v) {
-		return DateWritable.dateToDays(v);
-	}
-
 	public static Long safeToLong(Date v) {
 		if (v == null) {
 			return null;
@@ -454,7 +449,8 @@ public class BuildInScalarFunctions {
 	}
 
 	public static java.sql.Date internalToDate(int v) {
-		return new DateWritable(v).get();
+		final long t = v * DateTimeUtils.MILLIS_PER_DAY;
+		return new java.sql.Date(t);
 	}
 
 	public static java.sql.Time internalToTime(int v) {
