@@ -18,8 +18,8 @@
 package org.apache.flink.table.plan.rules.logical
 
 import org.apache.flink.table.calcite.CalciteConfig
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.LOGICAL
-import org.apache.flink.table.plan.optimize.{FlinkBatchPrograms, FlinkHepRuleSetProgramBuilder, HEP_RULES_EXECUTION_TYPE}
+import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms.LOGICAL
+import org.apache.flink.table.plan.optimize.program.{FlinkBatchPrograms, FlinkHepRuleSetProgramBuilder, HEP_RULES_EXECUTION_TYPE}
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule

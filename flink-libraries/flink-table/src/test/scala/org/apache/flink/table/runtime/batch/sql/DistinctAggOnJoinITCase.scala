@@ -21,6 +21,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{FlinkBatchPrograms, FlinkHepRuleSetProgramBuilder, FlinkRuleSetProgram, HEP_RULES_EXECUTION_TYPE}
 import org.apache.flink.table.plan.rules.logical.FlinkAggregateJoinTransposeRule
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 

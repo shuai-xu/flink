@@ -32,7 +32,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testOneSink(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val t = StreamTestData.get3TupleDataStream(env)
@@ -53,7 +52,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testCorrelate(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val func0 = new TableFunc0
@@ -78,7 +76,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test(expected = classOf[TableException])
   def testRetractSinkAndAppendSink(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val t = StreamTestData.get3TupleDataStream(env)
@@ -95,7 +92,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test(expected = classOf[TableException])
   def testUpsertSinkAndAppendSink(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val t = StreamTestData.get3TupleDataStream(env)
@@ -114,7 +110,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testRetractAndUpsertSink(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val t = StreamTestData.get3TupleDataStream(env)
@@ -147,7 +142,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testMultiSinkInsqlQuery(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
 
     val mytable = StreamTestData.get3TupleDataStream(env)
       .toTable(tEnv, 'id, 'num, 'text)
@@ -180,7 +174,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testUpsertAndUpsertSink(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val t = StreamTestData.get3TupleDataStream(env)
@@ -214,7 +207,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testRetractAndUpsertSinkWithTimeIndicator(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
     val t = StreamTestData.get3TupleDataStream(env)
       .toTable(tEnv, 'id, 'num, 'text, 'proctime.proctime)
@@ -242,7 +234,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testRetractAndUpsertSinkWithUDTF(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val func0 = new TableFunc0
@@ -273,7 +264,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
 
   @Test
   def testJoin(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     env.setParallelism(1)
 
     val func0 = new TableFunc0

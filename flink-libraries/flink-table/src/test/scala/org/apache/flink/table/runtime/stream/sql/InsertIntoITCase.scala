@@ -63,6 +63,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |WHERE a < 3 OR a > 19
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
 
     val expected = Seq(
@@ -96,6 +97,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |GROUP BY len
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
     val results = RowCollector.getAndClearValues
 
@@ -112,8 +114,7 @@ class InsertIntoITCase(mode: StateBackendMode)
 
   }
 
-  //TODO
-  //@Test
+  @Test
   def testInsertIntoAppendTableToRetractSink(): Unit = {
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
@@ -139,6 +140,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |GROUP BY TUMBLE(rowtime, INTERVAL '0.005' SECOND)
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
     val results = RowCollector.getAndClearValues
 
@@ -186,6 +188,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |GROUP BY cnt, cTrue
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
     val results = RowCollector.getAndClearValues
 
@@ -230,6 +233,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |GROUP BY TUMBLE(rowtime, INTERVAL '0.005' SECOND), num
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
     val results = RowCollector.getAndClearValues
 
@@ -280,6 +284,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |GROUP BY TUMBLE(rowtime, INTERVAL '0.005' SECOND), num
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
     val results = RowCollector.getAndClearValues
 
@@ -328,6 +333,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |GROUP BY TUMBLE(rowtime, INTERVAL '0.005' SECOND), num
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
     val results = RowCollector.getAndClearValues
 
@@ -375,6 +381,7 @@ class InsertIntoITCase(mode: StateBackendMode)
          |GROUP BY TUMBLE(rowtime, INTERVAL '0.005' SECOND), num
        """.stripMargin)
 
+    tEnv.compile()
     env.execute()
     val results = RowCollector.getAndClearValues
 

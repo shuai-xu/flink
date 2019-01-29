@@ -34,7 +34,6 @@ class TableServiceExceptionTest extends BatchTestBase {
   def testTableServiceUnavailable(): Unit = {
     env.setParallelism(1)
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 1000))
-    tEnv.getConfig.setSubsectionOptimization(true)
     val path = new File(System.getProperty("user.dir")).toPath
     val rootPath = Files.createTempDirectory(
       path,

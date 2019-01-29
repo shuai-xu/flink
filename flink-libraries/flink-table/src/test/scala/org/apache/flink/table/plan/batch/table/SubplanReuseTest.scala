@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.batch.table
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
+import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRule
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
@@ -55,7 +55,6 @@ class SubplanReuseTest extends TableTestBase {
 
   @Test
   def testSubplanReuse_MultiSinks(): Unit = {
-    util.tableEnv.getConfig.setSubsectionOptimization(true)
     util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, true)
     val table = util.tableEnv.scan("x")

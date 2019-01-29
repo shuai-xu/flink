@@ -22,8 +22,9 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalAggregate, FlinkLogicalCalc, FlinkLogicalExpand, FlinkLogicalNativeTableScan, FlinkLogicalSemiJoin, FlinkLogicalSink, FlinkLogicalTableSourceScan, FlinkLogicalValues}
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms.SUBQUERY_REWRITE
+import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms.SUBQUERY_REWRITE
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkChainedPrograms, FlinkGroupProgramBuilder, FlinkHepRuleSetProgramBuilder, FlinkVolcanoProgramBuilder, HEP_RULES_EXECUTION_TYPE}
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
 

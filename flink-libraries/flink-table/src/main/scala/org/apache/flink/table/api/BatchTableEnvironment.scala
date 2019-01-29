@@ -37,29 +37,30 @@ import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.{Expression, TimeAttribute}
 import org.apache.flink.table.plan.`trait`.FlinkRelDistributionTraitDef
 import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
-import org.apache.flink.table.plan.logical.{LogicalNode, SinkNode}
+import org.apache.flink.table.plan.logical.SinkNode
 import org.apache.flink.table.plan.nodes.calcite.LogicalSink
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecSink, BatchPhysicalRel}
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext
-import org.apache.flink.table.plan.optimize.{BatchOptimizeContext, FlinkBatchPrograms}
+import org.apache.flink.table.plan.optimize.{BatchOptimizer, Optimizer}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
-import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkNodeOptUtil, FlinkRelOptUtil, SameRelObjectShuttle, SubplanReuseUtil}
+import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkNodeOptUtil, FlinkRelOptUtil, SubplanReuseUtil}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
-import org.apache.flink.table.sources.{BatchTableSource, _}
+import org.apache.flink.table.sources._
 import org.apache.flink.table.temptable.TableServiceException
 import org.apache.flink.table.util.PlanUtil._
 import org.apache.flink.table.util._
-import org.apache.flink.util.{AbstractID, ExceptionUtils, Preconditions}
-import org.apache.calcite.plan.{Context, ConventionTraitDef, RelOptPlanner}
+import org.apache.flink.util.{AbstractID, ExceptionUtils}
+
+import org.apache.calcite.plan.ConventionTraitDef
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config
+
 import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
 
 import _root_.scala.collection.JavaConversions._
@@ -117,6 +118,8 @@ class BatchTableEnvironment(
    * Returns specific FlinkCostFactory of this Environment.
    */
   override protected def getFlinkCostFactory: FlinkCostFactory = FlinkBatchCost.FACTORY
+
+  override protected def getOptimizer: Optimizer = new BatchOptimizer(this)
 
   /**
     * Triggers the program execution with specific job name.
@@ -220,19 +223,6 @@ class BatchTableEnvironment(
     }
   }
 
-  override private[table] def writeToSink[T](
-      table: Table,
-      sink: TableSink[T],
-      sinkName: String): Unit = {
-    val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
-    if (config.getSubsectionOptimization) {
-      sinkNodes += sinkNode
-    } else {
-      val transformation = translate(table, sink, sinkName)
-      transformations.add(transformation)
-    }
-  }
-
   /**
    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
    * catalog.
@@ -326,19 +316,6 @@ class BatchTableEnvironment(
     registerTableInternal(name, boundedStreamTable, replace)
   }
 
-  private def translate[A](
-      table: Table,
-      sink: TableSink[A],
-      sinkName: String,
-      dagOptimizeEnabled: Boolean = false): StreamTransformation[_] = {
-    val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
-    val nodeDag = optimizeAndTranslateNodeDag(dagOptimizeEnabled, sinkNode)
-    nodeDag.head match {
-      case batchExecSink: BatchExecSink[A] => translate(batchExecSink, sink.getOutputType)
-      case _ => throw new TableException(TableErrors.INST.sqlCompileSinkNodeRequired())
-    }
-  }
-
   /**
     * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.
     *
@@ -375,54 +352,6 @@ class BatchTableEnvironment(
   }
 
   /**
-   * Generates the optimized [[RelNode]] tree from the original relational node tree.
-   *
-   * @param relNode The original [[RelNode]] tree
-   * @return The optimized [[RelNode]] tree
-   */
-  private[flink] def optimize(relNode: RelNode): RelNode = {
-    val programs = config.getCalciteConfig.getBatchPrograms
-      .getOrElse(FlinkBatchPrograms.buildPrograms(config.getConf))
-    Preconditions.checkNotNull(programs)
-
-    val optimizedPlan = programs.optimize(relNode, new BatchOptimizeContext {
-      override def getContext: Context = getFrameworkConfig.getContext
-
-      override def getRelOptPlanner: RelOptPlanner = getPlanner
-    })
-
-    // Rewrite same rel object to different rel objects
-    // in order to get the correct dag (dag reuse is based on object not digest)
-    optimizedPlan.accept(new SameRelObjectShuttle())
-  }
-
-  /**
-    * Translates a [[Table]] into a [[DataStream]].
-    *
-    * The transformation involves optimizing the relational expression tree as defined by
-    * Table API calls and / or SQL queries and generating corresponding [[DataStream]] operators.
-    *
-    * @param table The root node of the relational expression tree.
-    * @param updateAsRetraction Set to true to encode updates as retraction messages.
-    * @param withChangeFlag Set to true to emit records with change flags.
-    * @param resultType The [[DataType]] of the resulting [[DataStream]].
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The [[DataStream]] that corresponds to the translated [[Table]].
-    */
-  protected def translateToDataStream[T](
-    table: Table,
-    resultType: DataType): DataStream[T] = {
-    val sink = new DataStreamTableSink[T](table, resultType, false, false)
-    val sinkName = createUniqueTableName()
-    val sinkNode = LogicalSink.create(table.getRelNode, sink, sinkName)
-    val optimizedPlan = optimize(sinkNode)
-    val optimizedNodes = translateNodeDag(Seq(optimizedPlan))
-    require(optimizedNodes.size() == 1)
-    val transformation = translate(optimizedNodes.head, resultType)
-    new DataStream(execEnv, transformation).asInstanceOf[DataStream[T]]
-  }
-
-  /**
     * Convert [[BatchPhysicalRel]] DAG to [[BatchExecNode]] DAG and translate them.
     */
   @VisibleForTesting
@@ -449,32 +378,25 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Optimize the RelNode tree (or DAG), and translate the result to ExecNode tree (or DAG).
+    * Translates a [[Table]] into a [[DataStream]].
+    *
+    * The transformation involves optimizing the relational expression tree as defined by
+    * Table API calls and / or SQL queries and generating corresponding [[DataStream]] operators.
+    *
+    * @param table The root node of the relational expression tree.
+    * @param resultType The [[DataType]] of the resulting [[DataStream]].
+    * @tparam T The type of the resulting [[DataStream]].
+    * @return The [[DataStream]] that corresponds to the translated [[Table]].
     */
-  @VisibleForTesting
-  private[flink] override def optimizeAndTranslateNodeDag(
-      dagOptimizeEnabled: Boolean,
-      logicalNodes: LogicalNode*): Seq[ExecNode[_, _]] = {
-    if (logicalNodes.isEmpty) {
-      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
-    }
-    val nodeDag = if (dagOptimizeEnabled) {
-      val optLogicalNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(logicalNodes)
-      // optimize dag
-      val optRelNodes = BatchDAGOptimizer.optimize(optLogicalNodes, this)
-      // translate node dag
-      translateNodeDag(optRelNodes)
-    } else {
-      require(logicalNodes.size == 1)
-      val sinkTable = new Table(this, logicalNodes.head)
-      val originTree = sinkTable.getRelNode
-      // optimize tree
-      val optimizedTree = optimize(originTree)
-      // translate node tree
-      translateNodeDag(Seq(optimizedTree))
-    }
-    require(nodeDag.size() == logicalNodes.size)
-    nodeDag
+  protected def translateToDataStream[T](table: Table, resultType: DataType): DataStream[T] = {
+    val sink = new DataStreamTableSink[T](table, resultType, false, false)
+    val sinkName = createUniqueTableName()
+    val sinkNode = LogicalSink.create(table.getRelNode, sink, sinkName)
+    val optimizedPlan = optimize(sinkNode)
+    val optimizedNodes = translateNodeDag(Seq(optimizedPlan))
+    require(optimizedNodes.size() == 1)
+    val transformation = translate(optimizedNodes.head, resultType)
+    new DataStream(execEnv, transformation).asInstanceOf[DataStream[T]]
   }
 
   /**
@@ -666,8 +588,7 @@ class BatchTableEnvironment(
    */
   private[flink] def explain(table: Table, extended: Boolean): String = {
     val ast = table.getRelNode
-    // explain as simple tree, ignore dag optimization if it's enabled
-    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan).head
+    val optimizedNode = compileToExecNode(table.logicalPlan).head
 
     val fieldTypes = ast.getRowType.getFieldList.asScala
       .map(field => FlinkTypeFactory.toInternalType(field.getType))
@@ -699,12 +620,7 @@ class BatchTableEnvironment(
   def explain(table: Table): String = explain(table: Table, extended = false)
 
   def explain(extended: Boolean = false): String = {
-    if (!config.getSubsectionOptimization) {
-      throw new TableException("Can not explain due to subsection optimization is not supported, " +
-        "please check your TableConfig.")
-    }
-
-    val sinkExecNodes = optimizeAndTranslateNodeDag(true, sinkNodes: _*)
+    val sinkExecNodes = compileToExecNode(sinkNodes: _*)
 
     val sb = new StringBuilder
     sb.append("== Abstract Syntax Tree ==")

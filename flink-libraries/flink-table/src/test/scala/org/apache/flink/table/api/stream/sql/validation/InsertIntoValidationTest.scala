@@ -80,7 +80,6 @@ class InsertIntoValidationTest {
     tEnv.registerTableSink("targetTable", fieldNames, fieldTypes, sink)
 
     val sql = "INSERT INTO targetTable (d, f) SELECT a, c FROM sourceTable"
-    tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.sqlUpdate(sql)
   }
 }

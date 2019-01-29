@@ -22,6 +22,7 @@ import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkBatchPrograms, FlinkGroupProgramBuilder, FlinkHepRuleSetProgramBuilder, HEP_RULES_EXECUTION_TYPE}
 import org.apache.flink.table.plan.rules.logical.{AggregateReduceGroupingRule, FlinkAggregateJoinTransposeRule}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row

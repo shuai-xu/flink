@@ -24,7 +24,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.stream.sql.AddUdf
-import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
+import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
 import org.apache.flink.table.runtime.utils.StreamTestData
 import org.apache.flink.table.util.{TableTestBase, TestFlinkLogicalLastRowRule, TestTableSourceWithUniqueKeys}

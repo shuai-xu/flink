@@ -23,21 +23,17 @@ import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.tpc.TpcUtils.getTpcHQuery
 import org.apache.flink.test.util.TestBaseUtils
 
-import org.junit.{Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import org.junit.{Before, Test}
 import org.scalatest.prop.PropertyChecks
 
 import java.util
 
-import scala.collection.JavaConversions._
-
 // TODO support externalShuffle test.
 // TODO now there is no way to test in externalShuffle.
 @RunWith(classOf[Parameterized])
-class TpcHBatchExecITCase(caseName: String,
-    subsectionOptimization: Boolean)
-  extends BatchTestBase with PropertyChecks {
+class TpcHBatchExecITCase(caseName: String) extends BatchTestBase with PropertyChecks {
 
   def getDataFile(tableName: String): String = {
     getClass.getResource(s"/tpch/data/$tableName/$tableName.tbl").getFile
@@ -59,7 +55,6 @@ class TpcHBatchExecITCase(caseName: String,
     tEnv.getConfig.getConf.setInteger(TableConfigOptions.SQL_EXEC_SORT_DEFAULT_LIMIT, -1)
     TpcUtils.disableBroadcastHashJoin(tEnv)
     TpcUtils.disableRangeSort(tEnv)
-    tEnv.getConfig.setSubsectionOptimization(subsectionOptimization)
   }
 
   def execute(caseName: String): Unit = {
@@ -74,15 +69,13 @@ class TpcHBatchExecITCase(caseName: String,
 }
 
 object TpcHBatchExecITCase {
-  @Parameterized.Parameters(name = "{0}, {1}")
-  def parameters(): util.Collection[Array[_]] = {
+  @Parameterized.Parameters(name = "{0}")
+  def parameters(): util.Collection[String] = {
     // 15 plan: VIEW is unsupported
     util.Arrays.asList(
       "01", "02", "03", "04", "05", "06", "07", "08", "09", "10",
       "11", "12", "13", "14", "15_1", "16", "17", "18", "19",
       "20", "21", "22"
-    ).flatMap { s => Seq(
-      Array(s, true),
-      Array(s, false))}
+    )
   }
 }

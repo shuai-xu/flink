@@ -60,6 +60,7 @@ class TableSinkITCase extends StreamingTestBase {
       .where('a < 3 || 'a > 19)
       .select('c, 't, 'b)
       .insertInto("targetTable")
+    tEnv.compile()
     env.execute()
 
     val expected = Seq(
@@ -88,6 +89,7 @@ class TableSinkITCase extends StreamingTestBase {
       .writeToSink(
         new CsvTableSink(path, Some(","), None, None, None, Some(WriteMode.OVERWRITE), None, None))
 
+    tEnv.compile()
     env.execute()
 
     val expected = Seq(
@@ -120,6 +122,7 @@ class TableSinkITCase extends StreamingTestBase {
     val old = System.out // save output stream
     System.setOut(ps)
 
+    tEnv.compile()
     env.execute()
 
     // flush

@@ -75,9 +75,8 @@ public class RunningUnitKeeper {
 		if (rootNode instanceof BatchExecSink<?>) {
 			rootNode = (BatchExecNode<?>) ((BatchExecSink) rootNode).getInput();
 		}
-		// not support subsectionOptimization or external shuffle temporarily
-		if (tableEnv.getConfig().getSubsectionOptimization()
-				|| getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED)) {
+		// not support external shuffle temporarily
+		if (getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED)) {
 			supportRunningUnit = false;
 			return;
 		}

@@ -216,6 +216,7 @@ class CalcITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     result.writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("0,0,0", "1,1,1", "2,2,2")

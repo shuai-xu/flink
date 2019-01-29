@@ -17,58 +17,196 @@ limitations under the License.
 -->
 <Root>
   <TestCase name="testFilterWithExtended">
-    <Resource name="planAfter">
-      <![CDATA[
+    <Resource name="explain">
+      <![CDATA[== Abstract Syntax Tree ==
+LogicalFilter(condition=[=(MOD($0, 2), 0)])
++- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
+
+== Optimized Logical Plan ==
 Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
+
+== Physical Execution Plan ==
+Stage 22 : Data Source
+	content : collect elements with CollectionInputFormat
+
+	Stage 23 : Operator
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
+		ship_strategy : FORWARD
+
+		Stage 24 : Operator
+			content : Calc(where: ((a MOD 2) = 0), select: (a, b))
+			ship_strategy : FORWARD
+
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testFilterWithoutExtended">
-    <Resource name="planAfter">
-      <![CDATA[
+    <Resource name="explain">
+      <![CDATA[== Abstract Syntax Tree ==
+LogicalFilter(condition=[=(MOD($0, 2), 0)])
++- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
+
+== Optimized Logical Plan ==
 Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
+
+== Physical Execution Plan ==
+Stage 1 : Data Source
+	content : collect elements with CollectionInputFormat
+
+	Stage 2 : Operator
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
+		ship_strategy : FORWARD
+
+		Stage 3 : Operator
+			content : Calc(where: ((a MOD 2) = 0), select: (a, b))
+			ship_strategy : FORWARD
+
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testJoinWithExtended">
-    <Resource name="planAfter">
-      <![CDATA[
+    <Resource name="explain">
+      <![CDATA[== Abstract Syntax Tree ==
+LogicalProject(a=[$0], c=[$2])
++- LogicalFilter(condition=[=($1, $3)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
+      +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
+
+== Optimized Logical Plan ==
 Calc(select=[a, c])
 +- HashJoin(where=[=(b, d)], join=[a, b, c, d], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[c, d])
+
+== Physical Execution Plan ==
+Stage 25 : Data Source
+	content : collect elements with CollectionInputFormat
+
+Stage 26 : Data Source
+	content : collect elements with CollectionInputFormat
+
+	Stage 27 : Operator
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
+		ship_strategy : FORWARD
+
+		Stage 28 : Operator
+			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(c, d))
+			ship_strategy : FORWARD
+
+			Stage 30 : Operator
+				content : HashJoin(where: (b = d), buildRight)
+				ship_strategy : BROADCAST
+
+				Stage 31 : Operator
+					content : Calc(select: (a, c))
+					ship_strategy : FORWARD
+
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testJoinWithoutExtended">
-    <Resource name="planAfter">
-      <![CDATA[
+    <Resource name="explain">
+      <![CDATA[== Abstract Syntax Tree ==
+LogicalProject(a=[$0], c=[$2])
++- LogicalFilter(condition=[=($1, $3)])
+   +- LogicalJoin(condition=[true], joinType=[inner])
+      :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
+      +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
+
+== Optimized Logical Plan ==
 Calc(select=[a, c])
 +- HashJoin(where=[=(b, d)], join=[a, b, c, d], joinType=[InnerJoin], isBroadcast=[true], build=[right])
    :- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
    +- Exchange(distribution=[broadcast])
       +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[c, d])
+
+== Physical Execution Plan ==
+Stage 14 : Data Source
+	content : collect elements with CollectionInputFormat
+
+Stage 15 : Data Source
+	content : collect elements with CollectionInputFormat
+
+	Stage 16 : Operator
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
+		ship_strategy : FORWARD
+
+		Stage 17 : Operator
+			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(c, d))
+			ship_strategy : FORWARD
+
+			Stage 19 : Operator
+				content : HashJoin(where: (b = d), buildRight)
+				ship_strategy : BROADCAST
+
+				Stage 20 : Operator
+					content : Calc(select: (a, c))
+					ship_strategy : FORWARD
+
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testUnionWithExtended">
-    <Resource name="planAfter">
-      <![CDATA[
+    <Resource name="explain">
+      <![CDATA[== Abstract Syntax Tree ==
+LogicalUnion(all=[true])
+:- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
++- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
+
+== Optimized Logical Plan ==
 Union(all=[true], union=[count, word])
 :- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[count, word])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[count, word])
+
+== Physical Execution Plan ==
+Stage 4 : Data Source
+	content : collect elements with CollectionInputFormat
+
+Stage 5 : Data Source
+	content : collect elements with CollectionInputFormat
+
+	Stage 6 : Operator
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(count, word))
+		ship_strategy : FORWARD
+
+		Stage 7 : Operator
+			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(count, word))
+			ship_strategy : FORWARD
+
 ]]>
     </Resource>
   </TestCase>
   <TestCase name="testUnionWithoutExtended">
-    <Resource name="planAfter">
-      <![CDATA[
+    <Resource name="explain">
+      <![CDATA[== Abstract Syntax Tree ==
+LogicalUnion(all=[true])
+:- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
++- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
+
+== Optimized Logical Plan ==
 Union(all=[true], union=[count, word])
 :- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[count, word])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[count, word])
+
+== Physical Execution Plan ==
+Stage 9 : Data Source
+	content : collect elements with CollectionInputFormat
+
+Stage 10 : Data Source
+	content : collect elements with CollectionInputFormat
+
+	Stage 11 : Operator
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(count, word))
+		ship_strategy : FORWARD
+
+		Stage 12 : Operator
+			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(count, word))
+			ship_strategy : FORWARD
+
 ]]>
     </Resource>
   </TestCase>

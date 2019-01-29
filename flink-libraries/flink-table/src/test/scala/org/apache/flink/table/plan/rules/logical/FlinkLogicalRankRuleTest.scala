@@ -22,6 +22,7 @@ import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
 import org.apache.flink.table.util.TableTestBase
 
 import org.junit.{Before, Test}
@@ -36,7 +37,7 @@ class FlinkLogicalRankRuleTest extends TableTestBase {
     var startRemove = false
     val programs = FlinkStreamPrograms.buildPrograms(util.tableEnv.getConfig.getConf)
     programs.getProgramNames.foreach { name =>
-      if (name.equals(FlinkBatchPrograms.PHYSICAL)) {
+      if (name.equals(FlinkStreamPrograms.PHYSICAL)) {
         startRemove = true
       }
       if (startRemove) {

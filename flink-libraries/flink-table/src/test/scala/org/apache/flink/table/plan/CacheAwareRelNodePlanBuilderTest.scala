@@ -18,32 +18,32 @@
 
 package org.apache.flink.table.plan
 
-import java.io.IOException
-import java.nio.file._
-import java.nio.file.attribute.BasicFileAttributes
-
-import org.apache.calcite.rel.{AbstractRelNode, BiRel, RelNode, SingleRel}
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{Table, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment, _}
 import org.apache.flink.table.api.types.DataType
+import org.apache.flink.table.api.{Table, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory, TableFactory}
 import org.apache.flink.table.plan.nodes.physical.batch._
-import org.apache.flink.table.plan.subplan.BatchDAGOptimizer
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.sinks.{BatchTableSink, CollectRowTableSink}
-import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.sources.BatchTableSource
+import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.temptable.{FlinkTableServiceFactory, FlinkTableServiceFactoryDescriptor}
 import org.apache.flink.table.util.{CollectionBatchExecTable, TableProperties}
 import org.apache.flink.test.util.TestBaseUtils
+
+import org.apache.calcite.rel.{AbstractRelNode, BiRel, RelNode, SingleRel}
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{After, Before, Ignore, Test}
+
+import java.io.IOException
+import java.nio.file._
+import java.nio.file.attribute.BasicFileAttributes
 
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
@@ -100,7 +100,6 @@ class CacheAwareRelNodePlanBuilderTest(
 
   @Before
   def init(): Unit = {
-    conf.setSubsectionOptimization(true)
     conf.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
     conf.setTableServiceFactoryDescriptor(
       new FlinkTableServiceFactoryDescriptor(factory, properties))
@@ -509,7 +508,8 @@ class CacheAwareRelNodePlanBuilderTest(
 
   private def compile(): Seq[RelNode] = {
     val sinks = tableEnv.tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(tableEnv.sinkNodes)
-    BatchDAGOptimizer.optimize(sinks, tableEnv)
+    val relNodeTrees = sinks.map(_.toRelNode(tableEnv.getRelBuilder))
+    tableEnv.optimize(relNodeTrees)
   }
 
 }

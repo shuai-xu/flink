@@ -23,6 +23,7 @@ import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalNativeTableScan}
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkChainedPrograms, FlinkHepRuleSetProgramBuilder, FlinkVolcanoProgramBuilder, HEP_RULES_EXECUTION_TYPE}
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.TableTestBase
 

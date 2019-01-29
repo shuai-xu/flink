@@ -205,6 +205,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val sink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -263,6 +264,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val sink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val updatedExpected = List(
@@ -364,6 +366,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val sink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val updatedExpected = List(
@@ -413,6 +416,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val sink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val updatedExpected = List(
@@ -453,6 +457,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val updatedExpected = List(
@@ -583,6 +588,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -637,6 +643,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -693,6 +700,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0))
     tEnv.sqlQuery(sql2).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -751,6 +759,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
     val tableSink = new TestingUpsertTableSink(Array(0))
     tEnv.getConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_TOPN_CACHE_SIZE, 1)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -817,6 +826,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -875,7 +885,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 3))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
-
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -950,6 +960,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -1018,6 +1029,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -1080,6 +1092,7 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
 
     val tableSink = new TestingUpsertTableSink(Array(0, 2))
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -1113,7 +1126,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       ("fruit", 5, 22))
 
     env.setParallelism(1)
-    tEnv.config.setSubsectionOptimization(true)
     val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'num)
     tEnv.registerTable("T", ds)
 
@@ -1180,7 +1192,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       ("fruit", 5, 22))
 
     env.setParallelism(1)
-    tEnv.config.setSubsectionOptimization(true)
     val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'num)
     tEnv.registerTable("T", ds)
 
@@ -1245,7 +1256,6 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
       ("fruit", 5, 22))
 
     env.setParallelism(1)
-    tEnv.config.setSubsectionOptimization(true)
     val ds = failingDataSource(data).toTable(tEnv, 'category, 'shopId, 'num)
     tEnv.registerTable("T", ds)
 

@@ -168,7 +168,6 @@ class SortITCase extends AbstractTestBase {
   def testOrderByRepeatedFields(): Unit = {
     val env = getExecutionEnvironment
     val tEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
-    tEnv.getConfig.setSubsectionOptimization(true)
     val sqlQuery = "SELECT * FROM MyTable ORDER BY _1 DESC, _1 DESC"
 
     val csvTable = CommonTestData.get3Source()

@@ -28,32 +28,29 @@ import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
-import org.apache.flink.table.calcite.{FlinkChainContext, FlinkRelBuilder}
+import org.apache.flink.table.calcite.FlinkRelBuilder
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.`trait`._
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
-import org.apache.flink.table.plan.logical.{LogicalNode, LogicalRelNode, SinkNode}
+import org.apache.flink.table.plan.logical.LogicalRelNode
 import org.apache.flink.table.plan.nodes.calcite._
 import org.apache.flink.table.plan.nodes.exec.{ExecNode, StreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.stream._
 import org.apache.flink.table.plan.nodes.process.DAGProcessContext
-import org.apache.flink.table.plan.optimize.{FlinkStreamPrograms, StreamOptimizeContext}
+import org.apache.flink.table.plan.optimize.{Optimizer, StreamOptimizer}
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.subplan.StreamDAGOptimizer
-import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SameRelObjectShuttle, SubplanReuseUtil}
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SubplanReuseUtil}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.util._
-import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
-import org.apache.calcite.rex.RexBuilder
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 
@@ -115,8 +112,11 @@ abstract class StreamTableEnvironment(
       .withExpand(false)
       .build()
 
+  override protected def getOptimizer: Optimizer = new StreamOptimizer(this)
+
   /**
     * Triggers the program execution with jobName.
+    *
     * @param jobName The job name.
     */
   override def execute(jobName: String): JobExecutionResult = {
@@ -141,7 +141,7 @@ abstract class StreamTableEnvironment(
     streamGraph
   }
 
-  protected override def compile(): Unit = {
+  override def compile(): Unit = {
     mergeParameters()
     super.compile()
   }
@@ -379,31 +379,6 @@ abstract class StreamTableEnvironment(
     */
   override protected def getFlinkCostFactory: FlinkCostFactory = FlinkStreamCost.FACTORY
 
-  /**
-    * Writes a [[Table]] to a [[TableSink]].
-    *
-    * Internally, the [[Table]] is translated into a [[DataStream]] and handed over to the
-    * [[TableSink]] to write it.
-    *
-    * @param table The [[Table]] to write.
-    * @param sink The [[TableSink]] to write the [[Table]] to.
-    * @tparam T The expected type of the [[DataStream]] which represents the [[Table]].
-    */
-  override private[table] def writeToSink[T](
-      table: Table,
-      sink: TableSink[T],
-      sinkName: String): Unit = {
-    mergeParameters()
-
-    val sinkNode = SinkNode(table.logicalPlan, sink, sinkName)
-    if (config.getSubsectionOptimization) {
-      sinkNodes += sinkNode
-    } else {
-      val optimizedNode = optimizeAndTranslateNodeDag(false, sinkNode).head
-      transformations.add(translate(optimizedNode))
-    }
-  }
-
   protected def registerDataStreamInternal[T](
     name: String,
     dataStream: DataStream[T],
@@ -432,8 +407,7 @@ abstract class StreamTableEnvironment(
       name: String,
       dataStream: DataStream[T],
       fields: Array[Expression],
-      replace: Boolean)
-    : Unit = {
+      replace: Boolean): Unit = {
 
     if (fields.exists(_.isInstanceOf[RowtimeAttribute])
         && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
@@ -477,8 +451,7 @@ abstract class StreamTableEnvironment(
     */
   private[flink] def validateAndExtractTimeAttributes(
     streamType: DataType,
-    exprs: Array[Expression])
-  : (Option[(Int, String)], Option[(Int, String)]) = {
+    exprs: Array[Expression]): (Option[(Int, String)], Option[(Int, String)]) = {
 
     val (isRefByPos, fieldTypes) = streamType.toInternalType match {
       case c: RowType =>
@@ -668,41 +641,6 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Generates the optimized [[RelNode]] tree from the original relational node tree.
-    *
-    * @param relNode The root node of the relational expression tree.
-    * @param updatesAsRetraction True if request updates as retraction messages.
-    * @return The optimized [[RelNode]] tree
-    */
-  private[flink] def optimize(
-      relNode: RelNode,
-      updatesAsRetraction: Boolean = false,
-      isSinkBlock: Boolean = true): RelNode = {
-
-    val programs = config.getCalciteConfig.getStreamPrograms
-      .getOrElse(FlinkStreamPrograms.buildPrograms(config.getConf))
-    Preconditions.checkNotNull(programs)
-
-    val flinkChainContext = getPlanner.getContext.asInstanceOf[FlinkChainContext]
-
-    val optimizeNode = programs.optimize(relNode, new StreamOptimizeContext() {
-      override def getContext: Context = flinkChainContext
-
-      override def getRelOptPlanner: RelOptPlanner = getPlanner
-
-      override def getRexBuilder: RexBuilder = getRelBuilder.getRexBuilder
-
-      override def updateAsRetraction(): Boolean = updatesAsRetraction
-
-      override def isSinkNode: Boolean = isSinkBlock
-    })
-
-    // Rewrite same rel object to different rel objects
-    // in order to get the correct dag (dag reuse is based on object not digest)
-    optimizeNode.accept(new SameRelObjectShuttle())
-  }
-
-  /**
     * Convert [[StreamPhysicalRel]] DAG to [[StreamExecNode]] DAG and translate them.
     */
   private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[StreamExecNode[_]] = {
@@ -714,36 +652,9 @@ abstract class StreamTableEnvironment(
     // call processors
     val dagProcessors = getConfig.getStreamDAGProcessors
     require(dagProcessors != null)
-    val postNodeDag = dagProcessors.process(nodeDag,  new DAGProcessContext(this))
+    val postNodeDag = dagProcessors.process(nodeDag, new DAGProcessContext(this))
 
     postNodeDag.map(_.asInstanceOf[StreamExecNode[_]])
-  }
-
-  /**
-    * Optimize the RelNode tree (or DAG), and translate the result to ExecNode tree (or DAG).
-    */
-  private[flink] override def optimizeAndTranslateNodeDag(
-      dagOptimizeEnabled: Boolean,
-      logicalNodes: LogicalNode*): Seq[ExecNode[_, _]] = {
-    if (logicalNodes.isEmpty) {
-      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
-    }
-    val nodeDag = if (dagOptimizeEnabled) {
-      // optimize dag
-      val optRelNodes = StreamDAGOptimizer.optimize(logicalNodes, this)
-      // translate node dag
-      translateNodeDag(optRelNodes)
-    } else {
-      require(logicalNodes.size == 1)
-      val sinkTable = new Table(this, logicalNodes.head)
-      val originTree = sinkTable.getRelNode
-      // optimize tree
-      val optimizedTree = optimize(originTree)
-      // translate node tree
-      translateNodeDag(Seq(optimizedTree))
-    }
-    require(nodeDag.size() == logicalNodes.size)
-    nodeDag
   }
 
   /**
@@ -813,8 +724,7 @@ abstract class StreamTableEnvironment(
     */
   def explain(table: Table): String = {
     val ast = table.getRelNode
-    // explain as simple tree, ignore dag optimization if it's enabled
-    val optimizedNode = optimizeAndTranslateNodeDag(false, table.logicalPlan).head
+    val optimizedNode = compileToExecNode(table.logicalPlan).head
     val transformStream = translate(optimizedNode)
     val streamGraph = translateStreamGraph(ArrayBuffer(transformStream), None)
     val executionPlan = PlanUtil.explainPlan(streamGraph)
@@ -833,12 +743,7 @@ abstract class StreamTableEnvironment(
   }
 
   def explain(extended: Boolean = false): String = {
-    if (!config.getSubsectionOptimization) {
-      throw new TableException("Can not explain due to subsection optimization is not supported, " +
-        "please check your TableConfig.")
-    }
-
-    val sinkExecNodes = optimizeAndTranslateNodeDag(true, sinkNodes: _*)
+    val sinkExecNodes = compileToExecNode(sinkNodes: _*)
 
     val sb = new StringBuilder
     sb.append("== Abstract Syntax Tree ==")
@@ -890,7 +795,7 @@ abstract class StreamTableEnvironment(
       tableName,
       new Table(
         this,
-        new LogicalRelNode(
+        LogicalRelNode(
           new LogicalWatermarkAssigner(
             source.getCluster,
             source.getTraitSet,
@@ -917,12 +822,12 @@ abstract class StreamTableEnvironment(
 
     val source = sourceTable.getRelNode
     registerTable(tableName, new Table(this,
-      new LogicalRelNode(
-      new LogicalLastRow(
-        source.getCluster,
-        source.getTraitSet,
-        source,
-        primaryKeys
-      ))))
+      LogicalRelNode(
+        new LogicalLastRow(
+          source.getCluster,
+          source.getTraitSet,
+          source,
+          primaryKeys
+        ))))
   }
 }

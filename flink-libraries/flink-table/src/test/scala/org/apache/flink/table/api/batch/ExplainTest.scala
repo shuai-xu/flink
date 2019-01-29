@@ -20,63 +20,67 @@ package org.apache.flink.table.api.batch
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
+
 import org.junit._
 
-class ExplainTest extends BatchTestBase {
+class ExplainTest extends TableTestBase {
+
+  private var util: BatchTableTestUtil = _
+
+  @Before
+  def setup(): Unit = {
+    util = batchTestUtil()
+  }
 
   @Test
   def testFilterWithoutExtended(): Unit = {
-
-    val table = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
+    val table = util.tableEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
       .filter("a % 2 = 0")
-    verifyPlan(table)
+    util.verifyExplain(table)
   }
 
   @Test
   def testFilterWithExtended(): Unit = {
-
-    val table = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
+    val table = util.tableEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
       .filter("a % 2 = 0")
 
-    verifyPlan(table)
+    util.verifyExplain(table)
   }
 
   @Test
   def testJoinWithoutExtended(): Unit = {
-
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'c, 'd)
+    val table1 = util.tableEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
+    val table2 = util.tableEnv.fromCollection(Seq((1, "hello")), 'c, 'd)
     val table = table1.join(table2).where("b = d").select('a, 'c)
 
-    verifyPlan(table)
+    util.verifyExplain(table)
   }
 
   @Test
   def testJoinWithExtended(): Unit = {
-
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'c, 'd)
+    val table1 = util.tableEnv.fromCollection(Seq((1, "hello")), 'a, 'b)
+    val table2 = util.tableEnv.fromCollection(Seq((1, "hello")), 'c, 'd)
     val table = table1.join(table2).where("b = d").select('a, 'c)
 
-    verifyPlan(table)
+    util.verifyExplain(table)
   }
 
   @Test
   def testUnionWithoutExtended(): Unit = {
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
+    val table1 = util.tableEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
+    val table2 = util.tableEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
     val table = table1.unionAll(table2)
 
-    verifyPlan(table)
+    util.verifyExplain(table)
   }
 
   @Test
   def testUnionWithExtended(): Unit = {
-    val table1 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
-    val table2 = tEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
+    val table1 = util.tableEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
+    val table2 = util.tableEnv.fromCollection(Seq((1, "hello")), 'count, 'word)
     val table = table1.unionAll(table2)
 
-    verifyPlan(table)
+    util.verifyExplain(table)
   }
 }

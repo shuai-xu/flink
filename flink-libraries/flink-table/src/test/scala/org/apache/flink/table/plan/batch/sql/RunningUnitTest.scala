@@ -40,7 +40,6 @@ class RunningUnitTest extends TableTestBase {
     util.addTable("y", CommonTestData.get3Source(Array("d", "e", "f")))
     util.tableEnv.alterTableStats("x", Some(TableStats(100L)))
     util.tableEnv.alterTableStats("y", Some(TableStats(100L)))
-    util.tableEnv.getConfig.setSubsectionOptimization(false)
   }
 
   @Test

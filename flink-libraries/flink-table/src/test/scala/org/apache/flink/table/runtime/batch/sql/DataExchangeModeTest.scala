@@ -40,7 +40,6 @@ class DataExchangeModeTest extends BatchTestBase {
 
   @Test
   def testReuseBatch(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
     tEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, true)
@@ -55,7 +54,6 @@ class DataExchangeModeTest extends BatchTestBase {
 
   @Test
   def testAllDataExchangeModeBatch(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH, true)
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
@@ -72,7 +70,6 @@ class DataExchangeModeTest extends BatchTestBase {
 
   @Test
   def testNotContainsBatch(): Unit = {
-    tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
     tEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED, true)

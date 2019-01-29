@@ -27,7 +27,7 @@ import org.apache.flink.table.api.{Table, TableConfigOptions, Types}
 import org.apache.flink.table.expressions.utils.Func1
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
+import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithRetract
 import org.apache.flink.table.runtime.utils.StreamTestData
 import org.apache.flink.table.util._
@@ -258,7 +258,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
   def assertMono(expect: RelModifiedMonotonicity, table: Table, util: StreamTableTestUtil): Unit = {
     val relNode = table.getRelNode
-    val optimized = util.tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = util.tableEnv.optimize(relNode)
     val mq = util.tableEnv.getRelBuilder.getCluster.getMetadataQuery
     assertEquals(expect,
        mq.asInstanceOf[FlinkRelMetadataQuery].getRelModifiedMonotonicity(optimized))

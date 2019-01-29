@@ -27,9 +27,12 @@ import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
 import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.table.plan.nodes.exec.ExecNode
+import org.apache.flink.table.plan.optimize.Optimizer
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
+
+import org.apache.calcite.rel.RelNode
 
 import _root_.scala.collection.mutable
 
@@ -125,13 +128,6 @@ class MockTableEnvironment extends TableEnvironment(
       replace: Boolean): Unit = ???
 
   /**
-    * Optimize the RelNode tree (or DAG), and translate the result to [[ExecNode]] tree (or DAG).
-    */
-  override private[flink] def optimizeAndTranslateNodeDag(
-      dagOptimizeEnabled: Boolean,
-      logicalNodes: LogicalNode*) = ???
-
-  /**
     * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.
     *
     * @param sinks The node DAG to translate.
@@ -139,4 +135,8 @@ class MockTableEnvironment extends TableEnvironment(
     */
   override protected def translate(
       sinks: Seq[ExecNode[_, _]]): Seq[StreamTransformation[_]] = ???
+
+  override protected def getOptimizer: Optimizer = ???
+
+  override private[flink] def translateNodeDag(rels: Seq[RelNode]) = ???
 }

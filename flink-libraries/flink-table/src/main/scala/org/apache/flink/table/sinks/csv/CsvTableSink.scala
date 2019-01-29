@@ -49,9 +49,9 @@ class CsvTableSink(
     outputFieldNames: Option[Boolean],
     timezone: Option[TimeZone])
   extends TableSinkBase[BaseRow]
-    with BatchTableSink[BaseRow] // Use for CsvBatchTableSinkFactory.
-    with BatchCompatibleStreamTableSink[BaseRow] // Used for o.a.f.t.factories.csv.CsvTableFactory.
-    with AppendStreamTableSink[BaseRow] {
+  with BatchTableSink[BaseRow] // Use for CsvBatchTableSinkFactory.
+  with BatchCompatibleStreamTableSink[BaseRow] // Used for o.a.f.t.factories.csv.CsvTableFactory.
+  with AppendStreamTableSink[BaseRow] {
 
   private val name = "csv sink: " + path
 

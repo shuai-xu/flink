@@ -41,6 +41,7 @@ import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{FlinkGroupProgram, FlinkHepRuleSetProgram, FlinkHepRuleSetProgramBuilder, FlinkStreamPrograms, HEP_RULES_EXECUTION_TYPE, StreamOptimizeContext}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
@@ -134,9 +135,17 @@ abstract class TableTestUtil {
       name: String,
       function: AggregateFunction[T, ACC]): Unit
 
+  def verifyPlan(): Unit
+
   def verifyPlan(sql: String): Unit
 
   def verifyPlan(table: Table): Unit
+
+  def verifyExplain(): Unit
+
+  def verifyExplain(query: String): Unit
+
+  def verifyExplain(resultTable: Table): Unit
 }
 
 case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
@@ -193,19 +202,19 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
   def verify2Tables(resultTable1: Table, resultTable2: Table): Unit = {
     val relNode1 = resultTable1.getRelNode
-    val optimized1 = tableEnv.optimize(relNode1, updatesAsRetraction = false)
+    val optimized1 = tableEnv.optimize(relNode1)
     val relNode2 = resultTable2.getRelNode
-    val optimized2 = tableEnv.optimize(relNode2, updatesAsRetraction = false)
+    val optimized2 = tableEnv.optimize(relNode2)
     assertEquals(FlinkRelOptUtil.toString(optimized1), FlinkRelOptUtil.toString(optimized2))
   }
 
   def verifyPlan(): Unit = {
-    doVerifyPlanWithSubsectionOptimization(explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+    doVerifyPlan(explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES)
   }
 
   def verifyPlan(table: Table): Unit = {
     val relNode = table.getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv.optimize(relNode)
     val actual = SystemUtils.LINE_SEPARATOR + FlinkRelOptUtil.toString(optimized)
 
     verifyPlan(test.name.getMethodName, actual)
@@ -221,7 +230,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
   }
 
   def verifyUniqueKeys(table: Table, expect: Set[Int]*): Unit = {
-    val node = tableEnv.optimize(table.getRelNode, updatesAsRetraction = false)
+    val node = tableEnv.optimize(table.getRelNode)
     val mq: FlinkRelMetadataQuery = FlinkRelMetadataQuery.instance()
     val actual = mq.getUniqueKeys(node)
     val expectSet = new JHashSet[ImmutableBitSet]
@@ -244,15 +253,21 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
   def verifyPlanAndTrait(table: Table): Unit = {
     val relNode = table.getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv.optimize(relNode)
     val actualPlan = SystemUtils.LINE_SEPARATOR +
       FlinkRelOptUtil.toString(optimized, withRetractTraits = true)
-    assertEqualsOrExpand("plan", actualPlan)
+    assertEqualsOrExpand("plan", actualPlan, expand = false)
   }
+
+  def verifyExplain(): Unit = doVerifyExplain()
+
+  def verifyExplain(query: String): Unit = doVerifyExplain(Some(tableEnv.sqlQuery(query)))
+
+  def verifyExplain(resultTable: Table): Unit = doVerifyExplain(Some(resultTable))
 
   def explainSql(query: String): String = {
     val relNode = tableEnv.sqlQuery(query).getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv.optimize(relNode)
     FlinkRelOptUtil.toString(optimized)
   }
 
@@ -282,13 +297,9 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     }
   }
 
-  private def doVerifyPlanWithSubsectionOptimization(
+  private def doVerifyPlan(
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printPlanBefore: Boolean = true): Unit = {
-    if (!tableEnv.getConfig.getSubsectionOptimization) {
-      throw new TableException(
-        "subsection optimization is false, please use other method to verify result.")
-    }
     if (tableEnv.sinkNodes.isEmpty) {
       throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
     }
@@ -306,12 +317,20 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
     val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
       .buildPlanIfNeeded(tableEnv.sinkNodes)
-    val sinkExecNodes = tableEnv.optimizeAndTranslateNodeDag(true, optSinkNodes: _*)
+    val sinkExecNodes = tableEnv.compileToExecNode(optSinkNodes: _*)
 
     tableEnv.sinkNodes.clear()
 
     val planAfter =  FlinkNodeOptUtil.dagToString(sinkExecNodes, detailLevel = explainLevel)
     assertEqualsOrExpand("planAfter", planAfter, expand = false)
+  }
+
+  private def doVerifyExplain(table: Option[Table] = None): Unit = {
+    val explainResult = table match {
+      case Some(t) => tableEnv.explain(t)
+      case _ => tableEnv.explain()
+    }
+    assertEqualsOrExpand("explain", explainResult, expand = false)
   }
 }
 
@@ -329,7 +348,6 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
   tableEnv.getConfig.getConf.setBoolean(
     TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH, false)
   tableEnv.getConfig.setCalciteConfig(CalciteConfig.createBuilder().build())
-  tableEnv.getConfig.setSubsectionOptimization(true)
 
   def disableBroadcastHashJoin(): Unit = {
     tableEnv.getConfig.getConf.setLong(
@@ -402,7 +420,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val fieldTypes: Array[InternalType] = fieldIdxs.map(physicalSchema.getType)
     val tableSchemaBuilder = TableSchema.builder()
     fieldNames.zip(fieldTypes).foreach { case (fn, ft) => tableSchemaBuilder.column(fn, ft) }
-    uniqueKeys.foreach { key => tableSchemaBuilder.uniqueKey((key.toArray[String]): _*) }
+    uniqueKeys.foreach { key => tableSchemaBuilder.uniqueKey(key.toArray[String]: _*) }
     val tableSchema = tableSchemaBuilder.build()
     val mapping = fieldNames.zipWithIndex.map {
       case (name: String, idx: Int) =>
@@ -426,7 +444,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
   }
 
   def verifyPlan(): Unit = {
-    doVerifyPlanWithSubsectionOptimization(explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+    doVerifyPlan(explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES)
   }
 
   override def verifyPlan(sql: String): Unit = {
@@ -448,27 +466,34 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
   }
 
   def verifyPlan(resultTable: Table, explainLevel: SqlExplainLevel): Unit = {
-    doVerifyPlan(resultTable, explainLevel = explainLevel)
+    doVerifySpecificPlan(resultTable, explainLevel = explainLevel)
   }
 
   def verifyPlan(
       resultTable: Table,
       explainLevel: SqlExplainLevel,
       printPlanBefore: Boolean): Unit = {
-    doVerifyPlan(resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
+    doVerifySpecificPlan(
+      resultTable, explainLevel = explainLevel, printPlanBefore = printPlanBefore)
   }
+
+  def verifyExplain(): Unit = doVerifyExplain()
+
+  def verifyExplain(query: String): Unit = doVerifyExplain(Some(tableEnv.sqlQuery(query)))
+
+  def verifyExplain(resultTable: Table): Unit = doVerifyExplain(Some(resultTable))
 
   def verifyResource(sql: String): Unit = {
     assertEqualsOrExpand("sql", sql)
-    doVerifyPlan(
+    doVerifySpecificPlan(
       tableEnv.sqlQuery(sql),
       explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResource = true,
       printPlanBefore = false)
   }
 
-  def verifyResourceWithSubsectionOptimization(): Unit = {
-    doVerifyPlanWithSubsectionOptimization(
+  def verifyResource(): Unit = {
+    doVerifyPlan(
       explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResource = true,
       printPlanBefore = false)
@@ -476,14 +501,14 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
 
   def verifyPlanWithRunningUnit(sql: String): Unit = {
     assertEqualsOrExpand("sql", sql)
-    doVerifyPlan(
+    doVerifySpecificPlan(
       tableEnv.sqlQuery(sql),
       explainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printPlanBefore = false,
       printRunningUnit = true)
   }
 
-  private def doVerifyPlan(
+  private def doVerifySpecificPlan(
       resultTable: Table,
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResource: Boolean = false,
@@ -501,14 +526,10 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     assertEqualsOrExpand("planAfter", actual.toString, expand = false)
   }
 
-  private def doVerifyPlanWithSubsectionOptimization(
+  private def doVerifyPlan(
       explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       printResource: Boolean = false,
       printPlanBefore: Boolean = true): Unit = {
-    if (!tableEnv.getConfig.getSubsectionOptimization) {
-      throw new TableException(
-        "subsection optimization is false, please use other method to verify result.")
-    }
     if (tableEnv.sinkNodes.isEmpty) {
       throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
     }
@@ -529,14 +550,21 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     if (!printResource) {
       tableEnv.getConfig.setBatchDAGProcessors(new ChainedDAGProcessors)
     }
-    val sinkExecNodes = tableEnv.optimizeAndTranslateNodeDag(true, optSinkNodes: _*)
+    val sinkExecNodes = tableEnv.compileToExecNode(optSinkNodes: _*)
 
     tableEnv.sinkNodes.clear()
 
-    // set resource
     val planAfter =  FlinkNodeOptUtil.dagToString(sinkExecNodes, detailLevel = explainLevel,
       withResource = printResource)
     assertEqualsOrExpand("planAfter", planAfter, expand = false)
+  }
+
+  private def doVerifyExplain(table: Option[Table] = None): Unit = {
+    val explainResult = table match {
+      case Some(t) => tableEnv.explain(t)
+      case _ => tableEnv.explain()
+    }
+    assertEqualsOrExpand("explain", explainResult, expand = false)
   }
 
   private def assertEqualsOrExpand(tag: String, actual: String, expand: Boolean = true): Unit = {

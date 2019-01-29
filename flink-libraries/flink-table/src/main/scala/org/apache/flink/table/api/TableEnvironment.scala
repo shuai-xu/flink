@@ -42,6 +42,7 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.exec.ExecNode
+import org.apache.flink.table.plan.optimize.Optimizer
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.sinks._
@@ -52,6 +53,7 @@ import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionC
 
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.logical.LogicalTableModify
 import org.apache.calcite.schema
 import org.apache.calcite.schema.SchemaPlus
@@ -149,25 +151,76 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Returns specific query [[Optimizer]] that is defined by the environment.
+    */
+  protected def getOptimizer: Optimizer
+
+  /**
     * Compile the sink [[org.apache.flink.table.plan.logical.LogicalNode]] to
     * [[org.apache.flink.streaming.api.transformations.StreamTransformation]].
     */
-  protected def compile(): Unit = {
-    if (config.getSubsectionOptimization) {
-      // optimize rel node, and translate to node dag
-      val nodeDag = optimizeAndTranslateNodeDag(true, sinkNodes: _*)
-      // translate to transformation
-      val sinkTransformations = translate(nodeDag)
-      transformations.addAll(sinkTransformations)
+  def compile(): Unit = {
+    if (sinkNodes.isEmpty) {
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
     }
+    // checks sink node
+    sinkNodes.foreach {
+      case _: SinkNode => // do nothing
+      case o => throw new TableException(s"Error node: $o, Only SinkNode is supported.")
+    }
+
+    val optLogicalNodes = tableServiceManager.cachePlanBuilder.buildPlanIfNeeded(sinkNodes)
+    // translate to ExecNode
+    val nodeDag = compileToExecNode(optLogicalNodes: _*)
+    // translate to transformation
+    val sinkTransformations = translate(nodeDag)
+    transformations.addAll(sinkTransformations)
   }
 
   /**
-    * Optimize the RelNode tree (or DAG), and translate the result to [[ExecNode]] tree (or DAG).
+    * Convert [[LogicalNode]]s tree (or DAG) to [[RelNode]] tree (or DAG), then optimize them,
+    * and translate the optimized plan to ExecNode tree (or DAG) at last.
     */
   @VisibleForTesting
-  private[flink] def optimizeAndTranslateNodeDag(
-      dagOptimizeEnabled: Boolean, logicalNodes: LogicalNode*): Seq[ExecNode[_, _]]
+  private[flink] def compileToExecNode(logicalNodes: LogicalNode*): Seq[ExecNode[_, _]] = {
+    if (logicalNodes.isEmpty) {
+      throw new TableException(TableErrors.INST.sqlCompileNoSinkTblError())
+    }
+
+    // convert LogicalNode tree to RelNode tree
+    val relNodeTrees = logicalNodes.map(_.toRelNode(getRelBuilder))
+    // optimize dag
+    val optRelNodes = optimize(relNodeTrees)
+    // translate node dag
+    translateNodeDag(optRelNodes)
+  }
+
+  /**
+    * Generates the optimized [[RelNode]] dag from the original relational nodes.
+    *
+    * @param roots The root nodes of the relational expression tree.
+    * @return The optimized [[RelNode]] dag
+    */
+  private[flink] def optimize(roots: Seq[RelNode]): Seq[RelNode] = {
+    val optRelNodes = getOptimizer.optimize(roots)
+    require(optRelNodes.size == roots.size)
+    optRelNodes
+  }
+
+  /**
+    * Generates the optimized [[RelNode]] tree from the original relational tee.
+    *
+    * @param root The root nodes of the relational expression tree.
+    * @return The optimized [[RelNode]] tree
+    */
+  private[flink] def optimize(root: RelNode): RelNode = optimize(Seq(root)).head
+
+  /**
+    * Convert [[org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel]] DAG
+    * to [[ExecNode]] DAG and translate them.
+    */
+  @VisibleForTesting
+  private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[ExecNode[_, _]]
 
   /**
     * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.
@@ -191,9 +244,7 @@ abstract class TableEnvironment(
     */
   def generateStreamGraph(jobName: String): StreamGraph = {
     try {
-      if (config.getSubsectionOptimization) {
-        compile()
-      }
+      compile()
       if (transformations.isEmpty) {
         throw new TableException("No table sinks have been created yet. " +
           "A program needs at least one sink that consumes data. ")
@@ -1106,8 +1157,8 @@ abstract class TableEnvironment(
   def explain(table: Table): String
 
   /**
-    * Explain the whole plan only when subsection optimization is supported, and returns the AST
-    * of the specified Table API and SQL queries and the execution plan.
+    * Explain the whole plan, and returns the AST(s) of the specified Table API and SQL queries
+    * and the execution plan.
     *
     * @param extended Flag to include detailed optimizer estimates.
     */
@@ -1175,16 +1226,17 @@ abstract class TableEnvironment(
     val parsed = flinkPlanner.parse(stmt)
     parsed match {
       case insert: SqlInsert =>
-        if (insert.getTargetTable.isInstanceOf[SqlIdentifier] &&
-            insert.getTargetTable.asInstanceOf[SqlIdentifier].toString.equals("console") &&
-            getTable("console").isEmpty) {
-          val source = flinkPlanner.validate(insert.getSource)
-          val queryResult = new Table(this, LogicalRelNode(flinkPlanner.rel(source).rel))
-          val schema = queryResult.getSchema
-          val printTableSink = new PrintTableSink(getConfig.getTimeZone).configure(
-            schema.getColumnNames, schema.getTypes.asInstanceOf[Array[DataType]])
-          writeToSink(queryResult, printTableSink, "console")
-          return
+        insert.getTargetTable match {
+          case identifier: SqlIdentifier if identifier.toString.equals("console") &&
+            getTable("console").isEmpty =>
+            val source = flinkPlanner.validate(insert.getSource)
+            val queryResult = new Table(this, LogicalRelNode(flinkPlanner.rel(source).rel))
+            val schema = queryResult.getSchema
+            val printTableSink = new PrintTableSink(getConfig.getTimeZone).configure(
+              schema.getColumnNames, schema.getTypes.asInstanceOf[Array[DataType]])
+            writeToSink(queryResult, printTableSink, "console")
+            return
+          case _ => // do nothing
         }
         // validate the insert sql
         val validated = flinkPlanner.validate(insert)
@@ -1255,7 +1307,9 @@ abstract class TableEnvironment(
   private[table] def writeToSink[T](
       table: Table,
       sink: TableSink[T],
-      sinkName: String = null): Unit
+      sinkName: String = null): Unit = {
+    sinkNodes += SinkNode(table.logicalPlan, sink, sinkName)
+  }
 
   /**
     * Triggers the program execution.

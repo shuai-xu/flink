@@ -61,6 +61,7 @@ class StreamTableSinksITCase extends StreamingTestBase {
 
     t1.join(t2, 'a === 'd)
       .writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -165,6 +166,7 @@ class StreamTableSinksITCase extends StreamingTestBase {
       .select('cnt, 'len.count, 'cTrue)
       .writeToSink(tableSink)
 
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -207,6 +209,7 @@ class StreamTableSinksITCase extends StreamingTestBase {
       .select('num, 'w.end as 'wend, 'id.count)
       .writeToSink(tableSink)
 
+    tEnv.compile()
     env.execute()
     val expected = List(
       "1,1970-01-01 00:00:00.005,1",
@@ -236,6 +239,7 @@ class StreamTableSinksITCase extends StreamingTestBase {
       .select('w.start as 'wstart, 'w.end as 'wend, 'num, 'id.count)
       .writeToSink(tableSink)
 
+    tEnv.compile()
     env.execute()
     val expected = List(
       "1970-01-01 00:00:00.0,1970-01-01 00:00:00.005,1,1",
@@ -265,6 +269,7 @@ class StreamTableSinksITCase extends StreamingTestBase {
       .select('w.end as 'wend, 'id.count as 'cnt)
       .writeToSink(tableSink)
 
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -295,6 +300,7 @@ class StreamTableSinksITCase extends StreamingTestBase {
       .select('num, 'id.count as 'cnt)
       .writeToSink(tableSink)
 
+    tEnv.compile()
     env.execute()
 
     val expected = List(
@@ -332,6 +338,7 @@ class StreamTableSinksITCase extends StreamingTestBase {
     testingRetractSink.setPartitionField("id")
     testingRetractSink.setPartitionalSink(new TestPartitionalSink(0, globalPartitionalResults))
     t.groupBy('num).select('id.sum as 'id, 'num).writeToSink(testingRetractSink)
+    tEnv.compile()
     env.execute()
   }
 }

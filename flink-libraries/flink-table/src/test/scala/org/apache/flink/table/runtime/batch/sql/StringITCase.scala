@@ -195,7 +195,6 @@ class StringITCase() extends BatchTestBase {
     INSERT INTO TableB SELECT log_diu FROM TMP_VIEW;
     INSERT INTO TableC SELECT log_diu FROM TMP_VIEW;
     */
-    conf.setSubsectionOptimization(true)
     val typeSerializer = TypeExtractor.getForClass(classOf[Seq[Row]])
         .createSerializer(env.getConfig)
     val tableSink1 = new RowsCollectTableSink

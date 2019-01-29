@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.calcite
 
-import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkChainedPrograms, StreamOptimizeContext}
 import org.apache.flink.util.Preconditions
 
 import org.apache.calcite.config.{CalciteConnectionConfig, CalciteConnectionConfigImpl, CalciteConnectionProperty}

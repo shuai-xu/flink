@@ -26,7 +26,7 @@ import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{TableSchema, Types}
-import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
+import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.{CommonTestData, StreamTestData}
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.util._

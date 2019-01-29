@@ -194,6 +194,7 @@ class GroupWindowITCase(mode: StateBackendMode)
       """.stripMargin
 
     tEnv.sqlUpdate(sql)
+    tEnv.compile()
     env.execute()
 
     val expected = Seq(

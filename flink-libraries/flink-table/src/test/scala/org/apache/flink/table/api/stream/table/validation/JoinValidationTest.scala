@@ -24,6 +24,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
 import org.apache.flink.table.runtime.utils.StreamTestData
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.Test
 
 class JoinValidationTest extends TableTestBase {
@@ -41,7 +42,7 @@ class JoinValidationTest extends TableTestBase {
       .where('ltime >= 'rtime - 5.minutes && 'ltime < 'rtime + 3.seconds)
       .select('a, 'e, 'ltime)
 
-    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
+    util.tableEnv.optimize(resultTable.getRelNode)
   }
 
   /**
@@ -57,7 +58,7 @@ class JoinValidationTest extends TableTestBase {
       .where('a ==='d && 'ltime >= 'rtime - 5.minutes && 'ltime < 'ltime + 3.seconds)
       .select('a, 'e, 'ltime)
 
-    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
+    util.tableEnv.optimize(resultTable.getRelNode)
   }
 
   /**
@@ -73,7 +74,7 @@ class JoinValidationTest extends TableTestBase {
       .where('a ==='d && 'ltime >= 'rtime - 5.minutes && 'ltime > 'rtime + 3.seconds)
       .select('a, 'e, 'ltime)
 
-    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
+    util.tableEnv.optimize(resultTable.getRelNode)
   }
 
   /**
@@ -88,7 +89,7 @@ class JoinValidationTest extends TableTestBase {
     val resultTable = left.join(right)
       .where('a ==='d && 'ltime >= 'rtime - 5.minutes && 'ltime < 'rtime + 3.seconds)
 
-    util.tableEnv.optimize(resultTable.getRelNode, updatesAsRetraction = false)
+    util.tableEnv.optimize(resultTable.getRelNode)
   }
 
   @Test(expected = classOf[ValidationException])

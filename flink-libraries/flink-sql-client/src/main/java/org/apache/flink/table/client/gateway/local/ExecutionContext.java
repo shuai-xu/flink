@@ -329,9 +329,6 @@ public class ExecutionContext<T> {
 				TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM,
 				mergedEnv.getExecution().getParallelism());
 
-			// always enable subsection optimization
-			tableEnv.getConfig().setSubsectionOptimization(true);
-
 			tableEnv.getConfig().getConf().setBoolean(
 				TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED,
 				true);

@@ -105,7 +105,7 @@ class UpdatingPlanCheckerTest extends StreamPlanTestBase {
 
   def verifyTableAppendOnly(resultTable: Table, expected: Boolean): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = streamUtil.tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = streamUtil.tableEnv.optimize(relNode)
     assertEquals(expected, UpdatingPlanChecker.isAppendOnly(optimized))
   }
 }

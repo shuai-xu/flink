@@ -26,19 +26,21 @@ import org.apache.flink.table.api.java.BatchTableEnvironment
 import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.table.api.{Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.CalciteConfig
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.physical.batch.{BatchExecNestedLoopJoinRule, BatchExecSortMergeJoinRule}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData._
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink}
 import NodeResourceUtil.InferMode
+import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms
 import org.apache.flink.table.util.PlanUtil.toPlanWihMetrics
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.apache.flink.util.AbstractID
+
 import org.apache.calcite.tools.RuleSets
 import org.junit._
+
 import java.nio.file.{Files, Paths}
 
 import scala.collection.JavaConversions._

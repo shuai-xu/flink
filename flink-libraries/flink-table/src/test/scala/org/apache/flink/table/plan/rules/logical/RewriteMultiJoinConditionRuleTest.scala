@@ -22,6 +22,7 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkChainedPrograms, FlinkDecorrelateProgram, FlinkHepRuleSetProgramBuilder, HEP_RULES_EXECUTION_TYPE}
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
 import org.apache.flink.table.util.TableTestBase
 

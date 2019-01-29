@@ -54,5 +54,6 @@ class CalcValidationTest extends TableTestBase {
       """.stripMargin
 
     util.tableEnv.sqlUpdate(sql)
+    util.tableEnv.compile()
   }
 }

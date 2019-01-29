@@ -26,7 +26,6 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.externalize.RelWriterImpl
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.Pair
-
 import org.apache.commons.lang3.SystemUtils
 
 import java.io.{PrintWriter, StringWriter}
@@ -40,7 +39,7 @@ abstract class StreamPlanTestBase extends TableTestBase {
   def verifyPlanAndTrait(sql: String): Unit = {
     val table = streamUtil.tableEnv.sqlQuery(sql)
     val relNode = table.getRelNode
-    val optimized = streamUtil.tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = streamUtil.tableEnv.optimize(relNode)
     val sw = new StringWriter
     val planWriter = new JoinRelWriter(new PrintWriter(sw))
     optimized.explain(planWriter)
@@ -55,8 +54,8 @@ class JoinRelWriter(pw: PrintWriter) extends RelWriterImpl(pw,
     val pairs = rel match {
       case join: StreamExecJoin => join.explainJoin
       case agg: StreamExecGroupAggregate => agg.explainAgg
-      case localagg: StreamExecLocalGroupAggregate => localagg.explainAgg
-      case globalagg: StreamExecGlobalGroupAggregate => globalagg.explainAgg
+      case localAgg: StreamExecLocalGroupAggregate => localAgg.explainAgg
+      case globalAgg: StreamExecGlobalGroupAggregate => globalAgg.explainAgg
       case _ => values
     }
     super.explain_(rel, pairs)

@@ -649,7 +649,6 @@ class TimeAttributesITCase extends StreamingTestBase {
 
     val tableSource = new TestTableSourceWithTime(schema, rowType, data)
 
-    tEnv.getConfig.setSubsectionOptimization(true)
     tEnv.registerTableSource(tableName, tableSource)
 
     tEnv.registerTableWithWatermark("MyTable2", tEnv.scan(tableName), "rtime", 0)

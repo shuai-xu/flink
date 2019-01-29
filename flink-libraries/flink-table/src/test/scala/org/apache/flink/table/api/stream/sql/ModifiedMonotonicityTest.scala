@@ -25,7 +25,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.{CalciteConfig, FlinkChainContext}
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.optimize.FlinkStreamPrograms
+import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 
@@ -275,9 +275,7 @@ class ModifiedMonotonicityTest extends TableTestBase {
 
     val table = streamUtil.tableEnv.sqlQuery(sql)
     val relNode = table.getRelNode
-    val optimized = streamUtil.tableEnv.optimize(
-      relNode,
-      updatesAsRetraction = false)
+    val optimized = streamUtil.tableEnv.optimize(relNode)
 
     val flinkChainContext =
       optimized.getCluster.getPlanner.getContext.asInstanceOf[FlinkChainContext]

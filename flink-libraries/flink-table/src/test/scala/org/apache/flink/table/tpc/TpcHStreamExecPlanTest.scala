@@ -46,7 +46,7 @@ class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {
     getClass.getResource(s"/tpch/data/$tableName/$tableName.tbl").getFile
   }
 
-  val retractSinkCase = Seq("06", "11", "14", "15", "17", "19")
+  val retractSinkCase: Seq[String] = Seq("06", "11", "14", "15", "17", "19")
 
   @Before
   def prepare(): Unit = {
@@ -74,7 +74,7 @@ class TpcHStreamExecPlanTest(caseName: String, twoStageAgg: Boolean) {
     val sql = TpcUtils.getStreamTpcHQuery(caseName)
     val table = tEnv.sqlQuery(sql)
     val relNode = table.getRelNode
-    val optimized = tEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tEnv.optimize(relNode)
     val result = FlinkRelOptUtil.toString(optimized)
     println(s"caseName: tpch$caseName.sql, plan:\n$result")
   }

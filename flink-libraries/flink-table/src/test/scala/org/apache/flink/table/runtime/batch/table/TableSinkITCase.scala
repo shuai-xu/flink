@@ -119,8 +119,6 @@ class TableSinkITCase extends BatchTestBase {
     val path1 = createTempFile(1)
     val path2 = createTempFile(2)
 
-    conf.setSubsectionOptimization(true)
-
     tEnv.registerTableSource("test", CommonTestData.getCsvTableSource)
 
     val table = tEnv.scan("test").select('id, 'first, 'score)

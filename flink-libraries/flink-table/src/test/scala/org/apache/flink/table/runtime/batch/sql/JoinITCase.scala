@@ -79,6 +79,7 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
         tEnv.sqlQuery("SELECT c FROM SmallTable3, Table5 WHERE b = e"),
         sink,
         "collect")
+      tEnv.compile()
 
       var haveTwoOp = false
       env.getStreamGraph.getOperators.foreach(o =>
@@ -771,9 +772,6 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
 
   @Test
   def testJoinCollation(): Unit = {
-    // TODO enable subplan reuse
-    tEnv.getConfig.getConf.setBoolean(
-      TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, false)
     checkResult(
       """
         |WITH v1 AS (

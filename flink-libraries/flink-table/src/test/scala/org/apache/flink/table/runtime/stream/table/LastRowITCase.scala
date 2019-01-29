@@ -26,6 +26,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, Types}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize._
+import org.apache.flink.table.plan.optimize.program.{FlinkHepRuleSetProgram, FlinkStreamPrograms, StreamOptimizeContext}
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils._
@@ -97,6 +98,7 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
     val sink = new TestingUpsertTableSink(Array(0))
     tEnv.scan(tableName).select('pk, 'a).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = mutable.MutableList("1,1", "2,3", "3,6", "4,10", "5,15", "6,21")
@@ -185,11 +187,11 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
       "a"
     ))
 
-
     val sink = new TestingUpsertTableSink(Array(0))
     tEnv.scan(tableName)
       .select('pk, 'd)
       .writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = mutable.MutableList("1,1", "2,3", "3,6", "4,10")

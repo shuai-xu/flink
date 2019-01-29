@@ -40,7 +40,6 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
 
   @Before
   def before(): Unit = {
-    util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       inferMode
@@ -110,7 +109,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
       "a" -> ColumnStats(3L, 1L, 10000D * NodeResourceUtil.SIZE_IN_MB, 8, 5, -5),
       "b" -> ColumnStats(5L, 0L, 10000D * NodeResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D),
       "c" -> ColumnStats(5L, 0L, 10000D * NodeResourceUtil.SIZE_IN_MB, 32, 6.1D, 0D)))
-    util.addTableSource("Table3", table3Schema, true, colStatsOfTable3)
+    util.addTableSource("Table3", table3Schema, limitPushDown = true, colStatsOfTable3)
 
     val sqlQuery = "SELECT sum(a) as sum_a, g FROM " +
         "(SELECT a, b, c FROM SmallTable3 UNION ALL SELECT a, b, c FROM Table3), Table5 " +
@@ -119,15 +118,14 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
   }
 
   @Test
-  def testSubsectionOptimization(): Unit = {
-    util.getTableEnv.getConfig.setSubsectionOptimization(true)
+  def testMultiSinks(): Unit = {
     val query = "SELECT SUM(a) AS sum_a, c FROM SmallTable3 GROUP BY c "
     val table = util.getTableEnv.sqlQuery(query)
     val result1 = table.select('sum_a.sum as 'total_sum)
     val result2 = table.select('sum_a.min as 'total_min)
     result1.writeToSink(new CsvTableSink("/tmp/1"))
     result2.writeToSink(new CsvTableSink("/tmp/2"))
-    util.verifyResourceWithSubsectionOptimization()
+    util.verifyResource()
   }
 
   @Test
@@ -138,7 +136,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
     util.addTableSource("customer",
       new TableSchema(customerSchema.getFieldNames,
         customerSchema.getFieldTypes),
-      false, colStatsOfCustomer.get)
+      limitPushDown = false, colStatsOfCustomer.get)
 
     val ordersSchema = TpcHSchemaProvider.getSchema("orders")
     val colStastOfOrders =
@@ -146,14 +144,14 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
     util.addTableSource("orders",
       new TableSchema(ordersSchema.getFieldNames,
         ordersSchema.getFieldTypes),
-      false, colStastOfOrders.get)
+      limitPushDown = false, colStastOfOrders.get)
     val lineitemSchema = TpcHSchemaProvider.getSchema("lineitem")
     val colStatsOfLineitem =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("lineitem")
     util.addTableSource("lineitem",
       new TableSchema(lineitemSchema.getFieldNames,
         lineitemSchema.getFieldTypes),
-      false, colStatsOfLineitem.get)
+      limitPushDown = false, colStatsOfLineitem.get)
 
     val sqlQuery = "select c.c_name, sum(l.l_quantity)" +
         " from customer c, orders o, lineitem l" +
@@ -173,7 +171,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
     util.addTableSource("lineitem",
       new TableSchema(lineitemSchema.getFieldNames,
         lineitemSchema.getFieldTypes),
-      true, colStatsOfLineitem.get)
+      limitPushDown = true, colStatsOfLineitem.get)
 
     val sqlQuery = "select * from lineitem limit 1"
     util.verifyResource(sqlQuery)
@@ -191,7 +189,7 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
     util.addTableSource("customer",
       new TableSchema(customerSchema.getFieldNames,
         customerSchema.getFieldTypes),
-      false, colStatsOfCustomer.get)
+      limitPushDown = false, colStatsOfCustomer.get)
 
     val ordersSchema = TpcHSchemaProvider.getSchema("orders")
     val colStastOfOrders =
@@ -199,14 +197,14 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
     util.addTableSource("orders",
       new TableSchema(ordersSchema.getFieldNames,
         ordersSchema.getFieldTypes),
-      false, colStastOfOrders.get)
+      limitPushDown = false, colStastOfOrders.get)
     val lineitemSchema = TpcHSchemaProvider.getSchema("lineitem")
     val colStatsOfLineitem =
       TpchTableStatsProvider.getTableStatsMap(1000, STATS_MODE.FULL).get("lineitem")
     util.addTableSource("lineitem",
       new TableSchema(lineitemSchema.getFieldNames,
         lineitemSchema.getFieldTypes),
-      false, colStatsOfLineitem.get)
+      limitPushDown = false, colStatsOfLineitem.get)
 
     val sqlQuery = "select c.c_name, sum(l.l_quantity)" +
         " from customer c, orders o, lineitem l" +

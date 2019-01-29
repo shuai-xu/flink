@@ -32,7 +32,6 @@ class BatchExecResourceAdjustTest extends TableTestBase {
   @Before
   def before(): Unit = {
     util = batchTestUtil()
-    util.getTableEnv.getConfig.setSubsectionOptimization(false)
     util.getTableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_RESOURCE_INFER_MODE,
       NodeResourceUtil.InferMode.ALL.toString

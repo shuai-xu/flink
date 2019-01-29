@@ -715,7 +715,6 @@ class TableEnvironmentTest extends TableTestBase {
       DataTypes.INT,
       DataTypes.TIMESTAMP,
       DataTypes.STRING)
-    util.tableEnv.getConfig.setSubsectionOptimization(true)
     util.tableEnv.registerTableSink(
       "sink_1",
       sinkFieldNames,

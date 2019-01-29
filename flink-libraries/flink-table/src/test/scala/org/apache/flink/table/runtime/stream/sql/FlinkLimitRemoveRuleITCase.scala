@@ -56,6 +56,7 @@ class FlinkLimitRemoveRuleITCase {
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     assertEquals(0, tableSink.getRawResults.size)
@@ -80,6 +81,7 @@ class FlinkLimitRemoveRuleITCase {
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     assertEquals(0, tableSink.getRawResults.size)
@@ -103,6 +105,7 @@ class FlinkLimitRemoveRuleITCase {
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     assertEquals(0, tableSink.getRawResults.size)
@@ -127,6 +130,7 @@ class FlinkLimitRemoveRuleITCase {
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     assertEquals(0, tableSink.getRawResults.size)
@@ -151,6 +155,7 @@ class FlinkLimitRemoveRuleITCase {
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     assertEquals(0, tableSink.getRawResults.size)
@@ -182,6 +187,7 @@ class FlinkLimitRemoveRuleITCase {
     val tableSink = new TestingUpsertTableSink(Array(0, 1))
     tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_SOURCE_VALUES_INPUT_ENABLED, true)
     tEnv.sqlQuery(sql).writeToSink(tableSink)
+    tEnv.compile()
     env.execute()
 
     assertEquals(0, tableSink.getRawResults.size)

@@ -34,14 +34,14 @@ import org.junit.runners.Parameterized
 @RunWith(classOf[Parameterized])
 class TpcDsStreamExecPlanTest(caseName: String) {
 
-  val env = StreamExecutionEnvironment.getExecutionEnvironment
+  val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
   env.setParallelism(4)
-  val tEnv = TableEnvironment.getTableEnvironment(env)
+  val tEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(env)
   def getDataFile(tableName: String): String = {
     getClass.getResource(s"/tpcds/data/$tableName").getFile
   }
 
-  val retractSql = Set("q1", "q2")
+  val retractSql: Set[String] = Set("q1", "q2")
 
   def prepare(): Unit = {
     for ((tableName, schema) <- TpcDsSchemaProvider.schemaMap) {
@@ -62,7 +62,7 @@ class TpcDsStreamExecPlanTest(caseName: String) {
     val sql = TpcUtils.getStreamTpcDsQuery(caseName)
     val table = tEnv.sqlQuery(sql)
     val relNode = table.getRelNode
-    val optimized = tEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tEnv.optimize(relNode)
     val result = FlinkRelOptUtil.toString(optimized)
     // println(s"caseName: tpcds$caseName.sql, plan:\n$result")
   }
@@ -86,7 +86,7 @@ class TpcDsStreamExecPlanTest(caseName: String) {
 
 object TpcDsStreamExecPlanTest {
   @Parameterized.Parameters(name = "caseName={0}")
-  def parameters() = {
+  def parameters(): Array[Array[String]] = {
     Array("q1", "q2", "q3", "q4", "q5",
       "q6", "q7", "q8", "q9", "q10", "q11",
       "q12", "q13", "q14a", "q14b", "q15",

@@ -1185,7 +1185,7 @@ class BuiltinScalarFunctionITCase extends StreamingTestBase {
     tEnv.registerTable("T1", t1)
 
     val relNode = tEnv.sqlQuery(sqlQuery).getRelNode
-    val optimized = tEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tEnv.optimize(relNode)
     val result = FlinkRelOptUtil.toString(optimized)
     assertEquals(
     """StreamExecCalc(select=[UNIX_TIMESTAMP() AS EXPR$0, date1])

@@ -78,10 +78,10 @@ public class TableConfigOptions {
 			.withDescription("When the semi-side of semiJoin can distinct a lot of data in advance," +
 					" we will add distinct node before semiJoin.");
 
-	public static final ConfigOption<Boolean> SQL_OPTIMIZER_SUBSECTION_UNIONALL_AS_BREAKPOINT_DISABLED =
-			key("sql.optimizer.subsection.unionall-as-breakpoint.disabled")
+	public static final ConfigOption<Boolean> SQL_OPTIMIZER_UNIONALL_AS_BREAKPOINT_DISABLED =
+			key("sql.optimizer.unionall-as-breakpoint.disabled")
 			.defaultValue(false)
-			.withDescription("Disable union all as breakpoint in subsection optimization");
+			.withDescription("Disable union all as breakpoint when constructing RelNodeBlock");
 
 	public static final ConfigOption<Boolean> SQL_OPTIMIZER_PLAN_DUMP_ENABLED =
 			key("sql.optimizer.plan.dump.enabled")

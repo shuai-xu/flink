@@ -26,7 +26,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
+import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms
 import org.apache.flink.table.sources._
 import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 

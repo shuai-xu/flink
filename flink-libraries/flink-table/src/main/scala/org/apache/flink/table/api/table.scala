@@ -200,8 +200,6 @@ class Table(
     * time when the cacehd table is computed.
     */
   def cache(): Unit = {
-    // Enable the subsection optimization.
-    tableEnv.getConfig.setSubsectionOptimization(true)
     // check if it has been already cached.
     (tableEnv.tableServiceManager.getToBeCachedTableName(logicalPlan) orElse
       tableEnv.tableServiceManager.getCachedTableName(logicalPlan)) match {

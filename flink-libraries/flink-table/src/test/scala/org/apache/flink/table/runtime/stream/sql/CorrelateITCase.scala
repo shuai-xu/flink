@@ -180,6 +180,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("1,2,,null", "1,3,,null")
@@ -200,6 +201,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("3018-06-10", "2018-06-03", "2018-06-01", "2018-06-02")
@@ -220,6 +222,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("1,3018-06-10", "1,2018-06-03", "1,2018-06-01", "1,2018-06-02")
@@ -239,6 +242,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("a")
@@ -258,6 +262,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     // output two null
@@ -278,6 +283,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("1,a")
@@ -297,6 +303,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingAppendTableSink
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("2,null", "3,null")
@@ -320,6 +327,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingUpsertTableSink(Array(0))
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("1", "2", "3", "4")
@@ -343,6 +351,7 @@ class CorrelateITCase extends StreamingTestBase {
 
     val sink = new TestingUpsertTableSink(Array(0))
     tEnv.sqlQuery(sql).writeToSink(sink)
+    tEnv.compile()
     env.execute()
 
     val expected = List("1", "2")

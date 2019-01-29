@@ -18,27 +18,23 @@
 package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment, TableException}
+import org.apache.flink.table.api.{TableConfigOptions, TableException}
 import org.apache.flink.table.runtime.utils.TestingRetractTableSink
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 
-import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
-
-import scala.io.Source
 
 class RankTest extends TableTestBase {
 
-  var streamUtil: StreamTableTestUtil = _
+  var util: StreamTableTestUtil = _
 
   @Before
-  def testSetUp(): Unit = {
-    streamUtil = streamTestUtil()
-    streamUtil.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
-    streamUtil.addFunction("add", new AddUdf)
+  def setUp(): Unit = {
+    util = streamTestUtil()
+    util.addTable[(Int, String, Long)]("MyTable", 'a, 'b, 'c)
+    util.addFunction("add", new AddUdf)
   }
 
   @Test
@@ -55,7 +51,7 @@ class RankTest extends TableTestBase {
 
     thrown.expectMessage("Rank end is not specified.")
     thrown.expect(classOf[TableException])
-    streamUtil.verifyPlan(sql)
+    util.verifyPlan(sql)
   }
 
   @Test
@@ -72,19 +68,19 @@ class RankTest extends TableTestBase {
 
     thrown.expectMessage("Rank end should not less than zero")
     thrown.expect(classOf[TableException])
-    streamUtil.verifyPlan(sql)
+    util.verifyPlan(sql)
   }
 
   @Test
   def testOrderByLimit(): Unit = {
     val sql = "SELECT * FROM MyTable ORDER BY a, b desc LIMIT 10"
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
   def testOrderByFetch(): Unit = {
     val sql = "SELECT * FROM MyTable ORDER BY a, b desc FETCH FIRST 10 ROWS ONLY"
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -99,7 +95,7 @@ class RankTest extends TableTestBase {
         |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -115,7 +111,7 @@ class RankTest extends TableTestBase {
         |WHERE 10 >= rank_num
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -130,7 +126,7 @@ class RankTest extends TableTestBase {
         |WHERE rank_num = 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -146,7 +142,7 @@ class RankTest extends TableTestBase {
         |WHERE rank_num <= 10 AND b IS NOT NULL
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -168,7 +164,7 @@ class RankTest extends TableTestBase {
         |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -190,12 +186,12 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
   def testUnarySortTopNOnString(): Unit = {
-    streamUtil.addTable[(String, Int, String)]("T", 'category, 'shopId, 'price)
+    util.addTable[(String, Int, String)]("T", 'category, 'shopId, 'price)
     val sql =
       """
         |SELECT *
@@ -210,7 +206,7 @@ class RankTest extends TableTestBase {
         |WHERE rank_num <= 3
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -237,7 +233,7 @@ class RankTest extends TableTestBase {
          |SELECT max(a) FROM ($sql)
        """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql2)
+    util.verifyPlanAndTrait(sql2)
   }
 
   @Test
@@ -260,7 +256,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
 
@@ -283,7 +279,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlan(sql)
+    util.verifyPlan(sql)
   }
 
   @Test
@@ -305,7 +301,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlan(sql)
+    util.verifyPlan(sql)
   }
 
   @Test
@@ -327,7 +323,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlan(sql)
+    util.verifyPlan(sql)
   }
 
   @Test
@@ -349,7 +345,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlan(sql)
+    util.verifyPlan(sql)
   }
 
   @Test
@@ -371,7 +367,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -396,7 +392,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -418,7 +414,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -453,7 +449,7 @@ class RankTest extends TableTestBase {
         |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
@@ -478,17 +474,17 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= a
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
   def testTopNWithPartialFinalAgg(): Unit = {
     // BLINK-17146809: fix monotonicity derivation not works when partial final optimization
-    streamUtil.tableEnv.getConfig.getConf.setLong(
+    util.tableEnv.getConfig.getConf.setLong(
       TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+    util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, true)
-    streamUtil.tableEnv.getConfig.getConf.setBoolean(
+    util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_EXEC_INCREMENTAL_AGG_ENABLED, false)
 
     val subquery =
@@ -509,12 +505,12 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
   def testTopNWithoutRowNumber2(): Unit = {
-    streamUtil.addTable[(String, String, String, String, Long, String, Long, String)](
+    util.addTable[(String, String, String, String, Long, String, Long, String)](
       "stream_source",
       'seller_id, 'sku_id, 'venture, 'stat_date, 'trd_amt, 'trd_buyer_id, 'log_pv, 'log_visitor_id)
 
@@ -562,20 +558,16 @@ class RankTest extends TableTestBase {
          |WHERE rownum <= 10
       """.stripMargin
 
-    streamUtil.verifyPlanAndTrait(sql)
+    util.verifyPlanAndTrait(sql)
   }
 
   @Test
   def testMultipleRetractTopNAfterAgg(): Unit = {
-    val conf = new TableConfig
-    conf.setSubsectionOptimization(true)
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
 
     val data = List(("book", 1, 12))
 
-    val ds = env.fromCollection(data).toTable(tEnv, 'category, 'shopId, 'num)
-    tEnv.registerTable("T", ds)
+    val ds = util.env.fromCollection(data).toTable(util.tableEnv, 'category, 'shopId, 'num)
+    util.tableEnv.registerTable("T", ds)
 
     val subquery =
       s"""
@@ -585,11 +577,11 @@ class RankTest extends TableTestBase {
          |GROUP BY category, shopId
          |""".stripMargin
 
-    val t = tEnv.sqlQuery(subquery)
-    tEnv.registerTable("MyView", t)
+    val t = util.tableEnv.sqlQuery(subquery)
+    util.tableEnv.registerTable("MyView", t)
 
     val sink1 = new TestingRetractTableSink
-    tEnv.sqlQuery(
+    util.tableEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (
@@ -601,7 +593,7 @@ class RankTest extends TableTestBase {
          |""".stripMargin).writeToSink(sink1)
 
     val sink2 = new TestingRetractTableSink
-    tEnv.sqlQuery(
+    util.tableEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (
@@ -612,24 +604,15 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 2
          |""".stripMargin).writeToSink(sink2)
 
-    val result = replaceString(tEnv.explain())
-
-    val source = readFromResource("testMultipleRetractTopNAfterAgg.out")
-    val expected = replaceString(source)
-    assertEquals(expected, result)
+    util.verifyExplain()
   }
 
   @Test
   def testMultipleUpdateTopNAfterAgg(): Unit = {
-    val conf = new TableConfig
-    conf.setSubsectionOptimization(true)
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env, conf)
-
     val data = List(("book", 1, 12))
 
-    val ds = env.fromCollection(data).toTable(tEnv, 'category, 'shopId, 'num)
-    tEnv.registerTable("T", ds)
+    val ds = util.env.fromCollection(data).toTable(util.tableEnv, 'category, 'shopId, 'num)
+    util.tableEnv.registerTable("T", ds)
 
     val subquery =
       s"""
@@ -638,11 +621,11 @@ class RankTest extends TableTestBase {
          |GROUP BY category, shopId
          |""".stripMargin
 
-    val t = tEnv.sqlQuery(subquery)
-    tEnv.registerTable("MyView", t)
+    val t = util.tableEnv.sqlQuery(subquery)
+    util.tableEnv.registerTable("MyView", t)
 
     val sink1 = new TestingRetractTableSink
-    tEnv.sqlQuery(
+    util.tableEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (
@@ -653,7 +636,7 @@ class RankTest extends TableTestBase {
          |""".stripMargin).writeToSink(sink1)
 
     val sink2 = new TestingRetractTableSink
-    tEnv.sqlQuery(
+    util.tableEnv.sqlQuery(
       s"""
          |SELECT *
          |FROM (
@@ -663,23 +646,7 @@ class RankTest extends TableTestBase {
          |WHERE rank_num <= 2
          |""".stripMargin).writeToSink(sink2)
 
-    val result = replaceString(tEnv.explain())
-
-    val source = readFromResource("testMultipleUpdateTopNAfterAgg.out")
-    val expected = replaceString(source)
-    assertEquals(expected, result)
-  }
-
-  private def replaceString(s: String): String = {
-    /* Stage {id} is ignored, because id keeps incrementing in test class
-     * while StreamExecutionEnvironment is up
-     */
-    s.replaceAll("\\r\\n", "\n").replaceAll("Stage \\d+", "")
-  }
-
-  private def readFromResource(name: String): String = {
-    val inputStream = getClass.getResource("/explain/" + name).getFile
-    Source.fromFile(inputStream).mkString
+    util.verifyExplain()
   }
 }
 

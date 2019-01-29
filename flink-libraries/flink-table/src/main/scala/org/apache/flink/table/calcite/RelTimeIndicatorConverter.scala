@@ -480,11 +480,15 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
 
 object RelTimeIndicatorConverter {
 
-  def convert(rootRel: RelNode, rexBuilder: RexBuilder, isSinkBlock: Boolean): RelNode = {
+  def convert(
+      rootRel: RelNode,
+      rexBuilder: RexBuilder,
+      needFinalTimeIndicatorConversion: Boolean): RelNode = {
     val converter = new RelTimeIndicatorConverter(rexBuilder)
     val convertedRoot = rootRel.accept(converter)
 
-    if (rootRel.isInstanceOf[LogicalSink] || !isSinkBlock) {
+    // the LogicalSink is converted in RelTimeIndicatorConverter before
+    if (rootRel.isInstanceOf[LogicalSink] || !needFinalTimeIndicatorConversion) {
       return convertedRoot
     }
     var needsConversion = false

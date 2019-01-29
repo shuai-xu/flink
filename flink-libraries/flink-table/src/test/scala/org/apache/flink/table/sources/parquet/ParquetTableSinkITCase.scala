@@ -63,16 +63,16 @@ class ParquetTableSinkITCase extends BatchTestBase {
     try {
       tEnv.sqlQuery("SELECT id, `first`, `last`, score FROM parquetTable1").writeToSink(
         new ParquetTableSink(tempFile.toFile.getAbsolutePath))
+      tEnv.compile()
       Assert.fail("runtime exception expected");
     } catch {
-      case _: RuntimeException => None
+      case _: RuntimeException => tEnv.sinkNodes.clear()
       case _ => Assert.fail("runtime exception expected");
     }
 
     tEnv.sqlQuery("SELECT id, `first`, `last`, score FROM parquetTable1").writeToSink(
       new ParquetTableSink(tempFile.toFile.getAbsolutePath, Some(WriteMode.OVERWRITE)))
     tEnv.execute()
-
   }
 
   @Test

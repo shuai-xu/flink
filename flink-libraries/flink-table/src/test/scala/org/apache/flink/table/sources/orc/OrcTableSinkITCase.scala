@@ -45,9 +45,10 @@ class OrcTableSinkITCase extends BatchTestBase {
     try {
       tEnv.sqlQuery("SELECT id, `first`, `last`, score FROM orcTable1").writeToSink(
         new OrcTableSink(tempFile.toFile.getAbsolutePath))
+      tEnv.compile()
       Assert.fail("runtime exception expected");
     } catch {
-      case _: RuntimeException => None
+      case _: RuntimeException => tEnv.sinkNodes.clear()
       case _ => Assert.fail("runtime exception expected");
     }
 

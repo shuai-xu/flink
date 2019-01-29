@@ -72,7 +72,7 @@ class FileSystemTableFactoryITCase {
   private var resultPath: String = null
 
   @Rule
-  def tempFolder = _tempFolder
+  def tempFolder: TemporaryFolder = _tempFolder
 
   private[this] def lookUpProps(updateMode: String): java.util.Map[String, String] = {
     val ret = new util.HashMap[String, String]()
@@ -95,8 +95,8 @@ class FileSystemTableFactoryITCase {
     tableProperties.toKeyLowerCase.toMap
   }
   val streamEnv: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-  val streamTableEnv = TableEnvironment.getTableEnvironment(streamEnv)
-  val batchEnv = TableEnvironment.getBatchTableEnvironment(streamEnv)
+  val streamTableEnv: StreamTableEnvironment = TableEnvironment.getTableEnvironment(streamEnv)
+  val batchEnv: BatchTableEnvironment = TableEnvironment.getBatchTableEnvironment(streamEnv)
 
   private[this] def getPath(): String = {
     resultPath
@@ -123,6 +123,7 @@ class FileSystemTableFactoryITCase {
       .find(classOf[CsvTableFactory], lookUpProps("append"))
         .createStreamTableSink(getCsvProps("csvTableSink"))
     streamTableEnv.sqlQuery("select a, b, c from sTable").writeToSink(tableSink)
+    streamTableEnv.compile()
     streamEnv.execute()
     expectedResult = "1,1,Hi\n" +
       "2,2,Hello\n" +
@@ -136,6 +137,7 @@ class FileSystemTableFactoryITCase {
       .find(classOf[CsvTableFactory], lookUpProps("upsert"))
       .createStreamTableSink(getCsvProps("csvTableSink", updateMode = "upsert"))
     streamTableEnv.sqlQuery("select a, b, c from sTable").writeToSink(tableSink)
+    streamTableEnv.compile()
     streamEnv.execute()
     expectedResult = "Add,1,1,Hi\n" +
       "Add,2,2,Hello\n" +
@@ -149,6 +151,7 @@ class FileSystemTableFactoryITCase {
       .find(classOf[CsvTableFactory], lookUpProps("retract"))
       .createStreamTableSink(getCsvProps("csvTableSink", updateMode = "retract"))
     streamTableEnv.sqlQuery("select a, b, c from sTable").writeToSink(tableSink)
+    streamTableEnv.compile()
     streamEnv.execute()
     expectedResult = "True,1,1,Hi\n" +
       "True,2,2,Hello\n" +

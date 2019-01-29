@@ -52,11 +52,6 @@ class TableConfig {
   private var calciteConfig = CalciteConfig.createBuilder().build()
 
   /**
-    * Defines whether supports subsection optimization
-    */
-  private var subsectionOptimization: Boolean = false
-
-  /**
     * Defines user-defined configuration
     */
   private var conf = GlobalConfiguration.loadConfiguration()
@@ -148,20 +143,6 @@ class TableConfig {
   def setConf(conf: Configuration): Unit = {
     this.conf = GlobalConfiguration.loadConfiguration()
     this.conf.addAll(conf)
-  }
-
-  /**
-    * Returns whether supports subsection optimization.
-    */
-  def getSubsectionOptimization: Boolean = subsectionOptimization
-
-  /**
-    * Sets the subsection optimization. If enabled, we will reuse DataSet/DataSteam plan as much
-    * as possible. The whole plan will be decomposed into multiple blocks, and each block will be
-    * optimized alone.
-    */
-  def setSubsectionOptimization(subsectionOptimization: Boolean): Unit = {
-    this.subsectionOptimization = subsectionOptimization
   }
 
   def enabledGivenOpType(operator: OperatorType): Boolean = {

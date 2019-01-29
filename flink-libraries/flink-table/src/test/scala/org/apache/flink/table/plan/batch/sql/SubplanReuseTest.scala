@@ -23,7 +23,7 @@ import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
-import org.apache.flink.table.plan.optimize.FlinkBatchPrograms
+import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRule
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
