@@ -216,13 +216,13 @@ catalogs:
       connector:
         hive.metastore.uris: thrift://localhost:9083
       is-default: false
-      default-db: mydb_1
+      default-database: mydb_1
    - name: MyHive_2
      catalog:
        type: hive
        connector:
          hive.metastore.uris: thrift://localhost:9084
-       default-db: mydb_2
+       default-database: mydb_2
 {% endhighlight %}
 
 This configuration:
@@ -599,13 +599,13 @@ catalogs:
       connector:
         hive.metastore.uris: thrift://localhost:9083
       is-default: false
-      default-db: mydb_1
+      default-database: mydb_1
    - name: MyHive_2
      catalog:
        type: hive
        connector:
          hive.metastore.uris: thrift://localhost:9084
-       default-db: mydb_2
+       default-database: mydb_2
 {% endhighlight %}
        
 Currently Flink supports two types of catalog - `FlinkInMemoryCatalog` and `HiveCatalog`.

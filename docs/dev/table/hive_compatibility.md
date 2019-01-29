@@ -123,7 +123,7 @@ catalogs:
       type: hive
       connector:
         # Hive metastore thrift uri
-        Hive.metastore.uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
+        hive.metastore.uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
 {% endhighlight %}
 
 Note that, if users are using Flink yarn-session mode, you'll get the sessionId as `\${appId}`. Set it in `yid: ${appId}` of `deployment` section in the `conf/sql-client-defaults.yaml` file
