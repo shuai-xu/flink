@@ -47,62 +47,117 @@ import org.apache.flink.table.plan.nodes.physical.batch.BatchExecUnion;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecValues;
 
 /**
- * Visitor pattern for traversing a dag of {@link BatchExecNode} objects. The visit can see the
- * detail type of every node.
+ * Implement of {@link BatchExecNodeVisitor}.
  */
-public interface BatchExecNodeVisitor {
+public class BatchExecNodeVisitorImpl implements BatchExecNodeVisitor {
 
 	//~ visit Methods ----------------------------------------------------------------
 
-	void visit(BatchExecBoundedStreamScan boundedStreamScan);
+	public void visit(BatchExecBoundedStreamScan boundedStreamScan) {
+		visitInputs(boundedStreamScan);
+	}
 
-	void visit(BatchExecTableSourceScan scanTableSource);
+	public void visit(BatchExecTableSourceScan scanTableSource) {
+		visitInputs(scanTableSource);
+	}
 
-	void visit(BatchExecValues values);
+	public void visit(BatchExecValues values) {
+		visitInputs(values);
+	}
 
-	void visit(BatchExecCalc calc);
+	public void visit(BatchExecCalc calc) {
+		visitInputs(calc);
+	}
 
-	void visit(BatchExecCorrelate correlate);
+	public void visit(BatchExecCorrelate correlate) {
+		visitInputs(correlate);
+	}
 
-	void visit(BatchExecExchange exchange);
+	public void visit(BatchExecExchange exchange) {
+		visitInputs(exchange);
+	}
 
-	void visit(BatchExecExpand expand);
+	public void visit(BatchExecExpand expand) {
+		visitInputs(expand);
+	}
 
-	void visit(BatchExecHashAggregate hashAggregate);
+	public void visit(BatchExecHashAggregate hashAggregate) {
+		visitInputs(hashAggregate);
+	}
 
-	void visit(BatchExecHashWindowAggregate hashAggregate);
+	public void visit(BatchExecHashWindowAggregate hashAggregate) {
+		visitInputs(hashAggregate);
+	}
 
-	void visit(BatchExecHashJoinBase hashJoin);
+	public void visit(BatchExecHashJoinBase hashJoin) {
+		visitInputs(hashJoin);
+	}
 
-	void visit(BatchExecSortMergeJoinBase sortMergeJoin);
+	public void visit(BatchExecSortMergeJoinBase sortMergeJoin) {
+		visitInputs(sortMergeJoin);
+	}
 
-	void visit(BatchExecNestedLoopJoinBase nestedLoopJoin);
+	public void visit(BatchExecNestedLoopJoinBase nestedLoopJoin) {
+		visitInputs(nestedLoopJoin);
+	}
 
-	void visit(BatchExecLocalHashAggregate localHashAggregate);
+	public void visit(BatchExecLocalHashAggregate localHashAggregate) {
+		visitInputs(localHashAggregate);
+	}
 
-	void visit(BatchExecSortAggregate sortAggregate);
+	public void visit(BatchExecSortAggregate sortAggregate) {
+		visitInputs(sortAggregate);
+	}
 
-	void visit(BatchExecLocalHashWindowAggregate localHashAggregate);
+	public void visit(BatchExecLocalHashWindowAggregate localHashAggregate) {
+		visitInputs(localHashAggregate);
+	}
 
-	void visit(BatchExecLocalSortAggregate localSortAggregate);
+	public void visit(BatchExecLocalSortAggregate localSortAggregate) {
+		visitInputs(localSortAggregate);
+	}
 
-	void visit(BatchExecLocalSortWindowAggregate localSortAggregate);
+	public void visit(BatchExecLocalSortWindowAggregate localSortAggregate) {
+		visitInputs(localSortAggregate);
+	}
 
-	void visit(BatchExecSortWindowAggregate sortAggregate);
+	public void visit(BatchExecSortWindowAggregate sortAggregate) {
+		visitInputs(sortAggregate);
+	}
 
-	void visit(BatchExecOverAggregate overWindowAgg);
+	public void visit(BatchExecOverAggregate overWindowAgg) {
+		visitInputs(overWindowAgg);
+	}
 
-	void visit(BatchExecLimit limit);
+	public void visit(BatchExecLimit limit) {
+		visitInputs(limit);
+	}
 
-	void visit(BatchExecSort sort);
+	public void visit(BatchExecSort sort) {
+		visitInputs(sort);
+	}
 
-	void visit(BatchExecSortLimit sortLimit);
+	public void visit(BatchExecSortLimit sortLimit) {
+		visitInputs(sortLimit);
+	}
 
-	void visit(BatchExecRank rank);
+	public void visit(BatchExecRank rank) {
+		visitInputs(rank);
+	}
 
-	void visit(BatchExecUnion union);
+	public void visit(BatchExecUnion union) {
+		visitInputs(union);
+	}
 
-	void visit(BatchExecTemporalTableJoin joinTable);
+	public void visit(BatchExecTemporalTableJoin joinTable) {
+		visitInputs(joinTable);
+	}
 
-	void visit(BatchExecSink<?> sink);
+	public void visit(BatchExecSink<?> sink) {
+		visitInputs(sink);
+	}
+
+	protected void visitInputs(BatchExecNode<?> node) {
+		node.getInputNodes().forEach(n -> ((BatchExecNode<?>) n).accept(this));
+	}
 }

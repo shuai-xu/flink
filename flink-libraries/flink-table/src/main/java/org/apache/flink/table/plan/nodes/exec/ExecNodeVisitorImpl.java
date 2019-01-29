@@ -19,9 +19,15 @@
 package org.apache.flink.table.plan.nodes.exec;
 
 /**
- * Visitor pattern for traversing a dag of {@link ExecNode} objects.
+ * Implement of {@link ExecNodeVisitor}.
  */
-public interface ExecNodeVisitor {
+public class ExecNodeVisitorImpl implements ExecNodeVisitor {
 
-	void visit(ExecNode<?, ?> node);
+	public void visit(ExecNode<?, ?> node) {
+		visitInputs(node);
+	}
+
+	protected void visitInputs(ExecNode<?, ?> node) {
+		node.getInputNodes().forEach(n -> n.accept(this));
+	}
 }

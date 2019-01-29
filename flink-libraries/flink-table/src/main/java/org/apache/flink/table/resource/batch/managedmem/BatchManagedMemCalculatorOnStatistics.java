@@ -21,7 +21,7 @@ package org.apache.flink.table.resource.batch.managedmem;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor;
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitorImpl;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
@@ -56,7 +56,7 @@ import static org.apache.flink.table.util.NodeResourceUtil.SQL_RESOURCE_INFER_OP
 /**
  * Managed memory calculator on statistics for batch node.
  */
-public class BatchManagedMemCalculatorOnStatistics extends BatchExecNodeVisitor {
+public class BatchManagedMemCalculatorOnStatistics extends BatchExecNodeVisitorImpl {
 
 	private final Configuration tableConf;
 

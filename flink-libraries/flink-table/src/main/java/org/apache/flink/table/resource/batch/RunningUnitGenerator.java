@@ -23,7 +23,7 @@ import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor;
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitorImpl;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecBoundedStreamScan;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCalc;
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecCorrelate;
@@ -62,7 +62,7 @@ import java.util.Map;
 /**
  * Visit every batchExecNode to build runningUnits.
  */
-public class RunningUnitGenerator extends BatchExecNodeVisitor {
+public class RunningUnitGenerator extends BatchExecNodeVisitorImpl {
 
 	private final Map<BatchExecNode<?>, List<NodeStageExchangeInfo>> outputInfoMap = new LinkedHashMap<>();
 	private final List<NodeRunningUnit> runningUnits = new LinkedList<>();

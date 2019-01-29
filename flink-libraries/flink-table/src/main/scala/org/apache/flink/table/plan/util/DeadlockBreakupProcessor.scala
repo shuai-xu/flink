@@ -23,8 +23,8 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
-import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, ExecNodeVisitor}
+import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitorImpl
+import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, ExecNodeVisitorImpl}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.process.{DAGProcessContext, DAGProcessor}
 
@@ -102,7 +102,7 @@ class DeadlockBreakupProcessor extends DAGProcessor{
     * A reuse node has more than one output or is a [[BatchExecBoundedStreamScan]]
     * which [[DataStream]] object is held by different [[BatchExecBoundedStreamScan]]s.
     */
-  class ReuseNodeFinder extends ExecNodeVisitor {
+  class ReuseNodeFinder extends ExecNodeVisitorImpl {
     // map a node object to its visited times.
     // the visited times of a reused node is greater than one
     private val visitedTimes = Maps.newIdentityHashMap[ExecNode[_, _], Integer]()
@@ -145,7 +145,7 @@ class DeadlockBreakupProcessor extends DAGProcessor{
     }
   }
 
-  class DeadlockBreakupVisitor(finder: ReuseNodeFinder) extends BatchExecNodeVisitor {
+  class DeadlockBreakupVisitor(finder: ReuseNodeFinder) extends BatchExecNodeVisitorImpl {
 
     private def rewriteJoin(
         join: BatchExecJoinBase,
@@ -205,7 +205,7 @@ class DeadlockBreakupProcessor extends DAGProcessor{
       buildNode: ExecNode[_, _],
       finder: ReuseNodeFinder): Set[ExecNode[_, _]] = {
     val nodesInBuildSide = Sets.newIdentityHashSet[ExecNode[_, _]]()
-    buildNode.accept(new ExecNodeVisitor {
+    buildNode.accept(new ExecNodeVisitorImpl {
       override def visit(node: ExecNode[_, _]): Unit = {
         if (finder.isReusedNode(node)) {
           nodesInBuildSide.add(node)
@@ -254,7 +254,7 @@ class DeadlockBreakupProcessor extends DAGProcessor{
       return result.toList
     }
 
-    probeNode.accept(new ExecNodeVisitor {
+    probeNode.accept(new ExecNodeVisitorImpl {
       override def visit(node: ExecNode[_, _]): Unit = {
         stack.push(node)
         if (finder.isReusedNode(node) &&

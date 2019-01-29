@@ -18,7 +18,7 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.plan.nodes.calcite.Sink
-import org.apache.flink.table.plan.nodes.exec.{ExecNode, ExecNodeVisitor}
+import org.apache.flink.table.plan.nodes.exec.{ExecNode, ExecNodeVisitorImpl}
 
 import com.google.common.collect.{Maps, Sets}
 import org.apache.calcite.sql.SqlExplainLevel
@@ -93,7 +93,7 @@ object FlinkNodeOptUtil {
     // mapping node object to visited times
     val mapNodeToVisitedTimes = Maps.newIdentityHashMap[ExecNode[_, _], Int]()
     val sb = new StringBuilder()
-    val visitor = new ExecNodeVisitor {
+    val visitor = new ExecNodeVisitorImpl {
       override def visit(node: ExecNode[_, _]): Unit = {
         val visitedTimes = mapNodeToVisitedTimes.getOrDefault(node, 0) + 1
         mapNodeToVisitedTimes.put(node, visitedTimes)
@@ -160,7 +160,7 @@ object FlinkNodeOptUtil {
   /**
     * build reuse id in an ExecNode DAG.
     */
-  class ReuseInfoBuilder extends ExecNodeVisitor {
+  class ReuseInfoBuilder extends ExecNodeVisitorImpl {
     // visited node set
     private val visitedNodes = Sets.newIdentityHashSet[ExecNode[_, _]]()
     // mapping reuse node to its reuse id

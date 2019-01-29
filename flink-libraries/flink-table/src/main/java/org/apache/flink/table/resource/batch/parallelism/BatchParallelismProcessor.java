@@ -68,7 +68,7 @@ public class BatchParallelismProcessor implements DAGProcessor {
 		}
 	}
 
-	private BatchShuffleStageParallelismCalculator getShuffleStageParallelismCalculator(
+	protected BatchShuffleStageParallelismCalculator getShuffleStageParallelismCalculator(
 			Configuration tableConf,
 			NodeResourceUtil.InferMode inferMode) {
 		int envParallelism = tEnv.execEnv().getParallelism();
@@ -89,6 +89,10 @@ public class BatchParallelismProcessor implements DAGProcessor {
 			}
 		});
 		return rootNodes;
+	}
+
+	protected TableEnvironment gettEnv() {
+		return tEnv;
 	}
 
 }
