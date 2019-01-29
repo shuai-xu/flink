@@ -36,7 +36,6 @@ import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
-import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
@@ -94,7 +93,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				null,
 				HiveMetaStoreClient.class.getName(),
 				true);
-		} catch (MetaException e) {
+		} catch (Exception e) {
 			throw new FlinkHiveException("Failed to create Hive metastore client", e);
 		}
 	}
