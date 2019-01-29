@@ -55,6 +55,8 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 
 	private final boolean enableSlotTagMatching;
 
+	private final boolean enableSlotsConverging;
+
 	public DefaultSlotPoolFactory(
 			@Nonnull RpcService rpcService,
 			@Nonnull SchedulingStrategy schedulingStrategy,
@@ -62,7 +64,8 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 			@Nonnull Time rpcTimeout,
 			@Nonnull Time slotIdleTimeout,
 			@Nonnull Boolean enableSharedSlot,
-			boolean enableSlotTagMatching) {
+			boolean enableSlotTagMatching,
+			boolean enableSlotsConverging) {
 		this.rpcService = rpcService;
 		this.schedulingStrategy = schedulingStrategy;
 		this.clock = clock;
@@ -70,6 +73,7 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 		this.slotIdleTimeout = slotIdleTimeout;
 		this.enableSharedSlot = enableSharedSlot;
 		this.enableSlotTagMatching = enableSlotTagMatching;
+		this.enableSlotsConverging = enableSlotsConverging;
 	}
 
 	@Override
@@ -83,19 +87,26 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 			rpcTimeout,
 			slotIdleTimeout,
 			enableSharedSlot,
-			enableSlotTagMatching);
+			enableSlotTagMatching,
+			enableSlotsConverging);
 	}
 
 	public static DefaultSlotPoolFactory fromConfiguration(
 			@Nonnull Configuration configuration,
 			@Nonnull RpcService rpcService) {
+		return fromConfiguration(new SlotPoolConfiguration(configuration), rpcService);
+	}
 
+	public static DefaultSlotPoolFactory fromConfiguration(
+			@Nonnull SlotPoolConfiguration slotPoolConfiguration,
+			@Nonnull RpcService rpcService) {
+
+		final Configuration configuration = slotPoolConfiguration.getConfiguration();
 		final Time rpcTimeout = AkkaUtils.getTimeoutAsTime(configuration);
 		final Time slotIdleTimeout = Time.milliseconds(configuration.getLong(JobManagerOptions.SLOT_IDLE_TIMEOUT));
 
 		final SchedulingStrategy schedulingStrategy = selectSchedulingStrategy(configuration);
 		final Boolean enableSharedSlot = configuration.getBoolean(JobManagerOptions.SLOT_ENABLE_SHARED_SLOT);
-		final boolean enableSlotTagMatching = configuration.getBoolean(JobManagerOptions.SLOT_ENABLE_TAG_MATCHING);
 
 		return new DefaultSlotPoolFactory(
 			rpcService,
@@ -104,7 +115,8 @@ public class DefaultSlotPoolFactory implements SlotPoolFactory {
 			rpcTimeout,
 			slotIdleTimeout,
 			enableSharedSlot,
-			enableSlotTagMatching);
+			slotPoolConfiguration.isEnableSlotTagMatching(),
+			slotPoolConfiguration.isEnableSlotsConverging());
 	}
 
 	private static SchedulingStrategy selectSchedulingStrategy(Configuration configuration) {

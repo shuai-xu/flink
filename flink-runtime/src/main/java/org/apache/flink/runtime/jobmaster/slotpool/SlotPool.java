@@ -142,8 +142,9 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 	private Boolean enableSharedSlot;
 
-	private boolean enableSlotTagMatching;
+	private final boolean enableSlotTagMatching;
 
+	private final boolean enableSlotsConverging;
 	// ------------------------------------------------------------------------
 
 	@VisibleForTesting
@@ -156,6 +157,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			AkkaUtils.getDefaultTimeout(),
 			Time.milliseconds(JobManagerOptions.SLOT_IDLE_TIMEOUT.defaultValue()),
 			true,
+			false,
 			false);
 	}
 
@@ -176,6 +178,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			rpcTimeout,
 			idleSlotTimeout,
 			true,
+			false,
 			false);
 	}
 
@@ -187,7 +190,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			Time rpcTimeout,
 			Time idleSlotTimeout,
 			Boolean enableSharedSlot,
-			boolean enableSlotTagMatching) {
+			boolean enableSlotTagMatching,
+			boolean enableSlotsConverging) {
 
 		super(rpcService);
 
@@ -197,6 +201,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		this.rpcTimeout = checkNotNull(rpcTimeout);
 		this.idleSlotTimeout = checkNotNull(idleSlotTimeout);
 		this.enableSharedSlot = checkNotNull(enableSharedSlot);
+		this.enableSlotTagMatching = enableSlotTagMatching;
+		this.enableSlotsConverging = enableSlotsConverging;
 
 		this.registeredTaskManagers = new HashSet<>(16);
 		this.allocatedSlots = new AllocatedSlots();
@@ -1213,7 +1219,9 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 	@Nullable
 	private SlotAndLocality pollAndAllocateSlot(SlotRequestId slotRequestId, SlotProfile slotProfile) {
-		SlotAndLocality slotFromPool = availableSlots.poll(schedulingStrategy, slotProfile);
+		SlotAndLocality slotFromPool = enableSlotsConverging ?
+			availableSlots.pollSlotConvergedInTaskManagers(schedulingStrategy, slotProfile, allocatedSlots) :
+			availableSlots.poll(schedulingStrategy, slotProfile);
 
 		if (slotFromPool != null) {
 			allocatedSlots.add(slotRequestId, slotFromPool.getSlot());
@@ -1223,7 +1231,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 	}
 
 	private List<SlotAndLocality> pollAndAllocateSlots(List<SlotRequestId> slotRequestIds, List<SlotProfile> slotProfiles) {
-		List<SlotAndLocality> slotsFromPool = availableSlots.poll(slotProfiles);
+		List<SlotAndLocality> slotsFromPool = availableSlots.poll(slotProfiles, enableSlotsConverging, allocatedSlots);
 
 		for (int i = 0; i < slotRequestIds.size(); i++) {
 			if (slotsFromPool.get(i) != null) {
@@ -1884,9 +1892,62 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		}
 
 		/**
+		 * Poll a slot which matches the required resource profile. The polling tries to make the polled
+		 * slots to be converged in task managers, i.e. use up one task manager, then another.
+		 *
+		 * @param schedulingStrategy indicates how the slot matching will be conducted
+		 * @param slotProfile slot profile that specifies the requirements for the slot
+		 * @param allocatedSlots provides info about slots that are already allocated
+		 *
+		 * @return Slot which matches the resource profile, null if we can't find a match
+		 */
+		SlotAndLocality pollSlotConvergedInTaskManagers(
+			SchedulingStrategy schedulingStrategy,
+			SlotProfile slotProfile,
+			AllocatedSlots allocatedSlots) {
+
+			// fast path if no slots are available
+			if (availableSlots.isEmpty()) {
+				return null;
+			}
+
+			// Sort the task managers: those with more allocated slots go first, then are the ones with more slots
+			Stream<ResourceID> sortedTaskManagers = availableSlotsByTaskManager.keySet().stream().sorted(
+				(ResourceID o1, ResourceID o2) -> {
+					int allocatedNumber1 = allocatedSlots.getSlotsForTaskManager(o1).size();
+					int allocatedNumber2 = allocatedSlots.getSlotsForTaskManager(o2).size();
+					if (allocatedNumber1 > allocatedNumber2) {
+						return -1;
+					} else if (allocatedNumber1 < allocatedNumber2) {
+						return 1;
+					} else {
+						if (allocatedNumber1 > 0) {
+							return 0;
+						}
+
+						int availableNumber1 = availableSlotsByTaskManager.get(o1).size();
+						int availableNumber2 = availableSlotsByTaskManager.get(o2).size();
+						if (availableNumber1 > availableNumber2) {
+							return -1;
+						} else if (availableNumber1 < availableNumber2) {
+							return 1;
+						} else {
+							return 0;
+						}
+					}
+				});
+			Stream<SlotAndTimestamp> sortedCandidates = sortedTaskManagers.flatMap(
+				resourceID -> availableSlotsByTaskManager.get(resourceID).stream()).map(
+				allocatedSlot -> availableSlots.get(allocatedSlot.getAllocationId()));
+
+			return poll(schedulingStrategy, slotProfile, sortedCandidates);
+		}
+
+		/**
 		 * Poll a slot which matches the required resource profile. The polling tries to satisfy the
 		 * location preferences, by TaskManager and by host.
 		 *
+		 * @param schedulingStrategy indicates how the slot matching will be conducted
 		 * @param slotProfile slot profile that specifies the requirements for the slot
 		 *
 		 * @return Slot which matches the resource profile, null if we can't find a match
@@ -1898,13 +1959,21 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			}
 			Collection<SlotAndTimestamp> slotAndTimestamps = availableSlots.values();
 
+			return poll(schedulingStrategy, slotProfile, slotAndTimestamps.stream());
+		}
+
+		private SlotAndLocality poll(
+			SchedulingStrategy schedulingStrategy,
+			SlotProfile slotProfile,
+			Stream<SlotAndTimestamp> candidates) {
+
 			SlotAndLocality matchingSlotAndLocality = schedulingStrategy.findMatchWithLocality(
 				slotProfile,
-				slotAndTimestamps.stream(),
+				candidates,
 				SlotAndTimestamp::slot,
 				(SlotAndTimestamp slot) -> {
 					return slot.slot().getResourceProfile().isMatching(slotProfile.getResourceProfile()) &&
-							(!enableSlotTagMatching || slot.slot().getTags().equals(slotProfile.getTags()));
+						(!enableSlotTagMatching || slot.slot().getTags().equals(slotProfile.getTags()));
 				},
 				(SlotAndTimestamp slotAndTimestamp, Locality locality) -> {
 					AllocatedSlot slot = slotAndTimestamp.slot();
@@ -1927,16 +1996,26 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		 * slots by resource preferences.
 		 *
 		 * @param slotProfiles slot profiles that specifies the requirements for the slots
+		 * @param convergeSlots whether to converge slots in task managers
+		 * @param allocatedSlots provides info about slots that are already allocated
 		 *
 		 * @return Slots which matches the resource profiles, null if we can't find a match
 		 */
-		List<SlotAndLocality> poll(List<SlotProfile> slotProfiles) {
+		List<SlotAndLocality> poll(List<SlotProfile> slotProfiles, boolean convergeSlots, AllocatedSlots allocatedSlots) {
 			List<SlotAndLocality> matchingSlotAndLocalities = new ArrayList<>(slotProfiles.size());
 
 			// first fulfill the request by previous location.
 			for (int i = 0; i < slotProfiles.size(); i++) {
-				matchingSlotAndLocalities.add(i,
+				if (convergeSlots) {
+					matchingSlotAndLocalities.add(i,
+						pollSlotConvergedInTaskManagers(
+							PreviousAllocationSchedulingStrategy.getInstance(),
+							slotProfiles.get(i),
+							allocatedSlots));
+				} else {
+					matchingSlotAndLocalities.add(i,
 						poll(PreviousAllocationSchedulingStrategy.getInstance(), slotProfiles.get(i)));
+				}
 			}
 
 			// fulfill the request if still has available slots.
@@ -1946,8 +2025,16 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				}
 
 				if (matchingSlotAndLocalities.get(i) == null) {
-					matchingSlotAndLocalities.set(i,
+					if (convergeSlots) {
+						matchingSlotAndLocalities.set(i,
+							pollSlotConvergedInTaskManagers(
+								LocationPreferenceSchedulingStrategy.getInstance(),
+								slotProfiles.get(i),
+								allocatedSlots));
+					} else {
+						matchingSlotAndLocalities.set(i,
 							poll(LocationPreferenceSchedulingStrategy.getInstance(), slotProfiles.get(i)));
+					}
 				}
 			}
 			return matchingSlotAndLocalities;

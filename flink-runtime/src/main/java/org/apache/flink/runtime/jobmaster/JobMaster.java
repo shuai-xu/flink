@@ -1734,11 +1734,12 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 			ExecutionJobVertex oldEjv = oldVertices.get(jobVertexID);
 			if (oldEjv != null) {
 				ExecutionJobVertex newEjv = newVertices.get(jobVertexID);
-				int minParallelism = oldEjv.getParallelism() < newEjv.getParallelism() ?
-						oldEjv.getParallelism() : newEjv.getParallelism();
-				for (int i = 0; i < minParallelism; i++) {
-					newEjv.getTaskVertices()[i].setLatestPriorLocation(
+				if (oldEjv.getParallelism() == newEjv.getParallelism()) {
+					// inherit the previous location if the vertex parallelism is not changed
+					for (int i = 0; i < oldEjv.getParallelism(); i++) {
+						newEjv.getTaskVertices()[i].setLatestPriorLocation(
 							oldEjv.getTaskVertices()[i].getCurrentAssignedResourceLocation());
+					}
 				}
 			}
 		}

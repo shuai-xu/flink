@@ -162,6 +162,12 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 	/** Determines if a task fails or not if there is an error in writing its checkpoint data. Default: false */
 	private boolean failTaskOnCheckpointError = false;
 
+	/** Whether to consider slot tags when tries to match slots with requests. */
+	private boolean enableSlotTagMatching = false;
+
+	/** Whether to converge slots in task managers. */
+	private boolean enableSlotsConverging = false;
+
 	// ------------------------------- User code values --------------------------------------------
 
 	private GlobalJobParameters globalJobParameters;
@@ -1002,6 +1008,22 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 		Preconditions.checkArgument(tracingMetricsInterval > 0);
 		this.tracingMetricsInterval = tracingMetricsInterval;
 		return this;
+	}
+
+	public boolean isEnableSlotTagMatching() {
+		return enableSlotTagMatching;
+	}
+
+	public void setEnableSlotTagMatching(boolean enableSlotTagMatching) {
+		this.enableSlotTagMatching = enableSlotTagMatching;
+	}
+
+	public boolean isEnableSlotsConverging() {
+		return enableSlotsConverging;
+	}
+
+	public void setEnableSlotsConverging(boolean enableSlotsConverging) {
+		this.enableSlotsConverging = enableSlotsConverging;
 	}
 // ------------------------------ Utilities  ----------------------------------
 

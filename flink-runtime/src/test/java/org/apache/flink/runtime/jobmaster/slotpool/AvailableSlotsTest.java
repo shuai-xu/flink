@@ -23,6 +23,7 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
+import org.apache.flink.runtime.jobmaster.SlotRequestId;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.util.TestLogger;
 
@@ -102,6 +103,97 @@ public class AvailableSlotsTest extends TestLogger {
 		assertEquals(0, availableSlots.size());
 		assertFalse(availableSlots.contains(slot1.getAllocationId()));
 		assertFalse(availableSlots.containsTaskManager(resource1));
+	}
+
+	@Test
+	public void testPollSlotConvergedInTaskManagers() {
+		SlotPool.AvailableSlots availableSlots = new SlotPool.AvailableSlots();
+		SlotPool.AllocatedSlots allocatedSlots = new SlotPool.AllocatedSlots();
+
+		final ResourceID resource1 = new ResourceID("resource1");
+		final ResourceID resource2 = new ResourceID("resource2");
+		final ResourceID resource3 = new ResourceID("resource3");
+		final ResourceID resource4 = new ResourceID("resource4");
+
+		final AllocatedSlot slot11 = createAllocatedSlot(resource1);
+		final AllocatedSlot slot12 = createAllocatedSlot(resource1);
+		final AllocatedSlot slot13 = createAllocatedSlot(resource1);
+
+		final AllocatedSlot slot21 = createAllocatedSlot(resource2);
+		final AllocatedSlot slot22 = createAllocatedSlot(resource2);
+		final AllocatedSlot slot23 = createAllocatedSlot(resource2);
+
+		final AllocatedSlot slot31 = createAllocatedSlot(resource3);
+		final AllocatedSlot slot32 = createAllocatedSlot(resource3);
+		final AllocatedSlot slot33 = createAllocatedSlot(resource3);
+
+		final AllocatedSlot slot41 = createAllocatedSlot(resource4);
+		final AllocatedSlot slot42 = createAllocatedSlot(resource4);
+		final AllocatedSlot slot43 = createAllocatedSlot(resource4);
+
+		availableSlots.add(slot11, 1L);
+		availableSlots.add(slot12, 1L);
+		availableSlots.add(slot13, 1L);
+
+		availableSlots.add(slot21, 1L);
+		allocatedSlots.add(new SlotRequestId(), slot22);
+		allocatedSlots.add(new SlotRequestId(), slot23);
+
+		availableSlots.add(slot31, 1L);
+		availableSlots.add(slot32, 1L);
+
+		availableSlots.add(slot41, 1L);
+		allocatedSlots.add(new SlotRequestId(), slot42);
+
+		AllocatedSlot polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots).getSlot();
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		assertEquals(slot21, polledSlot);
+
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots).getSlot();
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		assertEquals(slot41, polledSlot);
+
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots).getSlot();
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		assertEquals(resource1, polledSlot.getTaskManagerId());
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots).getSlot();
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		assertEquals(resource1, polledSlot.getTaskManagerId());
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots).getSlot();
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		assertEquals(resource1, polledSlot.getTaskManagerId());
+
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots).getSlot();
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots).getSlot();
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		assertEquals(resource3, polledSlot.getTaskManagerId());
+
+		assertNull(availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(DEFAULT_TESTING_PROFILE),
+			allocatedSlots));
 	}
 
 	static AllocatedSlot createAllocatedSlot(final ResourceID resourceId) {

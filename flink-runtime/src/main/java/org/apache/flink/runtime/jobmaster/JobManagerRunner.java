@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.jobmaster;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
@@ -36,6 +37,7 @@ import org.apache.flink.runtime.jobmanager.OnCompletionActions;
 import org.apache.flink.runtime.jobmanager.SubmittedJobGraphStore;
 import org.apache.flink.runtime.jobmaster.factories.JobManagerJobMetricGroupFactory;
 import org.apache.flink.runtime.jobmaster.slotpool.DefaultSlotPoolFactory;
+import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolConfiguration;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolFactory;
 import org.apache.flink.runtime.leaderelection.LeaderContender;
 import org.apache.flink.runtime.leaderelection.LeaderElectionService;
@@ -160,8 +162,13 @@ public class JobManagerRunner implements LeaderContender, OnCompletionActions, A
 
 			this.leaderGatewayFuture = new CompletableFuture<>();
 
+			ExecutionConfig executionConfig = jobGraph.getSerializedExecutionConfig().deserializeValue(userCodeLoader);
+
+			final SlotPoolConfiguration slotPoolConfiguration = new SlotPoolConfiguration(configuration);
+			slotPoolConfiguration.setEnableSlotTagMatching(executionConfig.isEnableSlotTagMatching());
+			slotPoolConfiguration.setEnableSlotsConverging(executionConfig.isEnableSlotsConverging());
 			final SlotPoolFactory slotPoolFactory = DefaultSlotPoolFactory.fromConfiguration(
-				configuration,
+				slotPoolConfiguration,
 				rpcService);
 
 			// now start the JobManager
