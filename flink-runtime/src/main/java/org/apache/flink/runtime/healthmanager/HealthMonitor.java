@@ -42,6 +42,7 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDe
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStableDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStuckDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
@@ -89,7 +90,8 @@ public class HealthMonitor {
 						+ FailoverDetector.class.getCanonicalName() + ","
 						+ BackPressureDetector.class.getCanonicalName() + ","
 						+ ExceedMaxResourceLimitDetector.class.getCanonicalName() + ","
-						+ JobStableDetector.class.getCanonicalName());
+						+ JobStableDetector.class.getCanonicalName() + ","
+						+ JobStuckDetector.class.getCanonicalName());
 
 	public static final ConfigOption<String> RESOLVER_CLASSES =
 			ConfigOptions.key("healthmonitor.resolver.classes")

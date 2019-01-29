@@ -22,6 +22,9 @@ package org.apache.flink.runtime.healthmanager.plugins.utils;
  * Metric names used in plugins.
  */
 public class MetricNames {
+	public static final String SOURCE_PARTITION_COUNT = "partitionCount";
+	public static final String SOURCE_PARTITION_LATENCY_COUNT = "partitionLatency.count";
+	public static final String SOURCE_PARTITION_LATENCY_SUM = "partitionLatency.sum";
 	public static final String SOURCE_LATENCY_COUNT = "sourceLatency.count";
 	public static final String SOURCE_LATENCY_SUM = "sourceLatency.sum";
 	public static final String TASK_LATENCY_COUNT = "taskLatency.count";
