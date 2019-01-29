@@ -126,6 +126,24 @@ catalogs:
         hive.metastore.uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
 {% endhighlight %}
 
+To have Flink successfully connect to your Hive metastore, make sure the `hive.metastore.uris` config should match the same config in your `hive-site.xml` config file:
+
+{% highlight yaml %}
+<configuration>
+
+   ...
+
+   <property>
+       <name>hive.metastore.uris</name>
+       <value>thrift://<ip1>:<port1>,thrift://<ip2>:<port2></value>
+       <description>IP address (or fully-qualified domain name) and port of the metastore host</description>
+   </property>
+
+   ...
+</configuration>
+{% endhighlight %}
+
+
 Note that, if users are using Flink yarn-session mode, you'll get the sessionId as `\${appId}`. Set it in `yid: ${appId}` of `deployment` section in the `conf/sql-client-defaults.yaml` file
 
 If users are using Flink local mode, no other config is required.
