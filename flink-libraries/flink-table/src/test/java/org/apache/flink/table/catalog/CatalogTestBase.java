@@ -30,6 +30,7 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TimestampType;
+import org.apache.flink.table.catalog.config.CatalogDatabaseConfig;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -73,6 +74,8 @@ public abstract class CatalogTestBase {
 	protected final ObjectPath path3 = new ObjectPath(db1, t2);
 	protected final ObjectPath nonExistDbPath = ObjectPath.fromString("non.exist");
 	protected final ObjectPath nonExistTablePath = ObjectPath.fromString("db1.nonexist");
+
+	protected static final String TEST_COMMENT = "test comment";
 
 	protected static ReadableWritableCatalog catalog;
 
@@ -899,12 +902,14 @@ public abstract class CatalogTestBase {
 	protected CatalogDatabase createDb() {
 		return new CatalogDatabase(new HashMap<String, String>() {{
 			put("k1", "v1");
+			put(CatalogDatabaseConfig.DATABASE_COMMENT, TEST_COMMENT);
 		}});
 	}
 
 	protected CatalogDatabase createAnotherDb() {
 		return new CatalogDatabase(new HashMap<String, String>() {{
 			put("k2", "v2");
+			put(CatalogDatabaseConfig.DATABASE_COMMENT, TEST_COMMENT);
 		}});
 	}
 

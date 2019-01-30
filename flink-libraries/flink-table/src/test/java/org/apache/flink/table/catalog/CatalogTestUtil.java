@@ -36,12 +36,14 @@ import java.util.Map;
 
 import scala.Option;
 
+import static org.apache.flink.table.catalog.CatalogTestBase.TEST_COMMENT;
 import static org.junit.Assert.assertEquals;
 
 /**
  * Test util for catalogs.
  */
 public class CatalogTestUtil {
+
 	public static List<Row> getTestData() {
 		List<Row> data = new ArrayList<>();
 		data.add(toRow(new Integer(1), new Integer(2)));
@@ -122,7 +124,7 @@ public class CatalogTestUtil {
 			tableProperties,
 			new RichTableSchema(schema.getFieldNames(), schema.getFieldTypes()),
 			stats,
-			null,
+			TEST_COMMENT,
 			partitionCols,
 			partitionCols != null && !partitionCols.isEmpty(),
 			null,
@@ -140,6 +142,7 @@ public class CatalogTestUtil {
 		assertEquals(t1.isPartitioned(), t2.isPartitioned());
 		assertEquals(t1.getPartitionColumnNames(), t2.getPartitionColumnNames());
 		assertEquals(t1.isStreaming(), t2.isStreaming());
+		assertEquals(t1.getComment(), t2.getComment());
 	}
 
 	protected static void compare(CatalogView v1, CatalogView v2) {
