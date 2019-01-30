@@ -1200,6 +1200,9 @@ under the License.
 						<!-- PyCharm -->
 						<exclude>**/.idea/**</exclude>
 
+						<exclude>flink-python-api/lib/py4j-LICENSE.txt</exclude>
+						<exclude>flink-python-api/src/main/python/pyflink/cloudpickle.py</exclude>
+
 						<!--Stability test module -->
 					</excludes>
 				</configuration>
