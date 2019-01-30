@@ -33,6 +33,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.HashMap;
 
+import static org.apache.flink.table.catalog.CatalogTestUtil.compare;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -91,7 +92,7 @@ public class HiveDataTypeTest {
 		catalog.createTable(tablePath, table, true);
 		CatalogTable table1 = catalog.getTable(tablePath);
 
-		assertTrue(table.equals(table1));
+		compare(table, table1);
 	}
 
 	@Test

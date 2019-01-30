@@ -133,7 +133,7 @@ public class CatalogTestUtil {
 			false);
 	}
 
-	protected static void compare(CatalogTable t1, CatalogTable t2) {
+	public static void compare(CatalogTable t1, CatalogTable t2) {
 		assertEquals(t1.getTableType(), t2.getTableType());
 		assertEquals(t1.getTableSchema(), t2.getTableSchema());
 		assertEquals(t1.getTableStats(), t2.getTableStats());
