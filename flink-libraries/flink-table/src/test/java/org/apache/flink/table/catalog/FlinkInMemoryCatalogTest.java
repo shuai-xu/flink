@@ -19,10 +19,6 @@
 package org.apache.flink.table.catalog;
 
 import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for FlinkInMemoryCatalog.
@@ -37,18 +33,5 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 	@Before
 	public void setUp() {
 		catalog = new FlinkInMemoryCatalog(db1);
-	}
-
-	@Test
-	public void testRenameDb() {
-		CatalogDatabase schema = createDb();
-		catalog.createDatabase(db1, schema, false);
-
-		assertTrue(catalog.listDatabases().contains(db1));
-
-		catalog.renameDatabase(db1, db2, false);
-
-		assertTrue(catalog.listDatabases().contains(db2));
-		assertFalse(catalog.listDatabases().contains(db1));
 	}
 }

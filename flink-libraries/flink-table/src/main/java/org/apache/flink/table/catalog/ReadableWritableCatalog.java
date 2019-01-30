@@ -73,19 +73,6 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	void alterDatabase(String dbName, CatalogDatabase newDatabase, boolean ignoreIfNotExists)
 		throws DatabaseNotExistException;
 
-	/**
-	 * Renames an existing database.
-	 *
-	 * @param dbName        Name of the database to modify.
-	 * @param newDbName     New name of the database.
-	 * @param ignoreIfNotExists Flag to specify behavior if the database does not exist:
-	 *                          if set to false, throw an exception,
-	 *                          if set to true, nothing happens.
-	 * @throws DatabaseNotExistException thrown if the database does not exist in the catalog
-	 */
-	void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists)
-		throws DatabaseNotExistException;
-
 	// ------ tables and views ------
 
 	/**

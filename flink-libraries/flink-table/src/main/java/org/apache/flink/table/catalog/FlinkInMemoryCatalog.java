@@ -277,15 +277,6 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		if (dbExists(dbName)) {
-			databases.put(newDbName, databases.remove(dbName));
-		} else if (!ignoreIfNotExists) {
-			throw new DatabaseNotExistException(catalogName, dbName);
-		}
-	}
-
-	@Override
 	public List<String> listDatabases() {
 		return new ArrayList<>(databases.keySet());
 	}

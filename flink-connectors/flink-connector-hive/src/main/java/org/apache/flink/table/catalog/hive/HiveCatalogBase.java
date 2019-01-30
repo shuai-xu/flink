@@ -269,12 +269,6 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		// Hive metastore client doesn't support renaming yet
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
 	public CatalogDatabase getDatabase(String dbName) throws DatabaseNotExistException {
 		Database hiveDb;
 

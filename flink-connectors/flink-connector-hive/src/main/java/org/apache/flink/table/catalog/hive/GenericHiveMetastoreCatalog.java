@@ -196,11 +196,6 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 	}
 
 	@Override
-	public void renameDatabase(String dbName, String newDbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
 	public void dropDatabase(String dbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		inMemoryCatalog.dropDatabase(dbName, ignoreIfNotExists);
 		super.dropDatabase(dbName, ignoreIfNotExists);
