@@ -23,8 +23,9 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.catalog.CatalogTable
 import org.apache.flink.table.util.TableTestBase
-import org.junit.Test
+import org.junit.{Ignore, Test}
 
+@Ignore("BLINK-18757509")
 class TableRegisterTest extends TableTestBase {
 
   @Test

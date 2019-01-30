@@ -34,12 +34,11 @@ import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableList
 import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.{Column, TableException, TableSchema}
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-import org.apache.flink.table.plan.nodes.calcite.{LogicalLastRow, LogicalWatermarkAssigner}
+import org.apache.flink.table.plan.nodes.calcite.LogicalWatermarkAssigner
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.sources.TableSourceUtil
 import org.apache.flink.table.api.types.{DataType, DataTypes, GenericType, TypeInfoWrappedDataType}
@@ -104,16 +103,6 @@ class CatalogTableToStreamTableSourceRule
         newRel,
         catalogTable.table.getRowTimeField,
         catalogTable.table.getWatermarkOffset)
-    }
-
-    // transfer to a update stream when primary key specified.
-    if (catalogTable.table.getTableSchema.getPrimaryKeys != null
-        && !catalogTable.table.getTableSchema.getPrimaryKeys.isEmpty) {
-      newRel = new LogicalLastRow(
-        newRel.getCluster,
-        newRel.getTraitSet,
-        newRel,
-        catalogTable.table.getTableSchema.getPrimaryKeys.toList)
     }
 
     call.transformTo(newRel)
