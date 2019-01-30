@@ -157,6 +157,8 @@ Mode "embedded" submits Flink jobs from the local machine.
                                            multiple times.
      -s,--session <session identifier>     The identifier for a session.
                                            'default' is the default identifier.
+     -yid,--yarnapplicationId <yarn session id>
+                                           Attach to running YARN session
 {% endhighlight %}
 
 {% top %}
