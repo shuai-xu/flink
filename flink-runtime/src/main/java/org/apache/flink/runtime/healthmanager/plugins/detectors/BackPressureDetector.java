@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexBackPressure;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ public class BackPressureDetector implements Detector {
 
 	private JobID jobID;
 	private MetricProvider metricProvider;
+	private HealthMonitor healthMonitor;
 
 	private long checkInterval;
 	private double threshold;
@@ -70,6 +72,7 @@ public class BackPressureDetector implements Detector {
 	@Override
 	public void open(HealthMonitor monitor) {
 		jobID = monitor.getJobID();
+		healthMonitor = monitor;
 		metricProvider = monitor.getMetricProvider();
 
 		checkInterval = monitor.getConfig().getLong(BACK_PRESSURE_CHECK_INTERVAL);
@@ -112,15 +115,12 @@ public class BackPressureDetector implements Detector {
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
 
-		long now = System.currentTimeMillis();
-
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
 		for (JobVertexID vertexId : waitOutputCountRangeSubs.keySet()) {
 			TaskMetricSubscription waitOutputCountRangeSub = waitOutputCountRangeSubs.get(vertexId);
 			TaskMetricSubscription waitOutputSumRangeSub = waitOutputSumRangeSubs.get(vertexId);
 
-			if (waitOutputCountRangeSub.getValue() == null || now - waitOutputCountRangeSub.getValue().f0 > checkInterval * 2 ||
-				waitOutputSumRangeSub.getValue() == null || now - waitOutputSumRangeSub.getValue().f0 > checkInterval * 2) {
+			if (!MetricUtils.validateTaskMetric(healthMonitor, checkInterval * 2, waitOutputCountRangeSub, waitOutputSumRangeSub)) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}

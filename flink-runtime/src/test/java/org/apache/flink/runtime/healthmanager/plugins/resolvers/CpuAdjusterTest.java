@@ -36,6 +36,8 @@ import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -228,22 +230,34 @@ public class CpuAdjusterTest {
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
-		long now = System.currentTimeMillis();
-		Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> usage2 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> capacity1 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> capacity2 = new HashMap<>();
-		Map<String, Tuple2<Long, Double>> capacity3 = new HashMap<>();
-		usage1.put("tmId", Tuple2.of(now, 1.0));
-		usage2.put("tmId", Tuple2.of(now, 0.5));
-		capacity1.put("tmId", Tuple2.of(now, 4.0));
-		capacity2.put("tmId", Tuple2.of(now, 2.0));
-		capacity3.put("tmId", Tuple2.of(now, 1.0));
-
 		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
 		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(usageSub.getValue()).thenReturn(usage1).thenReturn(usage2);
-		Mockito.when(capacitySub.getValue()).thenReturn(capacity1).thenReturn(capacity2).thenReturn(capacity3);
+		Mockito.when(usageSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			double[] values = new double[]{1, 0.5};
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				callCount++;
+				Map<String, Tuple2<Long, Double>> usage = new HashMap<>();
+				usage.put("tmId", Tuple2.of(now, values[callCount < values.length ? callCount - 1 : values.length - 1]));
+				return usage;
+			}
+		});
+		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			double[] values = new double[]{4, 2, 1};
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				callCount++;
+				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
+				capacity.put("tmId", Tuple2.of(now, values[callCount < values.length ? callCount - 1 : values.length - 1]));
+				return capacity;
+			}
+		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
 			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))

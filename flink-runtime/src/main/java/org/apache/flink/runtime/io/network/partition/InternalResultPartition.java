@@ -587,12 +587,12 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	public void setMetricGroup(TaskIOMetricGroup metrics, boolean enableTracingMetrics, int tracingMetricsInterval) {
 		super.setMetricGroup(metrics, enableTracingMetrics, tracingMetricsInterval);
 
+		this.numRecordsSent = metrics.getNumRecordsSent();
+
 		this.enableTracingMetrics = enableTracingMetrics;
 		this.tracingMetricsInterval = tracingMetricsInterval;
-
 		if (enableTracingMetrics) {
 			this.nsWaitBufferTime = metrics.getNsWaitBufferTime();
-			numRecordsSent = metrics.getNumRecordsSent();
 		}
 	}
 

@@ -22,7 +22,6 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
-import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
@@ -30,6 +29,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayIncreasing;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public class DelayIncreasingDetector implements Detector {
 		ConfigOptions.key("healthmonitor.delay-increasing.threshold.msps").defaultValue(0L);
 
 	private JobID jobID;
-	private RestServerClient restServerClient;
+	private HealthMonitor healthMonitor;
 	private MetricProvider metricProvider;
 
 	private long delayIncreasingCheckInterval;
@@ -67,8 +67,8 @@ public class DelayIncreasingDetector implements Detector {
 
 	@Override
 	public void open(HealthMonitor monitor) {
+		healthMonitor = monitor;
 		jobID = monitor.getJobID();
-		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
 		delayIncreasingCheckInterval = monitor.getConfig().getLong(DELAY_INCREASING_CHECK_INTERVAL);
@@ -99,13 +99,11 @@ public class DelayIncreasingDetector implements Detector {
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
 
-		long now = System.currentTimeMillis();
-
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
 		for (JobVertexID vertexId : delayRateSubs.keySet()) {
 			TaskMetricSubscription delayRateSub = delayRateSubs.get(vertexId);
 
-			if (delayRateSub.getValue() == null || now - delayRateSub.getValue().f0 > delayIncreasingCheckInterval * 2) {
+			if (!MetricUtils.validateTaskMetric(healthMonitor, delayIncreasingCheckInterval * 2, delayRateSub)) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}

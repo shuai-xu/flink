@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
@@ -118,7 +119,7 @@ public class ParallelismScalerTest {
 		Mockito.when(v1LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 1000.0));
 
 		TaskMetricSubscription v1LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 2.0e9 * 60));
+		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 2.0e9));
 
 		TaskMetricSubscription v1WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
@@ -127,7 +128,7 @@ public class ParallelismScalerTest {
 		Mockito.when(v1WaitOutputSumRange.getValue()).thenReturn(new Tuple2<>(now, 0.0));
 
 		TaskMetricSubscription v1Delay = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1Delay.getValue()).thenReturn(new Tuple2<>(now, 10 * 60 * 1000.0));
+		Mockito.when(v1Delay.getValue()).thenReturn(new Tuple2<>(now, 11 * 60 * 1000.0));
 
 		TaskMetricSubscription v1DelayRate = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1DelayRate.getValue()).thenReturn(new Tuple2<>(now, 10.0)).thenReturn(new Tuple2<>(now, 10.0)).thenReturn(new Tuple2<>(now, 10.0))
@@ -145,7 +146,7 @@ public class ParallelismScalerTest {
 		Mockito.when(v2LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
 		TaskMetricSubscription v2LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9 * 60));
+		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
 
 		TaskMetricSubscription v2WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
@@ -190,6 +191,8 @@ public class ParallelismScalerTest {
 			executorService,
 			new Configuration()
 		);
+
+		Whitebox.setInternalState(monitor, "lastExecution", 0);
 
 		monitor.start();
 
@@ -267,7 +270,7 @@ public class ParallelismScalerTest {
 		Mockito.when(v1LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 1000.0));
 
 		TaskMetricSubscription v1LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 2.0e9 * 60));
+		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 2.0e9));
 
 		TaskMetricSubscription v1WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
@@ -294,7 +297,7 @@ public class ParallelismScalerTest {
 		Mockito.when(v2LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
 		TaskMetricSubscription v2LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9 * 60));
+		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
 
 		TaskMetricSubscription v2WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
@@ -339,6 +342,8 @@ public class ParallelismScalerTest {
 			executorService,
 			new Configuration()
 		);
+
+		Whitebox.setInternalState(monitor, "lastExecution", 0);
 
 		monitor.start();
 
@@ -479,8 +484,6 @@ public class ParallelismScalerTest {
 			4, 4, new ResourceSpec.Builder().build(), Lists.newArrayList(1, 2));
 		RestServerClient.VertexConfig vertex2Config1 = new RestServerClient.VertexConfig(
 			4, 4, new ResourceSpec.Builder().build(), Lists.newArrayList(3, 4));
-		RestServerClient.VertexConfig vertex3Config1 = new RestServerClient.VertexConfig(
-			1, 4, new ResourceSpec.Builder().build(), Lists.newArrayList(5));
 		vertexConfigs1.put(vertex1, vertex1Config1);
 		vertexConfigs1.put(vertex2, vertex2Config1);
 
@@ -499,6 +502,7 @@ public class ParallelismScalerTest {
 		inputNodes.put(vertex2, Arrays.asList(Tuple2.of(vertex1, "FORWARD")));
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
+			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
@@ -520,7 +524,7 @@ public class ParallelismScalerTest {
 		Mockito.when(v1LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 1000.0));
 
 		TaskMetricSubscription v1LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 2.0e9 * 60));
+		Mockito.when(v1LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 2.0e9));
 
 		TaskMetricSubscription v1WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v1WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
@@ -543,7 +547,7 @@ public class ParallelismScalerTest {
 		Mockito.when(v2LatencyCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
 
 		TaskMetricSubscription v2LatencySumRange = Mockito.mock(TaskMetricSubscription.class);
-		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9 * 60));
+		Mockito.when(v2LatencySumRange.getValue()).thenReturn(new Tuple2<>(now, 1.0e9));
 
 		TaskMetricSubscription v2WaitOutputCountRange = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(v2WaitOutputCountRange.getValue()).thenReturn(new Tuple2<>(now, 2000.0));
@@ -593,6 +597,8 @@ public class ParallelismScalerTest {
 		);
 
 		monitor.start();
+
+		Whitebox.setInternalState(monitor, "lastExecution", 0);
 
 		Thread.sleep(10000);
 

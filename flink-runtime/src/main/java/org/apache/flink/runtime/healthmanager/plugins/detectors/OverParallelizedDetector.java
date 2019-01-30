@@ -31,6 +31,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -71,7 +72,7 @@ public class OverParallelizedDetector implements Detector {
 	private Map<JobVertexID, TaskMetricSubscription> sourcePartitionLatencySumRangeSubs;
 	private Map<JobVertexID, TaskMetricSubscription> latencyCountRangeSubs;
 	private Map<JobVertexID, TaskMetricSubscription> latencySumRangeSubs;
-	private Map<JobVertexID, TaskMetricSubscription> inputCountSubs;
+	private Map<JobVertexID, TaskMetricSubscription> inputTpsSubs;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -87,7 +88,7 @@ public class OverParallelizedDetector implements Detector {
 		sourcePartitionLatencySumRangeSubs = new HashMap<>();
 		latencyCountRangeSubs = new HashMap<>();
 		latencySumRangeSubs = new HashMap<>();
-		inputCountSubs = new HashMap<>();
+		inputTpsSubs = new HashMap<>();
 
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
@@ -101,7 +102,7 @@ public class OverParallelizedDetector implements Detector {
 
 			TaskMetricSubscription inputTpsSub = metricProvider.subscribeTaskMetric(
 				jobID, vertexId, MetricNames.TASK_INPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE);
-			inputCountSubs.put(vertexId, inputTpsSub);
+			inputTpsSubs.put(vertexId, inputTpsSub);
 
 			// source latency
 			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
@@ -137,8 +138,8 @@ public class OverParallelizedDetector implements Detector {
 			}
 		}
 
-		if (inputCountSubs != null) {
-			for (TaskMetricSubscription sub : inputCountSubs.values()) {
+		if (inputTpsSubs != null) {
+			for (TaskMetricSubscription sub : inputTpsSubs.values()) {
 				metricProvider.unsubscribe(sub);
 			}
 		}
@@ -180,30 +181,18 @@ public class OverParallelizedDetector implements Detector {
 			TaskMetricSubscription sourcePartitionLatencySumRangeSub = sourcePartitionLatencySumRangeSubs.get(vertexId);
 			TaskMetricSubscription latencyCountRangeSub = latencyCountRangeSubs.get(vertexId);
 			TaskMetricSubscription latencySumRangeSub = latencySumRangeSubs.get(vertexId);
-			TaskMetricSubscription inputCountSub = inputCountSubs.get(vertexId);
+			TaskMetricSubscription inputTpsSub = inputTpsSubs.get(vertexId);
 
-			if (latencyCountRangeSub.getValue() == null || now - latencyCountRangeSub.getValue().f0 > checkInterval * 2 ||
-				latencySumRangeSub.getValue() == null || now - latencySumRangeSub.getValue().f0 > checkInterval * 2 ||
-				inputCountSub.getValue() == null || now - inputCountSub.getValue().f0 > checkInterval * 2 ||
-					inputCountSub.getValue().f1 < 0) {
+			if (!MetricUtils.validateTaskMetric(monitor, checkInterval * 2,
+					latencyCountRangeSub, latencySumRangeSub, inputTpsSub)) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}
 
 			boolean isParallelReader = false;
 			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
-				if (sourcePartitionCountSub.getValue() == null ||
-					now - sourcePartitionCountSub.getValue().f0 > checkInterval * 2 ||
-					sourcePartitionCountSub.getValue().f1 <= 0.0 ||
-					sourcePartitionLatencyCountRangeSub.getValue() == null ||
-					now - sourcePartitionLatencyCountRangeSub.getValue().f0 > checkInterval * 2 ||
-					sourcePartitionLatencyCountRangeSub.getValue().f1 <= 0.0 ||
-					sourcePartitionLatencySumRangeSub.getValue() == null ||
-					now - sourcePartitionLatencySumRangeSub.getValue().f0 > checkInterval * 2 ||
-					sourcePartitionLatencySumRangeSub.getValue().f1 <= 0.0) {
-				} else {
-					isParallelReader = true;
-				}
+				isParallelReader = MetricUtils.validateTaskMetric(monitor, checkInterval * 2,
+						sourcePartitionCountSub, sourcePartitionLatencyCountRangeSub, sourcePartitionLatencySumRangeSub) && sourcePartitionCountSub.getValue().f1 > 0;
 				LOGGER.debug("Treat vertex {} as {} reader.", vertexId, isParallelReader ? "parallel" : "non-parallel");
 				LOGGER.debug("source partition count " + sourcePartitionCountSub.getValue()
 					+ " source partition latency count range " + sourcePartitionLatencyCountRangeSub.getValue()
@@ -214,7 +203,7 @@ public class OverParallelizedDetector implements Detector {
 			double taskLatencyCount = latencyCountRangeSub.getValue().f1;
 			double taskLatencySum = latencySumRangeSub.getValue().f1;
 			double taskLatency = taskLatencyCount <= 0.0 ? 0.0 : taskLatencySum / taskLatencyCount / 1.0e9;
-			double inputTps = inputCountSub.getValue().f1 * 1000 / checkInterval;
+			double inputTps = inputTpsSub.getValue().f1;
 
 			double workload;
 			if (isParallelReader) {

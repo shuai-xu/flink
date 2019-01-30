@@ -29,15 +29,11 @@ public class MetricNames {
 	public static final String SOURCE_LATENCY_SUM = "sourceLatency.sum";
 	public static final String TASK_LATENCY_COUNT = "taskLatency.count";
 	public static final String TASK_LATENCY_SUM = "taskLatency.sum";
-	public static final String TASK_INPUT_TPS = "numRecordsInPerSecond";
 	public static final String TASK_INPUT_COUNT = "numRecordsIn";
-	public static final String TASK_OUTPUT_TPS = "numRecordsOutPerSecond";
-	public static final String TASK_OUTPUT_COUNT = "numRecordsOut";
+	public static final String TASK_OUTPUT_COUNT = "numRecordsSent";
 	public static final String WAIT_OUTPUT_COUNT = "waitOutput.count";
 	public static final String WAIT_OUTPUT_SUM = "waitOutput.sum";
-	public static final String WAIT_OUTPUT_AVG = "waitOutput.avg";
 
-	public static final String SOURCE_INPUT_TPS = "tps";
 	public static final String SOURCE_DELAY = "fetched_delay";
 
 }

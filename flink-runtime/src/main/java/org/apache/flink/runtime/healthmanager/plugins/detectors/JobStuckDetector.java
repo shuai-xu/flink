@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStuck;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -40,8 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_INPUT_TPS;
-import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_INPUT_TPS;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.TASK_INPUT_COUNT;
 
 /**
  * JobStuckDetector detects stuck of a job.
@@ -55,6 +55,7 @@ public class JobStuckDetector implements Detector {
 		ConfigOptions.key("healthmonitor.job-stuck.interval.ms").defaultValue(5 * 60 * 1000L);
 
 	private JobID jobID;
+	private HealthMonitor healthMonitor;
 	private MetricProvider metricProvider;
 	private long checkInterval;
 
@@ -62,6 +63,7 @@ public class JobStuckDetector implements Detector {
 
 	@Override
 	public void open(HealthMonitor monitor) {
+		healthMonitor = monitor;
 		jobID = monitor.getJobID();
 		metricProvider = monitor.getMetricProvider();
 		checkInterval = monitor.getConfig().getLong(JOB_STUCK_CHECK_INTERVAL);
@@ -69,13 +71,8 @@ public class JobStuckDetector implements Detector {
 		inputTpsSubs = new HashMap<>();
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
-			if (jobConfig.getInputNodes().get(vertexId).isEmpty()) {
-				inputTpsSubs.put(vertexId, metricProvider.subscribeTaskMetric(
-					jobID, vertexId, SOURCE_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG));
-			} else {
-				inputTpsSubs.put(vertexId, metricProvider.subscribeTaskMetric(
-					jobID, vertexId, TASK_INPUT_TPS, MetricAggType.SUM, checkInterval, TimelineAggType.AVG));
-			}
+			inputTpsSubs.put(vertexId, metricProvider.subscribeTaskMetric(
+					jobID, vertexId, TASK_INPUT_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RATE));
 		}
 	}
 
@@ -94,13 +91,11 @@ public class JobStuckDetector implements Detector {
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
 
-		long now = System.currentTimeMillis();
-
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
 		for (JobVertexID vertexId : inputTpsSubs.keySet()) {
 			TaskMetricSubscription inputSub = inputTpsSubs.get(vertexId);
 
-			if (inputSub.getValue() == null || now - inputSub.getValue().f0 > checkInterval * 2) {
+			if (!MetricUtils.validateTaskMetric(healthMonitor, checkInterval * 2, inputSub)) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}
