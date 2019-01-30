@@ -65,6 +65,38 @@ public class SqlParserTest extends ParserTestBase {
 	}
 
 	@Test
+	public void testCreateTableWithComment() {
+		check("CREATE TABLE sls_stream (\n" +
+				"  a bigint, \n" +
+				"  h varchar header, \n" +
+				"  g as 2 * (a + 1), \n" +
+				"  ts as toTimestamp(b, 'yyyy-MM-dd HH:mm:ss'), \n" +
+				"  b varchar,\n" +
+				"  proc as PROCTIME(), \n" +
+				"  PRIMARY KEY (a, b), \n" +
+				"  WATERMARK wk FOR a AS withOffset(b, 1000)\n" +
+				") comment 'test table comment ABC.'" +
+				" with (\n" +
+				"  x = 'y', \n" +
+				"  asd = 'data'\n" +
+				")\n",
+			"CREATE TABLE `sls_stream` (\n" +
+				"  `a`  BIGINT,\n" +
+				"  `h`  VARCHAR HEADER,\n" +
+				"  `g` AS (2 * (`a` + 1)),\n" +
+				"  `ts` AS `toTimestamp`(`b`, 'yyyy-MM-dd HH:mm:ss'),\n" +
+				"  `b`  VARCHAR,\n" +
+				"  `proc` AS `PROCTIME`(),\n" +
+				"  PRIMARY KEY (`a`, `b`),\n" +
+				"  WATERMARK `wk` FOR `a` AS `withOffset`(`b`, 1000)\n" +
+				") COMMENT 'test table comment ABC.'\n" +
+				"WITH (\n" +
+				"  `x` = 'y',\n" +
+				"  `asd` = 'data'\n" +
+				")");
+	}
+
+	@Test
 	public void testCreateTableWithUk() {
 		check("CREATE TABLE sls_stream (\n" +
 				"  a bigint, \n" +

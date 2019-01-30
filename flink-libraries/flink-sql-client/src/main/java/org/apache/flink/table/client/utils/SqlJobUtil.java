@@ -134,6 +134,10 @@ public class SqlJobUtil {
 			isStreaming = false;
 		}
 
+		String tableComment = "";
+		if (sqlCreateTable.getComment() != null) {
+			tableComment = sqlCreateTable.getComment().getNlsString().getValue();
+		}
 		long now = System.currentTimeMillis();
 		CatalogTable catalogTable = new CatalogTable(
 				tableType,
@@ -141,7 +145,7 @@ public class SqlJobUtil {
 				properties,
 				SqlJobUtil.createBlinkTableSchema(sqlCreateTable),
 				null,
-				"SQL Client Table",  // TODO We don't have a table comment from DDL
+				tableComment,
 				null,
 				false,
 				computedColumns,

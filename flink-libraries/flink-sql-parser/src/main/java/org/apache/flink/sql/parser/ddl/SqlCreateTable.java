@@ -22,6 +22,7 @@ import org.apache.flink.sql.parser.plan.SqlParseException;
 
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
@@ -63,6 +64,8 @@ public class SqlCreateTable extends SqlCall {
 
 	private SqlWatermark watermark;
 
+	private SqlCharStringLiteral comment;
+
 	public SqlCreateTable(
 		SqlParserPos pos,
 		String tableType,
@@ -72,7 +75,8 @@ public class SqlCreateTable extends SqlCall {
 		List<SqlNodeList> uniqueKeysList,
 		List<IndexWrapper> indexKeysList,
 		SqlWatermark watermark,
-		SqlNodeList propertyList) {
+		SqlNodeList propertyList,
+		SqlCharStringLiteral comment) {
 		super(pos);
 		this.tableType = tableType;
 		this.tableName = requireNonNull(tableName, "Table name is missing");
@@ -82,6 +86,7 @@ public class SqlCreateTable extends SqlCall {
 		this.indexKeysList = indexKeysList;
 		this.watermark = watermark;
 		this.propertyList = propertyList;
+		this.comment = comment;
 	}
 
 	@Override
@@ -148,6 +153,14 @@ public class SqlCreateTable extends SqlCall {
 
 	public void setTableType(String tableType) {
 		this.tableType = tableType;
+	}
+
+	public SqlCharStringLiteral getComment() {
+		return comment;
+	}
+
+	public void setComment(SqlCharStringLiteral comment) {
+		this.comment = comment;
 	}
 
 	public void validate() throws SqlParseException {
@@ -300,6 +313,12 @@ public class SqlCreateTable extends SqlCall {
 		}
 		writer.newlineAndIndent();
 		writer.endList(frame);
+
+		if (comment != null) {
+			writer.keyword("COMMENT");
+			comment.unparse(writer, leftPrec, rightPrec);
+			writer.newlineAndIndent();
+		}
 
 		if (propertyList != null) {
 			writer.keyword("WITH");

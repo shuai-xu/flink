@@ -103,15 +103,18 @@ The following BNF-grammar describes the superset of supported DDL features in ba
 createTable:
   CREATE TABLE tablename '('
     columnDefinition [, columnDefinition ]*
-    columnDefinition [, columnDefinition ]*
     [ computedColumnDefinition [, computedColumnDefinition ]* ]
     [ tableConstraint [, tableConstraint ]* ]
     [ tableIndex [, tableIndex ]* ]
     [ WATERMARK watermarkName FOR rowtimeField AS withOffset '(' rowtimeField, offset ')' ]
-')' [ WITH '(' tableOption [, tableOption ]* ')' ]
+')' [ COMMENT quotedString ]
+[ WITH '(' tableOption [, tableOption ]* ')' ]
 
 columnDefinition:
-  columnName dataType [ NOT NULL ]
+  columnName dataType [ NOT NULL ] [ columnComment ]
+
+columnComment:
+  COMMENT quotedString
 
 dataType:
   VARCHAR

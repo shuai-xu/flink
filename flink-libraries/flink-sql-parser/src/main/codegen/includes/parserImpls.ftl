@@ -227,6 +227,7 @@ SqlNode SqlCreateTable() :
     SqlNodeList columnList = SqlNodeList.EMPTY;
     SqlHiddenColumn procTime = null;
     SqlWatermark watermark = null;
+	SqlCharStringLiteral comment = null;
 
     SqlNodeList propertyList = null;
 
@@ -255,6 +256,10 @@ SqlNode SqlCreateTable() :
         }
         <RPAREN>
     ]
+    [ <COMMENT> <QUOTED_STRING> {
+        String p = SqlParserUtil.parseString(token.image);
+        comment = SqlLiteral.createCharString(p, getPos());
+    }]
     [
         <WITH>
             {
@@ -280,7 +285,7 @@ SqlNode SqlCreateTable() :
     ]
 
     {
-        return new SqlCreateTable(startPos.plus(getPos()), tableType, tableName, columnList, primaryKeyList, uniqueKeysList, indexesList, watermark, propertyList);
+        return new SqlCreateTable(startPos.plus(getPos()), tableType, tableName, columnList, primaryKeyList, uniqueKeysList, indexesList, watermark, propertyList, comment);
     }
 }
 
