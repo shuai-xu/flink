@@ -169,11 +169,6 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 		}
 	}
 
-	@Override
-	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
-		throw new UnsupportedOperationException();
-	}
-
 	// ------ views ------
 
 	@Override

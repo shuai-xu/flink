@@ -20,6 +20,7 @@ package org.apache.flink.table.catalog.hive;
 
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.ObjectPath;
@@ -147,6 +148,29 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 	}
 
 	// ------ tables and views------
+
+	@Override
+	public void renameTable(ObjectPath path, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, TableAlreadyExistException {
+		try {
+			// alter_table() doesn't throw a clear exception when target table doesn't exist. Thus, check the table existence explicitly
+			if (tableExists(path)) {
+				ObjectPath newPath = new ObjectPath(path.getDbName(), newTableName);
+				// alter_table() doesn't throw a clear exception when new table already exists. Thus, check the table existence explicitly
+				if (tableExists(newPath)) {
+					throw new TableAlreadyExistException(catalogName, newPath.getFullName());
+				} else {
+					Table table = getHiveTable(path);
+					table.setTableName(newTableName);
+					client.alter_table(path.getDbName(), path.getObjectName(), table);
+				}
+			} else if (!ignoreIfNotExists) {
+				throw new TableNotExistException(catalogName, path.getFullName());
+			}
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed to alter table %s", path.getFullName()), e);
+		}
+	}
 
 	@Override
 	public void dropTable(ObjectPath path, boolean ignoreIfNotExists) throws TableNotExistException {

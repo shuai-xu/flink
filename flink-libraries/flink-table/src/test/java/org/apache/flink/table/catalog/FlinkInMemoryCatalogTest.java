@@ -18,13 +18,9 @@
 
 package org.apache.flink.table.catalog;
 
-import org.apache.flink.table.api.DatabaseNotExistException;
-import org.apache.flink.table.api.TableNotExistException;
-
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -54,39 +50,5 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 
 		assertTrue(catalog.listDatabases().contains(db2));
 		assertFalse(catalog.listDatabases().contains(db1));
-	}
-
-	@Test
-	public void testRenameNonexistentDb() {
-		exception.expect(DatabaseNotExistException.class);
-		catalog.renameDatabase("nonexisit", db2, false);
-	}
-
-	@Test
-	public void testRenameTable() {
-		catalog.createDatabase(db1, createDb(), false);
-		catalog.createDatabase(db2, createAnotherDb(), false);
-
-		CatalogTable table = createTable();
-		catalog.createTable(path1, table, false);
-
-		assertEquals(path1, catalog.listAllTables().get(0));
-
-		catalog.renameTable(path1, path2.getObjectName(), false);
-
-		assertEquals(new ObjectPath(path1.getDbName(), path2.getObjectName()), catalog.listAllTables().get(0));
-	}
-
-	@Test
-	public void testRenameTableNonexistentDb() {
-		exception.expect(TableNotExistException.class);
-		catalog.renameTable(nonExistDbPath, "", false);
-	}
-
-	@Test
-	public void testRenameNonexistentTable() {
-		catalog.createDatabase(db1, createDb(), false);
-		exception.expect(TableNotExistException.class);
-		catalog.renameTable(nonExistTablePath, path2.getObjectName(), false);
 	}
 }

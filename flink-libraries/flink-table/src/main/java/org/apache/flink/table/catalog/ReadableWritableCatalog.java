@@ -130,8 +130,7 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 *                          if set to true, nothing happens.
 	 * @throws TableNotExistException   thrown if the table does not exist
 	 */
-	void alterTable(ObjectPath tableName, CatalogTable newTable, boolean ignoreIfNotExists)
-		throws TableNotExistException;
+	void alterTable(ObjectPath tableName, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException;
 
 	/**
 	 * Renames an existing table.
@@ -142,10 +141,9 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 *                          if set to false, throw an exception,
 	 *                          if set to true, nothing happens.
 	 * @throws TableNotExistException thrown if the table does not exist
-	 * @throws DatabaseNotExistException thrown if the database that this table belongs to doesn't exist
+	 * @throws TableAlreadyExistException thrown if new table already exists
 	 */
-	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
-		throws TableNotExistException, DatabaseNotExistException;
+	void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, TableAlreadyExistException;
 
 	// ----- views ------
 

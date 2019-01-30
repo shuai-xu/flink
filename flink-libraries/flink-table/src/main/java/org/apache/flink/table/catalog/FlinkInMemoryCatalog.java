@@ -117,11 +117,16 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
-	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists)
-		throws TableNotExistException, DatabaseNotExistException {
+	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, TableAlreadyExistException {
 
 		if (tableExists(tableName)) {
-			tables.put(new ObjectPath(tableName.getDbName(), newTableName), tables.remove(tableName));
+			ObjectPath newPath = new ObjectPath(tableName.getDbName(), newTableName);
+
+			if (tableExists(newPath)) {
+				throw new TableAlreadyExistException(catalogName, newPath.getFullName());
+			} else {
+				tables.put(newPath, tables.remove(tableName));
+			}
 		} else if (!ignoreIfNotExists) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
 		}

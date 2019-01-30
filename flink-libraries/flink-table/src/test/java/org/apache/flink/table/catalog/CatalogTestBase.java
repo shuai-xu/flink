@@ -261,6 +261,45 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test
+	public void testRenameTable() {
+		catalog.createDatabase(db1, createDb(), false);
+		CatalogTable table = createTable();
+		catalog.createTable(path1, table, false);
+
+		compare(table, catalog.getTable(path1));
+
+		catalog.renameTable(path1, t2, false);
+
+		compare(table, catalog.getTable(path3));
+		assertFalse(catalog.tableExists(path1));
+	}
+
+	@Test
+	public void testRenameTable_TableNotExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		exception.expect(TableNotExistException.class);
+		catalog.renameTable(path1, t2, false);
+	}
+
+	@Test
+	public void testRenameTable_TableNotExistException_ignored() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.renameTable(path1, t2, true);
+	}
+
+	@Test
+	public void testRenameTable_TableAlreadyExistException() {
+		catalog.createDatabase(db1, createDb(), false);
+		CatalogTable table = createTable();
+		catalog.createTable(path1, table, false);
+		catalog.createTable(path3, createAnotherTable(), false);
+
+		exception.expect(TableAlreadyExistException.class);
+		catalog.renameTable(path1, t2, false);
+	}
+
+	@Test
 	public void testTableExists() {
 		catalog.createDatabase(db1, createDb(), false);
 

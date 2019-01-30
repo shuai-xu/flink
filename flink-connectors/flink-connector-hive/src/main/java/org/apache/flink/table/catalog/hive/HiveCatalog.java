@@ -141,12 +141,6 @@ public class HiveCatalog extends HiveCatalogBase {
 		}
 	}
 
-	@Override
-	public void renameTable(ObjectPath tableName, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, DatabaseNotExistException {
-		// Hive metastore client doesn't support renaming yet
-		throw new UnsupportedOperationException();
-	}
-
 	// ------ views ------
 
 	@Override
