@@ -50,6 +50,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.flink.table.catalog.CatalogTestUtil.compare;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -104,7 +105,7 @@ public abstract class CatalogTestBase {
 		CatalogTable table = createTable();
 		catalog.createTable(path1, table, false);
 
-		assertEquals(table, catalog.getTable(path1));
+		compare(table, catalog.getTable(path1));
 
 		List<ObjectPath> tables = catalog.listAllTables();
 
@@ -122,7 +123,7 @@ public abstract class CatalogTestBase {
 		table = createPartitionedTable();
 		catalog.createTable(path1, table, false);
 
-		assertEquals(table, catalog.getTable(path1));
+		compare(table, catalog.getTable(path1));
 
 		tables = catalog.listAllTables();
 
@@ -159,11 +160,11 @@ public abstract class CatalogTestBase {
 		CatalogTable table = createTable();
 		catalog.createTable(path1, table, false);
 
-		assertEquals(table, catalog.getTable(path1));
+		compare(table, catalog.getTable(path1));
 
 		catalog.createTable(path1, createAnotherTable(), true);
 
-		assertEquals(table, catalog.getTable(path1));
+		compare(table, catalog.getTable(path1));
 	}
 
 	@Test
@@ -223,13 +224,13 @@ public abstract class CatalogTestBase {
 		CatalogTable table = createTable();
 		catalog.createTable(path1, table, false);
 
-		assertEquals(table, catalog.getTable(path1));
+		compare(table, catalog.getTable(path1));
 
 		CatalogTable newTable = createAnotherTable();
 		catalog.alterTable(path1, newTable, false);
 
 		assertNotEquals(table, catalog.getTable(path1));
-		assertEquals(newTable, catalog.getTable(path1));
+		compare(newTable, catalog.getTable(path1));
 
 		catalog.dropTable(path1, false);
 
@@ -237,13 +238,12 @@ public abstract class CatalogTestBase {
 		table = createPartitionedTable();
 		catalog.createTable(path1, table, false);
 
-		assertEquals(catalog.getTable(path1), table);
+		compare(catalog.getTable(path1), table);
 
 		newTable = createAnotherPartitionedTable();
 		catalog.alterTable(path1, newTable, false);
 
-		assertNotEquals(table, catalog.getTable(path1));
-		assertEquals(newTable, catalog.getTable(path1));
+		compare(newTable, catalog.getTable(path1));
 	}
 
 	@Test
@@ -397,7 +397,7 @@ public abstract class CatalogTestBase {
 		catalog.createView(path1, view, false);
 
 		assertTrue(catalog.getTable(path1) instanceof CatalogView);
-		assertEquals(view, catalog.getTable(path1));
+		compare(view, catalog.getTable(path1));
 	}
 
 	@Test
@@ -425,12 +425,12 @@ public abstract class CatalogTestBase {
 		catalog.createView(path1, view, false);
 
 		assertTrue(catalog.getTable(path1) instanceof CatalogView);
-		assertEquals(view, catalog.getTable(path1));
+		compare(view, catalog.getTable(path1));
 
 		catalog.createView(path1, createAnotherView(), true);
 
 		assertTrue(catalog.getTable(path1) instanceof CatalogView);
-		assertEquals(view, catalog.getTable(path1));
+		compare(view, catalog.getTable(path1));
 	}
 
 	@Test
@@ -452,14 +452,13 @@ public abstract class CatalogTestBase {
 		CatalogView view = createView();
 		catalog.createView(path1, view, false);
 
-		assertEquals(view, catalog.getTable(path1));
+		compare(view, catalog.getTable(path1));
 
 		CatalogView newView = createAnotherView();
 		catalog.alterTable(path1, newView, false);
 
 		assertTrue(catalog.getTable(path1) instanceof CatalogView);
-		assertNotEquals(view, catalog.getTable(path1));
-		assertEquals(newView, catalog.getTable(path1));
+		compare(newView, catalog.getTable(path1));
 	}
 
 	@Test
@@ -601,13 +600,13 @@ public abstract class CatalogTestBase {
 
 		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1));
 		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1, createPartitionSpecSubset()));
-		assertEquals(createPartition(), catalog.getPartition(path1, createPartitionSpec()));
+		compare(createPartition(), catalog.getPartition(path1, createPartitionSpec()));
 
 		catalog.createPartition(path1, createAnotherPartition(), false);
 
 		assertEquals(Arrays.asList(createPartitionSpec(), createAnotherPartitionSpec()), catalog.listPartitions(path1));
 		assertEquals(Arrays.asList(createPartitionSpec(), createAnotherPartitionSpec()), catalog.listPartitions(path1, createPartitionSpecSubset()));
-		assertEquals(createAnotherPartition(), catalog.getPartition(path1, createAnotherPartitionSpec()));
+		compare(createAnotherPartition(), catalog.getPartition(path1, createAnotherPartitionSpec()));
 	}
 
 	@Test
@@ -699,7 +698,7 @@ public abstract class CatalogTestBase {
 
 		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1));
 		CatalogPartition cp = catalog.getPartition(path1, createPartitionSpec());
-		assertEquals(createPartition(), cp);
+		compare(createPartition(), cp);
 		assertNull(cp.getProperties().get("k"));
 
 		Map<String, String> partitionProperties = getTableProperties();
@@ -710,7 +709,7 @@ public abstract class CatalogTestBase {
 
 		assertEquals(Arrays.asList(createPartitionSpec()), catalog.listPartitions(path1));
 		cp = catalog.getPartition(path1, createPartitionSpec());
-		assertEquals(another, cp);
+		compare(another, cp);
 		assertEquals("v", cp.getProperties().get("k"));
 	}
 

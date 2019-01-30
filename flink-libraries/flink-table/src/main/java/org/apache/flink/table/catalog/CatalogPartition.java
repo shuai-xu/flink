@@ -48,25 +48,6 @@ public class CatalogPartition {
 	}
 
 	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-
-		CatalogPartition that = (CatalogPartition) o;
-		return partitionSpec.equals(that.partitionSpec);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(partitionSpec);
-	}
-
-	@Override
 	public String toString() {
 		return "CatalogPartition{" +
 			"partitionSpec=" + partitionSpec +

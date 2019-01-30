@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Objects;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -189,35 +188,6 @@ public class CatalogTable {
 
 	public boolean isStreaming() {
 		return isStreaming;
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-
-		CatalogTable that = (CatalogTable) o;
-
-		return tableType.equals(that.tableType) &&
-			Objects.equals(tableSchema, that.tableSchema) &&
-			Objects.equals(tableStats, that.tableStats) &&
-			isPartitioned == that.isPartitioned &&
-			partitionColumnNames.equals(that.partitionColumnNames);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(
-			tableType,
-			tableSchema,
-			tableStats,
-			isPartitioned,
-			partitionColumnNames);
 	}
 
 	@Override

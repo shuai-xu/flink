@@ -36,6 +36,8 @@ import java.util.Map;
 
 import scala.Option;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Test util for catalogs.
  */
@@ -131,4 +133,26 @@ public class CatalogTestUtil {
 			true);
 	}
 
+	protected static void compare(CatalogTable t1, CatalogTable t2) {
+		assertEquals(t1.getTableType(), t2.getTableType());
+		assertEquals(t1.getTableSchema(), t2.getTableSchema());
+		assertEquals(t1.getTableStats(), t2.getTableStats());
+		assertEquals(t1.isPartitioned(), t2.isPartitioned());
+		assertEquals(t1.getPartitionColumnNames(), t2.getPartitionColumnNames());
+		assertEquals(t1.isStreaming(), t2.isStreaming());
+	}
+
+	protected static void compare(CatalogView v1, CatalogView v2) {
+		compare(v1, v2);
+		assertEquals(v1.getOriginalQuery(), v2.getOriginalQuery());
+		assertEquals(v1.getExpandedQuery(), v2.getExpandedQuery());
+	}
+
+	protected static void compare(CatalogDatabase d1, CatalogDatabase d2) {
+		assertEquals(d1.getProperties(), d2.getProperties());
+	}
+
+	protected static void compare(CatalogPartition p1, CatalogPartition p2) {
+		assertEquals(p1.getPartitionSpec(), p2.getPartitionSpec());
+	}
 }

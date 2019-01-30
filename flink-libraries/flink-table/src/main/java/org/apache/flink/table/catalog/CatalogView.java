@@ -26,7 +26,6 @@ import org.apache.calcite.rex.RexNode;
 
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Represents a view in catalog.
@@ -106,39 +105,6 @@ public class CatalogView extends CatalogTable {
 			originalQuery,
 			expandedQuery
 		);
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-
-		CatalogView that = (CatalogView) o;
-
-		return getTableType().equals(that.getTableType()) &&
-			Objects.equals(getTableSchema(), that.getTableSchema()) &&
-			Objects.equals(getTableStats(), that.getTableStats()) &&
-			isPartitioned() == that.isPartitioned() &&
-			getPartitionColumnNames().equals(that.getPartitionColumnNames()) &&
-			originalQuery.equals(that.originalQuery) &&
-			expandedQuery.equals(that.expandedQuery);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(
-			getTableType(),
-			getTableSchema(),
-			getTableStats(),
-			isPartitioned(),
-			getPartitionColumnNames(),
-			originalQuery,
-			expandedQuery);
 	}
 
 	@Override
