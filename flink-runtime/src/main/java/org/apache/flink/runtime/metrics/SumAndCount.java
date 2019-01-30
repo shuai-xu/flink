@@ -56,7 +56,11 @@ public class SumAndCount {
 	}
 
 	public void update(long value) {
-		count.inc();
+		update(1, value);
+	}
+
+	public void update(long countUpdated, long value) {
+		count.inc(countUpdated);
 		sum += value;
 		histogram.update(value);
 	}

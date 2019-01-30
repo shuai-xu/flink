@@ -70,6 +70,7 @@ public class MetricNames {
 	public static final String IO_WAIT_INPUT = "waitInput";
 	public static final String TASK_LATENCY = "taskLatency";
 	public static final String SOURCE_LATENCY = "sourceLatency";
+	public static final String IO_NUM_RECORDS_SENT = "numRecordsSent";
 
 	// Metrics source may use
 	public static final String IO_NUM_TPS = "tps";

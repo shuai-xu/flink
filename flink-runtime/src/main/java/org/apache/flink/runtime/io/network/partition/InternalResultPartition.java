@@ -21,6 +21,7 @@ package org.apache.flink.runtime.io.network.partition;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
@@ -97,6 +98,8 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 	private boolean traceTriggered = false;
 
 	private long waitOutputForCurrentRecord = 0L;
+
+	private Counter numRecordsSent;
 
 	public InternalResultPartition(
 		String owningTaskName,
@@ -223,7 +226,11 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 			serializer.prune();
 		}
 
-		endTracing();
+		if (isBroadcast) {
+			endTracing(subpartitions.length);
+		} else {
+			endTracing(targetChannels.length);
+		}
 	}
 
 	@Override
@@ -246,7 +253,11 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 			tryFinishCurrentBufferBuilder(targetChannel, true);
 		}
 
-		endTracing();
+		if (isBroadcast) {
+			endTracing(subpartitions.length);
+		} else {
+			endTracing(1);
+		}
 	}
 
 	@Override
@@ -581,6 +592,7 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 
 		if (enableTracingMetrics) {
 			this.nsWaitBufferTime = metrics.getNsWaitBufferTime();
+			numRecordsSent = metrics.getNumRecordsSent();
 		}
 	}
 
@@ -593,9 +605,12 @@ public class InternalResultPartition<T> extends ResultPartition<T> implements Bu
 		}
 	}
 
-	private void endTracing() {
+	private void endTracing(long count) {
 		if (traceTriggered) {
-			nsWaitBufferTime.update(waitOutputForCurrentRecord);
+			nsWaitBufferTime.update(count, waitOutputForCurrentRecord);
+		}
+		if (numRecordsSent != null) {
+			numRecordsSent.inc(count);
 		}
 	}
 }

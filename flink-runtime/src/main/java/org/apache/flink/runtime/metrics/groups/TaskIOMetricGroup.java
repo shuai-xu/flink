@@ -45,6 +45,7 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 	private final Counter numBuffersOut;
 	private final Counter numBytesInLocal;
 	private final Counter numBytesInRemote;
+	private final Counter numRecordsSent;
 	private final SumCounter numRecordsIn;
 	private final SumCounter numRecordsOut;
 
@@ -71,6 +72,7 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 		this.numRecordsInRate = meter(MetricNames.IO_NUM_RECORDS_IN_RATE, new MeterView(numRecordsIn, 60));
 		this.numRecordsOutRate = meter(MetricNames.IO_NUM_RECORDS_OUT_RATE, new MeterView(numRecordsOut, 60));
 		this.nsWaitBufferTime = new SumAndCount(MetricNames.IO_WAIT_BUFFER_TIME, parent);
+		this.numRecordsSent = counter(MetricNames.IO_NUM_RECORDS_SENT);
 	}
 
 	public IOMetrics createSnapshot() {
@@ -116,6 +118,9 @@ public class TaskIOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
 		return numBytesOutRate;
 	}
 
+	public Counter getNumRecordsSent() {
+		return numRecordsSent;
+	}
 	// ============================================================================================
 	// Buffer metrics
 	// ============================================================================================
