@@ -130,7 +130,7 @@ public class CatalogTestUtil {
 			-1L,
 			0L,
 			-1L,
-			true);
+			false);
 	}
 
 	protected static void compare(CatalogTable t1, CatalogTable t2) {
