@@ -17,10 +17,9 @@
  */
 package org.apache.flink.table.tpc
 
-import java.sql.Date
-
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
+import org.apache.flink.table.util.DateTimeTestUtil
 
 import scala.collection.JavaConversions._
 
@@ -59,17 +58,17 @@ object TpchTableStatsProvider {
     "l_shipinstruct" -> ColumnStats(4L, 0L, 11.99999560182579D, 17, "TAKE BACK RETURN",
       "COLLECT COD"),
     "l_quantity" -> ColumnStats(50L, 0L, 8.0D, 8, 50.0D, 1.0D),
-    "l_receiptdate" -> ColumnStats(2556L, 0L, 12.0D, 12, Date.valueOf("1998-12-30"),
-      Date.valueOf("1992-01-02")),
+    "l_receiptdate" -> ColumnStats(2556L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-12-30"),
+      DateTimeTestUtil.UTCDate("1992-01-02")),
     "l_linenumber" -> ColumnStats(7L, 0L, 4.0D, 4, 7, 1),
     "l_tax" -> ColumnStats(9L, 0L, 8.0D, 8, 0.08D, 0.0D),
-    "l_shipdate" -> ColumnStats(2524L, 0L, 12.0D, 12, Date.valueOf("1998-11-30"),
-      Date.valueOf("1992-01-01")),
+    "l_shipdate" -> ColumnStats(2524L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-11-30"),
+      DateTimeTestUtil.UTCDate("1992-01-01")),
     "l_extendedprice" -> ColumnStats(3818583L, 0L, 8.0D, 8, 104950.0D, 900.0D),
     "l_partkey" -> ColumnStats(201326292L, 0L, 8.0D, 8, 200000000L, 1L),
     "l_discount" -> ColumnStats(11L, 0L, 8.0D, 8, 0.1D, 0.0D),
-    "l_commitdate" -> ColumnStats(2468L, 0L, 12.0D, 12, Date.valueOf("1998-10-30"),
-      Date.valueOf("1992-01-30")),
+    "l_commitdate" -> ColumnStats(2468L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-10-30"),
+      DateTimeTestUtil.UTCDate("1992-01-30")),
     "l_suppkey" -> ColumnStats(9921233L, 0L, 8.0D, 8, 10000000L, 1L),
     "l_orderkey" -> ColumnStats(1490108544L, 0L, 8.0D, 8, 6000000000L, 1L)
   ))
@@ -86,8 +85,8 @@ object TpchTableStatsProvider {
 
   val ORDER_1000 = TableStats(1500000000L, Map[String, ColumnStats](
     "o_shippriority" -> ColumnStats(1L, 0L, 4.0D, 4, 0, 0),
-    "o_orderdate" -> ColumnStats(2408L, 0L, 12.0D, 12, Date.valueOf("1998-08-01"),
-      Date.valueOf("1991-12-31")),
+    "o_orderdate" -> ColumnStats(2408L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-08-01"),
+      DateTimeTestUtil.UTCDate("1991-12-31")),
     "o_custkey" -> ColumnStats(100594195L, 0L, 8.0D, 8, 149999999L, 1L),
     "o_orderpriority" -> ColumnStats(5L, 0L, 8.399956616D, 15, "5-LOW", "1-URGENT"),
     "o_clerk" -> ColumnStats(1515757L, 0L, 15.0D, 15, "Clerk#001000000", "Clerk#000000001"),
@@ -210,8 +209,8 @@ object TpchTableStatsProvider {
 
   val ORDERS_10240 = TableStats(15360000000L, Map[String, ColumnStats](
     "o_shippriority" -> ColumnStats(1L, 0L, 4.0D, 4, 0, 0),
-    "o_orderdate" -> ColumnStats(2408L, 0L, 12.0D, 12, Date.valueOf("1998-08-01"),
-      Date.valueOf("1991-12-31")),
+    "o_orderdate" -> ColumnStats(2408L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-08-01"),
+      DateTimeTestUtil.UTCDate("1991-12-31")),
     "o_custkey" -> ColumnStats(1017252482L, 0L, 8.0D, 8, 1535999999L, 1L),
     "o_orderpriority" -> ColumnStats(5L, 0L, 8.399997409960937D, 15, "5-LOW", "1-URGENT"),
     "o_clerk" -> ColumnStats(15319523L, 0L, 15.0D, 15, "Clerk#010240000", "Clerk#000000001"),
@@ -230,17 +229,17 @@ object TpchTableStatsProvider {
     "l_shipinstruct" -> ColumnStats(4L, 0L, 11.999995248618715D, 17, "TAKE BACK RETURN",
       "COLLECT COD"),
     "l_quantity" -> ColumnStats(50L, 0L, 8.0D, 8, 50.0D, 1.0D),
-    "l_receiptdate" -> ColumnStats(2556L, 0L, 12.0D, 12, Date.valueOf("1998-12-30"),
-      Date.valueOf("1992-01-02")),
+    "l_receiptdate" -> ColumnStats(2556L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-12-30"),
+      DateTimeTestUtil.UTCDate("1992-01-02")),
     "l_linenumber" -> ColumnStats(7L, 0L, 4.0D, 4, 7, 1),
     "l_tax" -> ColumnStats(9L, 0L, 8.0D, 8, 0.08D, 0.0D),
-    "l_shipdate" -> ColumnStats(2524L, 0L, 12.0D, 12, Date.valueOf("1998-11-30"),
-      Date.valueOf("1992-01-01")),
+    "l_shipdate" -> ColumnStats(2524L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-11-30"),
+      DateTimeTestUtil.UTCDate("1992-01-01")),
     "l_extendedprice" -> ColumnStats(3830758L, 0L, 8.0D, 8, 104950.0D, 900.0D),
     "l_partkey" -> ColumnStats(1891135981L, 0L, 8.0D, 8, 2048000000L, 1L),
     "l_discount" -> ColumnStats(11L, 0L, 8.0D, 8, 0.1D, 0.0D),
-    "l_commitdate" -> ColumnStats(2468L, 0L, 12.0D, 12, Date.valueOf("1998-10-30"),
-      Date.valueOf("1992-01-30")),
+    "l_commitdate" -> ColumnStats(2468L, 0L, 12.0D, 12, DateTimeTestUtil.UTCDate("1998-10-30"),
+      DateTimeTestUtil.UTCDate("1992-01-30")),
     "l_suppkey" -> ColumnStats(103573589L, 0L, 8.0D, 8, 102400000L, 1L),
     "l_orderkey" -> ColumnStats(15359585941L, 0L, 8.0D, 8, 61440000000L, 1L)))
 

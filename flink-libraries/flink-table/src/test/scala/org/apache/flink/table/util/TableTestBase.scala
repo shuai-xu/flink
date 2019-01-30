@@ -146,6 +146,13 @@ abstract class TableTestUtil {
   def verifyExplain(query: String): Unit
 
   def verifyExplain(resultTable: Table): Unit
+
+  /* Stage {id} is ignored, because id keeps incrementing in test class
+     * while StreamExecutionEnvironment is up
+     */
+  protected def replaceStageId(s: String): String = {
+    s.replaceAll("\\r\\n", "\n").replaceAll("Stage \\d+", "")
+  }
 }
 
 case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
@@ -330,7 +337,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
       case Some(t) => tableEnv.explain(t)
       case _ => tableEnv.explain()
     }
-    assertEqualsOrExpand("explain", explainResult, expand = false)
+    assertEqualsOrExpand("explain", replaceStageId(explainResult), expand = false)
   }
 }
 
@@ -564,7 +571,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       case Some(t) => tableEnv.explain(t)
       case _ => tableEnv.explain()
     }
-    assertEqualsOrExpand("explain", explainResult, expand = false)
+    assertEqualsOrExpand("explain", replaceStageId(explainResult), expand = false)
   }
 
   private def assertEqualsOrExpand(tag: String, actual: String, expand: Boolean = true): Unit = {

@@ -27,14 +27,14 @@ Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
 
 == Physical Execution Plan ==
-Stage 22 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 23 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
 		ship_strategy : FORWARD
 
-		Stage 24 : Operator
+		 : Operator
 			content : Calc(where: ((a MOD 2) = 0), select: (a, b))
 			ship_strategy : FORWARD
 
@@ -52,14 +52,14 @@ Calc(select=[a, b], where=[=(MOD(a, 2), 0)])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b])
 
 == Physical Execution Plan ==
-Stage 1 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 2 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
 		ship_strategy : FORWARD
 
-		Stage 3 : Operator
+		 : Operator
 			content : Calc(where: ((a MOD 2) = 0), select: (a, b))
 			ship_strategy : FORWARD
 
@@ -83,25 +83,25 @@ Calc(select=[a, c])
       +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[c, d])
 
 == Physical Execution Plan ==
-Stage 25 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 26 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 27 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
 		ship_strategy : FORWARD
 
-		Stage 28 : Operator
+		 : Operator
 			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(c, d))
 			ship_strategy : FORWARD
 
-			Stage 30 : Operator
+			 : Operator
 				content : HashJoin(where: (b = d), buildRight)
 				ship_strategy : BROADCAST
 
-				Stage 31 : Operator
+				 : Operator
 					content : Calc(select: (a, c))
 					ship_strategy : FORWARD
 
@@ -125,25 +125,25 @@ Calc(select=[a, c])
       +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[c, d])
 
 == Physical Execution Plan ==
-Stage 14 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 15 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 16 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
 		ship_strategy : FORWARD
 
-		Stage 17 : Operator
+		 : Operator
 			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(c, d))
 			ship_strategy : FORWARD
 
-			Stage 19 : Operator
+			 : Operator
 				content : HashJoin(where: (b = d), buildRight)
 				ship_strategy : BROADCAST
 
-				Stage 20 : Operator
+				 : Operator
 					content : Calc(select: (a, c))
 					ship_strategy : FORWARD
 
@@ -163,17 +163,17 @@ Union(all=[true], union=[count, word])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[count, word])
 
 == Physical Execution Plan ==
-Stage 4 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 5 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 6 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(count, word))
 		ship_strategy : FORWARD
 
-		Stage 7 : Operator
+		 : Operator
 			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(count, word))
 			ship_strategy : FORWARD
 
@@ -193,17 +193,17 @@ Union(all=[true], union=[count, word])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_1]], fields=[count, word])
 
 == Physical Execution Plan ==
-Stage 9 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 10 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 11 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(count, word))
 		ship_strategy : FORWARD
 
-		Stage 12 : Operator
+		 : Operator
 			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(count, word))
 			ship_strategy : FORWARD
 

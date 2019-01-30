@@ -11607,6 +11607,249 @@ Calc(select=[CASE(>(EXPR$0, 1), EXPR$00, EXPR$01) AS bucket1, CASE(>(EXPR$02, 2)
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="test[caseName=q80, joinReorder=true]">
+    <Resource name="sql">
+      <![CDATA[-- start query 80 in stream 0 using template query80.tpl
+with ssr as
+ (select  s_store_id as store_id,
+          sum(ss_ext_sales_price) as sales,
+          sum(coalesce(sr_return_amt, 0)) as `returns`,
+          sum(ss_net_profit - coalesce(sr_net_loss, 0)) as profit
+  from store_sales left outer join store_returns on
+         (ss_item_sk = sr_item_sk and ss_ticket_number = sr_ticket_number),
+     date_dim,
+     store,
+     item,
+     promotion
+ where ss_sold_date_sk = d_date_sk
+       and d_date between cast('1998-08-02' as date) 
+                  and (cast('1998-08-02' as date) + INTERVAL '30' day)
+       and ss_store_sk = s_store_sk
+       and ss_item_sk = i_item_sk
+       and i_current_price > 50
+       and ss_promo_sk = p_promo_sk
+       and p_channel_tv = 'N'
+ group by s_store_id)
+ ,
+ csr as
+ (select  cp_catalog_page_id as catalog_page_id,
+          sum(cs_ext_sales_price) as sales,
+          sum(coalesce(cr_return_amount, 0)) as `returns`,
+          sum(cs_net_profit - coalesce(cr_net_loss, 0)) as profit
+  from catalog_sales left outer join catalog_returns on
+         (cs_item_sk = cr_item_sk and cs_order_number = cr_order_number),
+     date_dim,
+     catalog_page,
+     item,
+     promotion
+ where cs_sold_date_sk = d_date_sk
+       and d_date between cast('1998-08-02' as date)
+                  and (cast('1998-08-02' as date) + INTERVAL '30' day)
+        and cs_catalog_page_sk = cp_catalog_page_sk
+       and cs_item_sk = i_item_sk
+       and i_current_price > 50
+       and cs_promo_sk = p_promo_sk
+       and p_channel_tv = 'N'
+group by cp_catalog_page_id)
+ ,
+ wsr as
+ (select  web_site_id,
+          sum(ws_ext_sales_price) as sales,
+          sum(coalesce(wr_return_amt, 0)) as `returns`,
+          sum(ws_net_profit - coalesce(wr_net_loss, 0)) as profit
+  from web_sales left outer join web_returns on
+         (ws_item_sk = wr_item_sk and ws_order_number = wr_order_number),
+     date_dim,
+     web_site,
+     item,
+     promotion
+ where ws_sold_date_sk = d_date_sk
+       and d_date between cast('1998-08-02' as date)
+                  and (cast('1998-08-02' as date) + INTERVAL '30' day)
+        and ws_web_site_sk = web_site_sk
+       and ws_item_sk = i_item_sk
+       and i_current_price > 50
+       and ws_promo_sk = p_promo_sk
+       and p_channel_tv = 'N'
+group by web_site_id)
+  select  channel
+        , id
+        , sum(sales) as sales
+        , sum(`returns`) as `returns`
+        , sum(profit) as profit
+ from 
+ (select 'store channel' as channel
+        , 'store' || store_id as id
+        , sales
+        , `returns`
+        , profit
+ from   ssr
+ union all
+ select 'catalog channel' as channel
+        , 'catalog_page' || catalog_page_id as id
+        , sales
+        , `returns`
+        , profit
+ from  csr
+ union all
+ select 'web channel' as channel
+        , 'web_site' || web_site_id as id
+        , sales
+        , `returns`
+        , profit
+ from   wsr
+ ) x
+ group by rollup (channel, id)
+ order by channel
+         ,id
+ limit 100
+
+-- end query 80 in stream 0 using template query80.tpl
+]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC-nulls-first], dir1=[ASC-nulls-first], fetch=[100])
++- LogicalAggregate(group=[{0, 1}], groups=[[{0, 1}, {0}, {}]], sales=[SUM($2)], returns=[SUM($3)], profit=[SUM($4)])
+   +- LogicalUnion(all=[true])
+      :- LogicalUnion(all=[true])
+      :  :- LogicalProject(channel=['store channel'], id=[||('store', $0)], sales=[$1], returns=[$2], profit=[$3])
+      :  :  +- LogicalAggregate(group=[{0}], sales=[SUM($1)], returns=[SUM($2)], profit=[SUM($3)])
+      :  :     +- LogicalProject(store_id=[$72], ss_ext_sales_price=[$15], $f2=[CASE(IS NOT NULL($34), CAST($34):DECIMAL(12, 2), 0)], $f3=[-($22, CASE(IS NOT NULL($42), CAST($42):DECIMAL(12, 2), 0))])
+      :  :        +- LogicalFilter(condition=[AND(=($0, $43), >=($45, CAST('1998-08-02'):DATE NOT NULL), <=($45, +(CAST('1998-08-02'):DATE NOT NULL, 2592000000)), =($7, $71), =($2, $100), >($105, 50), =($8, $122), =($133, 'N'))])
+      :  :           +- LogicalJoin(condition=[true], joinType=[inner])
+      :  :              :- LogicalJoin(condition=[true], joinType=[inner])
+      :  :              :  :- LogicalJoin(condition=[true], joinType=[inner])
+      :  :              :  :  :- LogicalJoin(condition=[true], joinType=[inner])
+      :  :              :  :  :  :- LogicalJoin(condition=[AND(=($2, $25), =($9, $32))], joinType=[left])
+      :  :              :  :  :  :  :- LogicalTableScan(table=[[builtin, default, store_sales, source: [TestParquetTableSource -> selectedFields=[ss_sold_date_sk, ss_sold_time_sk, ss_item_sk, ss_customer_sk, ss_cdemo_sk, ss_hdemo_sk, ss_addr_sk, ss_store_sk, ss_promo_sk, ss_ticket_number, ss_quantity, ss_wholesale_cost, ss_list_price, ss_sales_price, ss_ext_discount_amt, ss_ext_sales_price, ss_ext_wholesale_cost, ss_ext_list_price, ss_ext_tax, ss_coupon_amt, ss_net_paid, ss_net_paid_inc_tax, ss_net_profit];filterPredicates=[]]]])
+      :  :              :  :  :  :  +- LogicalTableScan(table=[[builtin, default, store_returns, source: [TestParquetTableSource -> selectedFields=[sr_returned_date_sk, sr_return_time_sk, sr_item_sk, sr_customer_sk, sr_cdemo_sk, sr_hdemo_sk, sr_addr_sk, sr_store_sk, sr_reason_sk, sr_ticket_number, sr_return_quantity, sr_return_amt, sr_return_tax, sr_return_amt_inc_tax, sr_fee, sr_return_ship_cost, sr_refunded_cash, sr_reversed_charge, sr_store_credit, sr_net_loss];filterPredicates=[]]]])
+      :  :              :  :  :  +- LogicalTableScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_date_id, d_date, d_month_seq, d_week_seq, d_quarter_seq, d_year, d_dow, d_moy, d_dom, d_qoy, d_fy_year, d_fy_quarter_seq, d_fy_week_seq, d_day_name, d_quarter_name, d_holiday, d_weekend, d_following_holiday, d_first_dom, d_last_dom, d_same_day_ly, d_same_day_lq, d_current_day, d_current_week, d_current_month, d_current_quarter, d_current_year];filterPredicates=[]]]])
+      :  :              :  :  +- LogicalTableScan(table=[[builtin, default, store, source: [TestParquetTableSource -> selectedFields=[s_store_sk, s_store_id, s_rec_start_date, s_rec_end_date, s_closed_date_sk, s_store_name, s_number_employees, s_floor_space, s_hours, s_manager, s_market_id, s_geography_class, s_market_desc, s_market_manager, s_division_id, s_division_name, s_company_id, s_company_name, s_street_number, s_street_name, s_street_type, s_suite_number, s_city, s_county, s_state, s_zip, s_country, s_gmt_offset, s_tax_precentage];filterPredicates=[]]]])
+      :  :              :  +- LogicalTableScan(table=[[builtin, default, item, source: [TestParquetTableSource -> selectedFields=[i_item_sk, i_item_id, i_rec_start_date, i_rec_end_date, i_item_desc, i_current_price, i_wholesale_cost, i_brand_id, i_brand, i_class_id, i_class, i_category_id, i_category, i_manufact_id, i_manufact, i_size, i_formulation, i_color, i_units, i_container, i_manager_id, i_product_name];filterPredicates=[]]]])
+      :  :              +- LogicalTableScan(table=[[builtin, default, promotion, source: [TestParquetTableSource -> selectedFields=[p_promo_sk, p_promo_id, p_start_date_sk, p_end_date_sk, p_item_sk, p_cost, p_response_target, p_promo_name, p_channel_dmail, p_channel_email, p_channel_catalog, p_channel_tv, p_channel_radio, p_channel_press, p_channel_event, p_channel_demo, p_channel_details, p_purpose, p_discount_active];filterPredicates=[]]]])
+      :  +- LogicalProject(channel=['catalog channel'], id=[||('catalog_page', $0)], sales=[$1], returns=[$2], profit=[$3])
+      :     +- LogicalAggregate(group=[{0}], sales=[SUM($1)], returns=[SUM($2)], profit=[SUM($3)])
+      :        +- LogicalProject(catalog_page_id=[$90], cs_ext_sales_price=[$23], $f2=[CASE(IS NOT NULL($52), CAST($52):DECIMAL(12, 2), 0)], $f3=[-($33, CASE(IS NOT NULL($60), CAST($60):DECIMAL(12, 2), 0))])
+      :           +- LogicalFilter(condition=[AND(=($0, $61), >=($63, CAST('1998-08-02'):DATE NOT NULL), <=($63, +(CAST('1998-08-02'):DATE NOT NULL, 2592000000)), =($12, $89), =($15, $98), >($103, 50), =($16, $120), =($131, 'N'))])
+      :              +- LogicalJoin(condition=[true], joinType=[inner])
+      :                 :- LogicalJoin(condition=[true], joinType=[inner])
+      :                 :  :- LogicalJoin(condition=[true], joinType=[inner])
+      :                 :  :  :- LogicalJoin(condition=[true], joinType=[inner])
+      :                 :  :  :  :- LogicalJoin(condition=[AND(=($15, $36), =($17, $50))], joinType=[left])
+      :                 :  :  :  :  :- LogicalTableScan(table=[[builtin, default, catalog_sales, source: [TestParquetTableSource -> selectedFields=[cs_sold_date_sk, cs_sold_time_sk, cs_ship_date_sk, cs_bill_customer_sk, cs_bill_cdemo_sk, cs_bill_hdemo_sk, cs_bill_addr_sk, cs_ship_customer_sk, cs_ship_cdemo_sk, cs_ship_hdemo_sk, cs_ship_addr_sk, cs_call_center_sk, cs_catalog_page_sk, cs_ship_mode_sk, cs_warehouse_sk, cs_item_sk, cs_promo_sk, cs_order_number, cs_quantity, cs_wholesale_cost, cs_list_price, cs_sales_price, cs_ext_discount_amt, cs_ext_sales_price, cs_ext_wholesale_cost, cs_ext_list_price, cs_ext_tax, cs_coupon_amt, cs_ext_ship_cost, cs_net_paid, cs_net_paid_inc_tax, cs_net_paid_inc_ship, cs_net_paid_inc_ship_tax, cs_net_profit];filterPredicates=[]]]])
+      :                 :  :  :  :  +- LogicalTableScan(table=[[builtin, default, catalog_returns, source: [TestParquetTableSource -> selectedFields=[cr_returned_date_sk, cr_returned_time_sk, cr_item_sk, cr_refunded_customer_sk, cr_refunded_cdemo_sk, cr_refunded_hdemo_sk, cr_refunded_addr_sk, cr_returning_customer_sk, cr_returning_cdemo_sk, cr_returning_hdemo_sk, cr_returning_addr_sk, cr_call_center_sk, cr_catalog_page_sk, cr_ship_mode_sk, cr_warehouse_sk, cr_reason_sk, cr_order_number, cr_return_quantity, cr_return_amount, cr_return_tax, cr_return_amt_inc_tax, cr_fee, cr_return_ship_cost, cr_refunded_cash, cr_reversed_charge, cr_store_credit, cr_net_loss];filterPredicates=[]]]])
+      :                 :  :  :  +- LogicalTableScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_date_id, d_date, d_month_seq, d_week_seq, d_quarter_seq, d_year, d_dow, d_moy, d_dom, d_qoy, d_fy_year, d_fy_quarter_seq, d_fy_week_seq, d_day_name, d_quarter_name, d_holiday, d_weekend, d_following_holiday, d_first_dom, d_last_dom, d_same_day_ly, d_same_day_lq, d_current_day, d_current_week, d_current_month, d_current_quarter, d_current_year];filterPredicates=[]]]])
+      :                 :  :  +- LogicalTableScan(table=[[builtin, default, catalog_page, source: [TestParquetTableSource -> selectedFields=[cp_catalog_page_sk, cp_catalog_page_id, cp_start_date_sk, cp_end_date_sk, cp_department, cp_catalog_number, cp_catalog_page_number, cp_description, cp_type];filterPredicates=[]]]])
+      :                 :  +- LogicalTableScan(table=[[builtin, default, item, source: [TestParquetTableSource -> selectedFields=[i_item_sk, i_item_id, i_rec_start_date, i_rec_end_date, i_item_desc, i_current_price, i_wholesale_cost, i_brand_id, i_brand, i_class_id, i_class, i_category_id, i_category, i_manufact_id, i_manufact, i_size, i_formulation, i_color, i_units, i_container, i_manager_id, i_product_name];filterPredicates=[]]]])
+      :                 +- LogicalTableScan(table=[[builtin, default, promotion, source: [TestParquetTableSource -> selectedFields=[p_promo_sk, p_promo_id, p_start_date_sk, p_end_date_sk, p_item_sk, p_cost, p_response_target, p_promo_name, p_channel_dmail, p_channel_email, p_channel_catalog, p_channel_tv, p_channel_radio, p_channel_press, p_channel_event, p_channel_demo, p_channel_details, p_purpose, p_discount_active];filterPredicates=[]]]])
+      +- LogicalProject(channel=['web channel'], id=[||('web_site', $0)], sales=[$1], returns=[$2], profit=[$3])
+         +- LogicalAggregate(group=[{0}], sales=[SUM($1)], returns=[SUM($2)], profit=[SUM($3)])
+            +- LogicalProject(web_site_id=[$87], ws_ext_sales_price=[$23], $f2=[CASE(IS NOT NULL($49), CAST($49):DECIMAL(12, 2), 0)], $f3=[-($33, CASE(IS NOT NULL($57), CAST($57):DECIMAL(12, 2), 0))])
+               +- LogicalFilter(condition=[AND(=($0, $58), >=($60, CAST('1998-08-02'):DATE NOT NULL), <=($60, +(CAST('1998-08-02'):DATE NOT NULL, 2592000000)), =($13, $86), =($3, $112), >($117, 50), =($16, $134), =($145, 'N'))])
+                  +- LogicalJoin(condition=[true], joinType=[inner])
+                     :- LogicalJoin(condition=[true], joinType=[inner])
+                     :  :- LogicalJoin(condition=[true], joinType=[inner])
+                     :  :  :- LogicalJoin(condition=[true], joinType=[inner])
+                     :  :  :  :- LogicalJoin(condition=[AND(=($3, $36), =($17, $47))], joinType=[left])
+                     :  :  :  :  :- LogicalTableScan(table=[[builtin, default, web_sales, source: [TestParquetTableSource -> selectedFields=[ws_sold_date_sk, ws_sold_time_sk, ws_ship_date_sk, ws_item_sk, ws_bill_customer_sk, ws_bill_cdemo_sk, ws_bill_hdemo_sk, ws_bill_addr_sk, ws_ship_customer_sk, ws_ship_cdemo_sk, ws_ship_hdemo_sk, ws_ship_addr_sk, ws_web_page_sk, ws_web_site_sk, ws_ship_mode_sk, ws_warehouse_sk, ws_promo_sk, ws_order_number, ws_quantity, ws_wholesale_cost, ws_list_price, ws_sales_price, ws_ext_discount_amt, ws_ext_sales_price, ws_ext_wholesale_cost, ws_ext_list_price, ws_ext_tax, ws_coupon_amt, ws_ext_ship_cost, ws_net_paid, ws_net_paid_inc_tax, ws_net_paid_inc_ship, ws_net_paid_inc_ship_tax, ws_net_profit];filterPredicates=[]]]])
+                     :  :  :  :  +- LogicalTableScan(table=[[builtin, default, web_returns, source: [TestParquetTableSource -> selectedFields=[wr_returned_date_sk, wr_returned_time_sk, wr_item_sk, wr_refunded_customer_sk, wr_refunded_cdemo_sk, wr_refunded_hdemo_sk, wr_refunded_addr_sk, wr_returning_customer_sk, wr_returning_cdemo_sk, wr_returning_hdemo_sk, wr_returning_addr_sk, wr_web_page_sk, wr_reason_sk, wr_order_number, wr_return_quantity, wr_return_amt, wr_return_tax, wr_return_amt_inc_tax, wr_fee, wr_return_ship_cost, wr_refunded_cash, wr_reversed_charge, wr_account_credit, wr_net_loss];filterPredicates=[]]]])
+                     :  :  :  +- LogicalTableScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_date_id, d_date, d_month_seq, d_week_seq, d_quarter_seq, d_year, d_dow, d_moy, d_dom, d_qoy, d_fy_year, d_fy_quarter_seq, d_fy_week_seq, d_day_name, d_quarter_name, d_holiday, d_weekend, d_following_holiday, d_first_dom, d_last_dom, d_same_day_ly, d_same_day_lq, d_current_day, d_current_week, d_current_month, d_current_quarter, d_current_year];filterPredicates=[]]]])
+                     :  :  +- LogicalTableScan(table=[[builtin, default, web_site, source: [TestParquetTableSource -> selectedFields=[web_site_sk, web_site_id, web_rec_start_date, web_rec_end_date, web_name, web_open_date_sk, web_close_date_sk, web_class, web_manager, web_mkt_id, web_mkt_class, web_mkt_desc, web_market_manager, web_company_id, web_company_name, web_street_number, web_street_name, web_street_type, web_suite_number, web_city, web_county, web_state, web_zip, web_country, web_gmt_offset, web_tax_percentage];filterPredicates=[]]]])
+                     :  +- LogicalTableScan(table=[[builtin, default, item, source: [TestParquetTableSource -> selectedFields=[i_item_sk, i_item_id, i_rec_start_date, i_rec_end_date, i_item_desc, i_current_price, i_wholesale_cost, i_brand_id, i_brand, i_class_id, i_class, i_category_id, i_category, i_manufact_id, i_manufact, i_size, i_formulation, i_color, i_units, i_container, i_manager_id, i_product_name];filterPredicates=[]]]])
+                     +- LogicalTableScan(table=[[builtin, default, promotion, source: [TestParquetTableSource -> selectedFields=[p_promo_sk, p_promo_id, p_start_date_sk, p_end_date_sk, p_item_sk, p_cost, p_response_target, p_promo_name, p_channel_dmail, p_channel_email, p_channel_catalog, p_channel_tv, p_channel_radio, p_channel_press, p_channel_event, p_channel_demo, p_channel_details, p_purpose, p_discount_active];filterPredicates=[]]]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+SortLimit(orderBy=[channel ASC, id ASC], offset=[0], limit=[100], global=[true])
++- Exchange(distribution=[single])
+   +- SortLimit(orderBy=[channel ASC, id ASC], offset=[0], limit=[100], global=[false])
+      +- Calc(select=[CAST(channel) AS channel, CAST(id) AS id, sales, returns, profit])
+         +- HashAggregate(isMerge=[true], groupBy=[channel, id, $e], select=[channel, id, $e, Final_SUM(sum$0) AS sales, Final_SUM(sum$1) AS returns, Final_SUM(sum$2) AS profit])
+            +- Exchange(distribution=[hash[channel, id, $e]])
+               +- LocalHashAggregate(groupBy=[channel, id, $e], select=[channel, id, $e, Partial_SUM(sales) AS sum$0, Partial_SUM(returns) AS sum$1, Partial_SUM(profit) AS sum$2])
+                  +- Expand(projects=[{channel, id, sales, returns, profit, 0 AS $e}, {channel, null AS id, sales, returns, profit, 1 AS $e}, {null AS channel, null AS id, sales, returns, profit, 3 AS $e}])
+                     +- Union(all=[true], union=[channel, id, sales, returns, profit])
+                        :- Union(all=[true], union=[channel, id, sales, returns, profit])
+                        :  :- Calc(select=['store channel' AS channel, ||('store', store_id) AS id, sales, returns, profit])
+                        :  :  +- HashAggregate(isMerge=[true], groupBy=[store_id], select=[store_id, Final_SUM(sum$0) AS sales, Final_SUM(sum$1) AS returns, Final_SUM(sum$2) AS profit])
+                        :  :     +- Exchange(distribution=[hash[store_id]])
+                        :  :        +- LocalHashAggregate(groupBy=[store_id], select=[store_id, Partial_SUM(ss_ext_sales_price) AS sum$0, Partial_SUM($f2) AS sum$1, Partial_SUM($f3) AS sum$2])
+                        :  :           +- Calc(select=[s_store_id AS store_id, ss_ext_sales_price, CASE(IS NOT NULL(sr_return_amt), CAST(sr_return_amt), 0) AS $f2, -(ss_net_profit, CASE(IS NOT NULL(sr_net_loss), CAST(sr_net_loss), 0)) AS $f3])
+                        :  :              +- HashJoin(where=[=(ss_store_sk, s_store_sk)], join=[ss_store_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss, s_store_sk, s_store_id], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :  :                 :- Calc(select=[ss_store_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss])
+                        :  :                 :  +- HashJoin(where=[=(ss_sold_date_sk, d_date_sk)], join=[ss_sold_date_sk, ss_store_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :  :                 :     :- Calc(select=[ss_sold_date_sk, ss_store_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss])
+                        :  :                 :     :  +- HashJoin(where=[=(ss_item_sk, i_item_sk)], join=[ss_sold_date_sk, ss_item_sk, ss_store_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss, i_item_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :  :                 :     :     :- Calc(select=[ss_sold_date_sk, ss_item_sk, ss_store_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss])
+                        :  :                 :     :     :  +- HashJoin(where=[=(ss_promo_sk, p_promo_sk)], join=[ss_sold_date_sk, ss_item_sk, ss_store_sk, ss_promo_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss, p_promo_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :  :                 :     :     :     :- Calc(select=[ss_sold_date_sk, ss_item_sk, ss_store_sk, ss_promo_sk, ss_ext_sales_price, ss_net_profit, sr_return_amt, sr_net_loss])
+                        :  :                 :     :     :     :  +- HashJoin(where=[AND(=(ss_item_sk, sr_item_sk), =(ss_ticket_number, sr_ticket_number))], join=[ss_sold_date_sk, ss_item_sk, ss_store_sk, ss_promo_sk, ss_ticket_number, ss_ext_sales_price, ss_net_profit, sr_item_sk, sr_ticket_number, sr_return_amt, sr_net_loss], joinType=[LeftOuterJoin], build=[right])
+                        :  :                 :     :     :     :     :- Exchange(distribution=[hash[ss_item_sk]])
+                        :  :                 :     :     :     :     :  +- TableSourceScan(table=[[builtin, default, store_sales, source: [TestParquetTableSource -> selectedFields=[ss_sold_date_sk, ss_item_sk, ss_store_sk, ss_promo_sk, ss_ticket_number, ss_ext_sales_price, ss_net_profit];filterPredicates=[]]]], fields=[ss_sold_date_sk, ss_item_sk, ss_store_sk, ss_promo_sk, ss_ticket_number, ss_ext_sales_price, ss_net_profit])
+                        :  :                 :     :     :     :     +- Exchange(distribution=[hash[sr_item_sk]])
+                        :  :                 :     :     :     :        +- TableSourceScan(table=[[builtin, default, store_returns, source: [TestParquetTableSource -> selectedFields=[sr_item_sk, sr_ticket_number, sr_return_amt, sr_net_loss];filterPredicates=[]]]], fields=[sr_item_sk, sr_ticket_number, sr_return_amt, sr_net_loss])
+                        :  :                 :     :     :     +- Exchange(distribution=[broadcast], reuse_id=[1])
+                        :  :                 :     :     :        +- Calc(select=[p_promo_sk], where=[=(p_channel_tv, 'N')])
+                        :  :                 :     :     :           +- TableSourceScan(table=[[builtin, default, promotion, source: [TestParquetTableSource -> selectedFields=[p_promo_sk, p_channel_tv];filterPredicates=[]]]], fields=[p_promo_sk, p_channel_tv])
+                        :  :                 :     :     +- Exchange(distribution=[broadcast], reuse_id=[2])
+                        :  :                 :     :        +- Calc(select=[i_item_sk], where=[>(i_current_price, 50)])
+                        :  :                 :     :           +- TableSourceScan(table=[[builtin, default, item, source: [TestParquetTableSource -> selectedFields=[i_item_sk, i_current_price];filterPredicates=[]]]], fields=[i_item_sk, i_current_price])
+                        :  :                 :     +- Exchange(distribution=[broadcast], reuse_id=[3])
+                        :  :                 :        +- Calc(select=[d_date_sk], where=[AND(>=(d_date, 1998-08-02), <=(d_date, 1998-09-01))])
+                        :  :                 :           +- TableSourceScan(table=[[builtin, default, date_dim, source: [TestParquetTableSource -> selectedFields=[d_date_sk, d_date];filterPredicates=[]]]], fields=[d_date_sk, d_date])
+                        :  :                 +- Exchange(distribution=[broadcast])
+                        :  :                    +- TableSourceScan(table=[[builtin, default, store, source: [TestParquetTableSource -> selectedFields=[s_store_sk, s_store_id];filterPredicates=[]]]], fields=[s_store_sk, s_store_id])
+                        :  +- Calc(select=['catalog channel' AS channel, ||('catalog_page', catalog_page_id) AS id, sales, returns, profit])
+                        :     +- HashAggregate(isMerge=[true], groupBy=[catalog_page_id], select=[catalog_page_id, Final_SUM(sum$0) AS sales, Final_SUM(sum$1) AS returns, Final_SUM(sum$2) AS profit])
+                        :        +- Exchange(distribution=[hash[catalog_page_id]])
+                        :           +- LocalHashAggregate(groupBy=[catalog_page_id], select=[catalog_page_id, Partial_SUM(cs_ext_sales_price) AS sum$0, Partial_SUM($f2) AS sum$1, Partial_SUM($f3) AS sum$2])
+                        :              +- Calc(select=[cp_catalog_page_id AS catalog_page_id, cs_ext_sales_price, CASE(IS NOT NULL(cr_return_amount), CAST(cr_return_amount), 0) AS $f2, -(cs_net_profit, CASE(IS NOT NULL(cr_net_loss), CAST(cr_net_loss), 0)) AS $f3])
+                        :                 +- HashJoin(where=[=(cs_sold_date_sk, d_date_sk)], join=[cs_sold_date_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss, cp_catalog_page_id, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :                    :- Calc(select=[cs_sold_date_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss, cp_catalog_page_id])
+                        :                    :  +- HashJoin(where=[=(cs_item_sk, i_item_sk)], join=[cs_sold_date_sk, cs_item_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss, cp_catalog_page_id, i_item_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :                    :     :- Calc(select=[cs_sold_date_sk, cs_item_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss, cp_catalog_page_id])
+                        :                    :     :  +- HashJoin(where=[=(cs_promo_sk, p_promo_sk)], join=[cs_sold_date_sk, cs_item_sk, cs_promo_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss, cp_catalog_page_id, p_promo_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :                    :     :     :- Calc(select=[cs_sold_date_sk, cs_item_sk, cs_promo_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss, cp_catalog_page_id])
+                        :                    :     :     :  +- HashJoin(where=[=(cs_catalog_page_sk, cp_catalog_page_sk)], join=[cs_sold_date_sk, cs_catalog_page_sk, cs_item_sk, cs_promo_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss, cp_catalog_page_sk, cp_catalog_page_id], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                        :                    :     :     :     :- Calc(select=[cs_sold_date_sk, cs_catalog_page_sk, cs_item_sk, cs_promo_sk, cs_ext_sales_price, cs_net_profit, cr_return_amount, cr_net_loss])
+                        :                    :     :     :     :  +- HashJoin(where=[AND(=(cs_item_sk, cr_item_sk), =(cs_order_number, cr_order_number))], join=[cs_sold_date_sk, cs_catalog_page_sk, cs_item_sk, cs_promo_sk, cs_order_number, cs_ext_sales_price, cs_net_profit, cr_item_sk, cr_order_number, cr_return_amount, cr_net_loss], joinType=[LeftOuterJoin], build=[right])
+                        :                    :     :     :     :     :- Exchange(distribution=[hash[cs_item_sk]])
+                        :                    :     :     :     :     :  +- TableSourceScan(table=[[builtin, default, catalog_sales, source: [TestParquetTableSource -> selectedFields=[cs_sold_date_sk, cs_catalog_page_sk, cs_item_sk, cs_promo_sk, cs_order_number, cs_ext_sales_price, cs_net_profit];filterPredicates=[]]]], fields=[cs_sold_date_sk, cs_catalog_page_sk, cs_item_sk, cs_promo_sk, cs_order_number, cs_ext_sales_price, cs_net_profit])
+                        :                    :     :     :     :     +- Exchange(distribution=[hash[cr_item_sk]])
+                        :                    :     :     :     :        +- TableSourceScan(table=[[builtin, default, catalog_returns, source: [TestParquetTableSource -> selectedFields=[cr_item_sk, cr_order_number, cr_return_amount, cr_net_loss];filterPredicates=[]]]], fields=[cr_item_sk, cr_order_number, cr_return_amount, cr_net_loss])
+                        :                    :     :     :     +- Exchange(distribution=[broadcast])
+                        :                    :     :     :        +- TableSourceScan(table=[[builtin, default, catalog_page, source: [TestParquetTableSource -> selectedFields=[cp_catalog_page_sk, cp_catalog_page_id];filterPredicates=[]]]], fields=[cp_catalog_page_sk, cp_catalog_page_id])
+                        :                    :     :     +- Reused(reference_id=[1])
+                        :                    :     +- Reused(reference_id=[2])
+                        :                    +- Reused(reference_id=[3])
+                        +- Calc(select=['web channel' AS channel, ||('web_site', web_site_id) AS id, sales, returns, profit])
+                           +- HashAggregate(isMerge=[true], groupBy=[web_site_id], select=[web_site_id, Final_SUM(sum$0) AS sales, Final_SUM(sum$1) AS returns, Final_SUM(sum$2) AS profit])
+                              +- Exchange(distribution=[hash[web_site_id]])
+                                 +- LocalHashAggregate(groupBy=[web_site_id], select=[web_site_id, Partial_SUM(ws_ext_sales_price) AS sum$0, Partial_SUM($f2) AS sum$1, Partial_SUM($f3) AS sum$2])
+                                    +- Calc(select=[web_site_id, ws_ext_sales_price, CASE(IS NOT NULL(wr_return_amt), CAST(wr_return_amt), 0) AS $f2, -(ws_net_profit, CASE(IS NOT NULL(wr_net_loss), CAST(wr_net_loss), 0)) AS $f3])
+                                       +- HashJoin(where=[=(ws_sold_date_sk, d_date_sk)], join=[ws_sold_date_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss, web_site_id, d_date_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                                          :- Calc(select=[ws_sold_date_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss, web_site_id])
+                                          :  +- HashJoin(where=[=(ws_web_site_sk, web_site_sk)], join=[ws_sold_date_sk, ws_web_site_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss, web_site_sk, web_site_id], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                                          :     :- Calc(select=[ws_sold_date_sk, ws_web_site_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss])
+                                          :     :  +- HashJoin(where=[=(ws_item_sk, i_item_sk)], join=[ws_sold_date_sk, ws_item_sk, ws_web_site_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss, i_item_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                                          :     :     :- Calc(select=[ws_sold_date_sk, ws_item_sk, ws_web_site_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss])
+                                          :     :     :  +- HashJoin(where=[=(ws_promo_sk, p_promo_sk)], join=[ws_sold_date_sk, ws_item_sk, ws_web_site_sk, ws_promo_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss, p_promo_sk], joinType=[InnerJoin], isBroadcast=[true], build=[right])
+                                          :     :     :     :- Calc(select=[ws_sold_date_sk, ws_item_sk, ws_web_site_sk, ws_promo_sk, ws_ext_sales_price, ws_net_profit, wr_return_amt, wr_net_loss])
+                                          :     :     :     :  +- HashJoin(where=[AND(=(ws_item_sk, wr_item_sk), =(ws_order_number, wr_order_number))], join=[ws_sold_date_sk, ws_item_sk, ws_web_site_sk, ws_promo_sk, ws_order_number, ws_ext_sales_price, ws_net_profit, wr_item_sk, wr_order_number, wr_return_amt, wr_net_loss], joinType=[LeftOuterJoin], build=[right])
+                                          :     :     :     :     :- Exchange(distribution=[hash[ws_item_sk]])
+                                          :     :     :     :     :  +- TableSourceScan(table=[[builtin, default, web_sales, source: [TestParquetTableSource -> selectedFields=[ws_sold_date_sk, ws_item_sk, ws_web_site_sk, ws_promo_sk, ws_order_number, ws_ext_sales_price, ws_net_profit];filterPredicates=[]]]], fields=[ws_sold_date_sk, ws_item_sk, ws_web_site_sk, ws_promo_sk, ws_order_number, ws_ext_sales_price, ws_net_profit])
+                                          :     :     :     :     +- Exchange(distribution=[hash[wr_item_sk]])
+                                          :     :     :     :        +- TableSourceScan(table=[[builtin, default, web_returns, source: [TestParquetTableSource -> selectedFields=[wr_item_sk, wr_order_number, wr_return_amt, wr_net_loss];filterPredicates=[]]]], fields=[wr_item_sk, wr_order_number, wr_return_amt, wr_net_loss])
+                                          :     :     :     +- Reused(reference_id=[1])
+                                          :     :     +- Reused(reference_id=[2])
+                                          :     +- Exchange(distribution=[broadcast])
+                                          :        +- TableSourceScan(table=[[builtin, default, web_site, source: [TestParquetTableSource -> selectedFields=[web_site_sk, web_site_id];filterPredicates=[]]]], fields=[web_site_sk, web_site_id])
+                                          +- Reused(reference_id=[3])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="test[caseName=q81, joinReorder=true]">
     <Resource name="sql">
       <![CDATA[-- start query 81 in stream 0 using template query81.tpl

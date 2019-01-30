@@ -27,14 +27,14 @@ StreamExecCalc(select=[a, b], where=[=(MOD(a, 2), 0)])
 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 
 == Physical Execution Plan ==
-Stage 279 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 280 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b))
 		ship_strategy : FORWARD
 
-		Stage 281 : Operator
+		 : Operator
 			content : Calc(where: ((a MOD 2) = 0), select: (a, b))
 			ship_strategy : FORWARD
 
@@ -82,58 +82,58 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[AccRetrac
    +- Reused(reference_id=[3])
 
 == Physical Execution Plan ==
-Stage 237 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 238 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 239 : Operator
+		 : Operator
 			content : Calc(where: (text LIKE '%hello%'), select: (id, num, text))
 			ship_strategy : FORWARD
 
-			Stage 240 : Operator
+			 : Operator
 				content : SinkConversion to Row
 				ship_strategy : FORWARD
 
-				Stage 242 : Operator
+				 : Operator
 					content : Calc(select: (num, id))
 					ship_strategy : FORWARD
 
-					Stage 243 : Operator
+					 : Operator
 						content : Calc(where: (text LIKE '%world%'), select: (num, id))
 						ship_strategy : FORWARD
 
-						Stage 246 : Operator
+						 : Operator
 							content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
 							ship_strategy : HASH
 
-							Stage 247 : Operator
+							 : Operator
 								content : Calc(where: (num < 4), select: (num, cnt))
 								ship_strategy : FORWARD
 
-								Stage 248 : Operator
+								 : Operator
 									content : SinkConversion to Tuple2
 									ship_strategy : FORWARD
 
-									Stage 249 : Operator
+									 : Operator
 										content : Map
 										ship_strategy : FORWARD
 
-										Stage 251 : Operator
+										 : Operator
 											content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 											ship_strategy : FORWARD
 
-											Stage 241 : Data Sink
+											 : Data Sink
 												content : Sink: TestingAppendTableSink
 												ship_strategy : FORWARD
 
-												Stage 250 : Data Sink
+												 : Data Sink
 													content : Sink: TestingRetractTableSink
 													ship_strategy : FORWARD
 
-													Stage 252 : Data Sink
+													 : Data Sink
 														content : Sink: TestingUpsertTableSink(keys=())
 														ship_strategy : FORWARD
 
@@ -180,57 +180,57 @@ StreamExecSink(fields=[total_min], updateAsRetraction=[true], accMode=[AccRetrac
       +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 91 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 92 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 93 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 94 : Operator
+		 : Operator
 			content : Calc(select: (a))
 			ship_strategy : FORWARD
 
-			Stage 95 : Operator
+			 : Operator
 				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
-				Stage 96 : Operator
+				 : Operator
 					content : Calc(select: (d))
 					ship_strategy : FORWARD
 
-					Stage 99 : Operator
+					 : Operator
 						content : GroupAggregate(select: (SUM(a) AS TMP_0))
 						ship_strategy : GLOBAL
 
-						Stage 100 : Operator
+						 : Operator
 							content : Calc(select: (TMP_0 AS total_sum))
 							ship_strategy : FORWARD
 
-							Stage 103 : Operator
+							 : Operator
 								content : GroupAggregate(select: (MIN(a) AS TMP_1))
 								ship_strategy : GLOBAL
 
-								Stage 104 : Operator
+								 : Operator
 									content : Calc(select: (TMP_1 AS total_min))
 									ship_strategy : FORWARD
 
-									Stage 105 : Operator
+									 : Operator
 										content : SinkConversion to Tuple2
 										ship_strategy : FORWARD
 
-										Stage 106 : Operator
+										 : Operator
 											content : Map
 											ship_strategy : FORWARD
 
-											Stage 101 : Data Sink
+											 : Data Sink
 												content : Sink: TestingUpsertTableSink(keys=())
 												ship_strategy : FORWARD
 
-												Stage 107 : Data Sink
+												 : Data Sink
 													content : Sink: TestingRetractTableSink
 													ship_strategy : FORWARD
 
@@ -277,57 +277,57 @@ StreamExecSink(fields=[total_min], updateAsRetraction=[true], accMode=[AccRetrac
       +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 112 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 113 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 114 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 115 : Operator
+		 : Operator
 			content : Calc(select: (a))
 			ship_strategy : FORWARD
 
-			Stage 116 : Operator
+			 : Operator
 				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
-				Stage 117 : Operator
+				 : Operator
 					content : Calc(select: (d))
 					ship_strategy : FORWARD
 
-					Stage 120 : Operator
+					 : Operator
 						content : GroupAggregate(select: (SUM(a) AS TMP_0))
 						ship_strategy : GLOBAL
 
-						Stage 121 : Operator
+						 : Operator
 							content : Calc(select: (TMP_0 AS total_sum))
 							ship_strategy : FORWARD
 
-							Stage 124 : Operator
+							 : Operator
 								content : GroupAggregate(select: (MIN(a) AS TMP_1))
 								ship_strategy : GLOBAL
 
-								Stage 125 : Operator
+								 : Operator
 									content : Calc(select: (TMP_1 AS total_min))
 									ship_strategy : FORWARD
 
-									Stage 126 : Operator
+									 : Operator
 										content : SinkConversion to Tuple2
 										ship_strategy : FORWARD
 
-										Stage 127 : Operator
+										 : Operator
 											content : Map
 											ship_strategy : FORWARD
 
-											Stage 122 : Data Sink
+											 : Data Sink
 												content : Sink: TestingUpsertTableSink(keys=())
 												ship_strategy : FORWARD
 
-												Stage 128 : Data Sink
+												 : Data Sink
 													content : Sink: TestingRetractTableSink
 													ship_strategy : FORWARD
 
@@ -387,72 +387,72 @@ StreamExecSink(fields=[a], updateAsRetraction=[false], accMode=[Acc])
 +- Reused(reference_id=[2])
 
 == Physical Execution Plan ==
-Stage 133 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 134 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 135 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 136 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 137 : Operator
+		 : Operator
 			content : Calc(select: (a))
 			ship_strategy : FORWARD
 
-			Stage 138 : Operator
+			 : Operator
 				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
-				Stage 139 : Operator
+				 : Operator
 					content : Calc(select: (d))
 					ship_strategy : FORWARD
 
-					Stage 141 : Operator
+					 : Operator
 						content : SourceConversion(table:[builtin, default, t3], fields:(a, b, c))
 						ship_strategy : FORWARD
 
-						Stage 142 : Operator
+						 : Operator
 							content : Calc(select: (a))
 							ship_strategy : FORWARD
 
-							Stage 145 : Operator
+							 : Operator
 								content : GroupAggregate(select: (SUM(a) AS TMP_0))
 								ship_strategy : GLOBAL
 
-								Stage 146 : Operator
+								 : Operator
 									content : Calc(select: (TMP_0 AS total_sum))
 									ship_strategy : FORWARD
 
-									Stage 149 : Operator
+									 : Operator
 										content : GroupAggregate(select: (MIN(a) AS TMP_1))
 										ship_strategy : GLOBAL
 
-										Stage 150 : Operator
+										 : Operator
 											content : Calc(select: (TMP_1 AS total_min))
 											ship_strategy : FORWARD
 
-											Stage 151 : Operator
+											 : Operator
 												content : SinkConversion to Tuple2
 												ship_strategy : FORWARD
 
-												Stage 152 : Operator
+												 : Operator
 													content : Map
 													ship_strategy : FORWARD
 
-													Stage 147 : Data Sink
+													 : Data Sink
 														content : Sink: TestingUpsertTableSink(keys=())
 														ship_strategy : FORWARD
 
-														Stage 153 : Data Sink
+														 : Data Sink
 															content : Sink: TestingRetractTableSink
 															ship_strategy : FORWARD
 
-															Stage 154 : Data Sink
+															 : Data Sink
 																content : Sink: TestingUpsertTableSink(keys=())
 																ship_strategy : FORWARD
 
@@ -522,84 +522,84 @@ StreamExecSink(fields=[total_min], updateAsRetraction=[false], accMode=[Acc])
       +- Reused(reference_id=[2])
 
 == Physical Execution Plan ==
-Stage 161 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 162 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 163 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 164 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 165 : Operator
+		 : Operator
 			content : Calc(select: (a, c))
 			ship_strategy : FORWARD
 
-			Stage 166 : Operator
+			 : Operator
 				content : Calc(select: (a))
 				ship_strategy : FORWARD
 
-				Stage 167 : Operator
+				 : Operator
 					content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 					ship_strategy : FORWARD
 
-					Stage 168 : Operator
+					 : Operator
 						content : Calc(select: (d, f))
 						ship_strategy : FORWARD
 
-						Stage 169 : Operator
+						 : Operator
 							content : Calc(select: (d))
 							ship_strategy : FORWARD
 
-							Stage 171 : Operator
+							 : Operator
 								content : SinkConversion to Row
 								ship_strategy : FORWARD
 
-								Stage 173 : Operator
+								 : Operator
 									content : SourceConversion(table:[builtin, default, t3], fields:(a, b, c))
 									ship_strategy : FORWARD
 
-									Stage 174 : Operator
+									 : Operator
 										content : Calc(select: (a))
 										ship_strategy : FORWARD
 
-										Stage 177 : Operator
+										 : Operator
 											content : GroupAggregate(select: (SUM(a) AS TMP_0))
 											ship_strategy : GLOBAL
 
-											Stage 178 : Operator
+											 : Operator
 												content : Calc(select: (TMP_0 AS total_sum))
 												ship_strategy : FORWARD
 
-												Stage 179 : Operator
+												 : Operator
 													content : SinkConversion to Tuple2
 													ship_strategy : FORWARD
 
-													Stage 180 : Operator
+													 : Operator
 														content : Map
 														ship_strategy : FORWARD
 
-														Stage 183 : Operator
+														 : Operator
 															content : GroupAggregate(select: (MIN(a) AS TMP_1))
 															ship_strategy : GLOBAL
 
-															Stage 184 : Operator
+															 : Operator
 																content : Calc(select: (TMP_1 AS total_min))
 																ship_strategy : FORWARD
 
-																Stage 172 : Data Sink
+																 : Data Sink
 																	content : Sink: TestingAppendTableSink
 																	ship_strategy : FORWARD
 
-																	Stage 181 : Data Sink
+																	 : Data Sink
 																		content : Sink: TestingRetractTableSink
 																		ship_strategy : FORWARD
 
-																		Stage 185 : Data Sink
+																		 : Data Sink
 																			content : Sink: TestingUpsertTableSink(keys=())
 																			ship_strategy : FORWARD
 
@@ -655,68 +655,68 @@ StreamExecSink(fields=[total_min], updateAsRetraction=[true], accMode=[AccRetrac
       +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 192 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 193 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 194 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 195 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 196 : Operator
+		 : Operator
 			content : Calc(select: (a))
 			ship_strategy : FORWARD
 
-			Stage 197 : Operator
+			 : Operator
 				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
-				Stage 198 : Operator
+				 : Operator
 					content : Calc(select: (d))
 					ship_strategy : FORWARD
 
-					Stage 200 : Operator
+					 : Operator
 						content : SourceConversion(table:[builtin, default, t3], fields:(a, b, c))
 						ship_strategy : FORWARD
 
-						Stage 201 : Operator
+						 : Operator
 							content : Calc(select: (a))
 							ship_strategy : FORWARD
 
-							Stage 204 : Operator
+							 : Operator
 								content : GroupAggregate(select: (SUM(a) AS TMP_0))
 								ship_strategy : GLOBAL
 
-								Stage 205 : Operator
+								 : Operator
 									content : Calc(select: (TMP_0 AS total_sum))
 									ship_strategy : FORWARD
 
-									Stage 208 : Operator
+									 : Operator
 										content : GroupAggregate(select: (MIN(a) AS TMP_1))
 										ship_strategy : GLOBAL
 
-										Stage 209 : Operator
+										 : Operator
 											content : Calc(select: (TMP_1 AS total_min))
 											ship_strategy : FORWARD
 
-											Stage 210 : Operator
+											 : Operator
 												content : SinkConversion to Tuple2
 												ship_strategy : FORWARD
 
-												Stage 211 : Operator
+												 : Operator
 													content : Map
 													ship_strategy : FORWARD
 
-													Stage 206 : Data Sink
+													 : Data Sink
 														content : Sink: TestingUpsertTableSink(keys=())
 														ship_strategy : FORWARD
 
-														Stage 212 : Data Sink
+														 : Data Sink
 															content : Sink: TestingRetractTableSink
 															ship_strategy : FORWARD
 
@@ -756,46 +756,46 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[AccRetrac
    +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 255 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 256 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 257 : Operator
+		 : Operator
 			content : Calc(select: (num, id))
 			ship_strategy : FORWARD
 
-			Stage 259 : Operator
+			 : Operator
 				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS TMP_0))
 				ship_strategy : HASH
 
-				Stage 260 : Operator
+				 : Operator
 					content : Calc(select: (num, TMP_0 AS cnt))
 					ship_strategy : FORWARD
 
-					Stage 261 : Operator
+					 : Operator
 						content : Calc(where: (num < 4), select: (num, cnt))
 						ship_strategy : FORWARD
 
-						Stage 262 : Operator
+						 : Operator
 							content : SinkConversion to Tuple2
 							ship_strategy : FORWARD
 
-							Stage 263 : Operator
+							 : Operator
 								content : Map
 								ship_strategy : FORWARD
 
-								Stage 265 : Operator
+								 : Operator
 									content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 									ship_strategy : FORWARD
 
-									Stage 264 : Data Sink
+									 : Data Sink
 										content : Sink: TestingRetractTableSink
 										ship_strategy : FORWARD
 
-										Stage 266 : Data Sink
+										 : Data Sink
 											content : Sink: TestingUpsertTableSink(keys=())
 											ship_strategy : FORWARD
 
@@ -828,42 +828,42 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[AccRetrac
    +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 29 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 30 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 31 : Operator
+		 : Operator
 			content : Calc(select: (num, id))
 			ship_strategy : FORWARD
 
-			Stage 33 : Operator
+			 : Operator
 				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
 				ship_strategy : HASH
 
-				Stage 34 : Operator
+				 : Operator
 					content : Calc(where: (num < 4), select: (num, cnt))
 					ship_strategy : FORWARD
 
-					Stage 35 : Operator
+					 : Operator
 						content : SinkConversion to Tuple2
 						ship_strategy : FORWARD
 
-						Stage 36 : Operator
+						 : Operator
 							content : Map
 							ship_strategy : FORWARD
 
-							Stage 38 : Operator
+							 : Operator
 								content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 								ship_strategy : FORWARD
 
-								Stage 37 : Data Sink
+								 : Data Sink
 									content : Sink: TestingRetractTableSink
 									ship_strategy : FORWARD
 
-									Stage 39 : Data Sink
+									 : Data Sink
 										content : Sink: TestingUpsertTableSink(keys=())
 										ship_strategy : FORWARD
 
@@ -925,82 +925,82 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[AccRetrac
    +- Reused(reference_id=[4])
 
 == Physical Execution Plan ==
-Stage 282 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 283 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 284 : Operator
+		 : Operator
 			content : Calc(where: (text LIKE '%hello%'), select: (id, num, text))
 			ship_strategy : FORWARD
 
-			Stage 285 : Operator
+			 : Operator
 				content : SinkConversion to Row
 				ship_strategy : FORWARD
 
-				Stage 287 : Operator
+				 : Operator
 					content : Calc(where: (num >= 5), select: (id, num, text))
 					ship_strategy : FORWARD
 
-					Stage 288 : Operator
+					 : Operator
 						content : Calc(where: (text LIKE '%world%'), select: (id, num, text))
 						ship_strategy : FORWARD
 
-						Stage 289 : Operator
+						 : Operator
 							content : Calc(where: (num >= 5), select: (id, num, text))
 							ship_strategy : FORWARD
 
-							Stage 291 : Operator
+							 : Operator
 								content : SinkConversion to Tuple2
 								ship_strategy : FORWARD
 
-								Stage 292 : Operator
+								 : Operator
 									content : Map
 									ship_strategy : FORWARD
 
-									Stage 294 : Operator
+									 : Operator
 										content : Calc(select: (num, id))
 										ship_strategy : FORWARD
 
-										Stage 295 : Operator
+										 : Operator
 											content : Calc(select: (num, id))
 											ship_strategy : FORWARD
 
-											Stage 298 : Operator
+											 : Operator
 												content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
 												ship_strategy : HASH
 
-												Stage 299 : Operator
+												 : Operator
 													content : Calc(where: (num < 4), select: (num, cnt))
 													ship_strategy : FORWARD
 
-													Stage 300 : Operator
+													 : Operator
 														content : SinkConversion to Tuple2
 														ship_strategy : FORWARD
 
-														Stage 301 : Operator
+														 : Operator
 															content : Map
 															ship_strategy : FORWARD
 
-															Stage 303 : Operator
+															 : Operator
 																content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 																ship_strategy : FORWARD
 
-																Stage 286 : Data Sink
+																 : Data Sink
 																	content : Sink: TestingAppendTableSink
 																	ship_strategy : FORWARD
 
-																	Stage 293 : Data Sink
+																	 : Data Sink
 																		content : Sink: TestingRetractTableSink
 																		ship_strategy : FORWARD
 
-																		Stage 302 : Data Sink
+																		 : Data Sink
 																			content : Sink: TestingRetractTableSink
 																			ship_strategy : FORWARD
 
-																			Stage 304 : Data Sink
+																			 : Data Sink
 																				content : Sink: TestingUpsertTableSink(keys=())
 																				ship_strategy : FORWARD
 
@@ -1031,45 +1031,45 @@ StreamExecSink(fields=[total_sum], updateAsRetraction=[true], accMode=[AccRetrac
                +- StreamExecDataStreamScan(table=[[builtin, default, t2]], updateAsRetraction=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
-Stage 307 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 308 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 309 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 310 : Operator
+		 : Operator
 			content : Calc(select: (a))
 			ship_strategy : FORWARD
 
-			Stage 311 : Operator
+			 : Operator
 				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
-				Stage 312 : Operator
+				 : Operator
 					content : Calc(select: (d))
 					ship_strategy : FORWARD
 
-					Stage 315 : Operator
+					 : Operator
 						content : GroupAggregate(select: (SUM(a) AS TMP_0))
 						ship_strategy : GLOBAL
 
-						Stage 316 : Operator
+						 : Operator
 							content : Calc(select: (TMP_0 AS total_sum))
 							ship_strategy : FORWARD
 
-							Stage 317 : Operator
+							 : Operator
 								content : SinkConversion to Tuple2
 								ship_strategy : FORWARD
 
-								Stage 318 : Operator
+								 : Operator
 									content : Map
 									ship_strategy : FORWARD
 
-									Stage 319 : Data Sink
+									 : Data Sink
 										content : Sink: TestingRetractTableSink
 										ship_strategy : FORWARD
 
@@ -1100,45 +1100,45 @@ StreamExecSink(fields=[total_sum], updateAsRetraction=[true], accMode=[AccRetrac
                +- StreamExecDataStreamScan(table=[[builtin, default, t2]], updateAsRetraction=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
-Stage 322 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 323 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 324 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 325 : Operator
+		 : Operator
 			content : Calc(select: (a))
 			ship_strategy : FORWARD
 
-			Stage 326 : Operator
+			 : Operator
 				content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 				ship_strategy : FORWARD
 
-				Stage 327 : Operator
+				 : Operator
 					content : Calc(select: (d))
 					ship_strategy : FORWARD
 
-					Stage 330 : Operator
+					 : Operator
 						content : GroupAggregate(select: (SUM(a) AS TMP_0))
 						ship_strategy : GLOBAL
 
-						Stage 331 : Operator
+						 : Operator
 							content : Calc(select: (TMP_0 AS total_sum))
 							ship_strategy : FORWARD
 
-							Stage 332 : Operator
+							 : Operator
 								content : SinkConversion to Tuple2
 								ship_strategy : FORWARD
 
-								Stage 333 : Operator
+								 : Operator
 									content : Map
 									ship_strategy : FORWARD
 
-									Stage 334 : Data Sink
+									 : Data Sink
 										content : Sink: TestingRetractTableSink
 										ship_strategy : FORWARD
 
@@ -1172,40 +1172,40 @@ StreamExecSink(fields=[a, b, c, d, e, f, i, j, k, l, m, f1], updateAsRetraction=
          +- StreamExecDataStreamScan(table=[[builtin, default, t3]], updateAsRetraction=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
-Stage 219 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 220 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 221 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 222 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 224 : Operator
+		 : Operator
 			content : SourceConversion(table:[builtin, default, t2], fields:(d, e, f))
 			ship_strategy : FORWARD
 
-			Stage 226 : Operator
+			 : Operator
 				content : InnerJoin(where: (=(b, e)), join: (a, b, c, d, e, f))
 				ship_strategy : HASH
 
-				Stage 228 : Operator
+				 : Operator
 					content : SourceConversion(table:[builtin, default, t3], fields:(i, j, k, l, m))
 					ship_strategy : FORWARD
 
-					Stage 230 : Operator
+					 : Operator
 						content : InnerJoin(where: (=(a, i)), join: (a, b, c, d, e, f, i, j, k, l, m))
 						ship_strategy : HASH
 
-						Stage 231 : Operator
+						 : Operator
 							content : correlate: table(TableFunc1(f)), select: a,b,c,d,e,f,i,j,k,l,m,f1
 							ship_strategy : FORWARD
 
-							Stage 232 : Data Sink
+							 : Data Sink
 								content : Sink: csv sink: file
 								ship_strategy : FORWARD
 
@@ -1225,17 +1225,17 @@ StreamExecUnion(all=[true], union=[count, word])
 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
 
 == Physical Execution Plan ==
-Stage 86 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-Stage 87 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 88 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(count, word))
 		ship_strategy : FORWARD
 
-		Stage 89 : Operator
+		 : Operator
 			content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(count, word))
 			ship_strategy : FORWARD
 
@@ -1270,30 +1270,30 @@ StreamExecSink(fields=[a, b, c, a_sum], updateAsRetraction=[false], accMode=[Acc
             +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 74 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 75 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, t1], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 77 : Operator
+		 : Operator
 			content : GroupAggregate(groupBy: (a, b, c), select: (a, b, c, SUM(a) AS TMP_0))
 			ship_strategy : HASH
 
-			Stage 78 : Operator
+			 : Operator
 				content : Calc(select: (a, b, c, TMP_0 AS a_sum))
 				ship_strategy : FORWARD
 
-				Stage 80 : Operator
+				 : Operator
 					content : GroupAggregate(groupBy: (b, c), select: (b, c, SUM(a) AS TMP_1))
 					ship_strategy : HASH
 
-					Stage 81 : Operator
+					 : Operator
 						content : Calc(select: (CAST(1) AS a, b, c, TMP_1 AS a_sum))
 						ship_strategy : FORWARD
 
-						Stage 83 : Data Sink
+						 : Data Sink
 							content : Sink: TestingUpsertTableSink(keys=())
 							ship_strategy : FORWARD
 
@@ -1325,34 +1325,34 @@ StreamExecSink(fields=[a, b], updateAsRetraction=[false], accMode=[Acc])
    +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 337 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 338 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 340 : Operator
+		 : Operator
 			content : AppendFastRank(orderBy: (c DESC), partitionBy: (b), *, rowNum, rankStart=1, rankEnd=10)
 			ship_strategy : HASH
 
-			Stage 341 : Operator
+			 : Operator
 				content : SinkConversion to Tuple2
 				ship_strategy : FORWARD
 
-				Stage 342 : Operator
+				 : Operator
 					content : Map
 					ship_strategy : FORWARD
 
-					Stage 344 : Operator
+					 : Operator
 						content : Calc(where: (a < 6), select: (a, b))
 						ship_strategy : FORWARD
 
-						Stage 343 : Data Sink
+						 : Data Sink
 							content : Sink: TestingRetractTableSink
 							ship_strategy : FORWARD
 
-							Stage 345 : Data Sink
+							 : Data Sink
 								content : Sink: TestingUpsertTableSink(keys=())
 								ship_strategy : FORWARD
 
@@ -1384,38 +1384,38 @@ StreamExecSink(fields=[a, b], updateAsRetraction=[false], accMode=[AccRetract])
    +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 268 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 269 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(a, b, c))
 		ship_strategy : FORWARD
 
-		Stage 271 : Operator
+		 : Operator
 			content : AppendFastRank(orderBy: (c DESC), partitionBy: (b), *, rowNum, rankStart=1, rankEnd=10)
 			ship_strategy : HASH
 
-			Stage 272 : Operator
+			 : Operator
 				content : Calc(where: (a > 6), select: (a))
 				ship_strategy : FORWARD
 
-				Stage 273 : Operator
+				 : Operator
 					content : SinkConversion to Tuple2
 					ship_strategy : FORWARD
 
-					Stage 274 : Operator
+					 : Operator
 						content : Map
 						ship_strategy : FORWARD
 
-						Stage 276 : Operator
+						 : Operator
 							content : Calc(where: (a < 6), select: (a, b))
 							ship_strategy : FORWARD
 
-							Stage 275 : Data Sink
+							 : Data Sink
 								content : Sink: TestingRetractTableSink
 								ship_strategy : FORWARD
 
-								Stage 277 : Data Sink
+								 : Data Sink
 									content : Sink: TestingUpsertTableSink(keys=())
 									ship_strategy : FORWARD
 
@@ -1460,46 +1460,46 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[AccRetrac
    +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 1 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 2 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 3 : Operator
+		 : Operator
 			content : Calc(select: (num, id))
 			ship_strategy : FORWARD
 
-			Stage 5 : Operator
+			 : Operator
 				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS TMP_0))
 				ship_strategy : HASH
 
-				Stage 6 : Operator
+				 : Operator
 					content : Calc(select: (num, TMP_0 AS cnt))
 					ship_strategy : FORWARD
 
-					Stage 7 : Operator
+					 : Operator
 						content : Calc(where: (num < 4), select: (num, cnt))
 						ship_strategy : FORWARD
 
-						Stage 9 : Operator
+						 : Operator
 							content : GroupAggregate(groupBy: (cnt), select: (cnt, COUNT_RETRACT(num) AS TMP_1))
 							ship_strategy : HASH
 
-							Stage 10 : Operator
+							 : Operator
 								content : Calc(select: (cnt, TMP_1 AS frequency))
 								ship_strategy : FORWARD
 
-								Stage 12 : Operator
+								 : Operator
 									content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 									ship_strategy : FORWARD
 
-									Stage 11 : Data Sink
+									 : Data Sink
 										content : Sink: TestingUpsertTableSink(keys=(0))
 										ship_strategy : FORWARD
 
-										Stage 13 : Data Sink
+										 : Data Sink
 											content : Sink: TestingUpsertTableSink(keys=())
 											ship_strategy : FORWARD
 
@@ -1536,38 +1536,38 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[AccRetrac
    +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 16 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 17 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 18 : Operator
+		 : Operator
 			content : Calc(select: (num, id))
 			ship_strategy : FORWARD
 
-			Stage 20 : Operator
+			 : Operator
 				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
 				ship_strategy : HASH
 
-				Stage 21 : Operator
+				 : Operator
 					content : Calc(where: (num < 4), select: (num, cnt))
 					ship_strategy : FORWARD
 
-					Stage 23 : Operator
+					 : Operator
 						content : GroupAggregate(groupBy: (cnt), select: (cnt, COUNT_RETRACT(num) AS frequency))
 						ship_strategy : HASH
 
-						Stage 25 : Operator
+						 : Operator
 							content : Calc(where: ((num >= 4) AND (num < 6)), select: (num, cnt))
 							ship_strategy : FORWARD
 
-							Stage 24 : Data Sink
+							 : Data Sink
 								content : Sink: TestingUpsertTableSink(keys=(0))
 								ship_strategy : FORWARD
 
-								Stage 26 : Data Sink
+								 : Data Sink
 									content : Sink: TestingUpsertTableSink(keys=())
 									ship_strategy : FORWARD
 
@@ -1591,26 +1591,26 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[Acc])
             +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
-Stage 41 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 42 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 43 : Operator
+		 : Operator
 			content : Calc(select: (num, id))
 			ship_strategy : FORWARD
 
-			Stage 45 : Operator
+			 : Operator
 				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS TMP_0))
 				ship_strategy : HASH
 
-				Stage 46 : Operator
+				 : Operator
 					content : Calc(select: (num, TMP_0 AS cnt))
 					ship_strategy : FORWARD
 
-					Stage 47 : Data Sink
+					 : Data Sink
 						content : Sink: TestingUpsertTableSink(keys=(0))
 						ship_strategy : FORWARD
 
@@ -1632,22 +1632,22 @@ StreamExecSink(fields=[num, cnt], updateAsRetraction=[false], accMode=[Acc])
          +- StreamExecDataStreamScan(table=[[builtin, default, T]], updateAsRetraction=[true], accMode=[Acc])
 
 == Physical Execution Plan ==
-Stage 49 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 50 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, T], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 51 : Operator
+		 : Operator
 			content : Calc(select: (num, id))
 			ship_strategy : FORWARD
 
-			Stage 53 : Operator
+			 : Operator
 				content : GroupAggregate(groupBy: (num), select: (num, COUNT(id) AS cnt))
 				ship_strategy : HASH
 
-				Stage 54 : Data Sink
+				 : Data Sink
 					content : Sink: TestingUpsertTableSink(keys=(0))
 					ship_strategy : FORWARD
 
@@ -1693,42 +1693,42 @@ StreamExecSink(fields=[id1, num, text1], updateAsRetraction=[false], accMode=[Ac
                      +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 56 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 57 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id, num, text))
 		ship_strategy : FORWARD
 
-		Stage 58 : Operator
+		 : Operator
 			content : Calc(where: ((id >= 0) AND (num < 5)), select: (id AS id3, text AS text1))
 			ship_strategy : FORWARD
 
-			Stage 60 : Operator
+			 : Operator
 				content : Calc(where: (id <= 10), select: (id AS id1, num))
 				ship_strategy : FORWARD
 
-				Stage 62 : Operator
+				 : Operator
 					content : Calc(where: ((id >= 0) AND (num >= 5)), select: (id AS id2))
 					ship_strategy : FORWARD
 
-					Stage 64 : Operator
+					 : Operator
 						content : InnerJoin(where: (=(id1, id2)), join: (id1, num, id2))
 						ship_strategy : HASH
 
-						Stage 65 : Operator
+						 : Operator
 							content : Calc(select: (id1, num))
 							ship_strategy : FORWARD
 
-							Stage 67 : Operator
+							 : Operator
 								content : InnerJoin(where: (=(id1, id3)), join: (id3, text1, id1, num))
 								ship_strategy : HASH
 
-								Stage 68 : Operator
+								 : Operator
 									content : Calc(select: (id1, num, text1))
 									ship_strategy : FORWARD
 
-									Stage 69 : Data Sink
+									 : Data Sink
 										content : Sink: TestingUpsertTableSink(keys=())
 										ship_strategy : FORWARD
 

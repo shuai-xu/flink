@@ -47,58 +47,58 @@ StreamExecSink(fields=[category, shopId, avg_num, cnt_num, rank_num], updateAsRe
       +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 12 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 13 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(category, shopId, num))
 		ship_strategy : FORWARD
 
-		Stage 15 : Operator
+		 : Operator
 			content : GroupAggregate(groupBy: (category, shopId), select: (category, shopId, $SUM0(num) AS sum_num, COUNT(num) AS $f3, MAX(num) AS max_num))
 			ship_strategy : HASH
 
-			Stage 16 : Operator
+			 : Operator
 				content : Calc(select: (category, shopId, (($f3 = 0) CASE null CASE sum_num) AS sum_num, max_num, CAST((CAST((($f3 = 0) CASE null CASE sum_num)) / $f3)) AS avg_num, $f3 AS cnt_num))
 				ship_strategy : FORWARD
 
-				Stage 18 : Operator
+				 : Operator
 					content : RetractRank(orderBy: (sum_num DESC, max_num ASC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 					ship_strategy : HASH
 
-					Stage 19 : Operator
+					 : Operator
 						content : Calc(select: (category, shopId, sum_num, max_num, w0$o0))
 						ship_strategy : FORWARD
 
-						Stage 20 : Operator
+						 : Operator
 							content : SinkConversion to Tuple2
 							ship_strategy : FORWARD
 
-							Stage 21 : Operator
+							 : Operator
 								content : Map
 								ship_strategy : FORWARD
 
-								Stage 24 : Operator
+								 : Operator
 									content : RetractRank(orderBy: (avg_num DESC, cnt_num ASC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 									ship_strategy : HASH
 
-									Stage 25 : Operator
+									 : Operator
 										content : Calc(select: (category, shopId, avg_num, cnt_num, w0$o0))
 										ship_strategy : FORWARD
 
-										Stage 26 : Operator
+										 : Operator
 											content : SinkConversion to Tuple2
 											ship_strategy : FORWARD
 
-											Stage 27 : Operator
+											 : Operator
 												content : Map
 												ship_strategy : FORWARD
 
-												Stage 22 : Data Sink
+												 : Data Sink
 													content : Sink: TestingRetractTableSink
 													ship_strategy : FORWARD
 
-													Stage 28 : Data Sink
+													 : Data Sink
 														content : Sink: TestingRetractTableSink
 														ship_strategy : FORWARD
 
@@ -135,54 +135,54 @@ StreamExecSink(fields=[category, shopId, max_num, rank_num], updateAsRetraction=
       +- Reused(reference_id=[1])
 
 == Physical Execution Plan ==
-Stage 35 : Data Source
+ : Data Source
 	content : collect elements with CollectionInputFormat
 
-	Stage 36 : Operator
+	 : Operator
 		content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(category, shopId, num))
 		ship_strategy : FORWARD
 
-		Stage 38 : Operator
+		 : Operator
 			content : GroupAggregate(groupBy: (category, shopId), select: (category, shopId, COUNT(num) AS cnt_num, MAX(num) AS max_num))
 			ship_strategy : HASH
 
-			Stage 40 : Operator
+			 : Operator
 				content : UpdateFastRank[0,1](orderBy: (cnt_num DESC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 				ship_strategy : HASH
 
-				Stage 41 : Operator
+				 : Operator
 					content : Calc(select: (category, shopId, cnt_num, w0$o0))
 					ship_strategy : FORWARD
 
-					Stage 42 : Operator
+					 : Operator
 						content : SinkConversion to Tuple2
 						ship_strategy : FORWARD
 
-						Stage 43 : Operator
+						 : Operator
 							content : Map
 							ship_strategy : FORWARD
 
-							Stage 46 : Operator
+							 : Operator
 								content : UpdateFastRank[0,1](orderBy: (max_num DESC), partitionBy: (category), *, rowNum, rankStart=1, rankEnd=2)
 								ship_strategy : HASH
 
-								Stage 47 : Operator
+								 : Operator
 									content : Calc(select: (category, shopId, max_num, w0$o0))
 									ship_strategy : FORWARD
 
-									Stage 48 : Operator
+									 : Operator
 										content : SinkConversion to Tuple2
 										ship_strategy : FORWARD
 
-										Stage 49 : Operator
+										 : Operator
 											content : Map
 											ship_strategy : FORWARD
 
-											Stage 44 : Data Sink
+											 : Data Sink
 												content : Sink: TestingRetractTableSink
 												ship_strategy : FORWARD
 
-												Stage 50 : Data Sink
+												 : Data Sink
 													content : Sink: TestingRetractTableSink
 													ship_strategy : FORWARD
 
