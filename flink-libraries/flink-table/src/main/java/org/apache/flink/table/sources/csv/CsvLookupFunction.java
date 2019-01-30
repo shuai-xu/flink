@@ -29,7 +29,7 @@ import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.TypeGetterSetters;
-import org.apache.flink.table.sources.IndexKey;
+import org.apache.flink.table.plan.schema.IndexKey;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 
 import java.util.ArrayList;

@@ -50,11 +50,11 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow, Joined
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{checkAndExtractMethods, signatureToString, signaturesToString}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
-import org.apache.flink.table.plan.schema.{BaseRowSchema, TimeIndicatorRelDataType}
+import org.apache.flink.table.plan.schema.{BaseRowSchema, IndexKey, TimeIndicatorRelDataType}
 import org.apache.flink.table.plan.util.TemporalJoinUtil._
 import org.apache.flink.table.plan.util.{CalcUtil, RexLiteralUtil}
 import org.apache.flink.table.runtime.join.{TemporalTableJoinAsyncRunner, TemporalTableJoinProcessRunner, TemporalTableJoinWithCalcAsyncRunner, TemporalTableJoinWithCalcProcessRunner}
-import org.apache.flink.table.sources.{IndexKey, LookupConfig, LookupableTableSource, TableSource}
+import org.apache.flink.table.sources.{LookupConfig, LookupableTableSource, TableSource}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.TableConnectorUtil
 import org.apache.flink.types.Row

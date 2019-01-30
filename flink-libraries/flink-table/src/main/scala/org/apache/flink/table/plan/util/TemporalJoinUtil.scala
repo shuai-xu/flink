@@ -17,15 +17,14 @@
  */
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.table.sources.{IndexKey, TableSource}
+import org.apache.flink.table.sources.TableSource
 import org.apache.flink.util.Preconditions.checkArgument
-
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.`type`.{OperandTypes, ReturnTypes}
 import org.apache.calcite.sql.{SqlFunction, SqlFunctionCategory, SqlKind}
-
 import java.util
 import java.util.Comparator
+import org.apache.flink.table.plan.schema.IndexKey
 
 import scala.collection.JavaConversions._
 

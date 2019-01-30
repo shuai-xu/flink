@@ -24,7 +24,7 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.TypeConverters;
-import org.apache.flink.table.sources.IndexKey;
+import org.apache.flink.table.plan.schema.IndexKey;
 
 import java.io.Serializable;
 import java.util.ArrayList;

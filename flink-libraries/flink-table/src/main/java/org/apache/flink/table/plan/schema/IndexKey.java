@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources;
+package org.apache.flink.table.plan.schema;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -36,6 +36,7 @@ import java.util.stream.StreamSupport;
 /**
  * Represents internal structure of an Index, and may carry constant key(s) info during optimization.
  */
+@Internal
 public class IndexKey implements Comparable<IndexKey>, Serializable {
 
 	private static final long serialVersionUID = -7842311969684389493L;

@@ -24,10 +24,9 @@ import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.logical._
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.physical.stream._
-import org.apache.flink.table.plan.schema.FlinkRelOptTable
+import org.apache.flink.table.plan.schema.{FlinkRelOptTable, IndexKey}
 import org.apache.flink.table.plan.util.{FlinkRelMdUtil, TemporalJoinUtil}
-import org.apache.flink.table.sources.{IndexKey, TableSource}
-
+import org.apache.flink.table.sources.TableSource
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.plan.RelOptTable
 import org.apache.calcite.plan.volcano.RelSubset
@@ -40,7 +39,6 @@ import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.util.{Bug, BuiltInMethod, ImmutableBitSet, Util}
-
 import java.lang.{Boolean => JBool}
 import java.util
 import java.util.{ArrayList => JArrayList, List => JList}

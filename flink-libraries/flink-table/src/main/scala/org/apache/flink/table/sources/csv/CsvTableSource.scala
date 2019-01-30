@@ -31,6 +31,7 @@ import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowT
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.plan.schema.IndexKey
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.Logging
