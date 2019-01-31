@@ -290,10 +290,10 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		double capacityCpu = taskManagerConfiguration.getConfiguration().getDouble(TaskManagerOptions.TASK_MANAGER_CAPACITY_CPU_CORE);
 		int capacityMem = taskManagerConfiguration.getConfiguration().getInteger(TaskManagerOptions.TASK_MANAGER_CAPACITY_MEMORY_MB);
 
-		taskManagerMetricGroup.addGroup(MetricNames.PROCESS_TREE)
+		taskManagerMetricGroup.addGroup(MetricNames.STATUS).addGroup(MetricNames.PROCESS_TREE)
 			.addGroup(MetricNames.CPU).gauge("Allocated", () -> capacityCpu);
 		// Convert MB to Byte
-		taskManagerMetricGroup.addGroup(MetricNames.PROCESS_TREE)
+		taskManagerMetricGroup.addGroup(MetricNames.STATUS).addGroup(MetricNames.PROCESS_TREE)
 			.addGroup(MetricNames.MEMORY)
 			.gauge("Allocated", () -> capacityMem > 0 ? 1024L * 1024L * capacityMem : capacityMem);
 	}

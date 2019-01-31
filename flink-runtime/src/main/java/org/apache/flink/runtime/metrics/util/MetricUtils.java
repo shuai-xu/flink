@@ -55,12 +55,13 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.flink.runtime.metrics.MetricNames.STATUS;
+
 /**
  * Utility class to register pre-defined metric sets.
  */
 public class MetricUtils {
 	private static final Logger LOG = LoggerFactory.getLogger(MetricUtils.class);
-	private static final String METRIC_GROUP_STATUS_NAME = "Status";
 	private static final boolean IS_PROC_FS_AVAILABLE = OperatingSystem.isLinux();
 
 	private MetricUtils() {
@@ -73,7 +74,7 @@ public class MetricUtils {
 			metricRegistry,
 			hostname);
 
-		MetricGroup statusGroup = jobManagerMetricGroup.addGroup(METRIC_GROUP_STATUS_NAME);
+		MetricGroup statusGroup = jobManagerMetricGroup.addGroup(STATUS);
 
 		// initialize the JM metrics
 		instantiateStatusMetrics(statusGroup);
@@ -92,7 +93,7 @@ public class MetricUtils {
 			taskManagerLocation.getHostname(),
 			taskManagerLocation.getResourceID().toString());
 
-		MetricGroup statusGroup = taskManagerMetricGroup.addGroup(METRIC_GROUP_STATUS_NAME);
+		MetricGroup statusGroup = taskManagerMetricGroup.addGroup(STATUS);
 
 		// Initialize the TM metrics
 		instantiateStatusMetrics(statusGroup);

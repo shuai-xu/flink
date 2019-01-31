@@ -80,6 +80,7 @@ public class MetricNames {
 	public static final String IO_PARTITION_LATENCY = "partitionLatency";
 	public static final String IO_PARTITION_COUNT = "partitionCount";
 
+	public static final String STATUS = "Status";
 	public static final String PROCESS_TREE = "ProcessTree";
 	public static final String CPU = "CPU";
 	public static final String MEMORY = "Memory";
