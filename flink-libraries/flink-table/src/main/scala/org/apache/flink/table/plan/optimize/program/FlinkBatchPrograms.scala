@@ -259,12 +259,6 @@ object FlinkBatchPrograms {
           .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
           .add(FlinkBatchExecRuleSets.SKEW_AGGREGATE_REWRITE_RULES)
           .build(), "skewed aggregate rewrite")
-        .addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-          .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-          .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-          .add(FlinkBatchExecRuleSets.SMJ_REWRITE_RULES)
-          .build(), "smj rewrite")
         .build())
 
     programs

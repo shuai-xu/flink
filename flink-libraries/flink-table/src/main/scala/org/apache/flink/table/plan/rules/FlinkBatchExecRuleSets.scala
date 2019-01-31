@@ -413,10 +413,4 @@ object FlinkBatchExecRuleSets {
     UselessRfBuilderRemoveRule.INSTANCE,
     FlinkCalcRemoveRule.INSTANCE
   )
-
-  val SMJ_REWRITE_RULES: RuleSet = RuleSets.ofList(
-    SortMergeJoinSortMergeRule.INSTANCE,
-    SortMergeJoinCalcSortMergeRule.LEFT_SORT,
-    SortMergeJoinCalcSortMergeRule.RIGHT_SORT
-  )
 }
