@@ -22,11 +22,12 @@ import java.util
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.catalog.{CatalogTable, ExternalTableUtil}
+import org.apache.flink.table.catalog.{CatalogTable, ExternalTableUtil, FlinkTempTable}
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.ConfigurableTable
 import org.apache.flink.table.api.TableSourceParser
+import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
 
@@ -46,9 +47,10 @@ import scala.collection.mutable.ArrayBuffer
  */
 class CatalogCalciteTable(
     val name:String,
-    val table: CatalogTable,
-    val isStreaming: Boolean)
+    val table: CatalogTable)
     extends FlinkTable with ConfigurableTable {
+
+  val isStreaming = table.getProperties.remove(CatalogTableConfig.IS_STREAMING).toBoolean
 
   /**
    * Creates a copy of this table, changing statistic.
@@ -56,7 +58,10 @@ class CatalogCalciteTable(
    * @param statistic A new FlinkStatistic.
    * @return Copy of this table, substituting statistic.
    */
-  override def copy(statistic: FlinkStatistic) = new CatalogCalciteTable(name, table, isStreaming)
+  override def copy(statistic: FlinkStatistic): CatalogCalciteTable = {
+    table.getProperties.put(CatalogTableConfig.IS_STREAMING, isStreaming.toString)
+    return new CatalogCalciteTable(name, table)
+  }
 
   override def getRowType(typeFactory: RelDataTypeFactory) =
     typeFactory.asInstanceOf[FlinkTypeFactory]
@@ -79,9 +84,10 @@ class CatalogCalciteTable(
       table.getRowTimeField,
       table.getWatermarkOffset,
       table.getCreateTime,
-      table.getLastAccessTime,
-      isStreaming)
-    new CatalogCalciteTable(name, newTable, isStreaming)
+      table.getLastAccessTime)
+
+    newTable.getProperties.put(CatalogTableConfig.IS_STREAMING, isStreaming.toString)
+    new CatalogCalciteTable(name, newTable)
   }
 
   override def getStatistic(): FlinkStatistic = {

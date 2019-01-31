@@ -31,6 +31,7 @@ import org.apache.flink.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +100,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 				throw new TableAlreadyExistException(catalogName, tableName.getFullName());
 			}
 		} else {
-			tables.put(tableName, table);
+			tables.put(tableName, deepCopyCatalogTable(table));
 
 			if (table.isPartitioned()) {
 				partitions.put(tableName, new LinkedHashMap<>());
@@ -167,7 +168,52 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		if (!tableExists(tableName)) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
 		} else {
-			return tables.get(tableName);
+			CatalogTable table = tables.get(tableName);
+
+			// TODO: Should return a deep copy since operations outside the catalog should not impact table stored internally
+			// [BLINK-18866721] read/write APIs in FlinkInMemoryCatalog for meta objects should use a deep copy of those objects
+			// This is only a shallow copy
+			return deepCopyCatalogTable(table);
+		}
+	}
+
+	private CatalogTable deepCopyCatalogTable(CatalogTable table) {
+		if (table instanceof FlinkTempTable) {
+			return table;
+		} else if (table instanceof CatalogView) {
+			return new CatalogView(
+				table.getTableType(),
+				table.getTableSchema(),
+				new HashMap<>(table.getProperties()),
+				table.getRichTableSchema(),
+				table.getTableStats(),
+				table.getComment(),
+				table.getPartitionColumnNames(),
+				table.isPartitioned(),
+				table.getComputedColumns(),
+				table.getRowTimeField(),
+				table.getWatermarkOffset(),
+				table.getCreateTime(),
+				table.getLastAccessTime(),
+				((CatalogView) table).getOriginalQuery(),
+				((CatalogView) table).getExpandedQuery()
+			);
+		} else {
+			return new CatalogTable(
+				table.getTableType(),
+				table.getTableSchema(),
+				new HashMap<>(table.getProperties()),
+				table.getRichTableSchema(),
+				table.getTableStats(),
+				table.getComment(),
+				table.getPartitionColumnNames(),
+				table.isPartitioned(),
+				table.getComputedColumns(),
+				table.getRowTimeField(),
+				table.getWatermarkOffset(),
+				table.getCreateTime(),
+				table.getLastAccessTime()
+			);
 		}
 	}
 
@@ -236,8 +282,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 					oldTable.getRowTimeField(),
 					oldTable.getWatermarkOffset(),
 					oldTable.getCreateTime(),
-					oldTable.getLastAccessTime(),
-					oldTable.isStreaming()
+					oldTable.getLastAccessTime()
 				));
 			}
 		} else if (!ignoreIfNotExists) {
@@ -286,7 +331,10 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		if (!dbExists(dbName)) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} else {
-			return databases.get(dbName);
+			// TODO: Should return a deep copy since operations outside the catalog should not impact db stored internally
+			// This is only a shallow copy
+			CatalogDatabase db = databases.get(dbName);
+			return new CatalogDatabase(db.getProperties());
 		}
 	}
 

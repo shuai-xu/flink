@@ -23,4 +23,7 @@ package org.apache.flink.table.catalog.config;
  */
 public class CatalogTableConfig {
 	public static final String TABLE_COMMENT = "comment";
+
+	// Flag whether this external table is intended for streaming or batch environments
+	public static final String IS_STREAMING = "is_streaming";
 }

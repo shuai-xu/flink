@@ -59,7 +59,9 @@ public class GenericHiveMetastoreCatalogUtil {
 	 * Note that create Hive table doesn't include TableStats
 	 */
 	static Table createHiveTable(ObjectPath path, CatalogTable table) {
-		Map<String, String> properties = new HashMap<>();
+		Map<String, String> properties = table.getProperties();
+
+		// Table Schema
 		Schema schema = new Schema().schema(table.getTableSchema());
 		properties.putAll(schema.toProperties());
 
@@ -69,6 +71,11 @@ public class GenericHiveMetastoreCatalogUtil {
 		// Partitioned keys
 		if (table.isPartitioned()) {
 			properties.put(PARTITION_KEYS, String.join(PARTITION_KEYS_DELIMITER, table.getPartitionColumnNames()));
+		}
+
+		// Table comment
+		if (table.getComment() != null) {
+			properties.put(CatalogTableConfig.TABLE_COMMENT, table.getComment());
 		}
 
 		// StorageDescriptor
@@ -86,11 +93,6 @@ public class GenericHiveMetastoreCatalogUtil {
 
 		hiveTable.setParameters(properties);
 		hiveTable.getParameters().putAll(EXTERNAL_TABLE_PROPERTY);
-
-		// Table comment
-		if (table.getComment() != null) {
-			hiveTable.getParameters().put(CatalogTableConfig.TABLE_COMMENT, table.getComment());
-		}
 
 		return hiveTable;
 	}
@@ -135,8 +137,7 @@ public class GenericHiveMetastoreCatalogUtil {
 			null,
 			-1L,
 			(long) table.getCreateTime(),
-			(long) table.getLastAccessTime(),
-			false
+			(long) table.getLastAccessTime()
 		);
 	}
 

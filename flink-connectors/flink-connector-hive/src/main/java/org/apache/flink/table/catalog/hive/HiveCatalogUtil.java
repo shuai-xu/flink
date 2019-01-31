@@ -240,8 +240,7 @@ public class HiveCatalogUtil {
 			null,
 			-1L,
 			(long) hiveTable.getCreateTime(),
-			(long) hiveTable.getLastAccessTime(),
-			false);
+			(long) hiveTable.getLastAccessTime());
 
 		if (tableType == TableType.VIRTUAL_VIEW) {
 			return CatalogView.createCatalogView(table, hiveTable.getViewOriginalText(), hiveTable.getViewExpandedText());

@@ -20,6 +20,7 @@ package org.apache.flink.table.catalog
 
 import java.sql.Timestamp
 import java.util
+
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
@@ -30,11 +31,10 @@ import org.apache.flink.table.api._
 import org.apache.flink.types.Row
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.table.expressions.{Proctime, ResolvedFieldReference}
-
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexNode
+import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.util.TableSchemaUtil
-
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.mockito.Mockito
@@ -106,7 +106,9 @@ class ExternalCatalogITCase {
       new CatalogTable(
         CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
-        new util.HashMap[String, String](),
+        new util.HashMap[String, String]() {{
+          put(CatalogTableConfig.IS_STREAMING, false.toString)
+        }},
         richTableSchema,
         null,
         "",
@@ -116,8 +118,7 @@ class ExternalCatalogITCase {
         null,
         -1,
         0,
-        0,
-        false
+        0
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -178,7 +179,9 @@ class ExternalCatalogITCase {
       new CatalogTable(
         CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
-        new util.HashMap[String, String](),
+        new util.HashMap[String, String]() {{
+          put(CatalogTableConfig.IS_STREAMING,true.toString)
+        }},
         richTableSchema,
         null,
         "",
@@ -188,8 +191,7 @@ class ExternalCatalogITCase {
         null,
         -1,
         0,
-        0,
-        true
+        0
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -250,7 +252,9 @@ class ExternalCatalogITCase {
       new CatalogTable(
         CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
-        new util.HashMap[String, String](),
+        new util.HashMap[String, String]()  {{
+          put(CatalogTableConfig.IS_STREAMING, true.toString)
+        }},
         richTableSchema,
         null,
         "",
@@ -260,8 +264,7 @@ class ExternalCatalogITCase {
         "c",
         1L,
         0,
-        0,
-        true
+        0
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -320,7 +323,9 @@ class ExternalCatalogITCase {
       new CatalogTable(
         CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
-        new util.HashMap[String, String](),
+        new util.HashMap[String, String]() {{
+          put(CatalogTableConfig.IS_STREAMING, false.toString)
+        }},
         richTableSchema,
         null,
         "",
@@ -330,8 +335,7 @@ class ExternalCatalogITCase {
         null,
         1,
         0,
-        0,
-        false
+        0
       ),
       false)
     tableEnv.sqlUpdate("" +
@@ -391,7 +395,9 @@ class ExternalCatalogITCase {
       new CatalogTable(
         CONNECTOR_TYPE_COLLECTION,
         tableSchemaBuilder.build(),
-        new util.HashMap[String, String](),
+        new util.HashMap[String, String]()  {{
+          put(CatalogTableConfig.IS_STREAMING, false.toString)
+        }},
         richTableSchema,
         null,
         "",
@@ -401,8 +407,7 @@ class ExternalCatalogITCase {
         "c",
         1L,
         0,
-        0,
-        false
+        0
       ),
       false)
     tableEnv.sqlUpdate("" +

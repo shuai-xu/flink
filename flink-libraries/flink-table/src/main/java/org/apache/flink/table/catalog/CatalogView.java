@@ -44,11 +44,10 @@ public class CatalogView extends CatalogTable {
 		String tableType,
 		TableSchema tableSchema,
 		Map<String, String> properties,
-		boolean isStreaming,
 		String originalQuery,
 		String expandedQuery) {
 
-		super(tableType, tableSchema, new TableStats(), properties, isStreaming);
+		super(tableType, tableSchema, new TableStats(), properties);
 
 		this.originalQuery = originalQuery;
 		this.expandedQuery = expandedQuery;
@@ -68,11 +67,10 @@ public class CatalogView extends CatalogTable {
 		long watermarkOffset,
 		long createTime,
 		long lastAccessTime,
-		boolean isStreaming,
 		String originalQuery,
 		String expandedQuery) {
 
-		super(tableType, tableSchema, properties, richTableSchema, tableStats, comment, partitionColumnNames, isPartitioned, computedColumns, rowTimeField, watermarkOffset, createTime, lastAccessTime, isStreaming);
+		super(tableType, tableSchema, properties, richTableSchema, tableStats, comment, partitionColumnNames, isPartitioned, computedColumns, rowTimeField, watermarkOffset, createTime, lastAccessTime);
 
 		this.originalQuery = originalQuery;
 		this.expandedQuery = expandedQuery;
@@ -101,7 +99,6 @@ public class CatalogView extends CatalogTable {
 			table.getWatermarkOffset(),
 			table.getCreateTime(),
 			table.getLastAccessTime(),
-			table.isStreaming(),
 			originalQuery,
 			expandedQuery
 		);
@@ -125,7 +122,6 @@ public class CatalogView extends CatalogTable {
 			", watermarkOffset=" + getWatermarkOffset() +
 			", createTime=" + getCreateTime() +
 			", lastAccessTime=" + getLastAccessTime() +
-			", isStreaming=" + isStreaming() +
 			'}';
 	}
 }

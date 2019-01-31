@@ -18,10 +18,13 @@
 
 package org.apache.flink.table.runtime.stream.table
 
+import java.util.HashMap
+
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.catalog.CatalogTable
+import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.factories.utils.TestingTableSink
 import org.apache.flink.table.runtime.utils._
 import org.junit.Assert._
@@ -34,13 +37,17 @@ class TableRegisterITCase extends StreamingTestBase {
   @Test
   def testRegister(): Unit = {
 
+    val properties = new HashMap[String, String] () {{
+      put(CatalogTableConfig.IS_STREAMING, true.toString)
+    }}
+
     val catalogTable = new CatalogTable.Builder(
       "test",
       new TableSchema.Builder()
         .column("a", DataTypes.INT)
         .column("b", DataTypes.LONG)
         .column("c", DataTypes.STRING).build(),
-      true)
+      properties)
       .build();
 
     tEnv.registerTable("MyTable", catalogTable)

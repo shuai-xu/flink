@@ -24,7 +24,6 @@ import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -44,9 +43,11 @@ public class HiveCatalogTest extends CatalogTestBase {
 	}
 
 	@Override
-	protected Map<String, String> getTableProperties() {
-		return new HashMap<String, String>() {{
-			put(HiveTableConfig.HIVE_TABLE_LOCATION, HiveTestUtils.warehouseDir + "/tmp");
-		}};
+	protected Map<String, String> getBatchTableProperties() {
+		Map<String, String> properties = super.getBatchTableProperties();
+
+		properties.put(HiveTableConfig.HIVE_TABLE_LOCATION, HiveTestUtils.warehouseDir + "/tmp");
+
+		return properties;
 	}
 }

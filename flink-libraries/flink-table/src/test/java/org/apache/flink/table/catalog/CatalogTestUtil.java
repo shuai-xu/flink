@@ -24,6 +24,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
+import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
@@ -67,7 +68,9 @@ public class CatalogTestUtil {
 		return new CatalogTable(
 			"COLLECTION",
 			tableSchema,
-			new HashMap<>(),
+			new HashMap<String, String>() {{
+				put(CatalogTableConfig.IS_STREAMING, String.valueOf(isStreaming));
+			}},
 			richTableSchema,
 			new TableStats((long) data.size(), new HashMap<>()),
 			null,
@@ -77,8 +80,7 @@ public class CatalogTestUtil {
 			null,
 			-1L,
 			System.currentTimeMillis(),
-			-1L,
-			isStreaming
+			-1L
 		);
 	}
 
@@ -118,6 +120,8 @@ public class CatalogTestUtil {
 		Map<String, String> tableProperties,
 		LinkedHashSet<String> partitionCols) {
 
+		tableProperties.put(CatalogTableConfig.IS_STREAMING, "true");
+
 		return new CatalogTable(
 			tableType,
 			schema,
@@ -131,8 +135,7 @@ public class CatalogTestUtil {
 			null,
 			-1L,
 			0L,
-			-1L,
-			false);
+			-1L);
 	}
 
 	public static void compare(CatalogTable t1, CatalogTable t2) {
@@ -141,8 +144,11 @@ public class CatalogTestUtil {
 		assertEquals(t1.getTableStats(), t2.getTableStats());
 		assertEquals(t1.isPartitioned(), t2.isPartitioned());
 		assertEquals(t1.getPartitionColumnNames(), t2.getPartitionColumnNames());
-		assertEquals(t1.isStreaming(), t2.isStreaming());
 		assertEquals(t1.getComment(), t2.getComment());
+		assertEquals(
+			Boolean.valueOf(t1.getProperties().get(CatalogTableConfig.IS_STREAMING)),
+			Boolean.valueOf(t2.getProperties().get(CatalogTableConfig.IS_STREAMING)));
+
 	}
 
 	protected static void compare(CatalogView v1, CatalogView v2) {

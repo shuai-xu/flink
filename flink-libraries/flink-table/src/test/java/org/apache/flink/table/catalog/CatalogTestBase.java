@@ -31,6 +31,7 @@ import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.catalog.config.CatalogDatabaseConfig;
+import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -101,7 +102,16 @@ public abstract class CatalogTestBase {
 	// ------ tables ------
 
 	@Test
-	public void testCreateTable() {
+	public void testCreateTable_Streaming() {
+		catalog.createDatabase(db1, createDb(), false);
+		CatalogTable streamingTable = createStreamingTable();
+		catalog.createTable(path1, streamingTable, false);
+
+		compare(streamingTable, catalog.getTable(path1));
+	}
+
+	@Test
+	public void testCreateTable_Batch() {
 		catalog.createDatabase(db1, createDb(), false);
 
 		// Non-partitioned table
@@ -362,7 +372,7 @@ public abstract class CatalogTestBase {
 		CatalogTable table = CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			schema,
-			getTableProperties());
+			getBatchTableProperties());
 		catalog.createTable(path1, table, false);
 
 		TableStats tableStats = new TableStats(100L, new HashMap<String, ColumnStats>() {{
@@ -743,7 +753,7 @@ public abstract class CatalogTestBase {
 		compare(createPartition(), cp);
 		assertNull(cp.getProperties().get("k"));
 
-		Map<String, String> partitionProperties = getTableProperties();
+		Map<String, String> partitionProperties = getBatchTableProperties();
 		partitionProperties.put("k", "v");
 
 		CatalogPartition another = createPartition(cp.getPartitionSpec(), partitionProperties);
@@ -825,18 +835,25 @@ public abstract class CatalogTestBase {
 
 	// ------ utilities ------
 
+	protected CatalogTable createStreamingTable() {
+		return CatalogTestUtil.createCatalogTable(
+			getTableType(),
+			createTableSchema(),
+			getStreamingTableProperties());
+	}
+
 	protected CatalogTable createTable() {
 		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createTableSchema(),
-			getTableProperties());
+			getBatchTableProperties());
 	}
 
 	protected CatalogTable createAnotherTable() {
 		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createAnotherTableSchema(),
-			getTableProperties());
+			getBatchTableProperties());
 	}
 
 	protected CatalogTable createPartitionedTable() {
@@ -844,7 +861,7 @@ public abstract class CatalogTestBase {
 			getTableType(),
 			createTableSchema(),
 			new TableStats(),
-			getTableProperties(),
+			getBatchTableProperties(),
 			createPartitionCols());
 	}
 
@@ -853,7 +870,7 @@ public abstract class CatalogTestBase {
 			getTableType(),
 			createAnotherTableSchema(),
 			new TableStats(),
-			getTableProperties(),
+			getBatchTableProperties(),
 			createPartitionCols());
 	}
 
@@ -888,11 +905,11 @@ public abstract class CatalogTestBase {
 	}
 
 	protected CatalogPartition createPartition() {
-		return createPartition(createPartitionSpec(), getTableProperties());
+		return createPartition(createPartitionSpec(), getBatchTableProperties());
 	}
 
 	protected CatalogPartition createAnotherPartition() {
-		return createPartition(createAnotherPartitionSpec(), getTableProperties());
+		return createPartition(createAnotherPartitionSpec(), getBatchTableProperties());
 	}
 
 	protected CatalogPartition createPartition(CatalogPartition.PartitionSpec partitionSpec, Map<String, String> partitionProperties) {
@@ -949,7 +966,15 @@ public abstract class CatalogTestBase {
 			String.format("select * from %s.%s", testCatalogName, path2.getFullName()));
 	}
 
-	protected Map<String, String> getTableProperties() {
-		return new HashMap<>();
+	protected Map<String, String> getBatchTableProperties() {
+		return new HashMap<String, String>() {{
+			put(CatalogTableConfig.IS_STREAMING, "false");
+		}};
+	}
+
+	protected Map<String, String> getStreamingTableProperties() {
+		return new HashMap<String, String>() {{
+			put(CatalogTableConfig.IS_STREAMING, "true");
+		}};
 	}
 }

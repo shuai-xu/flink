@@ -26,7 +26,6 @@ import org.apache.flink.util.StringUtils;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
@@ -63,21 +62,17 @@ public class CatalogTable {
 	private long createTime = System.currentTimeMillis();
 	// Timestamp of last access of the table
 	private long lastAccessTime = -1L;
-	// Flag whether this external table is intended for streaming or batch environments
-	private final boolean isStreaming;
 
 	public CatalogTable(
 		String tableType,
 		TableSchema tableSchema,
 		TableStats tableStats,
-		Map<String, String> properties,
-		boolean isStreaming) {
+		Map<String, String> properties) {
 
 		this.tableType = tableType;
 		this.tableSchema = tableSchema;
 		this.tableStats = tableStats;
 		this.properties = properties;
-		this.isStreaming = isStreaming;
 		this.richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
 	}
 
@@ -94,8 +89,7 @@ public class CatalogTable {
 		String rowTimeField,
 		long watermarkOffset,
 		long createTime,
-		long lastAccessTime,
-		boolean isStreaming) {
+		long lastAccessTime) {
 
 		if (tableSchema != null && partitionColumnNames != null) {
 			checkPartitionKeys(tableSchema, partitionColumnNames);
@@ -114,7 +108,6 @@ public class CatalogTable {
 		this.watermarkOffset = watermarkOffset;
 		this.createTime = createTime;
 		this.lastAccessTime = lastAccessTime;
-		this.isStreaming = isStreaming;
 	}
 
 	private void checkPartitionKeys(TableSchema schema, LinkedHashSet<String> partitionColumnNames) {
@@ -186,10 +179,6 @@ public class CatalogTable {
 		return lastAccessTime;
 	}
 
-	public boolean isStreaming() {
-		return isStreaming;
-	}
-
 	@Override
 	public String toString() {
 		return "CatalogTable{" +
@@ -206,7 +195,6 @@ public class CatalogTable {
 			", watermarkOffset=" + watermarkOffset +
 			", createTime=" + createTime +
 			", lastAccessTime=" + lastAccessTime +
-			", isStreaming=" + isStreaming +
 			'}';
 	}
 
@@ -217,27 +205,19 @@ public class CatalogTable {
 	public static class Builder {
 		private final String tableType;
 		private final TableSchema tableSchema;
-		private final boolean isStreaming;
+		private Map<String, String> properties;
 
 		private TableStats tableStats = new TableStats();
-		private Map<String, String> properties = new HashMap<>();
 
-		public Builder(String tableType, TableSchema tableSchema, boolean isStreaming) {
+		public Builder(String tableType, TableSchema tableSchema, Map<String, String> properties) {
 			checkArgument(!StringUtils.isNullOrWhitespaceOnly(tableType), "tableType cannot be null or empty");
-			checkNotNull(tableSchema, "tableSchema cannot be null or empty");
-
 			this.tableType = tableType;
-			this.tableSchema = tableSchema;
-			this.isStreaming = isStreaming;
+			this.tableSchema = checkNotNull(tableSchema, "tableSchema cannot be null or empty");
+			this.properties = checkNotNull(properties, "properties cannot be null or empty");
 		}
 
 		public Builder withTableStats(TableStats tableStats) {
 			this.tableStats = checkNotNull(tableStats);
-			return this;
-		}
-
-		public Builder withProperties(Map<String, String> properties) {
-			this.properties = checkNotNull(properties);
 			return this;
 		}
 
@@ -246,8 +226,7 @@ public class CatalogTable {
 				tableType,
 				tableSchema,
 				tableStats,
-				properties,
-				isStreaming
+				properties
 			);
 		}
 	}

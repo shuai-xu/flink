@@ -18,10 +18,13 @@
 
 package org.apache.flink.table.api.stream.table
 
+import java.util.HashMap
+
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.catalog.CatalogTable
+import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.util.TableTestBase
 import org.junit.{Ignore, Test}
 
@@ -32,6 +35,10 @@ class TableRegisterTest extends TableTestBase {
   def testTableSchema(): Unit = {
     val util = streamTestUtil()
 
+    val properties = new HashMap[String, String] () {{
+      put(CatalogTableConfig.IS_STREAMING, true.toString)
+    }}
+
     val catalogTable = new CatalogTable.Builder(
       "test",
       new TableSchema.Builder()
@@ -41,7 +48,8 @@ class TableRegisterTest extends TableTestBase {
         .computedColumn("d", "a.toTimestamp")
         .watermark("wk1", "d", 0)
         .primaryKey("c").build(),
-      true)
+      properties
+      )
       .build();
 
     util.tableEnv.registerTable("MyTable", catalogTable)

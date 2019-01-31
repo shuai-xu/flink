@@ -177,8 +177,7 @@ public class CatalogCalciteSchema implements Schema {
 				if (table instanceof FlinkTempTable) {
 					return ((FlinkTempTable) table).getAbstractTable();
 				} else {
-					return new CatalogCalciteTable(
-						tableName, table, table.isStreaming());
+					return new CatalogCalciteTable(tableName, table);
 				}
 			} catch (TableNotExistException e) {
 				LOGGER.warn(

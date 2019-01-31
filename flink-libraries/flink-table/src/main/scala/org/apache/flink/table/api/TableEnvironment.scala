@@ -33,6 +33,7 @@ import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTabl
 import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite._
 import org.apache.flink.table.catalog._
+import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
@@ -50,7 +51,6 @@ import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
-
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
@@ -64,7 +64,6 @@ import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
 import org.apache.commons.lang3.StringUtils
-
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
@@ -675,7 +674,9 @@ abstract class TableEnvironment(
       table,
       null,
       null,
-      new util.HashMap[String, String](),
+      new util.HashMap[String, String]() {{
+        put(CatalogTableConfig.IS_STREAMING, true.toString);
+      }},
       null,
       null,
       null,

@@ -23,13 +23,12 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TypeConverters}
 import org.apache.flink.table.api.{RichTableSchema, TableSchema}
 import org.apache.flink.table.catalog._
+import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.types.Row
-
 import org.apache.calcite.avatica.util.DateTimeUtils
-
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.math.BigDecimal
 import java.sql.Timestamp
@@ -285,6 +284,7 @@ object CommonTestData {
     properties1.put("path", tempFilePath1)
     properties1.put("fieldDelim", "#")
     properties1.put("rowDelim", "$")
+    properties1.put(CatalogTableConfig.IS_STREAMING, isStreaming.toString)
     val catalogTable1 = new CatalogTable(
       "CSV",
       new TableSchema(
@@ -308,8 +308,7 @@ object CommonTestData {
       null,
       -1,
       System.currentTimeMillis(),
-      System.currentTimeMillis(),
-      isStreaming
+      System.currentTimeMillis()
     )
 
     val csvRecord2 = Seq(
@@ -334,6 +333,7 @@ object CommonTestData {
     properties2.put("path", tempFilePath2)
     properties2.put("fieldDelim", "#")
     properties2.put("rowDelim", "$")
+    properties2.put(CatalogTableConfig.IS_STREAMING, isStreaming.toString)
     val catalogTable2 = new CatalogTable(
       "CSV",
       new TableSchema(
@@ -363,8 +363,7 @@ object CommonTestData {
       null,
       -1,
       System.currentTimeMillis(),
-      System.currentTimeMillis(),
-      isStreaming
+      System.currentTimeMillis()
     )
     val catalog = new FlinkInMemoryCatalog("test")
     val db1 = new CatalogDatabase()

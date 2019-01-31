@@ -59,8 +59,7 @@ object ExternalTableUtil extends Logging {
    * @param isStreaming Is in streaming mode or not
    * @return the extracted parser
    */
-  def toParser(
-                name: String, table: CatalogTable, isStreaming: Boolean): TableSourceParser = {
+  def toParser(name: String, table: CatalogTable, isStreaming: Boolean): TableSourceParser = {
 
     val tableProperties = generateTableProperties(name, table, isStreaming)
     try {

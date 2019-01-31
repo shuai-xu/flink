@@ -44,6 +44,7 @@ import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
+import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.errorcode.TableErrors;
@@ -138,6 +139,9 @@ public class SqlJobUtil {
 		if (sqlCreateTable.getComment() != null) {
 			tableComment = sqlCreateTable.getComment().getNlsString().getValue();
 		}
+
+		properties.put(CatalogTableConfig.IS_STREAMING, String.valueOf(isStreaming));
+
 		long now = System.currentTimeMillis();
 		CatalogTable catalogTable = new CatalogTable(
 				tableType,
@@ -152,8 +156,7 @@ public class SqlJobUtil {
 				rowtimeField,
 				offset,
 				now,
-				now,
-				isStreaming);
+				now);
 
 		ReadableWritableCatalog catalog = (ReadableWritableCatalog) tableEnv.getDefaultCatalog();
 		// TODO: need to consider if a default db doesn't exist
