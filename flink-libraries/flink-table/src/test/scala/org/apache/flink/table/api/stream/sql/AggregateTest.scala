@@ -144,7 +144,7 @@ class AggregateTest extends TableTestBase {
     streamUtil.addFunction("udag", new MyAgg)
     val call = streamUtil
       .tableEnv
-      .chainedFunctionCatalog
+      .functionCatalog
       .lookupFunction("udag", Seq())
       .asInstanceOf[AggFunctionCall]
 
@@ -160,7 +160,7 @@ class AggregateTest extends TableTestBase {
     streamUtil.addFunction("udag2", new MyAgg2)
     val call2 = streamUtil
       .tableEnv
-      .chainedFunctionCatalog
+      .functionCatalog
       .lookupFunction("udag2", Seq())
       .asInstanceOf[AggFunctionCall]
 

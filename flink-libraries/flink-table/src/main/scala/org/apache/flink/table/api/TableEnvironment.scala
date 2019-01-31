@@ -50,7 +50,7 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, FunctionCatalog}
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
@@ -92,11 +92,7 @@ abstract class TableEnvironment(
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
   // Table API/SQL function catalog (built in, does not contain external functions)
-  private val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns()
-
-  // Table API/SQL function catalog built in function catalog.
-  private[flink] lazy val chainedFunctionCatalog: FunctionCatalog =
-    new ChainedFunctionCatalog(Seq(functionCatalog))
+  private[flink] val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns()
 
   // the configuration to create a Calcite planner
   protected var frameworkConfig: FrameworkConfig = createFrameworkConfig
@@ -270,12 +266,12 @@ abstract class TableEnvironment(
 
     calciteConfig.getSqlOperatorTable match {
       case None =>
-        chainedFunctionCatalog.getSqlOperatorTable
+        functionCatalog.getSqlOperatorTable
       case Some(table) =>
         if (calciteConfig.replacesSqlOperatorTable) {
           table
         } else {
-          ChainedSqlOperatorTable.of(chainedFunctionCatalog.getSqlOperatorTable, table)
+          ChainedSqlOperatorTable.of(functionCatalog.getSqlOperatorTable, table)
         }
     }
   }
@@ -1146,7 +1142,7 @@ abstract class TableEnvironment(
     * Gets the names of all functions registered in this environment.
     */
   def listUserDefinedFunctions(): Array[String] = {
-    chainedFunctionCatalog.getSqlOperatorTable.getOperatorList.map(e => e.getName).toArray
+    functionCatalog.getSqlOperatorTable.getOperatorList.map(e => e.getName).toArray
   }
 
   /**
@@ -1504,7 +1500,7 @@ abstract class TableEnvironment(
 
   /** Returns the chained [[FunctionCatalog]]. */
   private[flink] def getFunctionCatalog: FunctionCatalog = {
-    chainedFunctionCatalog
+    functionCatalog
   }
 
   private def createFrameworkConfig: FrameworkConfig = {
@@ -1516,7 +1512,7 @@ abstract class TableEnvironment(
       .operatorTable(getSqlOperatorTable)
       // set the executor to evaluate constant expressions
       .executor(new ExpressionReducer(config))
-      .context(FlinkChainContext.chain(Contexts.of(config), Contexts.of(chainedFunctionCatalog)))
+      .context(FlinkChainContext.chain(Contexts.of(config), Contexts.of(functionCatalog)))
       .build
   }
 
