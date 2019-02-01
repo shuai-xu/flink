@@ -268,6 +268,17 @@ public class ResourceSpec implements Serializable {
 		private int stateSizeInMB;
 		private final Map<String, Resource> extendedResources = new HashMap<>();
 
+		public Builder() { }
+
+		public Builder(ResourceSpec resourceSpec) {
+			this.cpuCores = resourceSpec.getCpuCores();
+			this.heapMemoryInMB = resourceSpec.getHeapMemory();
+			this.directMemoryInMB = resourceSpec.getDirectMemory();
+			this.nativeMemoryInMB = resourceSpec.getNativeMemory();
+			this.stateSizeInMB = resourceSpec.getStateSize();
+			this.extendedResources.putAll(resourceSpec.getExtendedResources());
+		}
+
 		public Builder setCpuCores(double cpuCores) {
 			this.cpuCores = cpuCores;
 			return this;

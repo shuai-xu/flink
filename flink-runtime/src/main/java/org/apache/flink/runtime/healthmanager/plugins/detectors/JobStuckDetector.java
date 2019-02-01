@@ -52,7 +52,7 @@ public class JobStuckDetector implements Detector {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JobStuckDetector.class);
 
 	private static final ConfigOption<Long> JOB_STUCK_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.job-stuck.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.job-stuck.interval.ms").defaultValue(60 * 1000L);
 
 	private JobID jobID;
 	private HealthMonitor healthMonitor;

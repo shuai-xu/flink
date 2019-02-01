@@ -32,16 +32,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Adjust resource config for given vertex.
+ * Adjust resource and parallelism config for given vertex.
  */
 public class AdjustJobConfig implements Action {
 
-	private JobID jobID;
-	private Map<JobVertexID, Integer> currentParallelism;
-	private Map<JobVertexID, Integer> targetParallelism;
-	private Map<JobVertexID, ResourceSpec> currentResource;
-	private Map<JobVertexID, ResourceSpec> targetResource;
-	private long timeoutMs;
+	protected JobID jobID;
+	protected Map<JobVertexID, Integer> currentParallelism;
+	protected Map<JobVertexID, Integer> targetParallelism;
+	protected Map<JobVertexID, ResourceSpec> currentResource;
+	protected Map<JobVertexID, ResourceSpec> targetResource;
+	protected long timeoutMs;
 
 	public AdjustJobConfig(JobID jobID, long timeoutMs) {
 		this(jobID, timeoutMs, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>());

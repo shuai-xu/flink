@@ -516,6 +516,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 	@Override
 	public CompletableFuture<JobGraph> requestJobGraph(Time timeout) {
+		log.debug("Requesting job graph {}.", jobGraph);
 		return CompletableFuture.completedFuture(jobGraph);
 	}
 
@@ -546,6 +547,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		newJobGraph.setJobVersion(newJobGraph.getJobVersion() + 1);
 
 		// update the job with the new JobGraph
+		log.debug("Update original job graph {} with new job graph {}.", jobGraph, newJobGraph);
 		return updateJob(newJobGraph);
 	}
 

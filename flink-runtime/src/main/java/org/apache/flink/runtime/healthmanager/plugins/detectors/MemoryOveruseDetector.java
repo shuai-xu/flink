@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -51,11 +52,12 @@ public class MemoryOveruseDetector implements Detector {
 	private static final String TM_MEM_USAGE_TOTAL = "Status.ProcessTree.Memory.RSS";
 
 	private static final ConfigOption<Long> MEMORY_OVERUSE_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.memory-overuse-detector.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.memory-overuse-detector.interval.ms").defaultValue(60 * 1000L);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
+	private HealthMonitor monitor;
 
 	private long overuseCheckInterval;
 
@@ -64,7 +66,7 @@ public class MemoryOveruseDetector implements Detector {
 
 	@Override
 	public void open(HealthMonitor monitor) {
-
+		this.monitor = monitor;
 		jobID = monitor.getJobID();
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
@@ -101,8 +103,7 @@ public class MemoryOveruseDetector implements Detector {
 
 		Map<JobVertexID, Double> vertexMaxOveruse = new HashMap<>();
 		for (String tmId : tmCapacities.keySet()) {
-			if (now - tmCapacities.get(tmId).f0 > overuseCheckInterval * 2 ||
-				now - tmTotalUsages.get(tmId).f0 > overuseCheckInterval * 2) {
+			if (!MetricUtils.validateTmMetric(monitor, overuseCheckInterval * 2, tmCapacities.get(tmId), tmTotalUsages.get(tmId))) {
 				LOGGER.debug("Skip tm {}, metrics missing.", tmId);
 				continue;
 			}
@@ -113,14 +114,14 @@ public class MemoryOveruseDetector implements Detector {
 				continue;
 			}
 
-			double overuse = totalUsage - capacity;
+			double overuseInMB = totalUsage - capacity / 1024 / 1024;
 			List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
 			if (jobExecutionVertexIds != null && !jobExecutionVertexIds.isEmpty()) {
-				overuse /= jobExecutionVertexIds.size();
+				overuseInMB /= jobExecutionVertexIds.size();
 				for (ExecutionVertexID jobExecutionVertexId : jobExecutionVertexIds) {
 					JobVertexID jvId = jobExecutionVertexId.getJobVertexID();
-					if (!vertexMaxOveruse.containsKey(jvId) || vertexMaxOveruse.get(jvId) < overuse) {
-						vertexMaxOveruse.put(jvId, overuse);
+					if (!vertexMaxOveruse.containsKey(jvId) || vertexMaxOveruse.get(jvId) < overuseInMB) {
+						vertexMaxOveruse.put(jvId, overuseInMB);
 					}
 				}
 			}

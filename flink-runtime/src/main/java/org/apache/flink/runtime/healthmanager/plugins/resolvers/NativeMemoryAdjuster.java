@@ -29,6 +29,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobNativeMemory;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -83,6 +84,11 @@ public class NativeMemoryAdjuster implements Resolver {
 
 		Map<JobVertexID, Double> vertexMaxOveruse = new HashMap<>();
 		for (Symptom symptom : symptomList) {
+			if (symptom instanceof JobUnstable) {
+				LOGGER.debug("Job unstable, should not rescale.");
+				return null;
+			}
+
 			if (symptom instanceof JobVertexNativeMemOveruse) {
 				JobVertexNativeMemOveruse jobVertexNativeMemOveruse = (JobVertexNativeMemOveruse) symptom;
 				LOGGER.debug("Native memory overuse detected for vertices with max overuses {}.", jobVertexNativeMemOveruse.getOveruses());

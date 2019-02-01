@@ -19,12 +19,39 @@
 package org.apache.flink.runtime.healthmanager.plugins.actions;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 /**
  * Adjust native memory for given vertex.
  */
-public class AdjustJobNativeMemory extends AdjustJobConfig {
+public class AdjustJobNativeMemory extends AdjustJobResource {
 	public AdjustJobNativeMemory(JobID jobID, long timeoutMs) {
 		super(jobID, timeoutMs);
+	}
+
+	@Override
+	public AdjustJobResource merge(AdjustJobResource anotherAction) {
+		if (!this.jobID.equals(anotherAction.jobID)) {
+			return null;
+		}
+
+		AdjustJobResource mergedAction = new AdjustJobResource(anotherAction);
+		mergedAction.timeoutMs = Math.max(mergedAction.timeoutMs, this.timeoutMs);
+
+		for (JobVertexID vertexId : targetResource.keySet()) {
+			if (mergedAction.targetResource.containsKey(vertexId)) {
+				mergedAction.targetResource.put(vertexId,
+					new ResourceSpec.Builder(mergedAction.targetResource.get(vertexId))
+						.setNativeMemoryInMB(this.targetResource.get(vertexId).getNativeMemory()).build());
+			} else {
+				mergedAction.currentResource.put(vertexId, this.currentResource.get(vertexId));
+				mergedAction.targetResource.put(vertexId, this.targetResource.get(vertexId));
+				mergedAction.currentParallelism.put(vertexId, this.currentParallelism.get(vertexId));
+				mergedAction.targetParallelism.put(vertexId, this.targetParallelism.get(vertexId));
+			}
+		}
+
+		return mergedAction;
 	}
 }

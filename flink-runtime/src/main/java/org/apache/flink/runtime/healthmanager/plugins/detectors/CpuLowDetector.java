@@ -53,7 +53,7 @@ public class CpuLowDetector implements Detector {
 	private static final String TM_CPU_USAGE = "Status.ProcessTree.CPU.Usage";
 
 	private static final ConfigOption<Long> LOW_CPU_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.low-cpu-detector.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.low-cpu-detector.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Double> LOW_CPU_THRESHOLD =
 		ConfigOptions.key("healthmonitor.low-cpu-detector.threashold").defaultValue(0.4);
 

@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobCpu;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -85,6 +86,11 @@ public class CpuAdjuster implements Resolver {
 		JobVertexHighCpu jobVertexHighCpu = null;
 		JobVertexLowCpu jobVertexLowCpu = null;
 		for (Symptom symptom : symptomList) {
+			if (symptom instanceof JobUnstable) {
+				LOGGER.debug("Job unstable, should not rescale.");
+				return null;
+			}
+
 			if (symptom instanceof JobVertexHighCpu) {
 				jobVertexHighCpu = (JobVertexHighCpu) symptom;
 			}
@@ -101,7 +107,8 @@ public class CpuAdjuster implements Resolver {
 		}
 		if (jobVertexLowCpu != null) {
 			LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
-			utilities.putAll(jobVertexLowCpu.getUtilities());
+			// TODO add cpu down scale strategy
+			// utilities.putAll(jobVertexLowCpu.getUtilities());
 		}
 
 		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
@@ -116,7 +123,8 @@ public class CpuAdjuster implements Resolver {
 		for (JobVertexID jvId : vertexMaxUtility.keySet()) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			double targetCpu = currentResource.getCpuCores() * vertexMaxUtility.get(jvId) * (1.0 + scaleRatio);
+			double utility = vertexMaxUtility.get(jvId);
+			double targetCpu = currentResource.getCpuCores() * Math.max(1.0, utility) * (1.0 + scaleRatio);
 			LOGGER.debug("Target cpu for vertex {} is {}.", jvId, targetCpu);
 			ResourceSpec.Builder builder = new ResourceSpec.Builder()
 					.setCpuCores(targetCpu)

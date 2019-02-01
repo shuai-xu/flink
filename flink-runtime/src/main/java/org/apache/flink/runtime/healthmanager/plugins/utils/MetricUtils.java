@@ -41,4 +41,18 @@ public class MetricUtils {
 		}
 		return true;
 	}
+
+	/**
+	 * Validate current value of tm metric.
+	 */
+	public static boolean validateTmMetric(HealthMonitor monitor, long validInterval, Tuple2<Long, Double>... metrics) {
+		long now = System.currentTimeMillis();
+		for (Tuple2<Long, Double> metric : metrics) {
+			if (metric == null || metric.f0 < monitor.getLastExecution() ||
+				now - metric.f0 > validInterval * 2) {
+				return false;
+			}
+		}
+		return true;
+	}
 }

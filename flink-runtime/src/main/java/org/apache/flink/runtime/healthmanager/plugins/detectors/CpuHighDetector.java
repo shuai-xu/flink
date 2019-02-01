@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -54,13 +55,14 @@ public class CpuHighDetector implements Detector {
 	private static final String TM_CPU_USAGE = "Status.ProcessTree.CPU.Usage";
 
 	private static final ConfigOption<Long> HIGH_CPU_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.high-cpu-detector.interval.ms").defaultValue(5 * 60 * 1000L);
+		ConfigOptions.key("healthmonitor.high-cpu-detector.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Double> HIGH_CPU_THRESHOLD =
-		ConfigOptions.key("healthmonitor.high-cpu-detector.threashold").defaultValue(0.95);
+		ConfigOptions.key("healthmonitor.high-cpu-detector.threashold").defaultValue(0.8);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
+	private HealthMonitor monitor;
 
 	private long checkInterval;
 	private double threshold;
@@ -70,7 +72,7 @@ public class CpuHighDetector implements Detector {
 
 	@Override
 	public void open(HealthMonitor monitor) {
-
+		this.monitor = monitor;
 		jobID = monitor.getJobID();
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
@@ -108,8 +110,7 @@ public class CpuHighDetector implements Detector {
 
 		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
 		for (String tmId : tmCapacities.keySet()) {
-			if (now - tmCapacities.get(tmId).f0 > checkInterval * 2 ||
-				now - tmUsages.get(tmId).f0 > checkInterval * 2) {
+			if (!MetricUtils.validateTmMetric(monitor, checkInterval * 2, tmCapacities.get(tmId), tmUsages.get(tmId))) {
 				LOGGER.debug("Skip tm {}, metrics missing.", tmId);
 				continue;
 			}
@@ -131,8 +132,11 @@ public class CpuHighDetector implements Detector {
 						vertexMaxUtility.put(jvId, utility);
 					}
 				}
-				LOGGER.debug("Cpu high detected for tm {}, with running tasks of vertices {}.",
+				LOGGER.debug("Cpu high detected for tm {}, capacity {}, usage {}, utility {}, tasks of vertices {}.",
 					tmId,
+					capacity,
+					usage,
+					utility,
 					jobExecutionVertexIds.stream().map(evid -> evid.getJobVertexID()).collect(Collectors.toList()));
 			}
 		}
