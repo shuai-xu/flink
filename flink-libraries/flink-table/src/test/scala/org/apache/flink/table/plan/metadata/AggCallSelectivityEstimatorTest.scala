@@ -24,7 +24,6 @@ import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
 import org.apache.flink.util.Preconditions
 
-import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.{AbstractRelOptPlanner, Context, Contexts, RelOptCluster}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{Aggregate, AggregateCall, TableScan}
@@ -37,6 +36,9 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.sql.{SqlAggFunction, SqlOperator}
 import org.apache.calcite.util.ImmutableBitSet
+
+import com.google.common.collect.ImmutableList
+
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.{Before, BeforeClass, Test}
@@ -96,8 +98,8 @@ class AggCallSelectivityEstimatorTest {
     when(flinkTable, "getFlinkStatistic").thenReturn(statistic)
     when(flinkTable, "getRowType").thenReturn(relDataType)
     when(tableScan, "getTable").thenReturn(flinkTable)
-    val rowCount: java.lang.Double = if (statistic != null && statistic.getTableStats != null) {
-      statistic.getTableStats.rowCount.doubleValue()
+    val rowCount: java.lang.Double = if (statistic != null && statistic.getRowCount != null) {
+      statistic.getRowCount
     } else {
       100D
     }

@@ -72,7 +72,7 @@ public class CatalogTestUtil {
 				put(CatalogTableConfig.IS_STREAMING, String.valueOf(isStreaming));
 			}},
 			richTableSchema,
-			new TableStats((long) data.size(), new HashMap<>()),
+			TableStats.builder().rowCount((long) data.size()).build(),
 			null,
 			new LinkedHashSet<>(),
 			false,
@@ -108,7 +108,7 @@ public class CatalogTestUtil {
 		return createCatalogTable(
 			tableType,
 			schema,
-			new TableStats(),
+			TableStats.builder().rowCount(0L).build(),
 			tableProperties,
 			new LinkedHashSet<>());
 	}

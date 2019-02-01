@@ -258,7 +258,8 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 			if (!isTablePartitioned(path)) {
 				return tables.get(path).getTableStats();
 			} else {
-				return new TableStats();
+				// TableStats of partitioned table is unknown, the behavior is same as HIVE
+				return TableStats.UNKNOWN();
 			}
 		}
 	}

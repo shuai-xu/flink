@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalSort, FlinkLogicalTableSourceScan}
+import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
+import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
+import org.apache.flink.table.sources.LimitableTableSource
+
 import org.apache.calcite.plan.RelOptRule.{none, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.core.{Sort, TableScan}
 import org.apache.calcite.rex.RexLiteral
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalSort, FlinkLogicalTableSourceScan}
-import org.apache.flink.table.plan.schema.{FlinkRelOptTable, TableSourceTable}
-import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
-import org.apache.flink.table.sources.LimitableTableSource
 
 class PushLimitIntoTableSourceScanRule extends RelOptRule(
   operand(classOf[FlinkLogicalSort],
@@ -78,14 +79,15 @@ class PushLimitIntoTableSourceScanRule extends RelOptRule(
     val limitedSource = tableSourceTable.tableSource.asInstanceOf[LimitableTableSource]
     val newTableSource = limitedSource.applyLimit(limit)
 
-    val oldStatistic = relOptTable.getFlinkStatistic
-    val tableStats = oldStatistic.getTableStats
-    val newStatistic = if (tableStats != null) {
-      val newTableStats = TableStats(Math.min(limit, tableStats.rowCount), tableStats.colStats)
-      FlinkStatistic.builder.statistic(oldStatistic).tableStats(newTableStats).build()
+    val statistic = relOptTable.getFlinkStatistic
+    val newRowCount = if (statistic.getRowCount != null) {
+      Math.min(limit, statistic.getRowCount.toLong)
     } else {
-      oldStatistic
+      limit
     }
+    // Update TableStats after limit push down
+    val newTableStats = TableStats(newRowCount)
+    val newStatistic = FlinkStatistic.builder.statistic(statistic).tableStats(newTableStats).build()
     val newTableSourceTable = tableSourceTable.replaceTableSource(newTableSource).copy(newStatistic)
     relOptTable.copy(newTableSourceTable, relOptTable.getRowType)
   }

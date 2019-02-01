@@ -123,13 +123,20 @@ public class GenericHiveMetastoreCatalogUtil {
 			partitionKeys = Arrays.stream(table.getParameters().get(PARTITION_KEYS).split(PARTITION_KEYS_DELIMITER))
 				.collect(Collectors.toCollection(LinkedHashSet::new));
 		}
-
+		TableStats tableStats = null;
+		if (partitionKeys.isEmpty()) {
+			// rowCnt is 0 for new created hive table
+			tableStats = TableStats.builder().rowCount(0L).build();
+		} else {
+			// TableStats of partitioned table is unknown, the behavior is same as HIVE
+			tableStats = TableStats.UNKNOWN();
+		}
 		return new CatalogTable(
 			table.getParameters().get(TABLE_TYPE),
 			tableSchema,
 			properties,
 			new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes()),
-			new TableStats(),
+			tableStats,
 			tableComment,
 			partitionKeys,
 			!partitionKeys.isEmpty(),

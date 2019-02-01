@@ -664,7 +664,7 @@ class TestBatchTableSource(tableSchema: TableSchema,
       tableSchema.getColumnNames)
 
   override def getTableStats: TableStats = if (stats == null) {
-    TableStats(10L, new mutable.HashMap[String, ColumnStats]())
+    TableStats(10L)
   } else {
     stats
   }

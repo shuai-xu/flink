@@ -47,7 +47,7 @@ public class CatalogView extends CatalogTable {
 		String originalQuery,
 		String expandedQuery) {
 
-		super(tableType, tableSchema, new TableStats(), properties);
+		super(tableType, tableSchema, TableStats.UNKNOWN(), properties);
 
 		this.originalQuery = originalQuery;
 		this.expandedQuery = expandedQuery;

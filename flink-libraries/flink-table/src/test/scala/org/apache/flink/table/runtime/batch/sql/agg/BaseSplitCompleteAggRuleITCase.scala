@@ -36,13 +36,13 @@ abstract class BaseSplitCompleteAggRuleITCase extends BatchTestBase {
   @Before
   def before(): Unit = {
     registerCollection("T1", smallData3, type3, "a, b, c", nullablesOfSmallData3)
-    tEnv.alterSkewInfo("T1", Map("a" -> List[AnyRef](new Integer(1)).asJava))
+    val skewInfo = Map("a" -> List[AnyRef](new Integer(1)).asJava)
     val colStats = Map[java.lang.String, ColumnStats](
       "a" -> ColumnStats(90L, 0L, 8D, 8, 100, 1),
       "b" -> ColumnStats(90L, 0L, 32D, 32, 100D, 0D),
       "c" -> ColumnStats(90L, 0L, 64D, 64, null, null)
     )
-    val tableStats = TableStats(100L, colStats)
+    val tableStats = TableStats(100L, colStats, skewInfo)
     tEnv.alterTableStats("T1", Option(tableStats))
     prepareAggOp(tEnv)
   }

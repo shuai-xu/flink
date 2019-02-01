@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.schema
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
-import org.apache.flink.table.plan.stats.FlinkStatistic
+import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.sources.TableSource
 
 import java.util
@@ -44,7 +44,7 @@ abstract class TableSourceTable(
     // Currently, we could get more exact TableStats by AnalyzeStatistic#generateTableStats
     // and update it by TableEnvironment#alterTableStats.
     // So the default tableStats should be prior to the stats from TableSource.
-    val stats = if (statistic != null && statistic.getTableStats != null) {
+    val stats = if (statistic != null && statistic.getTableStats != TableStats.UNKNOWN) {
       statistic.getTableStats
     } else {
       tableSource.getTableStats

@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.plan.rules.logical
 
-import java.util
-
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, RexNodeExtractor}
@@ -34,6 +32,8 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.logical.LogicalTableScan
 import org.apache.calcite.rel.core.Filter
 import org.apache.calcite.tools.RelBuilder
+
+import java.util
 
 import scala.collection.JavaConverters._
 
@@ -134,8 +134,8 @@ class PushFilterIntoTableSourceScanRule extends RelOptRule(
     } else if (statistic == FlinkStatistic.UNKNOWN) {
       statistic
     } else {
-      // Remove tableStats and skewInfo after predicates pushed down
-      FlinkStatistic.builder.statistic(statistic).tableStats(null).skewInfo(null).build()
+      // Remove tableStats after predicates pushed down
+      FlinkStatistic.builder.statistic(statistic).tableStats(null).build()
     }
     val newTableSourceTable = tableSourceTable.replaceTableSource(newTableSource).copy(newStatistic)
     relOptTable.copy(newTableSourceTable, tableSourceTable.getRowType(relBuilder.getTypeFactory))

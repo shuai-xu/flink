@@ -379,8 +379,17 @@ public class SqlJobUtil {
 				SqlAnalyzeTable sqlAnalyzeTable = (SqlAnalyzeTable) sqlNodeInfo.getSqlNode();
 				String[] tablePath = sqlAnalyzeTable.getTableName().names.toArray(new String[] {});
 				String[] columnNames = getColumnsToAnalyze(sqlAnalyzeTable);
-				TableStats tableStats = AnalyzeStatistic.generateTableStats(tableEnv, tablePath, columnNames);
-				tableEnv.alterTableStats(tablePath, tableStats);
+				TableStats analyzeTableStats = AnalyzeStatistic.generateTableStats(tableEnv, tablePath, columnNames);
+
+				// TODO: Only overwrite oldTableStats with rowCount and columnStats because
+				// AnalyzeStatistic utility could only collect rowCount and column stats.
+				TableStats oldTableStats = tableEnv.getTableStats(tablePath);
+				TableStats.Builder statsBuilder = TableStats.builder();
+				if (oldTableStats != null && !oldTableStats.equals(TableStats.UNKNOWN())) {
+					statsBuilder.tableStats(oldTableStats);
+				}
+				statsBuilder.rowCount(analyzeTableStats.rowCount()).colStats(analyzeTableStats.colStats());
+				tableEnv.alterTableStats(tablePath, statsBuilder.build());
 			}
 		}
 	}

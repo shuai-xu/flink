@@ -45,7 +45,7 @@ public class CatalogTable {
 	// RichTableSchema of the table
 	private RichTableSchema richTableSchema;
 	// Statistics of the table
-	private TableStats tableStats = new TableStats();
+	private TableStats tableStats = TableStats.UNKNOWN();
 	// Comment of the table
 	private String comment;
 	// Partitioned columns
@@ -207,7 +207,7 @@ public class CatalogTable {
 		private final TableSchema tableSchema;
 		private Map<String, String> properties;
 
-		private TableStats tableStats = new TableStats();
+		private TableStats tableStats = TableStats.UNKNOWN();
 
 		public Builder(String tableType, TableSchema tableSchema, Map<String, String> properties) {
 			checkArgument(!StringUtils.isNullOrWhitespaceOnly(tableType), "tableType cannot be null or empty");

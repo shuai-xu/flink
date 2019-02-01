@@ -18,18 +18,20 @@
 
 package org.apache.flink.table.plan.batch.sql
 
-import java.lang.{Long => JLong}
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.TableTestBase
-import org.junit.{Before, Test}
+
+import java.lang.{Long => JLong}
+import java.util.{Map => JMap, List => JList}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
+
+import org.junit.{Before, Test}
 
 class JoinTest extends TableTestBase {
 
@@ -45,9 +47,9 @@ class JoinTest extends TableTestBase {
     util.addTable("T1", CommonTestData.get3Source(Array("f1", "f2", "f3")))
     util.addTable("T2", CommonTestData.get3Source(Array("f4", "f5", "f6")))
     // Prevent CSV sample random values.
-    util.tableEnv.alterTableStats("T1", Some(TableStats(100000000L)))
+    val skewInfo = Map("f1" -> List[AnyRef](new Integer(1)).asJava)
+    util.tableEnv.alterTableStats("T1", Some(TableStats(100000000L, skewInfo = skewInfo)))
     util.tableEnv.alterTableStats("T2", Some(TableStats(100000000L)))
-    util.tableEnv.alterSkewInfo("T1", Map("f1" -> List[AnyRef](new Integer(1)).asJava))
     util.disableBroadcastHashJoin()
   }
 
@@ -97,23 +99,23 @@ class JoinTest extends TableTestBase {
 
   @Test
   def testSkewJoinTwoValue(): Unit = {
-    util.tableEnv.alterSkewInfo("T1", Map("f1" ->
-        List[AnyRef](new Integer(1), new Integer(2)).asJava))
+    alterSkewInfo("T1", Map("f1" -> List[AnyRef](new Integer(1), new Integer(2)).asJava))
     val query = "SELECT * FROM T1, T2 WHERE f1 = f4"
     util.verifyPlan(query)
   }
 
   @Test
   def testSkewJoinThreeValue(): Unit = {
-    util.tableEnv.alterSkewInfo("T1", Map("f1" ->
-        List[AnyRef](new Integer(1), new Integer(2), new Integer(3)).asJava))
+    alterSkewInfo(
+      "T1",
+      Map("f1" -> List[AnyRef](new Integer(1), new Integer(2), new Integer(3)).asJava))
     val query = "SELECT * FROM T1, T2 WHERE f1 = f4"
     util.verifyPlan(query)
   }
 
   @Test
   def testSkewJoinTwoField(): Unit = {
-    util.tableEnv.alterSkewInfo("T1", Map(
+    alterSkewInfo("T1", Map(
       "f1" -> List[AnyRef](new Integer(1)).asJava,
       "f2" -> List[AnyRef](new JLong(1)).asJava))
     val query = "SELECT * FROM T1, T2 WHERE f1 = f4 AND f2 = f5"
@@ -122,8 +124,8 @@ class JoinTest extends TableTestBase {
 
   @Test
   def testSkewJoinTwoTable(): Unit = {
-    util.tableEnv.alterSkewInfo("T1", Map("f1" -> List[AnyRef](new Integer(1)).asJava))
-    util.tableEnv.alterSkewInfo("T2", Map("f4" -> List[AnyRef](new Integer(5)).asJava))
+    alterSkewInfo("T1", Map("f1" -> List[AnyRef](new Integer(1)).asJava))
+    alterSkewInfo("T2", Map("f4" -> List[AnyRef](new Integer(5)).asJava))
     val query = "SELECT * FROM T1, T2 WHERE f1 = f4"
     util.verifyPlan(query)
   }
@@ -151,9 +153,19 @@ class JoinTest extends TableTestBase {
   @Test
   def testSkewJoinEqualToField(): Unit = {
     util.addTable("T5", CommonTestData.get5Source(Array("f5_1", "f5_2", "f5_3", "f5_4", "f5_5")))
-    util.tableEnv.alterTableStats("T5", Some(TableStats(100000000L)))
-    util.tableEnv.alterSkewInfo("T5", Map("f5_1" -> List[AnyRef](new Integer(1)).asJava))
+    util.tableEnv.alterTableStats("T5", Some(
+      TableStats(100000000L, skewInfo = Map("f5_1" -> List[AnyRef](new Integer(1)).asJava))))
     val query = "SELECT * FROM T5, T2 WHERE f5_1 = f4 and f5_1 = f5_3"
     util.verifyPlan(query)
   }
+
+  private def alterSkewInfo(
+    tableName: String,
+    skewInfo: JMap[String, JList[AnyRef]]): Unit = {
+    val existedTableStats = util.tableEnv.getTableStats(tableName)
+    val oldTableStats = if (existedTableStats != null) existedTableStats else TableStats.UNKNOWN
+    val newTableStats = TableStats.builder().tableStats(oldTableStats).skewInfo(skewInfo).build
+    util.tableEnv.alterTableStats(Array(tableName), newTableStats)
+  }
+
 }

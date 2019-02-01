@@ -32,19 +32,19 @@ import scala.collection.JavaConversions._
 /**
   * The class provides statistics for a [[org.apache.flink.table.plan.schema.FlinkTable]].
   *
-  * @param tableStats The table statistics.
+  * @param tableStats The table statistics, it cannot be null. Use [[TableStats.UNKNOWN]] if table
+  *                   statistics is not available.
   * @param uniqueKeys unique keys of table.
   *                   null means miss this information;
   *                   empty set means does not exist unique key of the table;
   *                   non-empty set means set of the unique keys.
-  * @param skewInfo statistics of skewedColNames and skewedColValues.
   */
-class FlinkStatistic private(tableStats: Option[TableStats],
+class FlinkStatistic private(tableStats: TableStats,
     uniqueKeys: util.Set[_ <: util.Set[String]] = null,
-    skewInfo: util.Map[String, util.List[AnyRef]] = null,
     monotonicity: RelModifiedMonotonicity = null)
   extends Statistic {
 
+  require(tableStats != null, "tableStats can not be null!")
   require(uniqueKeys == null || !uniqueKeys.exists(keys => keys == null || keys.isEmpty),
     "uniqueKeys contains invalid elements!")
 
@@ -53,7 +53,7 @@ class FlinkStatistic private(tableStats: Option[TableStats],
     *
     * @return The table statistics
     */
-  def getTableStats: TableStats = tableStats.orNull
+  def getTableStats: TableStats = tableStats
 
   /**
     * Returns the stats of the specified the column.
@@ -61,9 +61,9 @@ class FlinkStatistic private(tableStats: Option[TableStats],
     * @param columnName The name of the column for which the stats are requested.
     * @return The stats of the specified column.
     */
-  def getColumnStats(columnName: String): ColumnStats = tableStats match {
-    case Some(tStats) if tStats.colStats != null => tStats.colStats.get(columnName)
-    case _ => null
+  def getColumnStats(columnName: String): ColumnStats = {
+    val columnStats = tableStats.colStats
+    if (columnStats != null) columnStats.get(columnName) else null
   }
 
   /**
@@ -78,19 +78,13 @@ class FlinkStatistic private(tableStats: Option[TableStats],
   def getRelModifiedMonotonicity: RelModifiedMonotonicity = monotonicity
 
   /**
-    * Returns the skew info.
-    * @return
-    */
-  def getSkewInfo: util.Map[String, util.List[AnyRef]] = skewInfo
-
-  /**
     * Returns the number of rows of the table.
     *
     * @return The number of rows of the table.
     */
-  override def getRowCount: Double = tableStats match {
-    case Some(tStats) if tStats.rowCount != null => tStats.rowCount.toDouble
-    case _ => null
+  override def getRowCount: Double = {
+    val rowCount = tableStats.rowCount
+    if (rowCount != null) rowCount.toDouble else null
   }
 
   override def getCollations: util.List[RelCollation] = util.Collections.emptyList()
@@ -122,27 +116,25 @@ class FlinkStatistic private(tableStats: Option[TableStats],
 object FlinkStatistic {
 
   /** Represents a FlinkStatistic that knows nothing about a table */
-  val UNKNOWN: FlinkStatistic = new FlinkStatistic(None)
+  val UNKNOWN: FlinkStatistic = new FlinkStatistic(TableStats.UNKNOWN)
 
   class Builder {
 
-    private var tableStats: TableStats = null
+    private var tableStats: TableStats = TableStats.UNKNOWN
     private var uniqueKeys: util.Set[_ <: util.Set[String]] = null
-    private var skewInfo: util.Map[String, util.List[AnyRef]] = null
     private var monotonicity: RelModifiedMonotonicity = null
 
     def tableStats(tableStats: TableStats): Builder = {
-      this.tableStats = tableStats
+      if (tableStats == null) {
+        this.tableStats = TableStats.UNKNOWN
+      } else {
+        this.tableStats = tableStats
+      }
       this
     }
 
     def uniqueKeys(uniqueKeys: util.Set[_ <: util.Set[String]]): Builder = {
       this.uniqueKeys = uniqueKeys
-      this
-    }
-
-    def skewInfo(skewInfo: util.Map[String, util.List[AnyRef]]): Builder = {
-      this.skewInfo = skewInfo
       this
     }
 
@@ -152,18 +144,18 @@ object FlinkStatistic {
     }
 
     def statistic(statistic: FlinkStatistic): Builder = {
+      require(statistic != null, "input statistic cannot be null!")
       this.tableStats = statistic.getTableStats
       this.uniqueKeys = statistic.getUniqueKeys
-      this.skewInfo = statistic.getSkewInfo
       this.monotonicity = statistic.getRelModifiedMonotonicity
       this
     }
 
     def build(): FlinkStatistic = {
-      if (tableStats == null && uniqueKeys == null && skewInfo == null && monotonicity == null) {
+      if (tableStats == null && uniqueKeys == null && monotonicity == null) {
         UNKNOWN
       } else {
-        new FlinkStatistic(Option(tableStats), uniqueKeys, skewInfo, monotonicity)
+        new FlinkStatistic(tableStats, uniqueKeys, monotonicity)
       }
     }
   }

@@ -18,20 +18,6 @@
 
 package org.apache.flink.table.plan.metadata
 
-import java.math.BigDecimal
-import java.sql.{Date, Time, Timestamp}
-import java.util
-
-import org.apache.calcite.plan.{AbstractRelOptPlanner, Context, Contexts, RelOptCluster}
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
-import org.apache.calcite.rel.core.TableScan
-import org.apache.calcite.rel.metadata.{JaninoRelMetadataProvider, RelMetadataQuery}
-import org.apache.calcite.rex.{RexBuilder, RexInputRef, RexLiteral, RexNode}
-import org.apache.calcite.sql.SqlOperator
-import org.apache.calcite.sql.`type`.SqlTypeName._
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.calcite.sql.fun.SqlStdOperatorTable._
-import org.apache.calcite.util.{DateString, TimeString, TimestampString}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.types.DataType
@@ -44,14 +30,30 @@ import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStat
 import org.apache.flink.table.sources.{Partition, PartitionableTableSource, TableSource}
 import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.util.Preconditions
+
+import org.apache.calcite.plan.{AbstractRelOptPlanner, Context, Contexts, RelOptCluster}
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
+import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.metadata.{JaninoRelMetadataProvider, RelMetadataQuery}
+import org.apache.calcite.rex.{RexBuilder, RexInputRef, RexLiteral, RexNode}
+import org.apache.calcite.sql.SqlOperator
+import org.apache.calcite.sql.`type`.SqlTypeName._
+import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.calcite.sql.fun.SqlStdOperatorTable._
+import org.apache.calcite.util.{DateString, TimeString, TimestampString}
+
+import java.math.BigDecimal
+import java.sql.{Date, Time, Timestamp}
+import java.util
+
+import scala.collection.JavaConverters._
+
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.{Before, BeforeClass, Test}
 import org.powermock.api.mockito.PowerMockito._
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
-
-import scala.collection.JavaConverters._
 
 /**
   * Tests for [[SelectivityEstimator]].
@@ -137,8 +139,8 @@ class SelectivityEstimatorTest {
     when(flinkTable, "getFlinkStatistic").thenReturn(statistic)
     when(flinkTable, "getRowType").thenReturn(relDataType)
     when(tableScan, "getTable").thenReturn(flinkTable)
-    val rowCount: java.lang.Double = if (statistic != null && statistic.getTableStats != null) {
-      statistic.getTableStats.rowCount.doubleValue()
+    val rowCount: java.lang.Double = if (statistic != null && statistic.getRowCount != null) {
+      statistic.getRowCount
     } else {
       100D
     }

@@ -24,16 +24,67 @@ import java.util
 /**
   * Table statistics
   *
-  * @param rowCount cardinality of table
-  * @param colStats statistics of table columns
+  * @param rowCount cardinality of table, the value is null if not available
+  * @param colStats statistics of table columns, the value is empty map if not available.
+  *                 default value is empty map.
+  * @param skewInfo skew information, including skewed column names and skewed column values,
+  *                 the value is empty map if not available. default value is empty map.
   */
 case class TableStats(
   rowCount: Long,
-  colStats: util.Map[String, ColumnStats] = new util.HashMap()) {
+  colStats: util.Map[String, ColumnStats] = new util.HashMap(),
+  skewInfo: util.Map[String, util.List[AnyRef]] = new util.HashMap()) {
 
-  def this() = this(0, new util.HashMap())
+  require(rowCount == null || rowCount >= 0L, "rowCount cannot be negative!")
+  require(colStats != null, "column statistic cannot be null!")
+  require(skewInfo != null, "skew information cannot be null!")
 
-  override def toString = {
-    s"TableStats{rowCount=$rowCount, colStats=$colStats}"
+  override def toString: String = {
+    val rowCountStr = if (rowCount != null) s"rowCount=$rowCount" else ""
+    val colStatsStr = if (!colStats.isEmpty) s"colStats=$colStats" else ""
+    val skewInfoStr = if (!skewInfo.isEmpty) s"skewInfo=$skewInfo" else ""
+
+    s"TableStats{${Seq(rowCountStr, colStatsStr, skewInfoStr).mkString(", ")}}"
+  }
+
+}
+
+object TableStats {
+
+  val UNKNOWN = new TableStats(null)
+
+  def builder(): Builder = new Builder()
+
+  class Builder {
+    private var rowCount: Long = null
+    private var colStats: util.Map[String, ColumnStats] = new util.HashMap()
+    private var skewInfo: util.Map[String, util.List[AnyRef]] = new util.HashMap()
+
+    def rowCount(rowCount: Long): Builder = {
+      this.rowCount = rowCount
+      this
+    }
+
+    def colStats(colStats: util.Map[String, ColumnStats]): Builder = {
+      this.colStats = colStats
+      this
+    }
+
+    def skewInfo(skewInfo: util.Map[String, util.List[AnyRef]]): Builder = {
+      this.skewInfo = skewInfo
+      this
+    }
+
+    def tableStats(stats: TableStats): Builder = {
+      require(stats != null, "input TableStats cannot be null!")
+      this.rowCount = stats.rowCount
+      this.colStats = stats.colStats
+      this.skewInfo = stats.skewInfo
+      this
+    }
+
+    def build(): TableStats = {
+      new TableStats(rowCount, colStats, skewInfo)
+    }
   }
 }

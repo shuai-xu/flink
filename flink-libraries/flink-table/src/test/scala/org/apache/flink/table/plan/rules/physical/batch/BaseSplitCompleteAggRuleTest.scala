@@ -45,17 +45,16 @@ abstract class BaseSplitCompleteAggRuleTest(aggStrategy: AggPhaseEnforcer)
   def before(): Unit = {
     util = batchTestUtil()
     util.addTable("T1", CommonTestData.get3Source(Array("a", "b", "c")))
-    util.tableEnv.alterSkewInfo("T1", Map("a" -> List[AnyRef](new Integer(1)).asJava))
+    val skewInfo = Map("a" -> List[AnyRef](new Integer(1)).asJava)
     val colStats = Map[java.lang.String, ColumnStats](
       "a" -> ColumnStats(90L, 0L, 8D, 8, 100, 1),
       "b" -> ColumnStats(90L, 0L, 32D, 32, 100D, 0D),
       "c" -> ColumnStats(90L, 0L, 64D, 64, null, null)
     )
-    val tableStats = TableStats(100L, colStats)
-    util.tableEnv.alterTableStats("T1", Option(tableStats))
+    util.tableEnv.alterTableStats("T1", Option(TableStats(100L, colStats, skewInfo)))
     // difference between T1 and T2 is t1 has skew info
     util.addTable("T2", CommonTestData.get3Source(Array("a", "b", "c")))
-    util.tableEnv.alterTableStats("T2", Option(tableStats))
+    util.tableEnv.alterTableStats("T2", Option(TableStats(100L, colStats)))
     util.tableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, aggStrategy.toString)
     prepareAggOp(util.tableEnv)

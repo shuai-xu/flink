@@ -866,55 +866,6 @@ abstract class TableEnvironment(
   }
 
   /**
-    * Alter skew info to a table, optimizer will try to choose better plan on skewed data.
-    * 1. pick the skewed values to join separately
-    * 2. prefer to choose add local-combine aggregate before global aggregate which group by
-    * skewed data
-    *
-    * TODO: Add skewInfo on a specified set of columns later. Now only support to specify skewInfo
-    * on a singleKey, it is not enough to determines whether a specified set of columns from a
-    * specified relational expression is skew or not.
-    *
-    * @param tableName table name to alter.
-    * @param skewInfo statistics of skewedColNames and skewedColValues.
-    */
-  def alterSkewInfo(
-                     tableName: String,
-                     skewInfo: util.Map[String, util.List[AnyRef]]): Unit = {
-    require(tableName != null && tableName.nonEmpty, "tableName must not be null or empty.")
-    alterSkewInfo(Array(tableName), skewInfo)
-  }
-
-  private def alterSkewInfo(
-                             tablePath: Array[String],
-                             skewInfo: util.Map[String, util.List[AnyRef]]): Unit = {
-    val tableOpt = getTable(tablePath)
-    if (tableOpt.isEmpty) {
-      throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
-    }
-
-    val table = tableOpt.get
-    val tableName = tablePath.last
-    if (tablePath.length == 1) {
-      // table in calcite root schema
-      val statistic = table match {
-        // call statistic instead of getStatistics of TableSourceTable
-        // to fetch the original statistics.
-        case t: TableSourceSinkTable[_] if t.isSourceTable => t.tableSourceTable.get.statistic
-        case t: FlinkTable => t.getStatistic
-        case _ => throw new TableException(
-          s"alter SkewInfo operation is not supported for ${table.getClass}.")
-      }
-      val oldStatistic = if (statistic == null) FlinkStatistic.UNKNOWN else statistic
-      val newStatistic = FlinkStatistic.builder.statistic(oldStatistic).skewInfo(skewInfo).build()
-      val newTable = table.asInstanceOf[FlinkTable].copy(newStatistic)
-      replaceRegisteredTable(tableName, newTable)
-    } else {
-      throw new TableException("alterSkewInfo operation is not supported for external catalog.")
-    }
-  }
-
-  /**
     * Registers an external [[TableSink]] with given field names and types in this
     * [[TableEnvironment]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.

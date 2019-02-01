@@ -44,17 +44,18 @@ class FlinkRelMdSkewInfo private extends MetadataHandler[SkewInfoMeta] {
   override def getDef: MetadataDef[SkewInfoMeta] = SkewInfoMeta.DEF
 
   def getSkewInfo(ts: TableScan, mq: RelMetadataQuery): SkewInfoInternal = {
-    val info = ts.getTable.asInstanceOf[FlinkRelOptTable].getFlinkStatistic.getSkewInfo
+    val tableStats = ts.getTable.asInstanceOf[FlinkRelOptTable].getFlinkStatistic.getTableStats
+    val info = tableStats.skewInfo
+    if (info == null || info.isEmpty) {
+      return null
+    }
     val skewMap = new mutable.HashMap[Int, Seq[AnyRef]]
-
-    if (info != null) {
-      ts.getRowType.getFieldNames.zipWithIndex.foreach {
-        case (field, fieldIndex) =>
+    ts.getRowType.getFieldNames.zipWithIndex.foreach {
+      case (field, fieldIndex) =>
           val skewValues = info.get(field)
           if (skewValues != null && skewValues.nonEmpty) {
             skewMap.put(fieldIndex, skewValues)
           }
-      }
     }
     if (skewMap.nonEmpty) {
       SkewInfoInternal(skewMap.toMap)

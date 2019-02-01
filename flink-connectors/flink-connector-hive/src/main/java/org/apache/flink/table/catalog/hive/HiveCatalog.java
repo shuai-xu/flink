@@ -72,14 +72,16 @@ public class HiveCatalog extends HiveCatalogBase {
 
 		TableSchema tableSchema = HiveCatalogUtil.createTableSchema(hiveTable.getSd().getCols(), hiveTable.getPartitionKeys());
 
-		// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
-		Map<String, ColumnStats> colStats = new HashMap<>();
-		if (hiveTable.getPartitionKeysSize() == 0) {
-			colStats = HiveCatalogUtil.createColumnStats(
-				getHiveTableColumnStats(path.getDbName(), path.getObjectName(), Arrays.asList(tableSchema.getFieldNames())));
+		TableStats tableStats = null;
+		if (!isTablePartitioned(hiveTable)) {
+			// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
+			Map<String, ColumnStats> colStats = HiveCatalogUtil.createColumnStats(
+					getHiveTableColumnStats(path.getDbName(), path.getObjectName(), Arrays.asList(tableSchema.getFieldNames())));
+			tableStats = TableStats.builder().rowCount(getRowCount(hiveTable)).colStats(colStats).build();
+		} else {
+			// TableStats of partitioned table is unknown, the behavior is same as HIVE
+			tableStats = TableStats.UNKNOWN();
 		}
-
-		TableStats tableStats = new TableStats(getRowCount(hiveTable), colStats);
 
 		CatalogTable catalogTable = HiveCatalogUtil.createCatalogTable(hiveTable, tableSchema, tableStats);
 		catalogTable.getProperties().put(HiveConf.ConfVars.METASTOREURIS.varname,
@@ -159,11 +161,10 @@ public class HiveCatalog extends HiveCatalogBase {
 	public TableStats getTableStats(ObjectPath path) throws TableNotExistException {
 		Table hiveTable = getHiveTable(path);
 
-		// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
-		// For partitioned tables, get partition columns stats from HiveCatalog.getPartition()
-		Map<String, ColumnStats> colStats = new HashMap<>();
-
 		if (!isTablePartitioned(hiveTable)) {
+			// Get the column statistics for a set of columns in a table. This only works for non-partitioned tables.
+			// For partitioned tables, get partition columns stats from HiveCatalog.getPartition()
+			Map<String, ColumnStats> colStats = new HashMap<>();
 			colStats = HiveCatalogUtil.createColumnStats(
 				getHiveTableColumnStats(
 					path.getDbName(),
@@ -172,9 +173,11 @@ public class HiveCatalog extends HiveCatalogBase {
 						.map(fs -> fs.getName())
 						.collect(Collectors.toList())
 				));
+			return TableStats.builder().rowCount(getRowCount(hiveTable)).colStats(colStats).build();
+		} else {
+			// TableStats of partitioned table is unknown, the behavior is same as HIVE
+			return TableStats.UNKNOWN();
 		}
-
-		return new TableStats(getRowCount(hiveTable), colStats);
 	}
 
 	@Override

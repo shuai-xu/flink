@@ -102,7 +102,7 @@ object ParquetTableStatsCollector extends Logging {
       LOG.debug(s"collect TableStats from path: $filePath, cost: ${endTime - startTime}ms")
     }
 
-    new TableStats(totalRowCount, finalColumnStats)
+    TableStats(totalRowCount, finalColumnStats)
   }
 
   /**

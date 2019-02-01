@@ -375,7 +375,7 @@ public abstract class CatalogTestBase {
 			getBatchTableProperties());
 		catalog.createTable(path1, table, false);
 
-		TableStats tableStats = new TableStats(100L, new HashMap<String, ColumnStats>() {{
+		TableStats tableStats = TableStats.builder().rowCount(100L).colStats(new HashMap<String, ColumnStats>() {{
 			// StringType
 			put("1", new ColumnStats(11L, 1L, 1.1, 1, null, null));
 			// BooleanType
@@ -400,7 +400,7 @@ public abstract class CatalogTestBase {
 			put("11", new ColumnStats(19L, 10L, null, null, Decimal.fromLong(999999, 6, 3), Decimal.fromLong(666666, 6, 3)));
 			// TimetampType.Timestamp
 			put("12", new ColumnStats(19L, 10L, null, null, new Timestamp(1547529235000L), new Timestamp(1540529200000L)));
-		}});
+		}}).build();
 
 		catalog.alterTableStats(path1, tableStats, false);
 		TableStats actual = catalog.getTableStats(path1);
@@ -415,15 +415,15 @@ public abstract class CatalogTestBase {
 		catalog.createDatabase(db1, createDb(), false);
 		catalog.createTable(path1, createPartitionedTable(), false);
 
-		TableStats stats = new TableStats(0L, new HashMap<String, ColumnStats>() {{
+		TableStats stats = TableStats.builder().rowCount(0L).colStats(new HashMap<String, ColumnStats>() {{
 			put("first", new ColumnStats(11L, 1L, 1.1, 1, null, null));
 			put("second", new ColumnStats(14L, 4L, null, null, 5, 4));
 			put("third", new ColumnStats(11L, 1L, 1.1, 1, null, null));
-		}});
+		}}).build();
 
 		catalog.alterTableStats(path1, stats, false);
 
-		assertEquals(new TableStats().toString(), catalog.getTableStats(path1).toString());
+		assertEquals(TableStats.UNKNOWN(), catalog.getTableStats(path1));
 	}
 
 	@Test
@@ -860,7 +860,7 @@ public abstract class CatalogTestBase {
 		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createTableSchema(),
-			new TableStats(),
+			TableStats.UNKNOWN(),
 			getBatchTableProperties(),
 			createPartitionCols());
 	}
@@ -869,7 +869,7 @@ public abstract class CatalogTestBase {
 		return CatalogTestUtil.createCatalogTable(
 			getTableType(),
 			createAnotherTableSchema(),
-			new TableStats(),
+			TableStats.UNKNOWN(),
 			getBatchTableProperties(),
 			createPartitionCols());
 	}
