@@ -23,6 +23,5 @@ class JavaTableSource(object):
     """
     Wrapper for existing org.apache.flink.table.sources.TableSource
     """
-
     def __init__(self, j_table_source):
         self.j_table_source = j_table_source

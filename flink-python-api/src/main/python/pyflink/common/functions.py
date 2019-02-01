@@ -16,25 +16,16 @@
 # limitations under the License.
 ################################################################################
 
-from pyflink.common.enum_base import EnumBase
-
-__all__ = ['FileProcessingMode',
-           'JavaSourceFunction'
-           ]
+__all__ = ['JavaFlatMapFunction']
 
 
-class FileProcessingMode(EnumBase):
+class JavaFlatMapFunction(object):
     """
-    Wrapper for org.apache.flink.streaming.api.functions.source.FileProcessingMode
+    for wrapping existing JavaFlatMapFunction
     """
-    PROCESS_ONCE = 0
-    PROCESS_CONTINUOUSLY = 1
+    def __init__(self, j_flat_map_function):
+        self._j_flat_map_function = j_flat_map_function
 
 
-class JavaSourceFunction(object):
-    """
-    for wrapping an existing java SourceFunction
-    """
-
-    def __init__(self, j_source_function):
-        self._j_source_function = j_source_function
+# TODO: pure python FlatMapFunction
+# class FlatMapFunction(object) ...

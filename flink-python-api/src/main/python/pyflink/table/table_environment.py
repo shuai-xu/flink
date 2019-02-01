@@ -204,23 +204,23 @@ class StreamTableEnvironment(TableEnvironment):
 
     def from_data_stream(self, data_stream, fields):
         if fields is None:
-            j_table = self._j_tenv.fromDataStream(data_stream.j_ds_source)
+            j_table = self._j_tenv.fromDataStream(data_stream._j_datastream_source)
         else:
-            j_table = self._j_tenv.fromDataStream(data_stream.j_ds_source, fields)
+            j_table = self._j_tenv.fromDataStream(data_stream._j_datastream_source, fields)
 
         return Table(j_table)
 
     def register_data_stream(self, name, data_stream, fields=None):
         if fields is None:
-            self._j_tenv.registerDataStream(name, data_stream.j_ds)
+            self._j_tenv.registerDataStream(name, data_stream._j_datastream)
         else:
-            self._j_tenv.registerDataStream(name, data_stream.j_ds, fields)
+            self._j_tenv.registerDataStream(name, data_stream._j_datastream, fields)
 
     def register_or_replace_data_stream(self, name, data_stream, fields=None):
         if fields is None:
-            self._j_tenv.registerOrReplaceDataStream(name, data_stream.j_ds)
+            self._j_tenv.registerOrReplaceDataStream(name, data_stream._j_datastream)
         else:
-            self._j_tenv.registerOrReplaceDataStream(name, data_stream.j_ds, fields)
+            self._j_tenv.registerOrReplaceDataStream(name, data_stream._j_datastream, fields)
 
     # TODO: clazz, StreamQueryConfig
     def to_append_stream(self, table, type_info):
@@ -246,7 +246,7 @@ class BatchTableEnvironment(TableEnvironment):
         self.table_config = table_config
 
     def from_bounded_stream(self, bounded_stream, fields=None, field_nullables=None):
-        j_table = self.j_env.fromBoundedStream(bounded_stream.j_ds)
+        j_table = self.j_env.fromBoundedStream(bounded_stream._j_datastream)
         return Table(j_table)
 
     def from_collection(self, data, fields=None):
@@ -262,13 +262,13 @@ class BatchTableEnvironment(TableEnvironment):
 
     def register_bounded_stream(self, name, bounded_stream, fields=None):
         if fields is None:
-            self._j_tenv.registerBoundedStream(name, bounded_stream.j_ds)
+            self._j_tenv.registerBoundedStream(name, bounded_stream._j_datastream)
         else:
-            self._j_tenv.registerBoundedStream(name, bounded_stream.j_ds, fields)
+            self._j_tenv.registerBoundedStream(name, bounded_stream._j_datastream, fields)
 
     def register_or_replace_bounded_stream(self, name, bounded_stream, fields=None):
         if fields is None:
-            self._j_tenv.registerOrReplaceBoundedStream(name, bounded_stream.j_ds)
+            self._j_tenv.registerOrReplaceBoundedStream(name, bounded_stream._j_datastream)
         else:
-            self._j_tenv.registerOrReplaceBoundedStream(name, bounded_stream.j_ds, fields)
+            self._j_tenv.registerOrReplaceBoundedStream(name, bounded_stream._j_datastream, fields)
 

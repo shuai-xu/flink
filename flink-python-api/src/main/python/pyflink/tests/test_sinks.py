@@ -38,6 +38,6 @@ def init_pyflink_env():
 
 def test_sink_conf():
     java_sink_name = 'org.apache.flink.table.sinks.csv.UpsertCsvTableSink'
-    sink_clazz = TypesUtil.get_java_class_by_package_name(java_sink_name)
+    sink_clazz = TypesUtil.class_for_name(java_sink_name)
     sink = JavaTableSink(sink_clazz('tmp.csv', ','))
     sink.configure(['a', 'b'],  [StringType(), IntegerType()])

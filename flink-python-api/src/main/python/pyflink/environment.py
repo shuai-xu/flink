@@ -18,6 +18,7 @@
 
 from pyflink.java_gateway import get_gateway
 from pyflink.stream.datastream import DataStream, DataStreamSource
+from pyflink.stream.functions.source import JavaSourceFunction
 from pyflink.common import ExecutionConfig
 from pyflink.common.cache import DistributedCache
 from pyflink.common.job_result import JobExecutionResult, JobSubmissionResult
@@ -217,9 +218,12 @@ class StreamExecutionEnvironment(object):
         j_ds = self._j_env.createInput(input_format._j_input_format)
         return DataStream(j_ds)
 
-    # TODO: SourceFunction
     def add_source(self, source_func):
-        j_ds = self._j_env.addSource(source_func)
+        if isinstance(source_func, JavaSourceFunction):
+            j_ds = self._j_env.addSource(source_func._j_source_function)
+        else:
+            # TODO: support pure python SourceFunction (DataStream API)
+            j_ds = None
         return DataStream(j_ds)
 
     # TODO: SourceFunction,  SourceContext, addSourceV2
