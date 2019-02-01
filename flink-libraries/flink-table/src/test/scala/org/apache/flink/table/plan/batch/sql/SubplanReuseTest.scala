@@ -229,6 +229,8 @@ class SubplanReuseTest extends TableTestBase {
   def testSubplanReuse_SortMergeJoin(): Unit = {
     util.tableEnv.getConfig.getConf.setString(
       TableConfigOptions.SQL_EXEC_DISABLED_OPERATORS, "HashJoin,NestedLoopJoin")
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_SMJ_REMOVE_SORT_ENABLE, true)
     val sqlQuery =
       """
         |WITH r AS (SELECT * FROM x, y WHERE a = d AND c LIKE 'He%')

@@ -127,6 +127,12 @@ public class TableConfigOptions {
 			.defaultValue(1024)
 			.withDescription("Configure the number of buckets when splitting distinct aggregation.");
 
+	public static final ConfigOption<Boolean> SQL_OPTIMIZER_SMJ_REMOVE_SORT_ENABLE =
+			key("sql.optimizer.smj.remove-sort.enable")
+			.defaultValue(false)
+			.withDescription("When true, the optimizer will try to remove redundant sort for SortMergeJoin. " +
+					"However that will increase optimization time. Default value is false.");
+
 	// ------------------------------------------------------------------------
 	//  CodGen Options
 	// ------------------------------------------------------------------------

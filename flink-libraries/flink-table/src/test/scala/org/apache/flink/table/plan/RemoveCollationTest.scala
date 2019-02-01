@@ -45,6 +45,9 @@ class RemoveCollationTest extends TableTestBase {
     util.tableEnv.alterTableStats("y", Some(TableStats(100L)))
     util.tableEnv.alterTableStats("t1", Some(TableStats(100L)))
     util.tableEnv.alterTableStats("t2", Some(TableStats(100L)))
+
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_SMJ_REMOVE_SORT_ENABLE, true)
   }
 
   @Test

@@ -132,14 +132,22 @@ class BatchExecSortMergeJoinRule(joinClass: Class[_ <: Join])
       call.transformTo(newJoin)
     }
 
-    Array((false, false), (true, false), (false, true), (true, true)).foreach {
+    val tableConfig = FlinkRelOptUtil.getTableConfig(join)
+    val candidate = if (tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_SMJ_REMOVE_SORT_ENABLE)) {
+      // add more possibility to remove redundant sort, and longer optimization time
+      Array((false, false), (true, false), (false, true), (true, true))
+    } else {
+      // will not try to remove redundant sort, and shorter optimization time
+      Array((false, false))
+    }
+    candidate.foreach {
       case (requireLeftSorted, requireRightSorted) =>
         transformToEquiv(joinInfo.leftKeys, joinInfo.rightKeys,
           requireLeftSorted, requireRightSorted)
     }
 
     // add more possibility to only shuffle by partial joinKeys, now only single one
-    val tableConfig = FlinkRelOptUtil.getTableConfig(join)
     val isShuffleByPartialKeyEnabled = tableConfig.getConf.getBoolean(
       TableConfigOptions.SQL_OPTIMIZER_SHUFFLE_PARTIAL_KEY_ENABLED)
     if (isShuffleByPartialKeyEnabled && joinInfo.pairs().length > 1) {
