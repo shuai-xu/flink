@@ -164,4 +164,10 @@ public class CatalogTestUtil {
 	protected static void compare(CatalogPartition p1, CatalogPartition p2) {
 		assertEquals(p1.getPartitionSpec(), p2.getPartitionSpec());
 	}
+
+	protected static void compare(CatalogFunction f1, CatalogFunction f2) {
+		assertEquals(f1.getSource(), f2.getSource());
+		assertEquals(f1.getClazzName(), f2.getClazzName());
+		assertEquals(f1.getProperties(), f2.getProperties());
+	}
 }

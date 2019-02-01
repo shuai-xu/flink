@@ -74,7 +74,7 @@ public abstract class CatalogTestBase {
 	protected final ObjectPath path2 = new ObjectPath(db2, t2);
 	protected final ObjectPath path3 = new ObjectPath(db1, t2);
 	protected final ObjectPath nonExistDbPath = ObjectPath.fromString("non.exist");
-	protected final ObjectPath nonExistTablePath = ObjectPath.fromString("db1.nonexist");
+	protected final ObjectPath nonExistObjectPath = ObjectPath.fromString("db1.nonexist");
 
 	protected static final String TEST_COMMENT = "test comment";
 
@@ -154,7 +154,7 @@ public abstract class CatalogTestBase {
 		assertFalse(catalog.dbExists(db1));
 
 		exception.expect(DatabaseNotExistException.class);
-		catalog.createTable(nonExistTablePath, createTable(), false);
+		catalog.createTable(nonExistObjectPath, createTable(), false);
 	}
 
 	@Test
@@ -185,13 +185,13 @@ public abstract class CatalogTestBase {
 		catalog.createDatabase(db1, createDb(), false);
 
 		exception.expect(TableNotExistException.class);
-		catalog.getTable(nonExistTablePath);
+		catalog.getTable(nonExistObjectPath);
 	}
 
 	@Test
 	public void testGetTable_TableNotExistException_NoDb() {
 		exception.expect(TableNotExistException.class);
-		catalog.getTable(nonExistTablePath);
+		catalog.getTable(nonExistObjectPath);
 	}
 
 	@Test
@@ -226,7 +226,7 @@ public abstract class CatalogTestBase {
 	@Test
 	public void testDropTable_TableNotExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);
-		catalog.dropTable(nonExistTablePath, true);
+		catalog.dropTable(nonExistObjectPath, true);
 	}
 
 	@Test
@@ -268,9 +268,9 @@ public abstract class CatalogTestBase {
 	@Test
 	public void testAlterTable_TableNotExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);
-		catalog.alterTable(nonExistTablePath, createTable(), true);
+		catalog.alterTable(nonExistObjectPath, createTable(), true);
 
-		assertFalse(catalog.tableExists(nonExistTablePath));
+		assertFalse(catalog.tableExists(nonExistObjectPath));
 	}
 
 	@Test
@@ -457,7 +457,7 @@ public abstract class CatalogTestBase {
 		assertFalse(catalog.dbExists(db1));
 
 		exception.expect(DatabaseNotExistException.class);
-		catalog.createView(nonExistTablePath, createView(), false);
+		catalog.createView(nonExistObjectPath, createView(), false);
 	}
 
 	@Test
@@ -522,9 +522,9 @@ public abstract class CatalogTestBase {
 	@Test
 	public void testAlterView_TableNotExist_ignored() {
 		catalog.createDatabase(db1, createDb(), false);
-		catalog.alterView(nonExistTablePath, createView(), true);
+		catalog.alterView(nonExistObjectPath, createView(), true);
 
-		assertFalse(catalog.tableExists(nonExistTablePath));
+		assertFalse(catalog.tableExists(nonExistObjectPath));
 	}
 
 	@Test

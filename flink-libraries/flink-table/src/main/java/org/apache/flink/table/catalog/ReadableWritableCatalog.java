@@ -20,6 +20,8 @@ package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.FunctionAlreadyExistException;
+import org.apache.flink.table.api.FunctionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
@@ -220,4 +222,31 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 	 */
 	void alterPartition(ObjectPath tablePath, CatalogPartition newPartition, boolean ignoreIfNotExists)
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
+
+	// ------ functions ------
+
+	/**
+	 * Creates a function.
+	 *
+	 * @param functionPath		Path of the function
+	 * @param function			The function to register
+	 * @param ignoreIfExists    Flag to specify behavior if a table/view with the given name already exists:
+	 *                        if set to false, it throws a TableAlreadyExistException,
+	 *                        if set to true, nothing happens.
+	 * @throws FunctionAlreadyExistException thrown if the function already exist
+	 * @throws DatabaseNotExistException thrown if the database does not exist
+	 */
+	void createFunction(ObjectPath functionPath, CatalogFunction function, boolean ignoreIfExists)
+		throws FunctionAlreadyExistException, DatabaseNotExistException;
+
+	/**
+	 * Drops a function.
+	 *
+	 * @param functionPath		Path of the function.
+	 * @param ignoreIfNotExists    Flag to specify behavior if the database does not exist:
+	 *                           if set to false, throw an exception,
+	 *                           if set to true, nothing happens.
+	 * @throws FunctionNotExistException	thrown if the function does not exist
+	 */
+	void dropFunction(ObjectPath functionPath, boolean ignoreIfNotExists) throws FunctionNotExistException;
 }

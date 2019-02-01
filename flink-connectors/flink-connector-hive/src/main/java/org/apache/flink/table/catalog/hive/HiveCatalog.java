@@ -19,12 +19,15 @@
 package org.apache.flink.table.catalog.hive;
 
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.FunctionAlreadyExistException;
+import org.apache.flink.table.api.FunctionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
+import org.apache.flink.table.catalog.CatalogFunction;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
@@ -361,5 +364,28 @@ public class HiveCatalog extends HiveCatalogBase {
 
 	private List<String> getOrderedPartitionValues(Table hiveTable, CatalogPartition.PartitionSpec partitionSpec) {
 		return partitionSpec.getOrderedValues(HiveCatalogUtil.getPartitionKeys(hiveTable.getPartitionKeys()));
+	}
+
+	// ------ functions ------
+
+	@Override
+	public void createFunction(ObjectPath functionPath, CatalogFunction function, boolean ignoreIfExists)
+		throws FunctionAlreadyExistException, DatabaseNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void dropFunction(ObjectPath functionPath, boolean ignoreIfNotExists) throws FunctionNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public CatalogFunction getFunction(ObjectPath functionPath) throws FunctionNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public boolean functionExists(ObjectPath functionPath) {
+		throw new UnsupportedOperationException();
 	}
 }

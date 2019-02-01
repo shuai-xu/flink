@@ -20,6 +20,8 @@ package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.FunctionAlreadyExistException;
+import org.apache.flink.table.api.FunctionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.PartitionAlreadyExistException;
@@ -52,6 +54,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	private final Map<String, CatalogDatabase> databases;
 	private final Map<ObjectPath, CatalogTable> tables;
 	private final Map<ObjectPath, Map<CatalogPartition.PartitionSpec, CatalogPartition>> partitions;
+	private final Map<ObjectPath, CatalogFunction> functions;
 
 	public FlinkInMemoryCatalog(String name) {
 		Preconditions.checkArgument(!StringUtils.isNullOrWhitespaceOnly(name), "name cannot be null or empty");
@@ -61,6 +64,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		this.databases.put(DEFAULT_DB, new CatalogDatabase());
 		this.tables = new LinkedHashMap<>();
 		this.partitions = new LinkedHashMap<>();
+		this.functions = new LinkedHashMap<>();
 	}
 
 	@Override
@@ -83,6 +87,48 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public void close() throws IOException {
 
+	}
+
+	// ------ functions ------
+
+	@Override
+	public void createFunction(ObjectPath path, CatalogFunction function, boolean ignoreIfExists)
+		throws FunctionAlreadyExistException, DatabaseNotExistException {
+
+		if (!dbExists(path.getDbName())) {
+			throw new DatabaseNotExistException(catalogName, path.getDbName());
+		}
+
+		if (functionExists(path)) {
+			if (!ignoreIfExists) {
+				throw new FunctionAlreadyExistException(catalogName, path.getFullName());
+			}
+		} else {
+			functions.put(path, function.deepCopy());
+		}
+	}
+
+	@Override
+	public void dropFunction(ObjectPath path, boolean ignoreIfNotExists) throws FunctionNotExistException {
+		if (functionExists(path)) {
+			functions.remove(path);
+		} else if (!ignoreIfNotExists) {
+			throw new FunctionNotExistException(catalogName, path.getFullName());
+		}
+	}
+
+	@Override
+	public CatalogFunction getFunction(ObjectPath path) throws FunctionNotExistException {
+		if (!functionExists(path)) {
+			throw new FunctionNotExistException(catalogName, path.getFullName());
+		} else {
+			return functions.get(path).deepCopy();
+		}
+	}
+
+	@Override
+	public boolean functionExists(ObjectPath path) {
+		return dbExists(path.getDbName()) && functions.containsKey(path);
 	}
 
 	// ------ tables ------

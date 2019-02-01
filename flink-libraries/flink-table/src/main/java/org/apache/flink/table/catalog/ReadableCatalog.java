@@ -19,6 +19,7 @@
 package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.FunctionNotExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.api.exceptions.PartitionNotExistException;
 import org.apache.flink.table.api.exceptions.TableNotPartitionedException;
@@ -71,7 +72,7 @@ public interface ReadableCatalog extends Closeable {
 	CatalogDatabase getDatabase(String dbName) throws DatabaseNotExistException;
 
 	/**
-	 * Check if a database exists in this catalog.
+	 * Check whether a database exists in this catalog.
 	 *
 	 * @param dbName		Name of the database.
 	 */
@@ -104,7 +105,7 @@ public interface ReadableCatalog extends Closeable {
 	CatalogTable getTable(ObjectPath objectName) throws TableNotExistException;
 
 	/**
-	 * Checks if a table or view exists in this catalog.
+	 * Checks whether a table or view exists in this catalog.
 	 *
 	 * @param path			Path of the table or view.
 	 */
@@ -171,10 +172,28 @@ public interface ReadableCatalog extends Closeable {
 		throws TableNotExistException, TableNotPartitionedException, PartitionNotExistException;
 
 	/**
-	 * Checks if a partition exists or not.
+	 * Checks whether a partition exists or not.
 	 *
 	 * @param tablePath		Path of the table
 	 * @param partitionSpec	Partition spec of the partition to check
 	 */
 	boolean partitionExists(ObjectPath tablePath, CatalogPartition.PartitionSpec partitionSpec);
+
+	// ------ functions ------
+
+	/**
+	 * Gets the function.
+	 *
+	 * @param functionPath	Path of the function.
+	 * @return	The requested function.
+	 * @throws FunctionNotExistException thrown if the partition does not exist in the catalog.
+	 */
+	CatalogFunction getFunction(ObjectPath functionPath) throws FunctionNotExistException;
+
+	/**
+	 * Checks whether a function exists or not.
+	 *
+	 * @param functionPath	Path of the function
+	 */
+	boolean functionExists(ObjectPath functionPath);
 }
