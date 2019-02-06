@@ -380,6 +380,11 @@ public class HiveCatalog extends HiveCatalogBase {
 	}
 
 	@Override
+	public List<ObjectPath> listFunctions(String dbName) throws DatabaseNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
 	public CatalogFunction getFunction(ObjectPath functionPath) throws FunctionNotExistException {
 		throw new UnsupportedOperationException();
 	}

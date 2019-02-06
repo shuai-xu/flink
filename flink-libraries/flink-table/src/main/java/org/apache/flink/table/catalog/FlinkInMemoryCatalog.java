@@ -118,6 +118,19 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
+	public List<ObjectPath> listFunctions(String dbName) throws DatabaseNotExistException {
+		checkArgument(!StringUtils.isNullOrWhitespaceOnly(dbName), "dbName cannot be null or empty");
+
+		if (!dbExists(dbName)) {
+			throw new DatabaseNotExistException(catalogName, dbName);
+		}
+
+		return functions.keySet().stream()
+			.filter(k -> k.getDbName().equals(dbName))
+			.collect(Collectors.toList());
+	}
+
+	@Override
 	public CatalogFunction getFunction(ObjectPath path) throws FunctionNotExistException {
 		if (!functionExists(path)) {
 			throw new FunctionNotExistException(catalogName, path.getFullName());

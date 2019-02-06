@@ -182,6 +182,15 @@ public interface ReadableCatalog extends Closeable {
 	// ------ functions ------
 
 	/**
+	 * Lists functions in the given database. An empty list is returned if none is registered.
+	 *
+	 * @param dbName	Name of the database.
+	 * @return	A list of the names of all registered functions in this database.
+	 * @throws DatabaseNotExistException
+	 */
+	List<ObjectPath> listFunctions(String dbName) throws DatabaseNotExistException;
+
+	/**
 	 * Gets the function.
 	 *
 	 * @param functionPath	Path of the function.

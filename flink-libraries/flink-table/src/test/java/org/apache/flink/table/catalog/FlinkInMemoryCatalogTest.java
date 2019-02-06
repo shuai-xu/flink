@@ -26,6 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.flink.table.catalog.CatalogTestUtil.compare;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -84,6 +85,22 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 		catalog.createFunction(path1, createAnotherFunction(), true);
 
 		compare(func, catalog.getFunction(path1));
+	}
+
+	@Test
+	public void testListFunctions() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		CatalogFunction func = createFunction();
+		catalog.createFunction(path1, func, false);
+
+		assertEquals(path1, catalog.listFunctions(db1).get(0));
+	}
+
+	@Test
+	public void testListFunctions_DatabaseNotExistException() {
+		exception.expect(DatabaseNotExistException.class);
+		catalog.listFunctions(db1);
 	}
 
 	@Test
