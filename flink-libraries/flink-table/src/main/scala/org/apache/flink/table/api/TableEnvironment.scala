@@ -92,7 +92,7 @@ abstract class TableEnvironment(
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
   // Table API/SQL function catalog (built in, does not contain external functions)
-  private[flink] val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.withBuiltIns()
+  private[flink] val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.instance()
 
   // the configuration to create a Calcite planner
   protected var frameworkConfig: FrameworkConfig = createFrameworkConfig

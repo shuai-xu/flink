@@ -109,7 +109,7 @@ object FlinkRelOptUtil {
 
   def getFunctionCatalog(rel: RelNode): FunctionCatalog = {
     Option(rel.getCluster.getPlanner.getContext.unwrap(classOf[FunctionCatalog]))
-      .getOrElse(BuiltInFunctionCatalog.withBuiltIns())
+      .getOrElse(BuiltInFunctionCatalog.instance())
   }
 
   /**
@@ -333,7 +333,7 @@ object FlinkRelOptUtil {
   private def pushNotToLeaf(expr: RexNode,
       rexBuilder: RexBuilder,
       needReverse: Boolean = false): RexNode = (expr.getKind, needReverse) match {
-    case (AND, true) | (OR, false) => 
+    case (AND, true) | (OR, false) =>
       val convertedExprs = expr.asInstanceOf[RexCall].operands
                            .map(pushNotToLeaf(_, rexBuilder, needReverse))
       RexUtil.composeDisjunction(rexBuilder,  convertedExprs, false)

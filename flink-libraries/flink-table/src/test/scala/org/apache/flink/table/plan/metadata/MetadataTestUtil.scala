@@ -50,7 +50,7 @@ object MetadataTestUtil {
       .configBuilder()
       .setLex(Lex.JAVA)
       .build()
-    val sqlOperatorTable = BuiltInFunctionCatalog.withBuiltIns().getSqlOperatorTable
+    val sqlOperatorTable = BuiltInFunctionCatalog.instance().getSqlOperatorTable
     val config = new TableConfig
     Frameworks
       .newConfigBuilder

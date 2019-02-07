@@ -143,6 +143,8 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
 
 object BuiltInFunctionCatalog {
 
+  private val _instance = new BuiltInFunctionCatalog
+
   val builtInFunctions: Map[String, Class[_]] = Map(
 
     // logic
@@ -320,26 +322,26 @@ object BuiltInFunctionCatalog {
     "multi_keyvalue" -> new MultiKeyValue
   )
 
+  builtInFunctions.foreach { case (name, clazz) => _instance.registerFunction(name, clazz) }
+  buildInTableFunctions.foreach { case (name, tableFunction) =>
+    List(name, name.toUpperCase).foreach { regName =>
+      _instance.registerSqlFunction(
+        createTableSqlFunction(
+          regName,
+          regName,
+          tableFunction,
+          // TODO correct args for builtInTableFunctions.
+          tableFunction.getResultType(Array[AnyRef](), Array[Class[_]]()),
+          // TODO different with typeFactory in TableEnvironment may cause some problems.
+          new FlinkTypeFactory(new FlinkTypeSystem())))
+    }
+  }
+
   /**
     * Create a new function catalog with built-in functions.
     */
-  def withBuiltIns(): FunctionCatalog = {
-    val catalog = new BuiltInFunctionCatalog
-    builtInFunctions.foreach { case (name, clazz) => catalog.registerFunction(name, clazz) }
-    buildInTableFunctions.foreach { case (name, tableFunction) =>
-      List(name, name.toUpperCase).foreach { regName =>
-        catalog.registerSqlFunction(
-          createTableSqlFunction(
-            regName,
-            regName,
-            tableFunction,
-            // TODO correct args for builtInTableFunctions.
-            tableFunction.getResultType(Array[AnyRef](), Array[Class[_]]()),
-            // TODO different with typeFactory in TableEnvironment may cause some problems.
-            new FlinkTypeFactory(new FlinkTypeSystem())))
-      }
-    }
-    catalog
+  def instance(): FunctionCatalog = {
+    _instance
   }
 }
 
