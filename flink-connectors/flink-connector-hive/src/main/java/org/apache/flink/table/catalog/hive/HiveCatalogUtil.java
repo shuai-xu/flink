@@ -524,6 +524,10 @@ public class HiveCatalogUtil {
 			.map(key -> key.getName().toLowerCase())
 			.collect(Collectors.toList())));
 
+		if (!prop.containsKey(CatalogTableConfig.IS_STREAMING)) {
+			prop.put(CatalogTableConfig.IS_STREAMING, "false");
+		}
+
 		return prop;
 	}
 
