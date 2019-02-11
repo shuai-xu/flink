@@ -29,6 +29,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayIncreasing;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -51,8 +52,6 @@ public class DelayIncreasingDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DelayIncreasingDetector.class);
 
-	private static final ConfigOption<Long> DELAY_INCREASING_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.delay-increasing.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Long> DELAY_INCREASING_THRESHOLD =
 		ConfigOptions.key("healthmonitor.delay-increasing.threshold.msps").defaultValue(0L);
 
@@ -71,7 +70,7 @@ public class DelayIncreasingDetector implements Detector {
 		jobID = monitor.getJobID();
 		metricProvider = monitor.getMetricProvider();
 
-		delayIncreasingCheckInterval = monitor.getConfig().getLong(DELAY_INCREASING_CHECK_INTERVAL);
+		delayIncreasingCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		delayIncreasingThreshold = monitor.getConfig().getLong(DELAY_INCREASING_THRESHOLD);
 
 		delayRateSubs = new HashMap<>();

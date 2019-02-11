@@ -18,15 +18,36 @@
 
 package org.apache.flink.runtime.healthmanager.metrics.timeline;
 
+import org.apache.flink.api.java.tuple.Tuple2;
+
 /**
- * Agg type of metric.
+ * Calculate earliest value of the metric in given interval.
  */
-public enum TimelineAggType {
-	MIN,
-	MAX,
-	AVG,
-	RATE,
-	RANGE,
-	LATEST,
-	EARLIEST
+public class EarliestTimelineAggregator extends TimelineAggregator {
+
+	private long nextIntervalKey = -1;
+	private long lastTimestamp = Long.MAX_VALUE;
+	private double lastValue = Double.MIN_VALUE;
+
+	public EarliestTimelineAggregator(long interval) {
+		super(interval);
+	}
+
+	@Override
+	public void addValue(Tuple2<Long, Double> value) {
+		if (nextIntervalKey == value.f0 / interval) {
+			if (value.f0 < lastTimestamp) {
+				lastValue = value.f1;
+				lastTimestamp = value.f0;
+			}
+		} else if (nextIntervalKey < value.f0 / interval) {
+			if (nextIntervalKey >= 0) {
+				currentTimestamp = nextIntervalKey * interval;
+				currentValue = lastValue;
+			}
+			nextIntervalKey = value.f0 / interval;
+			lastValue = value.f1;
+			lastTimestamp = value.f0;
+		}
+	}
 }

@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexBackPressure;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -53,8 +54,6 @@ public class BackPressureDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(BackPressureDetector.class);
 
-	private static final ConfigOption<Long> BACK_PRESSURE_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.back-pressure.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Double> BACK_PRESSURE_THRESHOLD =
 		ConfigOptions.key("healthmonitor.back-pressure.threshold.ms").defaultValue(0.01);
 
@@ -75,7 +74,7 @@ public class BackPressureDetector implements Detector {
 		healthMonitor = monitor;
 		metricProvider = monitor.getMetricProvider();
 
-		checkInterval = monitor.getConfig().getLong(BACK_PRESSURE_CHECK_INTERVAL);
+		checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		threshold = monitor.getConfig().getDouble(BACK_PRESSURE_THRESHOLD);
 
 		waitOutputCountRangeSubs = new HashMap<>();

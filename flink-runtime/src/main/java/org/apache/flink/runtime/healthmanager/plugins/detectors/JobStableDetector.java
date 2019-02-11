@@ -24,13 +24,23 @@ import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
+import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
+import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
+import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * JobStableDetector generate an JobStable symptom when all task running keep running for a given period.
@@ -45,11 +55,31 @@ public class JobStableDetector implements Detector {
 	private HealthMonitor monitor;
 
 	private long threshold;
+	private long interval;
+
+	private Map<JobVertexID, TaskMetricSubscription> inputCountSubs;
 
 	@Override
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.threshold = monitor.getConfig().getLong(JOB_STABLE_THRESHOLD);
+
+		inputCountSubs = new HashMap<>();
+
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
+
+		interval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
+
+		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
+			inputCountSubs.put(vertexId,
+					monitor.getMetricProvider().subscribeTaskMetric(
+							monitor.getJobID(),
+							vertexId,
+							MetricNames.TASK_INPUT_COUNT,
+							MetricAggType.MIN,
+							interval,
+							TimelineAggType.EARLIEST));
+		}
 	}
 
 	@Override
@@ -59,7 +89,16 @@ public class JobStableDetector implements Detector {
 
 	@Override
 	public Symptom detect() throws Exception {
+
 		RestServerClient.JobStatus status = this.monitor.getRestServerClient().getJobStatus(this.monitor.getJobID());
+
+		for (JobVertexID vertexID : inputCountSubs.keySet()) {
+			if (!MetricUtils.validateTaskMetric(monitor, interval * 2, inputCountSubs.get(vertexID))
+					|| inputCountSubs.get(vertexID).getValue().f1 == 0) {
+				LOGGER.debug("Some task has no input yet!");
+				return JobUnstable.INSTANCE;
+			}
+		}
 
 		long now = System.currentTimeMillis();
 		for (Tuple2<Long, ExecutionState> state: status.getTaskStatus().values()) {

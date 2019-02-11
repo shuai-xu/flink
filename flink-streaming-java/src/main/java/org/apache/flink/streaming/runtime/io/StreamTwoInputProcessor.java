@@ -133,11 +133,13 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 	private final WatermarkGauge[] watermarkGaugeOfInputs;
 
 	private Counter numRecordsIn;
+	private Counter numRecordsReceived;
 
 	private boolean isFinished;
 
 	private boolean enableTracingMetrics;
 	private int tracingMetricsInterval;
+	private long tracingInputCount;
 
 	private SumAndCount taskLatency;
 
@@ -240,6 +242,7 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 
 		this.enableTracingMetrics = enableTracingMetrics;
 		this.tracingMetricsInterval = tracingMetricsInterval;
+		this.tracingInputCount = 0;
 	}
 
 	public boolean processInput() throws Exception {
@@ -254,6 +257,16 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 				numRecordsIn = new SimpleCounter();
 			}
 		}
+
+		if (numRecordsReceived == null) {
+			try {
+				numRecordsReceived = ((OperatorMetricGroup) streamOperator.getMetricGroup()).parent().getIOMetricGroup().getNumRecordsReceived();
+			} catch (Exception e) {
+				LOG.warn("An exception occurred during the metrics setup.", e);
+				numRecordsReceived = new SimpleCounter();
+			}
+		}
+
 		if (enableTracingMetrics) {
 			if (taskLatency == null) {
 				taskLatency = new SumAndCount(
@@ -301,72 +314,25 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 				}
 
 				if (result.isFullRecord()) {
-					StreamElement recordOrWatermark = deserializationDelegateOfInputs[readingIndex].getInstance();
-					if (recordOrWatermark.isWatermark()) {
-						statusWatermarkValveOfInputs[readingIndex].inputWatermark(recordOrWatermark.asWatermark(),
-							currentChannelOfInputs[readingIndex] - (readingIndex == 0 ? 0 : numChannelsOfInputs[0]));
-						continue;
-					} else if (recordOrWatermark.isStreamStatus()) {
-						statusWatermarkValveOfInputs[readingIndex].inputStreamStatus(recordOrWatermark.asStreamStatus(),
-							currentChannelOfInputs[readingIndex] - (readingIndex == 0 ? 0 : numChannelsOfInputs[0]));
-						continue;
-					} else if (recordOrWatermark.isLatencyMarker()) {
-						synchronized (lock) {
-							if (readingIndex == 0) {
-								streamOperator.processLatencyMarker1(recordOrWatermark.asLatencyMarker());
-							} else {
-								streamOperator.processLatencyMarker2(recordOrWatermark.asLatencyMarker());
-							}
-						}
-						continue;
+
+					boolean recordProcessed;
+
+					numRecordsReceived.inc();
+					tracingInputCount++;
+					if (enableTracingMetrics && tracingInputCount % tracingMetricsInterval == 0) {
+						long start = System.nanoTime();
+						waitInput.update(start - lastProcessedTime);
+						recordProcessed = processRecordOrMark(readingIndex);
+						lastProcessedTime = System.nanoTime();
+						taskLatency.update(lastProcessedTime - start);
 					} else {
-						if (readingIndex == 0) {
-							reusedObject1 = ((StreamRecord<IN1>) recordOrWatermark).getValue();
+						recordProcessed = processRecordOrMark(readingIndex);
+					}
 
-							StreamRecord<IN1> record = recordOrWatermark.asRecord();
-							// numRecordsIn counter is a SimpleCounter not a heavier SumCounter, so reuse it
-							if (enableTracingMetrics && numRecordsIn.getCount() % tracingMetricsInterval == 0) {
-								long start = System.nanoTime();
-								waitInput.update(start - lastProcessedTime);
-								synchronized (lock) {
-									numRecordsIn.inc();
-									streamOperator.setKeyContextElement1(record);
-									inputSelection = streamOperator.processElement1(record);
-									lastProcessedTime = System.nanoTime();
-									taskLatency.update(lastProcessedTime - start);
-								}
-							} else {
-								synchronized (lock) {
-									numRecordsIn.inc();
-									streamOperator.setKeyContextElement1(record);
-									inputSelection = streamOperator.processElement1(record);
-								}
-							}
-						} else {
-							reusedObject2 = ((StreamRecord<IN2>) recordOrWatermark).getValue();
-
-							StreamRecord<IN2> record = recordOrWatermark.asRecord();
-							// numRecordsIn counter is a SimpleCounter not a heavier SumCounter, so reuse it
-							if (enableTracingMetrics && numRecordsIn.getCount() % tracingMetricsInterval == 0) {
-								long start = System.nanoTime();
-								waitInput.update(start - lastProcessedTime);
-								synchronized (lock) {
-									numRecordsIn.inc();
-									streamOperator.setKeyContextElement2(record);
-									inputSelection = streamOperator.processElement2(record);
-									lastProcessedTime = System.nanoTime();
-									taskLatency.update(lastProcessedTime - start);
-								}
-							} else {
-								synchronized (lock) {
-									numRecordsIn.inc();
-									streamOperator.setKeyContextElement2(record);
-									inputSelection = streamOperator.processElement2(record);
-								}
-							}
-						}
-
+					if (recordProcessed) {
 						return true;
+					} else {
+						continue;
 					}
 				}
 			}
@@ -425,6 +391,50 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 				}
 				return false;
 			}
+		}
+	}
+
+	private boolean processRecordOrMark(int readingIndex) throws Exception {
+		StreamElement recordOrWatermark = deserializationDelegateOfInputs[readingIndex].getInstance();
+		if (recordOrWatermark.isWatermark()) {
+			statusWatermarkValveOfInputs[readingIndex].inputWatermark(recordOrWatermark.asWatermark(),
+				currentChannelOfInputs[readingIndex] - (readingIndex == 0 ? 0 : numChannelsOfInputs[0]));
+			return false;
+		} else if (recordOrWatermark.isStreamStatus()) {
+			statusWatermarkValveOfInputs[readingIndex].inputStreamStatus(recordOrWatermark.asStreamStatus(),
+				currentChannelOfInputs[readingIndex] - (readingIndex == 0 ? 0 : numChannelsOfInputs[0]));
+			return false;
+		} else if (recordOrWatermark.isLatencyMarker()) {
+			synchronized (lock) {
+				if (readingIndex == 0) {
+					streamOperator.processLatencyMarker1(recordOrWatermark.asLatencyMarker());
+				} else {
+					streamOperator.processLatencyMarker2(recordOrWatermark.asLatencyMarker());
+				}
+			}
+			return false;
+		} else {
+			if (readingIndex == 0) {
+				reusedObject1 = ((StreamRecord<IN1>) recordOrWatermark).getValue();
+
+				StreamRecord<IN1> record = recordOrWatermark.asRecord();
+				synchronized (lock) {
+					numRecordsIn.inc();
+					streamOperator.setKeyContextElement1(record);
+					inputSelection = streamOperator.processElement1(record);
+				}
+			} else {
+				reusedObject2 = ((StreamRecord<IN2>) recordOrWatermark).getValue();
+
+				StreamRecord<IN2> record = recordOrWatermark.asRecord();
+				synchronized (lock) {
+					numRecordsIn.inc();
+					streamOperator.setKeyContextElement2(record);
+					inputSelection = streamOperator.processElement2(record);
+				}
+			}
+
+			return true;
 		}
 	}
 

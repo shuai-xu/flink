@@ -71,6 +71,7 @@ public class MetricNames {
 	public static final String TASK_LATENCY = "taskLatency";
 	public static final String SOURCE_LATENCY = "sourceLatency";
 	public static final String IO_NUM_RECORDS_SENT = "numRecordsSent";
+	public static final String IO_NUM_RECORDS_RECEIVED = "numRecordsReceived";
 
 	// Metrics source may use
 	public static final String IO_NUM_TPS = "tps";
@@ -78,6 +79,7 @@ public class MetricNames {
 	public static final String IO_FETCHED_DELAY = "fetched_delay";
 	public static final String IO_NO_DATA_DELAY = "no_data_delay";
 	public static final String IO_PARTITION_LATENCY = "partitionLatency";
+	public static final String IO_SOURCE_PROCESS_LATENCY = "sourceProcessLatency";
 	public static final String IO_PARTITION_COUNT = "partitionCount";
 
 	public static final String STATUS = "Status";
@@ -95,6 +97,7 @@ public class MetricNames {
 
 	public static final Set<String> SOURCE_FRAMEWORK_METRIC_SCOPE = new HashSet<String>() {{
 		add(IO_PARTITION_LATENCY);
+		add(IO_SOURCE_PROCESS_LATENCY);
 	}};
 
 	public static final Set<String> OPERATOR_METRICS_REPORTED_TO_MASTER = new HashSet<String>() {{
@@ -109,5 +112,6 @@ public class MetricNames {
 
 	public static final Set<String> OPERATOR_METRICS_SCOPE_REPORTED_TO_MASTER = new HashSet<String>() {{
 		add(IO_PARTITION_LATENCY);
+		add(IO_SOURCE_PROCESS_LATENCY);
 	}};
 }

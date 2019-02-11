@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.metrics.SimpleCounter;
 import org.apache.flink.runtime.metrics.SumAndCount;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
@@ -58,6 +59,8 @@ public class StreamSourceTest {
 		assertEquals(0, testSumAndCount.getSum(), 0.000001);
 		SumAndCount sourceLatency = new SumAndCount("test2");
 
+		SimpleCounter numReceived = new SimpleCounter();
+
 		SourceFunction.SourceContext<Long> ctx = streamSource.getSourceContext(
 			TimeCharacteristic.IngestionTime,
 			processingTimeService,
@@ -68,14 +71,16 @@ public class StreamSourceTest {
 			1,
 			testSumAndCount,
 			sourceLatency,
+			numReceived,
 			40L
 		);
 
 		sourceFunction.run(ctx);
 
-		assertEquals(1000, testSumAndCount.getCounter().getCount());
+		assertEquals(1001, numReceived.getCount());
+		assertEquals(1001, testSumAndCount.getCounter().getCount());
 		assertTrue(testSumAndCount.getSum() > 0);
-		assertEquals(999, sourceLatency.getCounter().getCount());
+		assertEquals(1000, sourceLatency.getCounter().getCount());
 		assertTrue(sourceLatency.getSum() > 0);
 	}
 

@@ -92,8 +92,6 @@ public class MemoryOveruseDetector implements Detector {
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
 
-		long now = System.currentTimeMillis();
-
 		Map<String, Tuple2<Long, Double>> tmCapacities = tmMemCapacitySubscription.getValue();
 		Map<String, Tuple2<Long, Double>> tmTotalUsages = tmMemUsageTotalSubscription.getValue();
 

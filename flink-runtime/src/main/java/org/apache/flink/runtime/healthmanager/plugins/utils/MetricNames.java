@@ -27,9 +27,11 @@ public class MetricNames {
 	public static final String SOURCE_PARTITION_LATENCY_SUM = "partitionLatency.sum";
 	public static final String SOURCE_LATENCY_COUNT = "sourceLatency.count";
 	public static final String SOURCE_LATENCY_SUM = "sourceLatency.sum";
+	public static final String SOURCE_PROCESS_LATENCY_COUNT = "sourceProcessLatency.count";
+	public static final String SOURCE_PROCESS_LATENCY_SUM = "sourceProcessLatency.sum";
 	public static final String TASK_LATENCY_COUNT = "taskLatency.count";
 	public static final String TASK_LATENCY_SUM = "taskLatency.sum";
-	public static final String TASK_INPUT_COUNT = "numRecordsIn";
+	public static final String TASK_INPUT_COUNT = "numRecordsReceived";
 	public static final String TASK_OUTPUT_COUNT = "numRecordsSent";
 	public static final String WAIT_OUTPUT_COUNT = "waitOutput.count";
 	public static final String WAIT_OUTPUT_SUM = "waitOutput.sum";

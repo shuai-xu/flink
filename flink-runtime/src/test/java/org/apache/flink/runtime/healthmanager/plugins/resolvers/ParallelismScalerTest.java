@@ -35,6 +35,7 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.BackPressureDete
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DelayIncreasingDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -78,8 +79,8 @@ public class ParallelismScalerTest {
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setString("parallelism.scale.timeout.ms", "10000");
-		config.setString("parallelism.up-scale.tps.ratio", "2.0");
-		config.setString("parallelism.scale.interval.ms", "60000");
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 2.0);
+		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES,
 				HighDelayDetector.class.getCanonicalName() + "," +
 				DelayIncreasingDetector.class.getCanonicalName());
@@ -229,10 +230,10 @@ public class ParallelismScalerTest {
 		// job level configuration.
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setString("parallelism.scale.timeout.ms", "10000");
-		config.setString("parallelism.up-scale.tps.ratio", "2.0");
-		config.setString("parallelism.scale.interval.ms", "60000");
 		config.setString("healthmonitor.back-pressure.threshold.ms", "0");
+		config.setString("parallelism.scale.timeout.ms", "10000");
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 2.0);
+		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, BackPressureDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
 
@@ -391,18 +392,30 @@ public class ParallelismScalerTest {
 						return v1OutputCount;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_COUNT)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
+						return v1LatencyCountRange;
+					}
 					if (aggType.equals(TimelineAggType.RANGE)) {
 						return v1LatencyCountRange;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_SUM)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
+						return v1LatencySumRange;
+					}
 					if (aggType.equals(TimelineAggType.RANGE)) {
 						return v1LatencySumRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_COUNT)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
+						return v1WaitOutputCountRange;
+					}
 					if (aggType.equals(TimelineAggType.RANGE)) {
 						return v1WaitOutputCountRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_SUM)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
+						return v1WaitOutputSumRange;
+					}
 					if (aggType.equals(TimelineAggType.RANGE)) {
 						return v1WaitOutputSumRange;
 					}
@@ -423,19 +436,19 @@ public class ParallelismScalerTest {
 						return v2OutputCount;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_COUNT)) {
-					if (aggType.equals(TimelineAggType.RANGE)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
 						return v2LatencyCountRange;
 					}
 				} else if (metricName.equals(MetricNames.TASK_LATENCY_SUM)) {
-					if (aggType.equals(TimelineAggType.RANGE)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
 						return v2LatencySumRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_COUNT)) {
-					if (aggType.equals(TimelineAggType.RANGE)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
 						return v2WaitOutputCountRange;
 					}
 				} else if (metricName.equals(MetricNames.WAIT_OUTPUT_SUM)) {
-					if (aggType.equals(TimelineAggType.RANGE)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
 						return v2WaitOutputSumRange;
 					}
 				}
@@ -473,8 +486,9 @@ public class ParallelismScalerTest {
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setString("parallelism.scale.timeout.ms", "10000");
-		config.setString("parallelism.down-scale.tps.ratio", "1.0");
-		config.setString("parallelism.scale.interval.ms", "60000");
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 1.5);
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 1.0);
+		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, OverParallelizedDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
 

@@ -110,7 +110,7 @@ public class NativeMemoryAdjuster implements Resolver {
 		for (JobVertexID jvId : vertexMaxOveruse.keySet()) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			int targetNativeMemory = (int) (vertexMaxOveruse.get(jvId) * (1 + scaleRatio));
+			int targetNativeMemory = (int) Math.ceil(vertexMaxOveruse.get(jvId) * (1 + scaleRatio)) - currentResource.getNativeMemory();
 			LOGGER.debug("Target native memory for vertex {} is {}.", jvId, targetNativeMemory);
 			ResourceSpec targetResource =
 				new ResourceSpec.Builder()

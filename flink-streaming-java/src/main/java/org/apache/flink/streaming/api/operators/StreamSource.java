@@ -19,6 +19,7 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.SumAndCount;
@@ -59,6 +60,8 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 
 	private transient SumAndCount sourceLatency;
 
+	private transient Counter numElementsReceived;
+
 	public StreamSource(SRC sourceFunction) {
 		super(sourceFunction);
 
@@ -85,6 +88,10 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 						MetricNames.SOURCE_LATENCY, ((OperatorMetricGroup) (getRuntimeContext().getMetricGroup())).parent());
 			}
 			tracingMetricsInterval = getRuntimeContext().getExecutionConfig().getTracingMetricsInterval();
+		}
+
+		if (numElementsReceived == null) {
+			numElementsReceived = ((OperatorMetricGroup) (getRuntimeContext().getMetricGroup())).parent().getIOMetricGroup().getNumRecordsReceived();
 		}
 
 		LatencyMarksEmitter latencyEmitter = null;
@@ -136,14 +143,20 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 		int tracingMetricsInterval,
 		SumAndCount taskLatency,
 		SumAndCount sourceLatency,
+		Counter numElementsReceived,
 		long watermarkInterval) {
 
+		this.enableTracingMetrics = enableTracingMetrics;
+		this.tracingMetricsInterval = tracingMetricsInterval;
+		this.taskLatency = taskLatency;
+		this.sourceLatency = sourceLatency;
+		this.numElementsReceived = numElementsReceived;
 		return getSourceContext(
 			timeCharacteristic,
 			processingTimeService,
 			lockingObject,
 			streamStatusMaintainer,
-			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
+			collector,
 			watermarkInterval);
 	}
 
@@ -160,7 +173,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			processingTimeService,
 			lockingObject,
 			streamStatusMaintainer,
-			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency),
+			getOutputWithTaskLatency(collector, enableTracingMetrics, tracingMetricsInterval, taskLatency, sourceLatency, numElementsReceived),
 			watermarkInterval,
 			-1);
 	}
@@ -170,24 +183,62 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			boolean enableTracingMetrics,
 			int tracingMetricsInterval,
 			SumAndCount taskLatency,
-			SumAndCount sourceLatency) {
+			SumAndCount sourceLatency,
+			Counter numElementsReceived) {
 		return new Output<StreamRecord<OUT>>() {
 			private long lastEmitTime = 0;
-			private long emitCounter = 0;
 
 			@Override
 			public void emitWatermark(Watermark mark) {
+				numElementsReceived.inc();
+				if (enableTracingMetrics && (numElementsReceived.getCount() % tracingMetricsInterval == 0)) {
+					emitWatermarkWithMetrics(mark);
+				} else {
+					collector.emitWatermark(mark);
+
+				}
+			}
+
+			public void emitWatermarkWithMetrics(Watermark mark) {
+				long start = System.nanoTime();
+
+				if (lastEmitTime > 0) {
+					sourceLatency.update(start - lastEmitTime);
+				}
+
 				collector.emitWatermark(mark);
+
+				lastEmitTime = System.nanoTime();
+				taskLatency.update(lastEmitTime - start);
 			}
 
 			@Override
 			public void emitLatencyMarker(LatencyMarker latencyMarker) {
-				collector.emitLatencyMarker(latencyMarker);
+				numElementsReceived.inc();
+				if (enableTracingMetrics && (numElementsReceived.getCount() % tracingMetricsInterval == 0)) {
+					emitLatencyMarkWithMetrics(latencyMarker);
+				} else {
+					collector.emitLatencyMarker(latencyMarker);
+				}
+			}
+
+			public void emitLatencyMarkWithMetrics(LatencyMarker mark) {
+				long start = System.nanoTime();
+
+				if (lastEmitTime > 0) {
+					sourceLatency.update(start - lastEmitTime);
+				}
+
+				collector.emitLatencyMarker(mark);
+
+				lastEmitTime = System.nanoTime();
+				taskLatency.update(lastEmitTime - start);
 			}
 
 			@Override
 			public void collect(StreamRecord<OUT> record) {
-				if (enableTracingMetrics && (emitCounter++ % tracingMetricsInterval == 0)) {
+				numElementsReceived.inc();
+				if (enableTracingMetrics && (numElementsReceived.getCount() % tracingMetricsInterval == 0)) {
 					collectWithMetrics(record);
 				} else {
 					collector.collect(record);
@@ -209,7 +260,8 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 
 			@Override
 			public <X> void collect(OutputTag<X> outputTag, StreamRecord<X> record) {
-				if (enableTracingMetrics && (emitCounter++ % tracingMetricsInterval == 0)) {
+				numElementsReceived.inc();
+				if (enableTracingMetrics && (numElementsReceived.getCount() % tracingMetricsInterval == 0)) {
 					collectWithMetrics(outputTag, record);
 				} else {
 					collector.collect(outputTag, record);

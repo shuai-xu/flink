@@ -35,6 +35,8 @@ import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -98,22 +100,56 @@ public class NativeMemoryAdjusterTest {
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
-		long now = System.currentTimeMillis();
 		Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
 		Map<String, Tuple2<Long, Double>> usage2 = new HashMap<>();
 		Map<String, Tuple2<Long, Double>> capacity1 = new HashMap<>();
 		Map<String, Tuple2<Long, Double>> capacity2 = new HashMap<>();
 		Map<String, Tuple2<Long, Double>> capacity3 = new HashMap<>();
-		usage1.put("tmId", Tuple2.of(now, 15.0));
-		usage2.put("tmId", Tuple2.of(now, 30.0));
-		capacity1.put("tmId", Tuple2.of(now, 10.0));
-		capacity2.put("tmId", Tuple2.of(now, 20.0));
-		capacity3.put("tmId", Tuple2.of(now, 40.0));
 
 		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
 		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(usageSub.getValue()).thenReturn(usage1).thenReturn(usage2);
-		Mockito.when(capacitySub.getValue()).thenReturn(capacity1).thenReturn(capacity2).thenReturn(capacity3);
+		Mockito.when(usageSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				usage1.put("tmId", Tuple2.of(now, 15.0));
+				return usage1;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				usage2.put("tmId", Tuple2.of(now, 30.0));
+				return usage2;
+			}
+		});
+		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				capacity1.put("tmId", Tuple2.of(now, 10.0));
+				return capacity1;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				capacity2.put("tmId", Tuple2.of(now, 20.0));
+				return capacity2;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				capacity3.put("tmId", Tuple2.of(now, 40.0));
+				return capacity3;
+			}
+		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
 			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.Memory.RSS"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
@@ -159,14 +195,14 @@ public class NativeMemoryAdjusterTest {
 
 		// verify rpc calls.
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(20).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(30).build()));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
 
 		vertexParallelismResource.clear();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(40).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(60).build()));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),

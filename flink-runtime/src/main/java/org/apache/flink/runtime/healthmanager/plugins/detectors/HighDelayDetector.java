@@ -29,6 +29,8 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighDelay;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -50,12 +52,11 @@ public class HighDelayDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(HighDelayDetector.class);
 
-	private static final ConfigOption<Long> HIGH_DELAY_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.high-delay.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Long> HIGH_DELAY_THRESHOLD =
 		ConfigOptions.key("healthmonitor.high-delay.threshold").defaultValue(10 * 60 * 1000L);
 
 	private JobID jobID;
+	private HealthMonitor healthMonitor;
 	private MetricProvider metricProvider;
 
 	private long highDelayCheckInterval;
@@ -65,10 +66,11 @@ public class HighDelayDetector implements Detector {
 
 	@Override
 	public void open(HealthMonitor monitor) {
+		healthMonitor = monitor;
 		jobID = monitor.getJobID();
 		metricProvider = monitor.getMetricProvider();
 
-		highDelayCheckInterval = monitor.getConfig().getLong(HIGH_DELAY_CHECK_INTERVAL);
+		highDelayCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		highDelayThreshold = monitor.getConfig().getLong(HIGH_DELAY_THRESHOLD);
 
 		delaySubs = new HashMap<>();
@@ -102,7 +104,7 @@ public class HighDelayDetector implements Detector {
 		for (JobVertexID vertexId : delaySubs.keySet()) {
 			TaskMetricSubscription delaySub = delaySubs.get(vertexId);
 
-			if (delaySub.getValue() == null || now - delaySub.getValue().f0 > highDelayCheckInterval * 2) {
+			if (!MetricUtils.validateTaskMetric(healthMonitor, highDelayCheckInterval * 2, delaySub)) {
 				LOGGER.debug("Skip vertex {}, metrics missing.", vertexId);
 				continue;
 			}

@@ -29,6 +29,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowDelay;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -50,8 +51,6 @@ public class LowDelayDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(LowDelayDetector.class);
 
-	private static final ConfigOption<Long> LOW_DELAY_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.low-delay.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Long> LOW_DELAY_THRESHOLD =
 		ConfigOptions.key("healthmonitor.low-delay.threshold").defaultValue(5 * 60 * 1000L);
 
@@ -68,7 +67,7 @@ public class LowDelayDetector implements Detector {
 		jobID = monitor.getJobID();
 		metricProvider = monitor.getMetricProvider();
 
-		lowDelayCheckInterval = monitor.getConfig().getLong(LOW_DELAY_CHECK_INTERVAL);
+		lowDelayCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		lowDelayThreshold = monitor.getConfig().getLong(LOW_DELAY_THRESHOLD);
 
 		delaySubs = new HashMap<>();

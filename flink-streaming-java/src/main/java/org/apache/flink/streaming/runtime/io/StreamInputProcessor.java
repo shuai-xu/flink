@@ -112,9 +112,11 @@ public class StreamInputProcessor<IN> {
 
 	private final WatermarkGauge watermarkGauge;
 	private Counter numRecordsIn;
+	private Counter numRecordsReceived;
 
 	private boolean enableTracingMetrics;
 	private int tracingMetricsInterval;
+	private long tracingInputCount;
 	private SumAndCount taskLatency;
 	private SumAndCount waitInput;
 	private long lastProcessedTime = -1;
@@ -175,6 +177,7 @@ public class StreamInputProcessor<IN> {
 
 		this.enableTracingMetrics = enableTracingMetrics;
 		this.tracingMetricsInterval = tracingMetricsInterval;
+		this.tracingInputCount = 0;
 	}
 
 	public boolean processInput() throws Exception {
@@ -189,6 +192,16 @@ public class StreamInputProcessor<IN> {
 				numRecordsIn = new SimpleCounter();
 			}
 		}
+
+		if (numRecordsReceived == null) {
+			try {
+				numRecordsReceived = ((OperatorMetricGroup) streamOperator.getMetricGroup()).parent().getIOMetricGroup().getNumRecordsReceived();
+			} catch (Exception e) {
+				LOG.warn("An exception occurred during the metrics setup.", e);
+				numRecordsReceived = new SimpleCounter();
+			}
+		}
+
 		if (enableTracingMetrics) {
 			if (taskLatency == null) {
 				taskLatency = new SumAndCount(
@@ -215,49 +228,24 @@ public class StreamInputProcessor<IN> {
 				if (result.isFullRecord()) {
 					StreamElement recordOrMark = deserializationDelegate.getInstance();
 
-					if (recordOrMark.isRecord()) {
-						reusedObject = ((StreamRecord<IN>) recordOrMark).getValue();
+					boolean recordProcessed;
 
-						// numRecordsIn counter is a SimpleCounter not a heavier SumCounter, so reuse it
-						if (enableTracingMetrics && numRecordsIn.getCount() % tracingMetricsInterval == 0) {
-							long start = System.nanoTime();
-							waitInput.update(start - lastProcessedTime);
-							// now we can do the actual processing
-							StreamRecord<IN> record = recordOrMark.asRecord();
-							synchronized (lock) {
-								numRecordsIn.inc();
-								streamOperator.setKeyContextElement1(record);
-								streamOperator.processElement(record);
-								lastProcessedTime = System.nanoTime();
-								taskLatency.update(lastProcessedTime - start);
-							}
-						} else {
-							// now we can do the actual processing
-							StreamRecord<IN> record = recordOrMark.asRecord();
-							synchronized (lock) {
-								numRecordsIn.inc();
-								streamOperator.setKeyContextElement1(record);
-								streamOperator.processElement(record);
-							}
-						}
-
-						return true;
-					} else if (recordOrMark.isWatermark()) {
-						// handle watermark
-						statusWatermarkValve.inputWatermark(recordOrMark.asWatermark(), currentChannel);
-						continue;
-					} else if (recordOrMark.isStreamStatus()) {
-						// handle stream status
-						statusWatermarkValve.inputStreamStatus(recordOrMark.asStreamStatus(), currentChannel);
-						continue;
-					} else if (recordOrMark.isLatencyMarker()) {
-						// handle latency marker
-						synchronized (lock) {
-							streamOperator.processLatencyMarker(recordOrMark.asLatencyMarker());
-						}
-						continue;
+					numRecordsReceived.inc();
+					tracingInputCount++;
+					if (enableTracingMetrics && tracingInputCount % tracingMetricsInterval == 0) {
+						long start = System.nanoTime();
+						waitInput.update(start - lastProcessedTime);
+						recordProcessed = processRecordOrMark(recordOrMark);
+						lastProcessedTime = System.nanoTime();
+						taskLatency.update(lastProcessedTime - start);
 					} else {
-						throw new RuntimeException("Unexpected stream element type " + recordOrMark);
+						recordProcessed = processRecordOrMark(recordOrMark);
+					}
+
+					if (recordProcessed) {
+						return true;
+					} else {
+						continue;
 					}
 				}
 			}
@@ -291,6 +279,36 @@ public class StreamInputProcessor<IN> {
 				}
 				return false;
 			}
+		}
+	}
+
+	private boolean processRecordOrMark(StreamElement recordOrMark) throws Exception {
+		if (recordOrMark.isRecord()) {
+			reusedObject = ((StreamRecord<IN>) recordOrMark).getValue();
+			// now we can do the actual processing
+			StreamRecord<IN> record = recordOrMark.asRecord();
+			synchronized (lock) {
+				numRecordsIn.inc();
+				streamOperator.setKeyContextElement1(record);
+				streamOperator.processElement(record);
+			}
+			return true;
+		} else if (recordOrMark.isWatermark()) {
+			// handle watermark
+			statusWatermarkValve.inputWatermark(recordOrMark.asWatermark(), currentChannel);
+			return false;
+		} else if (recordOrMark.isStreamStatus()) {
+			// handle stream status
+			statusWatermarkValve.inputStreamStatus(recordOrMark.asStreamStatus(), currentChannel);
+			return false;
+		} else if (recordOrMark.isLatencyMarker()) {
+			// handle latency marker
+			synchronized (lock) {
+				streamOperator.processLatencyMarker(recordOrMark.asLatencyMarker());
+			}
+			return false;
+		} else {
+			throw new RuntimeException("Unexpected stream element type " + recordOrMark);
 		}
 	}
 
