@@ -37,7 +37,6 @@ import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.util.TableSchemaUtil;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
@@ -52,7 +51,6 @@ import org.slf4j.LoggerFactory;
 
 import scala.Option;
 
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.DEFAULT_LIST_COLUMN_TYPES_SEPARATOR;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_LOCATION;
@@ -60,14 +58,12 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT;
-import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
 /**
@@ -75,6 +71,7 @@ import java.util.stream.Collectors;
  */
 public class HiveTableSource extends PartitionableTableSource implements BatchTableSource<BaseRow> {
 	private static Logger logger = LoggerFactory.getLogger(HiveTableSource.class);
+
 	private RowTypeInfo rowTypeInfo;
 	private String hiveRowTypeString;
 	private JobConf jobConf;
@@ -87,6 +84,54 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 	private boolean isPartitionPruned = false;
 	private final List<Partition> prunedPartitions;
 	private List<Partition> allPartitions;
+
+	public HiveTableSource(RowTypeInfo rowTypeInfo,
+						String hiveRowTypeString, // the string representations of original Hive types
+						JobConf jobConf,
+						TableStats tableStats,
+						String dbName,
+						String tableName,
+						String[] partitionColNames) {
+		this.rowTypeInfo = rowTypeInfo;
+		this.hiveRowTypeString = hiveRowTypeString;
+		this.jobConf = jobConf;
+		this.tableStats = tableStats;
+		this.dbName = dbName;
+		this.tableName = tableName;
+		this.isPartitionTable = (null != partitionColNames && partitionColNames.length != 0);
+		this.partitionColNames = partitionColNames;
+		this.prunedPartitions = null;
+		initAllPartitions();
+	}
+
+	public HiveTableSource(RowTypeInfo rowTypeInfo,
+						String hiveRowTypeString,
+						JobConf jobConf,
+						TableStats tableStats,
+						String dbName,
+						String tableName,
+						String[] partitionColNames,
+						Boolean isFilterPushDown,
+						Boolean isPartitionPruned,
+						List<Partition> allPartitions,
+						List<Partition> prunedPartitions) {
+		this.rowTypeInfo = rowTypeInfo;
+		this.hiveRowTypeString = hiveRowTypeString;
+		this.jobConf = jobConf;
+		this.tableStats = tableStats;
+		this.dbName = dbName;
+		this.tableName = tableName;
+		this.isPartitionTable = (null != partitionColNames && partitionColNames.length != 0);
+		this.partitionColNames = partitionColNames;
+		this.isFilterPushDown = isFilterPushDown;
+		this.isPartitionPruned = isPartitionPruned;
+		if (null != prunedPartitions && prunedPartitions.size() != 0) {
+			this.allPartitions = prunedPartitions;
+		} else {
+			this.allPartitions = allPartitions;
+		}
+		this.prunedPartitions = prunedPartitions;
+	}
 
 	@Override
 	public List<Partition> getAllPartitions() {
@@ -147,27 +192,22 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 		if (isPartitionTable) {
 			HiveConf hiveConf = new HiveConf();
 			hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, jobConf.get(HiveConf.ConfVars.METASTOREURIS.varname));
+			// Please note that the following directly accesses Hive metastore, which is only a temporary workaround.
+			// Ideally, we need to go thru Catalog API to get all info we need here, which requires some major
+			// refactoring. We will postpone this until we merge Blink to Flink.
 			IMetaStoreClient client = null;
 			try {
-				client = RetryingMetaStoreClient.getProxy(hiveConf,
-																		null,
-																		null,
-																		HiveMetaStoreClient.class.getName(),
-																		true);
-				List<org.apache.hadoop.hive.metastore.api.Partition> partitions = client.listPartitions(dbName, tableName, (short) -1);
+				client = RetryingMetaStoreClient.getProxy(hiveConf, null, null,
+					HiveMetaStoreClient.class.getName(), true);
+				List<org.apache.hadoop.hive.metastore.api.Partition> partitions =
+					client.listPartitions(dbName, tableName, (short) -1);
 				for (org.apache.hadoop.hive.metastore.api.Partition partition: partitions){
 					StorageDescriptor sd = partition.getSd();
 					Map<String, Object> partitionColValues = new HashMap<>();
 					for (int i = 0; i < partitionColNames.length; i++) {
 						partitionColValues.put(partitionColNames[i], partition.getValues().get(i));
 					}
-					allPartitions.add(
-							new HiveTablePartition(sd.getInputFormat(),
-												sd.getOutputFormat(),
-												sd.getSerdeInfo().getSerializationLib(),
-												sd.getLocation(),
-												createPropertiesFromSdParameters(sd),
-												partitionColValues));
+					allPartitions.add(new HiveTablePartition(sd, partitionColValues));
 				}
 			} catch (Exception e) {
 				throw new FlinkHiveException("Failed creating Hive metaStore client", e);
@@ -179,63 +219,8 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 		} else {
 			// TODO: we should get StorageDescriptor from Hive Metastore somehow.
 			StorageDescriptor sd = createStorageDescriptor(jobConf, rowTypeInfo);
-			jobConf.setStrings(INPUT_DIR, sd.getLocation());
-			Properties properties = createPropertiesFromSdParameters(sd);
-			allPartitions.add(new HiveTablePartition(jobConf.get(HIVE_TABLE_INPUT_FORMAT),
-													jobConf.get(HIVE_TABLE_OUTPUT_FORMAT),
-													jobConf.get(HIVE_TABLE_SERDE_LIBRARY),
-													jobConf.get(HIVE_TABLE_LOCATION),
-													properties,
-													null));
+			allPartitions.add(new HiveTablePartition(sd, null));
 		}
-	}
-
-	public HiveTableSource(RowTypeInfo rowTypeInfo,
-						String hiveRowTypeString, // the string representations of original Hive types
-						JobConf jobConf,
-						TableStats tableStats,
-						String dbName,
-						String tableName,
-						String[] partitionColNames) {
-		this.rowTypeInfo = rowTypeInfo;
-		this.hiveRowTypeString = hiveRowTypeString;
-		this.jobConf = jobConf;
-		this.tableStats = tableStats;
-		this.dbName = dbName;
-		this.tableName = tableName;
-		this.isPartitionTable = (null != partitionColNames && partitionColNames.length != 0);
-		this.partitionColNames = partitionColNames;
-		this.prunedPartitions = null;
-		initAllPartitions();
-	}
-
-	public HiveTableSource(RowTypeInfo rowTypeInfo,
-						String hiveRowTypeString,
-						JobConf jobConf,
-						TableStats tableStats,
-						String dbName,
-						String tableName,
-						String[] partitionColNames,
-						Boolean isFilterPushDown,
-						Boolean isPartitionPruned,
-						List<Partition> allPartitions,
-						List<Partition> prunedPartitions) {
-		this.rowTypeInfo = rowTypeInfo;
-		this.hiveRowTypeString = hiveRowTypeString;
-		this.jobConf = jobConf;
-		this.tableStats = tableStats;
-		this.dbName = dbName;
-		this.tableName = tableName;
-		this.isPartitionTable = (null != partitionColNames && partitionColNames.length != 0);
-		this.partitionColNames = partitionColNames;
-		this.isFilterPushDown = isFilterPushDown;
-		this.isPartitionPruned = isPartitionPruned;
-		if (null != prunedPartitions && prunedPartitions.size() != 0) {
-			this.allPartitions = prunedPartitions;
-		} else {
-			this.allPartitions = allPartitions;
-		}
-		this.prunedPartitions = prunedPartitions;
 	}
 
 	@Override
@@ -271,8 +256,8 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 
 	@Override
 	public String explainSource() {
-		return "hive-table-source" + ": isPartitionPrune:" + String.valueOf(isPartitionPruned)
-				+ " isFilterPushDown:" + String.valueOf(isFilterPushDown);
+		return "hive-table-source" + ": isPartitionPrune:" + isPartitionPruned
+				+ " isFilterPushDown:" + isFilterPushDown;
 	}
 
 	@Override
@@ -310,24 +295,4 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 		return storageDescriptor;
 	}
 
-	private Properties createPropertiesFromSdParameters(StorageDescriptor storageDescriptor) {
-		SerDeInfo serDeInfo = storageDescriptor.getSerdeInfo();
-		Map<String, String> parameters = serDeInfo.getParameters();
-		Properties properties = new Properties();
-		properties.setProperty(serdeConstants.SERIALIZATION_FORMAT,
-							serDeInfo.getParameters().get(serdeConstants.SERIALIZATION_FORMAT));
-		List<String> colTypes = new ArrayList<>();
-		List<String> colNames = new ArrayList<>();
-		List<FieldSchema> cols = storageDescriptor.getCols();
-		for (FieldSchema col: cols){
-			colTypes.add(col.getType());
-			colNames.add(col.getName());
-		}
-		properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(colNames, ","));
-		properties.setProperty(serdeConstants.COLUMN_NAME_DELIMITER, ",");
-		properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, StringUtils.join(colTypes, DEFAULT_LIST_COLUMN_TYPES_SEPARATOR));
-		properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
-		properties.putAll(parameters);
-		return properties;
-	}
 }

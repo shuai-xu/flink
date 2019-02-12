@@ -34,8 +34,13 @@ import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.sources.Partition;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.SerDeInfo;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
@@ -57,8 +62,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
+import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.DEFAULT_LIST_COLUMN_TYPES_SEPARATOR;
 import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR;
 
 /**
@@ -86,30 +93,21 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 	protected transient boolean fetched = false;
 	protected transient boolean hasNext;
 
-
-	private String dbName;
-	private String tableName;
 	private Boolean isPartitioned;
 	private RowTypeInfo rowTypeInfo;
 
 	// Necessary info to init deserializer
-	private Properties properties;
-	private String serDeInfoClass;
-	private String inputFormatClass;
 	private String[] partitionColNames;
 	private List<Partition> partitions;
 	private transient Deserializer deserializer;
 	private transient List<? extends StructField> fieldRefs;
 	private transient StructObjectInspector oi;
 	private transient InputFormat mapredInputFormat;
-	private transient HiveTableInputSplit hiveTableInputSplit;
 	private transient HiveTablePartition hiveTablePartition;
 	private transient GenericRow reuse;
 
 	public HiveTableInputFormat(
 			JobConf jobConf,
-			String dbName,
-			String tableName,
 			Boolean isPartitioned,
 			String[] partitionColNames,
 			List<Partition> partitions,
@@ -117,8 +115,6 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 		super(jobConf.getCredentials());
 		this.rowTypeInfo = rowTypeInfo;
 		this.jobConf = jobConf;
-		this.dbName = dbName;
-		this.tableName = tableName;
 		this.isPartitioned = isPartitioned;
 		this.partitionColNames = partitionColNames;
 		this.partitions = partitions;
@@ -126,15 +122,12 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 
 	@Override
 	public void open(HiveTableInputSplit split) throws IOException {
-		this.hiveTableInputSplit = split;
-		this.inputFormatClass = split.getHiveTablePartition().getInputFormatClassName();
-		this.serDeInfoClass = split.getHiveTablePartition().getSerdeClassName();
-		this.properties = split.getHiveTablePartition().getProperties();
-		hiveTablePartition = hiveTableInputSplit.getHiveTablePartition();
-		jobConf.set(INPUT_DIR, hiveTablePartition.getLocation());
+		this.hiveTablePartition = split.getHiveTablePartition();
+		StorageDescriptor sd = hiveTablePartition.getStorageDescriptor();
+		jobConf.set(INPUT_DIR, sd.getLocation());
 		try {
 			this.mapredInputFormat = (org.apache.hadoop.mapred.InputFormat)
-					Class.forName(inputFormatClass, true, Thread.currentThread().getContextClassLoader()).newInstance();
+				Class.forName(sd.getInputFormat(), true, Thread.currentThread().getContextClassLoader()).newInstance();
 		} catch (Exception e) {
 			throw new RuntimeException("Unable to instantiate the hadoop input format", e);
 		}
@@ -151,9 +144,8 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 		// enforce sequential open() calls
 		synchronized (OPEN_MUTEX) {
 
-			this.recordReader = this.mapredInputFormat.getRecordReader(hiveTableInputSplit.getHadoopInputSplit(),
-																	jobConf,
-																	new HadoopDummyReporter());
+			this.recordReader = this.mapredInputFormat.getRecordReader(split.getHadoopInputSplit(),
+				jobConf, new HadoopDummyReporter());
 			if (this.recordReader instanceof Configurable) {
 				((Configurable) this.recordReader).setConf(jobConf);
 			}
@@ -162,8 +154,9 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 			this.fetched = false;
 		}
 		try {
-			deserializer = (Deserializer) Class.forName(serDeInfoClass).newInstance();
+			deserializer = (Deserializer) Class.forName(sd.getSerdeInfo().getSerializationLib()).newInstance();
 			Configuration conf = new Configuration();
+			Properties properties = createPropertiesFromStorageDescriptor(sd);
 			SerDeUtils.initializeSerDe(deserializer, conf, properties, null);
 			// Get the row structure
 			oi = (StructObjectInspector) deserializer.getObjectInspector();
@@ -182,17 +175,17 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 		int splitNum = 0;
 		for (Partition partition : partitions) {
 			HiveTablePartition tablePartition = (HiveTablePartition) partition;
+			StorageDescriptor sd = tablePartition.getStorageDescriptor();
 			InputFormat format;
 			try {
 				format = (org.apache.hadoop.mapred.InputFormat)
-						Class.forName(tablePartition.getInputFormatClassName(),
-									true, Thread.currentThread().getContextClassLoader()).newInstance();
+					Class.forName(sd.getInputFormat(), true, Thread.currentThread().getContextClassLoader()).newInstance();
 			} catch (Exception e) {
 				throw new RuntimeException("Unable to instantiate the hadoop input format", e);
 			}
 			ReflectionUtils.setConf(format, jobConf);
-			jobConf.set(INPUT_DIR, tablePartition.getLocation());
-			//todo: we should consider how to calc the splits according to minNumSplits in the future.
+			jobConf.set(INPUT_DIR, sd.getLocation());
+			//TODO: we should consider how to calculate the splits according to minNumSplits in the future.
 			org.apache.hadoop.mapred.InputSplit[] splitArray = format.getSplits(jobConf, minNumSplits);
 			for (int i = 0; i < splitArray.length; i++) {
 				hiSplit.add(new HiveTableInputSplit(splitNum++, splitArray[i], jobConf, tablePartition));
@@ -308,14 +301,9 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 	private void writeObject(ObjectOutputStream out) throws IOException {
 		super.write(out);
 		jobConf.write(out);
-		out.writeObject(dbName);
-		out.writeObject(tableName);
 		out.writeObject(isPartitioned);
 		out.writeObject(rowTypeInfo);
 
-		out.writeObject(properties);
-		out.writeObject(serDeInfoClass);
-		out.writeObject(inputFormatClass);
 		out.writeObject(partitionColNames);
 		out.writeObject(partitions);
 	}
@@ -332,14 +320,9 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 		if (currentUserCreds != null) {
 			jobConf.getCredentials().addAll(currentUserCreds);
 		}
-		dbName = (String) in.readObject();
-		tableName = (String) in.readObject();
 		isPartitioned = (Boolean) in.readObject();
 		rowTypeInfo = (RowTypeInfo) in.readObject();
 
-		properties = (Properties) in.readObject();
-		serDeInfoClass = (String) in.readObject();
-		inputFormatClass = (String) in.readObject();
 		partitionColNames = (String[]) in.readObject();
 		partitions = (List<Partition>) in.readObject();
 	}
@@ -347,6 +330,27 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 	// --------------------------------------------------------------------------------------------
 	//  Helper methods
 	// --------------------------------------------------------------------------------------------
+
+	private static Properties createPropertiesFromStorageDescriptor(StorageDescriptor storageDescriptor) {
+		SerDeInfo serDeInfo = storageDescriptor.getSerdeInfo();
+		Map<String, String> parameters = serDeInfo.getParameters();
+		Properties properties = new Properties();
+		properties.setProperty(serdeConstants.SERIALIZATION_FORMAT,
+			parameters.get(serdeConstants.SERIALIZATION_FORMAT));
+		List<String> colTypes = new ArrayList<>();
+		List<String> colNames = new ArrayList<>();
+		List<FieldSchema> cols = storageDescriptor.getCols();
+		for (FieldSchema col: cols){
+			colTypes.add(col.getType());
+			colNames.add(col.getName());
+		}
+		properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(colNames, ","));
+		properties.setProperty(serdeConstants.COLUMN_NAME_DELIMITER, ",");
+		properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, StringUtils.join(colTypes, DEFAULT_LIST_COLUMN_TYPES_SEPARATOR));
+		properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
+		properties.putAll(parameters);
+		return properties;
+	}
 
 	private org.apache.flink.api.common.io.FileInputFormat.FileBaseStatistics getFileStats(
 			org.apache.flink.api.common.io.FileInputFormat.FileBaseStatistics cachedStats, org.apache.hadoop.fs.Path[] hadoopFilePaths,
@@ -405,8 +409,6 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 	public static class Builder {
 		private RowTypeInfo rowTypeInfo;
 		private JobConf jobConf;
-		private String dbName;
-		private String tableName;
 		private Boolean isPartitioned;
 		private String[] partitionColNames;
 		private List<Partition> partitions;
@@ -415,8 +417,6 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 				isPartitioned, String[] partitionColNames, List<Partition> partitions) {
 			this.rowTypeInfo = rowTypeInfo;
 			this.jobConf = jobConf;
-			this.dbName = dbName;
-			this.tableName = tableName;
 			this.isPartitioned = isPartitioned;
 			this.partitionColNames = partitionColNames;
 			this.partitions = partitions;
@@ -424,10 +424,7 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 
 		public HiveTableInputFormat build() {
 			try {
-				return new HiveTableInputFormat(jobConf, dbName, tableName, isPartitioned,
-												partitionColNames,
-												partitions,
-												rowTypeInfo);
+				return new HiveTableInputFormat(jobConf, isPartitioned, partitionColNames, partitions, rowTypeInfo);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

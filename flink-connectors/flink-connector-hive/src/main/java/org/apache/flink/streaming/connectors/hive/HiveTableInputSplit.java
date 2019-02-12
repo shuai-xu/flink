@@ -24,7 +24,8 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 
 /**
- * Wrapper class for hadoop input split.
+ * An wrapper class that wraps info needed for a hadoop input split.
+ * Right now, it contains info about the partition of the split.
  */
 public class HiveTableInputSplit extends HadoopInputSplit {
 	private HiveTablePartition hiveTablePartition;

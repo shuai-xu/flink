@@ -20,40 +20,33 @@ package org.apache.flink.streaming.connectors.hive;
 
 import org.apache.flink.table.sources.Partition;
 
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+
 import java.io.Serializable;
 import java.util.Map;
-import java.util.Properties;
 
 /**
- * describe hive table partition info.
+ * A class that describes a partition of a Hive table.
+ * Please note that the class is serializable because all its member variables are serializable.
  */
 public class HiveTablePartition implements Partition, Serializable {
-
-	private String inputFormatClassName;
-	private String outputFormatClassName;
-	private String serdeClassName;
-	private Properties properties;
-
-
-	/** The data location. */
-	private final String location;
+	/** Partition storage descriptor. */
+	private StorageDescriptor storageDescriptor;
 
 	/** The map of partition key names and their values. */
 	private Map<String, Object> partitionValues;
 
-	public HiveTablePartition(
-			String inputFormatClassName,
-			String outputFormatClassName,
-			String serdeClassName,
-			String location,
-			Properties properties,
-			Map<String, Object> partitionValues) {
-		this.inputFormatClassName = inputFormatClassName;
-		this.outputFormatClassName = outputFormatClassName;
-		this.serdeClassName = serdeClassName;
-		this.location = location;
-		this.properties = properties;
+	public HiveTablePartition(StorageDescriptor storageDescriptor, Map<String, Object> partitionValues) {
+		this.storageDescriptor = storageDescriptor;
 		this.partitionValues = partitionValues;
+	}
+
+	public StorageDescriptor getStorageDescriptor() {
+		return storageDescriptor;
+	}
+
+	public Map<String, Object> getPartitionValues() {
+		return partitionValues;
 	}
 
 	@Override
@@ -71,27 +64,4 @@ public class HiveTablePartition implements Partition, Serializable {
 		return null;
 	}
 
-	public String getInputFormatClassName() {
-		return inputFormatClassName;
-	}
-
-	public String getOutputFormatClassName() {
-		return outputFormatClassName;
-	}
-
-	public Properties getProperties() {
-		return properties;
-	}
-
-	public String getSerdeClassName() {
-		return serdeClassName;
-	}
-
-	public String getLocation() {
-		return location;
-	}
-
-	public Map<String, Object> getPartitionValues() {
-		return partitionValues;
-	}
 }
