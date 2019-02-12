@@ -137,7 +137,15 @@ public class RestServerClientImplTest extends TestLogger {
 	private ExecutorService executor;
 
 	private JobGraph jobGraph;
+
 	private JobID jobId;
+
+	private ResourceSpec resourceSpec = new ResourceSpec.Builder().setCpuCores(1)
+		.setHeapMemoryInMB(10)
+		.setNativeMemoryInMB(20)
+		.setNativeMemoryInMB(30)
+		.setDirectMemoryInMB(40)
+		.setStateSizeInMB(50).build();
 
 	@Before
 	public void setUp() throws Exception {
@@ -158,7 +166,7 @@ public class RestServerClientImplTest extends TestLogger {
 		executor = new ScheduledThreadPoolExecutor(
 			4, new ExecutorThreadFactory("health-manager"));
 		restServerClientImpl = new RestServerClientImpl(REST_ADDRESS, config, executor);
-		jobGraph = createBlockingJob(10);
+		jobGraph = createBlockingJob(10, resourceSpec);
 		jobId = jobGraph.getJobID();
 	}
 
@@ -185,6 +193,9 @@ public class RestServerClientImplTest extends TestLogger {
 		try (TestRestServerEndpoint ignored = createRestServerEndpoint(new TestJobGraphOverviewHandler())) {
 			{
 				RestServerClient.JobConfig jobConfig = restServerClientImpl.getJobConfig(jobId);
+				for (Map.Entry<JobVertexID, RestServerClient.VertexConfig> id2vertex: jobConfig.getVertexConfigs().entrySet()) {
+					Assert.assertEquals(id2vertex.getValue().getResourceSpec(), resourceSpec);
+				}
 				Assert.assertTrue(jobConfig.getConfig().toMap().size() == 5);
 				Assert.assertNotNull(jobConfig);
 			}
@@ -401,7 +412,7 @@ public class RestServerClientImplTest extends TestLogger {
 		protected void startInternal() throws Exception {}
 	}
 
-	public JobGraph createBlockingJob(int parallelism) {
+	public JobGraph createBlockingJob(int parallelism, ResourceSpec resourceSpec) {
 		Tasks.BlockingOnceReceiver$.MODULE$.blocking_$eq(true);
 
 		JobVertex sender = new JobVertex("sender");
@@ -412,6 +423,9 @@ public class RestServerClientImplTest extends TestLogger {
 
 		sender.setParallelism(parallelism);
 		receiver.setParallelism(parallelism);
+
+		sender.setResources(resourceSpec, resourceSpec);
+		receiver.setResources(resourceSpec, resourceSpec);
 
 		receiver.connectNewDataSetAsInput(sender, DistributionPattern.POINTWISE, ResultPartitionType.PIPELINED);
 

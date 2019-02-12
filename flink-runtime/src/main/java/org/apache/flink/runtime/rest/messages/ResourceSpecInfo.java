@@ -142,6 +142,8 @@ public class ResourceSpecInfo implements ResponseBody, Serializable {
 			.setCpuCores(this.cpuCores)
 			.setHeapMemoryInMB(this.heapMemoryInMB)
 			.setDirectMemoryInMB(this.directMemoryInMB)
-			.setNativeMemoryInMB(this.nativeMemoryInMB).addExtendedResource(resources).build();
+			.setNativeMemoryInMB(this.nativeMemoryInMB)
+			.setStateSizeInMB(this.stateSizeInMB)
+			.addExtendedResource(resources).build();
 	}
 }
