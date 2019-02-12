@@ -40,17 +40,13 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
-import org.apache.flink.table.plan.optimize._
-import org.apache.flink.table.plan.optimize.program.{FlinkGroupProgram, FlinkHepRuleSetProgram, FlinkHepRuleSetProgramBuilder, FlinkStreamPrograms, HEP_RULES_EXECUTION_TYPE, StreamOptimizeContext}
-import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.types.Row
 
-import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.sql.SqlExplainLevel
-import org.apache.calcite.tools.RuleSet
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.commons.lang3.SystemUtils
 import org.junit.Assert.{assertEquals, _}
@@ -62,7 +58,6 @@ import org.mockito.stubbing.Answer
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
-import _root_.scala.collection.mutable
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -94,25 +89,6 @@ abstract class TableTestBase {
       "Logical plans do not match",
       LogicalPlanFormatUtils.formatTempTableId(FlinkRelOptUtil.toString(expected.getRelNode)),
       LogicalPlanFormatUtils.formatTempTableId(FlinkRelOptUtil.toString(actual.getRelNode)))
-  }
-
-  def injectRules(tEnv: TableEnvironment, phase: String, injectRuleSet: RuleSet): Unit = {
-    val programs = FlinkStreamPrograms.buildPrograms(tEnv.getConfig.getConf)
-    programs.get(phase) match {
-      case Some(groupProg: FlinkGroupProgram[StreamOptimizeContext]) =>
-        groupProg.addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-            .add(injectRuleSet).build(), "test rules")
-      case Some(ruleSetProgram: FlinkHepRuleSetProgram[StreamOptimizeContext]) =>
-        ruleSetProgram.add(injectRuleSet)
-      case _ =>
-        throw new RuntimeException(s"$phase does not exist")
-    }
-    val builder = CalciteConfig.createBuilder(tEnv.getConfig.getCalciteConfig)
-      .replaceStreamPrograms(programs)
-    tEnv.getConfig.setCalciteConfig(builder.build())
   }
 }
 

@@ -19,23 +19,16 @@
 package org.apache.flink.table.plan
 
 import org.apache.flink.api.common.time.Time
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{Table, TableConfigOptions, Types}
+import org.apache.flink.table.api.{Table, TableConfigOptions}
 import org.apache.flink.table.expressions.utils.Func1
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithRetract
-import org.apache.flink.table.runtime.utils.StreamTestData
 import org.apache.flink.table.util._
 
-import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
-
 import org.apache.calcite.sql.validate.SqlMonotonicity._
-import org.apache.calcite.tools.RuleSets
 import org.junit.Assert._
 import org.junit.Test
 
@@ -202,57 +195,6 @@ class ModifiedMonotonicityTest extends TableTestBase {
     val lTable = table1.groupBy('a).select('a, 'b.min)
     val rTable = table2.groupBy('aa, 'bb).select('aa, 'bb, 'cc.count as 'cc)
     val resultTable = lTable.join(rTable, 'a === 'cc)
-    assertMono(null, resultTable, util)
-  }
-
-  @Test
-  def testUpdateSourceAndMax(): Unit = {
-    val util = streamTestUtil()
-
-    val rowTypeInfo = new RowTypeInfo(Types.INT, Types.LONG, Types.STRING)
-
-    util.tableEnv.registerTableSource("MyTable", new TestTableSourceWithUniqueKeys(
-      StreamTestData.get3TupleData,
-      Array("a", "pk", "c"),
-      Array(0, 1, 2),
-      ImmutableSet.of(ImmutableSet.copyOf(Array[String]("pk")))
-    )(rowTypeInfo.asInstanceOf[TypeInformation[(Int, Long, String)]]))
-
-    injectRules(
-      util.tableEnv,
-      FlinkStreamPrograms.LOGICAL_REWRITE,
-      RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
-
-    val resultTable = util.tableEnv.scan("MyTable")
-      .groupBy('pk)
-      .select('pk, 'a.max, 'c.count)
-    assertMono(
-      new RelModifiedMonotonicity(Array(CONSTANT, NOT_MONOTONIC, INCREASING)),
-      resultTable,
-      util)
-  }
-
-  @Test
-  def testUpdateSourceAndMax2(): Unit = {
-    val util = streamTestUtil()
-
-    val rowTypeInfo = new RowTypeInfo(Types.INT, Types.LONG, Types.STRING)
-
-    util.tableEnv.registerTableSource("MyTable", new TestTableSourceWithUniqueKeys(
-      StreamTestData.get3TupleData,
-      Array("a", "pk", "c"),
-      Array(0, 1, 2),
-      ImmutableSet.of(ImmutableSet.copyOf(Array[String]("pk")))
-    )(rowTypeInfo.asInstanceOf[TypeInformation[(Int, Long, String)]]))
-
-    injectRules(
-      util.tableEnv,
-      FlinkStreamPrograms.LOGICAL_REWRITE,
-      RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
-
-    val resultTable = util.tableEnv.scan("MyTable")
-      .groupBy('c)
-      .select('a.count)
     assertMono(null, resultTable, util)
   }
 

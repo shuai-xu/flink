@@ -19,13 +19,13 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.AggMode
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingWithAggTestBase, TestingRetractSink}
 import org.apache.flink.types.Row
-
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -207,19 +207,26 @@ class FlinkAggregateRemoveRuleITCase(
 
   private def checkResult(str: String, rows: Seq[Row]): Unit = {
     super.before()
-    val data = new mutable.MutableList[(Int, Int, String, String)]
-    data.+=((2, 1, "A", null))
-    data.+=((3, 2, "A", "Hi"))
-    data.+=((5, 2, "B", "Hello"))
-    data.+=((6, 3, "C", "Hello world"))
 
-    tEnv.registerTableWithPk("T", failingDataSource(data).toTable(tEnv, 'a, 'b, 'c, 'd), List("a"))
+    tEnv.registerTableSource(
+      "T",
+      CommonTestData.createCsvTableSource(
+        Seq(row(2, 1, "A", null),
+            row(3, 2, "A", "Hi"),
+            row(5, 2, "B", "Hello"),
+            row(6, 3, "C", "Hello world")),
+        Array("a", "b", "c", "d"),
+        Array(DataTypes.INT, DataTypes.INT, DataTypes.STRING, DataTypes.STRING),
+        uniqueKeys = Set(Set("a"))
+      )
+    )
 
-    val t1 = failingDataSource(CommonTestData.getSmall3Data).toTable(tEnv, 'a, 'b, 'c)
-    tEnv.registerTableWithPk("MyTable", t1, List("a"))
-
-    val t2 = failingDataSource(CommonTestData.getSmall5Data).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
-    tEnv.registerTableWithPk("MyTable2", t2, List("b"))
+    tEnv.registerTableSource(
+      "MyTable",
+      CommonTestData.getSmall3Source(Array("a", "b", "c"), Set(Set("a"))))
+    tEnv.registerTableSource(
+      "MyTable2",
+      CommonTestData.getSmall5Source(Array("a", "b", "c", "d", "e"), Set(Set("b"))))
 
     val t = tEnv.sqlQuery(str)
     val sink = new TestingRetractSink

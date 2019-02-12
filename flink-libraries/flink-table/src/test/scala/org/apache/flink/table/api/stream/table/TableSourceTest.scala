@@ -18,16 +18,13 @@
 
 package org.apache.flink.table.api.stream.table
 
-import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 
-import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{TableSchema, Types}
-import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
-import org.apache.flink.table.runtime.utils.{CommonTestData, StreamTestData}
+import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.util._
 import org.apache.flink.types.Row
@@ -386,57 +383,6 @@ class TableSourceTest extends TableTestBase {
         'deepNested.get("nested2").get("num") as 'nestedNum)
 
     util.verifyPlan(t)
-  }
-
-  // FIXME do calc before shuffle when refactoring stream cost.
-  @Test
-  def testWithPkMultiRowUpdateTransposeWithCalc(): Unit = {
-    val util = streamTestUtil()
-
-    val rowTypeInfo = new RowTypeInfo(Types.INT, Types.LONG, Types.STRING)
-
-    util.tableEnv.registerTableSource("MyTable", new TestTableSourceWithUniqueKeys(
-      StreamTestData.get3TupleData,
-      Array("a", "pk", "c"),
-      Array(0, 1, 2),
-      ImmutableSet.of(ImmutableSet.copyOf(Array[String]("pk")))
-    )(rowTypeInfo.asInstanceOf[TypeInformation[(Int, Long, String)]]))
-
-    injectRules(
-      util.tableEnv,
-      FlinkStreamPrograms.LOGICAL_REWRITE,
-      RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
-
-    val resultTable = util.tableEnv.scan("MyTable")
-      .groupBy('pk)
-      .select('pk, 'a.count)
-
-    util.verifyPlanAndTrait(resultTable)
-  }
-
-  @Test
-  def testWithPkMultiRowUpdate(): Unit = {
-    val util = streamTestUtil()
-
-    val rowTypeInfo = new RowTypeInfo(Types.INT, Types.LONG, Types.STRING)
-
-    util.tableEnv.registerTableSource("MyTable", new TestTableSourceWithUniqueKeys(
-      StreamTestData.get3TupleData,
-      Array("a", "pk", "c"),
-      Array(0, 1, 2),
-      ImmutableSet.of(ImmutableSet.copyOf(Array[String]("pk")))
-    )(rowTypeInfo.asInstanceOf[TypeInformation[(Int, Long, String)]]))
-
-    injectRules(
-      util.tableEnv,
-      FlinkStreamPrograms.LOGICAL_REWRITE,
-      RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
-
-    val resultTable = util.tableEnv.scan("MyTable")
-      .groupBy('pk)
-      .select('pk, 'a.count, 'c.count)
-
-    util.verifyPlanAndTrait(resultTable)
   }
 
   def csvTable: (CsvTableSource, String) = {

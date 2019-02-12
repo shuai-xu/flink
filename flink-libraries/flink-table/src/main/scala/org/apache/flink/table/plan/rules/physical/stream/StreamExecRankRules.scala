@@ -24,13 +24,14 @@ import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogical
 import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.ConstantRankRange
-
 import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rex.RexLiteral
+import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.flink.table.calcite.FlinkTypeFactory
 
 object StreamExecRankRules {
   val SORT_INSTANCE: RelOptRule = new StreamExecRankFromSortRule
@@ -101,6 +102,34 @@ object StreamExecRankRules {
       FlinkConventions.LOGICAL,
       FlinkConventions.STREAM_PHYSICAL,
       "StreamExecRankFromRankRule") {
+
+
+    override def matches(call: RelOptRuleCall): Boolean = {
+      val rank: FlinkLogicalRank = call.rel(0)
+      val sortCollation = rank.sortCollation
+      val rankRange = rank.rankRange
+
+      val isRowNumberFunction = rank.rankFunction.getKind == SqlKind.ROW_NUMBER
+
+      val limit1 = rankRange match {
+        case ConstantRankRange(rankStart, rankEnd) => rankStart == 1 && rankEnd == 1
+        case _ => false
+      }
+
+      val inputRowType = rank.getInput.getRowType
+      val sortOnTimeAttribute =
+        if (sortCollation.getFieldCollations.isEmpty ||
+          sortCollation.getFieldCollations.size() > 1) {
+          false
+        } else {
+          val fieldCollation = sortCollation.getFieldCollations.get(0)
+          val fieldType = inputRowType.getFieldList.get(fieldCollation.getFieldIndex).getType
+          FlinkTypeFactory.isTimeIndicatorType(fieldType)
+        }
+
+      // sort on time attribute and limit 1 should be handled by StreamExecFirstLastRowRule
+      !(limit1 && sortOnTimeAttribute && isRowNumberFunction)
+    }
 
     override def convert(rel: RelNode): RelNode = {
       val rank = rel.asInstanceOf[FlinkLogicalRank]

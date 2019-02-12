@@ -54,8 +54,6 @@ import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 
-import _root_.java.util
-
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable.ArrayBuffer
@@ -806,28 +804,5 @@ abstract class StreamTableEnvironment(
         )
       )
     )
-  }
-
-  /**
-    * Register a table with specific list of primary keys.
-    * @param tableName table name
-    * @param sourceTable table to register
-    * @param primaryKeys table primary field name list
-    */
-  @VisibleForTesting
-  def registerTableWithPk(
-    tableName: String,
-    sourceTable: Table,
-    primaryKeys: util.List[String]): Unit = {
-
-    val source = sourceTable.getRelNode
-    registerTable(tableName, new Table(this,
-      LogicalRelNode(
-        new LogicalLastRow(
-          source.getCluster,
-          source.getTraitSet,
-          source,
-          primaryKeys
-        ))))
   }
 }

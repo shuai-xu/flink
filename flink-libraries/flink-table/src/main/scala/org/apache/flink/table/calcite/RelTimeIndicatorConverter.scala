@@ -105,14 +105,6 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     case watermarkAssigner: LogicalWatermarkAssigner =>
       watermarkAssigner
 
-    case lastRow: LogicalLastRow =>
-      val input = lastRow.getInput.accept(this)
-      new LogicalLastRow(
-        lastRow.getCluster,
-        lastRow.getTraitSet,
-        input,
-        lastRow.uniqueKeys)
-
     case snapshot: LogicalSnapshot =>
       val input = snapshot.getInput.accept(this)
       snapshot.copy(snapshot.getTraitSet, input, snapshot.getPeriod)

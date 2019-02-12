@@ -147,19 +147,6 @@ class FlinkRelMdModifiedMonotonicity private extends MetadataHandler[ModifiedMon
   }
 
   def getRelModifiedMonotonicity(
-    rel: FlinkLogicalLastRow,
-    mq: RelMetadataQuery): RelModifiedMonotonicity = {
-
-    if (allAppend(mq, rel.getInput)) {
-      val mono = new RelModifiedMonotonicity(Array.fill(rel.getRowType.getFieldCount)(MONOTONIC))
-      rel.getUniqueKeys.foreach(e => mono.fieldMonotonicities(e) = CONSTANT)
-      mono
-    } else {
-      null
-    }
-  }
-
-  def getRelModifiedMonotonicity(
     rel: FlinkLogicalOverWindow,
     mq: RelMetadataQuery): RelModifiedMonotonicity = {
 

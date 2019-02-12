@@ -217,6 +217,7 @@ object FlinkBatchExecRuleSets {
 
     // rank rules
     FlinkLogicalRankRule.CONSTANT_RANK,
+    RankFunctionColumnRemoveRule.INSTANCE,
     CalcRankMergeRule.INSTANCE,
 
     // calc rules

@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
@@ -31,31 +31,28 @@ import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.aggregate.{LastRowFunction, MiniBatchLastRowFunction}
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
-
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-
 import java.util
 
 import scala.collection.JavaConversions._
 
 /**
-  * Flink RelNode which matches along with LogicalLastRow.
+  * Flink RelNode which deduplicate on keys and keeps only last row.
   */
 class StreamExecLastRow(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     input: RelNode,
-    inputSchema: BaseRowSchema,
-    outputSchema: BaseRowSchema,
     uniqueKeys: Array[Int],
+    isRowtime: Boolean,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, input)
   with StreamPhysicalRel
   with RowStreamExecNode {
 
-  override def deriveRowType(): RelDataType = outputSchema.relDataType
+  override def deriveRowType(): RelDataType = getInput.getRowType
 
   def getUniqueKeys: Array[Int] = uniqueKeys
 
@@ -64,9 +61,8 @@ class StreamExecLastRow(
       cluster,
       traitSet,
       inputs.get(0),
-      inputSchema,
-      outputSchema,
       uniqueKeys,
+      isRowtime,
       ruleDescription)
   }
 
@@ -79,11 +75,12 @@ class StreamExecLastRow(
   override def needsUpdatesAsRetraction(input: RelNode): Boolean = true
 
   override def explainTerms(pw: RelWriter): RelWriter = {
-    val inputNames = inputSchema.relDataType.getFieldNames
-    val outputNames = outputSchema.relDataType.getFieldNames
+    val fieldNames = getRowType.getFieldNames
+    val orderString = if (isRowtime) "ROWTIME" else "PROCTIME"
     super.explainTerms(pw)
-      .item("key", uniqueKeys.map(inputNames.get(_)).mkString(", "))
-      .item("select", outputNames.mkString(", "))
+      .item("key", uniqueKeys.map(fieldNames.get).mkString(", "))
+      .item("select", fieldNames.mkString(", "))
+      .item("order", orderString)
   }
 
   //~ ExecNode methods -----------------------------------------------------------
@@ -102,6 +99,7 @@ class StreamExecLastRow(
 
     val generateRetraction = StreamExecRetractionRules.isAccRetract(this)
 
+    val inputSchema = new BaseRowSchema(getInput.getRowType)
     val rowTimeFieldIndex = inputSchema.fieldTypeInfos.zipWithIndex
       .filter(e => FlinkTypeFactory.isRowtimeIndicatorType(e._1))
       .map(_._2)
@@ -111,7 +109,7 @@ class StreamExecLastRow(
     val orderIndex = if (rowTimeFieldIndex.isEmpty) {
       -1
     } else {
-      rowTimeFieldIndex.head
+      throw new TableException("Currently not support LastRow on rowtime.")
     }
 
     val operator = if (tableConfig.getConf.contains(
@@ -157,9 +155,9 @@ class StreamExecLastRow(
   }
 
   private def getOperatorName: String = {
-    val inputNames = inputSchema.relDataType.getFieldNames
-    val keyNames = uniqueKeys.map(inputNames.get(_)).mkString(", ")
-    val outputNames = outputSchema.relDataType.getFieldNames.mkString(", ")
-    s"LastRow: (key: ($keyNames), select: ($outputNames))"
+    val fieldNames = getRowType.getFieldNames
+    val keyNames = uniqueKeys.map(fieldNames.get).mkString(", ")
+    val orderString = if (isRowtime) "ROWTIME" else "PROCTIME"
+    s"LastRow: (key: ($keyNames), select: (${fieldNames.mkString(", ")}), order: ($orderString))"
   }
 }

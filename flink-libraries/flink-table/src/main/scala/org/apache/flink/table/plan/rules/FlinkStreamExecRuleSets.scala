@@ -235,7 +235,6 @@ object FlinkStreamExecRuleSets {
     FlinkLogicalMatch.CONVERTER,
     FlinkLogicalExpand.CONVERTER,
     FlinkLogicalWatermarkAssigner.CONVERTER,
-    FlinkLogicalLastRow.CONVERTER,
     FlinkLogicalSink.CONVERTER
   )
 
@@ -301,14 +300,14 @@ object FlinkStreamExecRuleSets {
   val LOGICAL_REWRITE: RuleSet = RuleSets.ofList(
     // transform over window to topn node
     FlinkLogicalRankRule.INSTANCE,
-    // transpose calc past lastrow to reduce state size
-    CalcLastRowTransposeRule.INSTANCE,
+    // remove output of rank function when rank number is constant
+    RankFunctionColumnRemoveRule.INSTANCE,
     // split distinct aggregate to reduce data skew
     SplitAggregateRule.INSTANCE,
     // transpose calc past snapshot
     CalcSnapshotTransposeRule.INSTANCE,
     // merge calc after calc transpose
-    CalcMergeRule.INSTANCE)
+    FlinkCalcMergeRule.INSTANCE)
 
   /**
     * RuleSet to optimize plans for streamExec / DataStream execution
@@ -336,9 +335,9 @@ object FlinkStreamExecRuleSets {
     StreamExecMatchRule.INSTANCE,
     StreamExecRankRules.SORT_INSTANCE,
     StreamExecRankRules.RANK_INSTANCE,
+    StreamExecFirstLastRowRule.INSTANCE,
     StreamExecWatermarkAssignerRule.INSTANCE,
     StreamExecExpandRule.INSTANCE,
-    StreamExecLastRowRule.INSTANCE,
     // sink
     StreamExecSinkRule.INSTANCE
   )

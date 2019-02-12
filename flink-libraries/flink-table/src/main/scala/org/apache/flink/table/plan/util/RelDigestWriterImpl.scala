@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
-import org.apache.flink.table.plan.nodes.calcite.{Expand, LogicalLastRow, Rank, Sink, WatermarkAssigner}
+import org.apache.flink.table.plan.nodes.calcite.{Expand, Rank, Sink, WatermarkAssigner}
 
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core._
@@ -137,7 +137,7 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
       case r: Rank => FlinkRexUtil.isDeterministicOperator(r.rankFunction)
       case e: Expand => ExpandUtil.isDeterministic(e.projects)
       case _: Collect | _: Correlate | _: Exchange | _: SetOp | _: Sample |
-           _: TableScan | _: Uncollect | _: Values | _: Sink | _: LogicalLastRow |
+           _: TableScan | _: Uncollect | _: Values | _: Sink |
            _: WatermarkAssigner | _: Snapshot => true
       case o => throw new TableException(
         s"Unsupported RelNode: ${o.getRelTypeName}, which should be handled before this exception")

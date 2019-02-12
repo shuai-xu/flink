@@ -18,20 +18,12 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.stream.sql.AddUdf
-import org.apache.flink.table.plan.optimize.program.FlinkStreamPrograms
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
-import org.apache.flink.table.runtime.utils.StreamTestData
-import org.apache.flink.table.util.{TableTestBase, TestFlinkLogicalLastRowRule, TestTableSourceWithUniqueKeys}
+import org.apache.flink.table.util.TableTestBase
 
-import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableSet
-
-import org.apache.calcite.tools.RuleSets
 import org.junit.Test
 
 class FlinkRelMdStreamUniqueKeysTest extends TableTestBase {
@@ -102,28 +94,5 @@ class FlinkRelMdStreamUniqueKeysTest extends TableTestBase {
         |WHERE rank_num <= 10
       """.stripMargin
     util.verifyUniqueKeys(sql, Set(0, 3))
-  }
-
-  @Test
-  def testSourceWithPk(): Unit = {
-    val util = streamTestUtil()
-
-    val rowTypeInfo = new RowTypeInfo(Types.INT, Types.LONG, Types.STRING)
-
-    util.tableEnv.registerTableSource("MyTable", new TestTableSourceWithUniqueKeys(
-      StreamTestData.get3TupleData,
-      Array("a", "pk", "c"),
-      Array(0, 1, 2),
-      ImmutableSet.of(ImmutableSet.copyOf(Array[String]("pk")))
-    )(rowTypeInfo.asInstanceOf[TypeInformation[(Int, Long, String)]]))
-
-    injectRules(
-      util.tableEnv,
-      FlinkStreamPrograms.LOGICAL_REWRITE,
-      RuleSets.ofList(TestFlinkLogicalLastRowRule.INSTANCE))
-
-    val resultTable = util.tableEnv.scan("MyTable")
-        .select('c, 'pk)
-    util.verifyUniqueKeys(resultTable, Set(1))
   }
 }
