@@ -50,6 +50,11 @@ public class HiveTestUtils {
 	}
 
 	private static HiveConf getHiveConf() throws IOException {
+		String fileName = "conf/hive-site.xml";
+		ClassLoader classLoader = new HiveTestUtils().getClass().getClassLoader();
+		HiveConf.setHiveSiteLocation(classLoader.getResource(fileName));
+		System.out.println("Setting hive-site: " + HiveConf.getHiveSiteLocation());
+
 		TEMPORARY_FOLDER.create();
 		warehouseDir = TEMPORARY_FOLDER.newFolder().getAbsolutePath() + "/metastore_db";
 		warehouseUri = String.format("jdbc:derby:;databaseName=%s;create=true", warehouseDir);
