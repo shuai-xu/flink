@@ -113,7 +113,7 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				usage1.put("tmId", Tuple2.of(now, 15.0));
+				usage1.put("tmId", Tuple2.of(now, 15.0 * 1024 * 1024));
 				return usage1;
 			}
 		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
@@ -121,7 +121,7 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				usage2.put("tmId", Tuple2.of(now, 30.0));
+				usage2.put("tmId", Tuple2.of(now, 30.0 * 1024 * 1024));
 				return usage2;
 			}
 		});
@@ -130,7 +130,7 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				capacity1.put("tmId", Tuple2.of(now, 10.0));
+				capacity1.put("tmId", Tuple2.of(now, 10.0 * 1024 * 1024));
 				return capacity1;
 			}
 		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
@@ -138,7 +138,7 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				capacity2.put("tmId", Tuple2.of(now, 20.0));
+				capacity2.put("tmId", Tuple2.of(now, 20.0 * 1024 * 1024));
 				return capacity2;
 			}
 		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
@@ -146,7 +146,7 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				capacity3.put("tmId", Tuple2.of(now, 40.0));
+				capacity3.put("tmId", Tuple2.of(now, 40.0 * 1024 * 1024));
 				return capacity3;
 			}
 		});

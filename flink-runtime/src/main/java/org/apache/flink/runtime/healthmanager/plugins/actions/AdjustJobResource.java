@@ -36,7 +36,8 @@ public class AdjustJobResource extends AdjustJobConfig {
 			new HashMap<>(anotherAdjustJobResource.currentParallelism),
 			new HashMap<>(anotherAdjustJobResource.targetParallelism),
 			new HashMap<>(anotherAdjustJobResource.currentResource),
-			new HashMap<>(anotherAdjustJobResource.targetResource));
+			new HashMap<>(anotherAdjustJobResource.targetResource),
+			anotherAdjustJobResource.actionMode);
 	}
 
 	public AdjustJobResource merge(AdjustJobResource anotherAction) {

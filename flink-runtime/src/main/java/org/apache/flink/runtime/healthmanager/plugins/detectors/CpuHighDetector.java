@@ -58,6 +58,8 @@ public class CpuHighDetector implements Detector {
 		ConfigOptions.key("healthmonitor.high-cpu-detector.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Double> HIGH_CPU_THRESHOLD =
 		ConfigOptions.key("healthmonitor.high-cpu-detector.threashold").defaultValue(0.8);
+	private static final ConfigOption<Double> HIGH_CPU_SEVERE_THRESHOLD =
+		ConfigOptions.key("healthmonitor.high-cpu-detector.severe.threashold").defaultValue(1.2);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
@@ -66,6 +68,7 @@ public class CpuHighDetector implements Detector {
 
 	private long checkInterval;
 	private double threshold;
+	private double severeThreshold;
 
 	private JobTMMetricSubscription tmCpuAllocatedSubscription;
 	private JobTMMetricSubscription tmCpuUsageSubscription;
@@ -79,6 +82,7 @@ public class CpuHighDetector implements Detector {
 
 		checkInterval = monitor.getConfig().getLong(HIGH_CPU_CHECK_INTERVAL);
 		threshold = monitor.getConfig().getDouble(HIGH_CPU_THRESHOLD);
+		severeThreshold = monitor.getConfig().getDouble(HIGH_CPU_SEVERE_THRESHOLD);
 
 		tmCpuAllocatedSubscription = metricProvider.subscribeAllTMMetric(jobID, TM_CPU_CAPACITY, checkInterval, TimelineAggType.AVG);
 		tmCpuUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, TM_CPU_USAGE, checkInterval, TimelineAggType.AVG);
@@ -108,6 +112,7 @@ public class CpuHighDetector implements Detector {
 			return null;
 		}
 
+		boolean severe = false;
 		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
 		for (String tmId : tmCapacities.keySet()) {
 			if (!MetricUtils.validateTmMetric(monitor, checkInterval * 2, tmCapacities.get(tmId), tmUsages.get(tmId))) {
@@ -125,6 +130,9 @@ public class CpuHighDetector implements Detector {
 			double utility = usage / capacity;
 
 			if (utility > threshold) {
+				if (utility > severeThreshold) {
+					severe = true;
+				}
 				List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
 				for (ExecutionVertexID jobExecutionVertexId : jobExecutionVertexIds) {
 					JobVertexID jvId = jobExecutionVertexId.getJobVertexID();
@@ -143,7 +151,7 @@ public class CpuHighDetector implements Detector {
 
 		if (vertexMaxUtility != null && !vertexMaxUtility.isEmpty()) {
 			LOGGER.info("Cpu high detected for vertices with max utilities {}.", vertexMaxUtility);
-			return new JobVertexHighCpu(jobID, vertexMaxUtility);
+			return new JobVertexHighCpu(jobID, vertexMaxUtility, severe);
 		}
 		return null;
 	}

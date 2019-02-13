@@ -31,10 +31,12 @@ public class JobVertexNativeMemOveruse implements Symptom {
 
 	private JobID jobID;
 	Map<JobVertexID, Double> overuses;
+	private boolean severe;
 
-	public JobVertexNativeMemOveruse(JobID jobID, Map<JobVertexID, Double> overuses) {
+	public JobVertexNativeMemOveruse(JobID jobID, Map<JobVertexID, Double> overuses, boolean severe) {
 		this.jobID = jobID;
 		this.overuses = overuses;
+		this.severe = severe;
 	}
 
 	public JobID getJobID() {
@@ -43,5 +45,9 @@ public class JobVertexNativeMemOveruse implements Symptom {
 
 	public Map<JobVertexID, Double> getOveruses() {
 		return overuses;
+	}
+
+	public boolean isSevere() {
+		return severe;
 	}
 }

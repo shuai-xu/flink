@@ -20,7 +20,6 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
@@ -56,13 +55,20 @@ public class CpuAdjuster implements Resolver {
 	private static final ConfigOption<Long> CPU_SCALE_TIME_OUT_OPTION =
 		ConfigOptions.key("cpu.scale.timeout.ms").defaultValue(180000L);
 
+	private static final ConfigOption<Long> CPU_SCALE_OPPORTUNISTIC_ACTION_DELAY =
+		ConfigOptions.key("cpu.scale.opportunistic-action.delay.ms").defaultValue(15 * 60 * 1000L);
+
 	private JobID jobID;
 	private HealthMonitor monitor;
 	private double scaleRatio;
 	private long timeout;
+	private long opportunisticActionDelay;
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
+
+	private Map<JobVertexID, Double> vertexMaxUtility;
+	private long opportunisticActionDelayStart;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -72,6 +78,10 @@ public class CpuAdjuster implements Resolver {
 		this.timeout = monitor.getConfig().getLong(CPU_SCALE_TIME_OUT_OPTION);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
+		this.opportunisticActionDelay = monitor.getConfig().getLong(CPU_SCALE_OPPORTUNISTIC_ACTION_DELAY);
+
+		vertexMaxUtility = new HashMap<>();
+		opportunisticActionDelayStart = -1;
 	}
 
 	@Override
@@ -82,6 +92,11 @@ public class CpuAdjuster implements Resolver {
 	@Override
 	public Action resolve(List<Symptom> symptomList) {
 		LOGGER.debug("Start resolving.");
+
+		if (opportunisticActionDelayStart < monitor.getLastExecution()) {
+			opportunisticActionDelayStart = -1;
+			vertexMaxUtility.clear();
+		}
 
 		JobVertexHighCpu jobVertexHighCpu = null;
 		JobVertexLowCpu jobVertexLowCpu = null;
@@ -100,22 +115,23 @@ public class CpuAdjuster implements Resolver {
 			}
 		}
 
-		Map<JobVertexID, Double> utilities = new HashMap<>();
 		if (jobVertexHighCpu != null) {
 			LOGGER.debug("High cpu detected for vertices with max utilities {}.", jobVertexHighCpu.getUtilities());
-			utilities.putAll(jobVertexHighCpu.getUtilities());
+			for (Map.Entry<JobVertexID, Double> entry : jobVertexHighCpu.getUtilities().entrySet()) {
+				if (!vertexMaxUtility.containsKey(entry.getKey()) || vertexMaxUtility.get(entry.getKey()) < entry.getValue()) {
+					vertexMaxUtility.put(entry.getKey(), entry.getValue());
+				}
+			}
 		}
+
 		if (jobVertexLowCpu != null) {
 			LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
 			// TODO add cpu down scale strategy
 			// utilities.putAll(jobVertexLowCpu.getUtilities());
 		}
 
-		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
-		for (JobVertexID jvId : utilities.keySet()) {
-			if (!vertexMaxUtility.containsKey(jvId) || vertexMaxUtility.get(jvId) < utilities.get(jvId)) {
-				vertexMaxUtility.put(jvId, utilities.get(jvId));
-			}
+		if (vertexMaxUtility.isEmpty()) {
+			return null;
 		}
 
 		AdjustJobCpu adjustJobCpu = new AdjustJobCpu(jobID, timeout);
@@ -126,16 +142,8 @@ public class CpuAdjuster implements Resolver {
 			double utility = vertexMaxUtility.get(jvId);
 			double targetCpu = currentResource.getCpuCores() * Math.max(1.0, utility) * (1.0 + scaleRatio);
 			LOGGER.debug("Target cpu for vertex {} is {}.", jvId, targetCpu);
-			ResourceSpec.Builder builder = new ResourceSpec.Builder()
-					.setCpuCores(targetCpu)
-					.setDirectMemoryInMB(currentResource.getDirectMemory())
-					.setHeapMemoryInMB(currentResource.getHeapMemory())
-					.setNativeMemoryInMB(currentResource.getNativeMemory())
-					.setStateSizeInMB(currentResource.getStateSize());
-			for (Resource resource : currentResource.getExtendedResources().values()) {
-				builder.addExtendedResource(resource);
-			}
-			ResourceSpec targetResource = builder.build();
+			ResourceSpec targetResource = new ResourceSpec.Builder(currentResource)
+					.setCpuCores(targetCpu).build();
 
 			adjustJobCpu.addVertex(
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
@@ -153,6 +161,16 @@ public class CpuAdjuster implements Resolver {
 		}
 
 		if (!adjustJobCpu.isEmpty()) {
+			long now = System.currentTimeMillis();
+			if ((jobVertexHighCpu != null && jobVertexHighCpu.isSevere()) ||
+				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
+				adjustJobCpu.setActionMode(Action.ActionMode.IMMEDIATE);
+			} else {
+				if (opportunisticActionDelayStart < 0) {
+					opportunisticActionDelayStart = now;
+				}
+				adjustJobCpu.setActionMode(Action.ActionMode.OPPORTUNISTIC);
+			}
 			LOGGER.info("AdjustJobCpu action generated: {}.", adjustJobCpu);
 			return adjustJobCpu;
 		}

@@ -94,6 +94,7 @@ public class DirectMemoryAdjuster implements Resolver {
 		}
 
 		AdjustJobDirectMemory adjustJobDirectMemory = new AdjustJobDirectMemory(jobID, timeout);
+		adjustJobDirectMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (JobVertexID jvId : jobVertexIDs) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);

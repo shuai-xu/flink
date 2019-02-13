@@ -74,11 +74,15 @@ public class RescaleResourcePriorActionSelector implements ActionSelector {
 			}
 		}
 
-		if (adjustJobResource != null) {
+		if (adjustJobResource != null && adjustJobResource.getActionMode() == Action.ActionMode.IMMEDIATE) {
 			return adjustJobResource;
-		} else {
+		}
+
+		if (rescaleJobParallelism != null && rescaleJobParallelism.getActionMode() == Action.ActionMode.IMMEDIATE){
 			return rescaleJobParallelism;
 		}
+
+		return null;
 	}
 
 	@Override

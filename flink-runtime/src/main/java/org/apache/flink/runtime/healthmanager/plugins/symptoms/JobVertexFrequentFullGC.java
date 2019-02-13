@@ -31,10 +31,12 @@ public class JobVertexFrequentFullGC implements Symptom {
 
 	private JobID jobID;
 	private List<JobVertexID> jobVertexIDs;
+	private boolean severe;
 
-	public JobVertexFrequentFullGC(JobID jobID, List<JobVertexID> jobVertexIDs) {
+	public JobVertexFrequentFullGC(JobID jobID, List<JobVertexID> jobVertexIDs, boolean severe) {
 		this.jobID = jobID;
 		this.jobVertexIDs = jobVertexIDs;
+		this.severe = severe;
 	}
 
 	public JobID getJobID() {
@@ -43,5 +45,9 @@ public class JobVertexFrequentFullGC implements Symptom {
 
 	public List<JobVertexID> getJobVertexIDs() {
 		return jobVertexIDs;
+	}
+
+	public boolean isSevere() {
+		return severe;
 	}
 }

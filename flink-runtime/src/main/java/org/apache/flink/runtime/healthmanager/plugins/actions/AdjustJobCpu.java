@@ -38,6 +38,9 @@ public class AdjustJobCpu extends AdjustJobResource {
 
 		AdjustJobResource mergedAction = new AdjustJobResource(anotherAction);
 		mergedAction.timeoutMs = Math.max(mergedAction.timeoutMs, this.timeoutMs);
+		if (actionMode == ActionMode.IMMEDIATE) {
+			mergedAction.actionMode = ActionMode.IMMEDIATE;
+		}
 
 		for (JobVertexID vertexId : targetResource.keySet()) {
 			if (mergedAction.targetResource.containsKey(vertexId)) {

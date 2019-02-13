@@ -31,10 +31,12 @@ public class JobVertexHighCpu implements Symptom {
 
 	private JobID jobID;
 	Map<JobVertexID, Double> utilities;
+	private boolean severe;
 
-	public JobVertexHighCpu(JobID jobID, Map<JobVertexID, Double> overuses) {
+	public JobVertexHighCpu(JobID jobID, Map<JobVertexID, Double> overuses, boolean severe) {
 		this.jobID = jobID;
 		this.utilities = overuses;
+		this.severe = severe;
 	}
 
 	public JobID getJobID() {
@@ -43,5 +45,9 @@ public class JobVertexHighCpu implements Symptom {
 
 	public Map<JobVertexID, Double> getUtilities() {
 		return utilities;
+	}
+
+	public boolean isSevere() {
+		return severe;
 	}
 }

@@ -54,12 +54,16 @@ public class MemoryOveruseDetector implements Detector {
 	private static final ConfigOption<Long> MEMORY_OVERUSE_CHECK_INTERVAL =
 		ConfigOptions.key("healthmonitor.memory-overuse-detector.interval.ms").defaultValue(60 * 1000L);
 
+	private static final ConfigOption<Double> MEMORY_OVERUSE_SEVERE_THRESHOLD =
+		ConfigOptions.key("healthmonitor.memory-overuse-detector.severe.threshold").defaultValue(1.2);
+
 	private JobID jobID;
 	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
 	private HealthMonitor monitor;
 
 	private long overuseCheckInterval;
+	private double severeThreshold;
 
 	private JobTMMetricSubscription tmMemCapacitySubscription;
 	private JobTMMetricSubscription tmMemUsageTotalSubscription;
@@ -72,9 +76,10 @@ public class MemoryOveruseDetector implements Detector {
 		metricProvider = monitor.getMetricProvider();
 
 		overuseCheckInterval = monitor.getConfig().getLong(MEMORY_OVERUSE_CHECK_INTERVAL);
+		severeThreshold = monitor.getConfig().getDouble(MEMORY_OVERUSE_SEVERE_THRESHOLD);
 
-		tmMemCapacitySubscription = metricProvider.subscribeAllTMMetric(jobID, TM_MEM_CAPACITY, overuseCheckInterval, TimelineAggType.AVG);
-		tmMemUsageTotalSubscription = metricProvider.subscribeAllTMMetric(jobID, TM_MEM_USAGE_TOTAL, overuseCheckInterval, TimelineAggType.AVG);
+		tmMemCapacitySubscription = metricProvider.subscribeAllTMMetric(jobID, TM_MEM_CAPACITY, overuseCheckInterval, TimelineAggType.MAX);
+		tmMemUsageTotalSubscription = metricProvider.subscribeAllTMMetric(jobID, TM_MEM_USAGE_TOTAL, overuseCheckInterval, TimelineAggType.MAX);
 	}
 
 	@Override
@@ -99,6 +104,7 @@ public class MemoryOveruseDetector implements Detector {
 			return null;
 		}
 
+		boolean severe = false;
 		Map<JobVertexID, Double> vertexMaxOveruse = new HashMap<>();
 		for (String tmId : tmCapacities.keySet()) {
 			if (!MetricUtils.validateTmMetric(monitor, overuseCheckInterval * 2, tmCapacities.get(tmId), tmTotalUsages.get(tmId))) {
@@ -108,11 +114,16 @@ public class MemoryOveruseDetector implements Detector {
 
 			double capacity = tmCapacities.get(tmId).f1;
 			double totalUsage = tmTotalUsages.get(tmId).f1;
+			LOGGER.debug("TM {}, capacity {}, usage {}.", tmId, capacity, totalUsage);
 			if (totalUsage <= capacity) {
 				continue;
 			}
 
-			double overuseInMB = totalUsage - capacity / 1024 / 1024;
+			if (totalUsage > capacity * severeThreshold) {
+				severe = true;
+			}
+
+			double overuseInMB = (totalUsage - capacity) / 1024 / 1024;
 			List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
 			if (jobExecutionVertexIds != null && !jobExecutionVertexIds.isEmpty()) {
 				overuseInMB /= jobExecutionVertexIds.size();
@@ -127,7 +138,7 @@ public class MemoryOveruseDetector implements Detector {
 
 		if (vertexMaxOveruse != null && !vertexMaxOveruse.isEmpty()) {
 			LOGGER.info("Native memory overuse detected for vertices with max overuse {}.", vertexMaxOveruse);
-			return new JobVertexNativeMemOveruse(jobID, vertexMaxOveruse);
+			return new JobVertexNativeMemOveruse(jobID, vertexMaxOveruse, severe);
 		}
 		return null;
 	}

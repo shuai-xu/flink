@@ -46,4 +46,27 @@ public interface Action {
 	 * @return
 	 */
 	Action rollback();
+
+	/**
+	 * Get action mode.
+	 * @return
+	 */
+	ActionMode getActionMode();
+
+	/**
+	 * Action mode.
+	 */
+	enum ActionMode {
+
+		/**
+		 * Action should be executed immediately.
+		 */
+		IMMEDIATE,
+
+		/**
+		 * Do not interrupt job running for executing this action,
+		 * unless it can be executed together with other immediate actions.
+		 */
+		OPPORTUNISTIC
+	}
 }
