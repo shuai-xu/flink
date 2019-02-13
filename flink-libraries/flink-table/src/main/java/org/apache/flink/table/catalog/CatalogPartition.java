@@ -47,6 +47,10 @@ public class CatalogPartition {
 		return partitionSpec;
 	}
 
+	public CatalogPartition deepCopy() {
+		return new CatalogPartition(partitionSpec, new HashMap<>(properties));
+	}
+
 	@Override
 	public String toString() {
 		return "CatalogPartition{" +

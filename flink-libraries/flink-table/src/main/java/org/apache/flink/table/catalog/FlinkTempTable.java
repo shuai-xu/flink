@@ -18,14 +18,9 @@
 
 package org.apache.flink.table.catalog;
 
-import org.apache.flink.table.api.RichTableSchema;
-import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.plan.stats.TableStats;
-
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.impl.AbstractTable;
 
-import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -35,40 +30,22 @@ public class FlinkTempTable extends CatalogTable {
 
 	private final AbstractTable abstractTable;
 
-	public FlinkTempTable(
-		AbstractTable table,
-		String tableType,
-		TableSchema schema,
-		Map<String, String> properties,
-		RichTableSchema richTableSchema,
-		TableStats stats,
-		String comment,
-		LinkedHashSet<String> partitionColumnNames,
-		boolean isPartitioned,
-		Map<String, RexNode> computedColumns,
-		String rowTimeField,
-		long watermarkOffset,
-		long createTime,
-		long lastAccessTime) {
+	public FlinkTempTable(AbstractTable table, Map<String, String> properties) {
 
-		super(tableType,
-			schema,
-			properties,
-			richTableSchema,
-			stats,
-			comment,
-			partitionColumnNames,
-			isPartitioned,
-			computedColumns,
-			rowTimeField,
-			watermarkOffset,
-			createTime,
-			lastAccessTime);
+		super(null,
+			null,
+			null,
+			properties);
 
 		this.abstractTable = table;
 	}
 
 	public AbstractTable getAbstractTable() {
 		return abstractTable;
+	}
+
+	@Override
+	public FlinkTempTable deepCopy() {
+		return new FlinkTempTable(abstractTable, new HashMap<>(super.getProperties()));
 	}
 }

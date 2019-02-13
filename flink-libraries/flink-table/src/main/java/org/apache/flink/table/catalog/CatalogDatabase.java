@@ -40,4 +40,8 @@ public class CatalogDatabase {
 	public Map<String, String> getProperties() {
 		return properties;
 	}
+
+	public CatalogDatabase deepCopy() {
+		return new CatalogDatabase(new HashMap<>(properties));
+	}
 }

@@ -668,21 +668,9 @@ abstract class TableEnvironment(
 
     return new FlinkTempTable(
       table,
-      null,
-      null,
       new util.HashMap[String, String]() {{
         put(CatalogTableConfig.IS_STREAMING, true.toString);
-      }},
-      null,
-      null,
-      null,
-      new util.LinkedHashSet[String](),
-      false,
-      null,
-      null,
-      -1,
-      currentMillis,
-      currentMillis
+      }}
     )
   }
 

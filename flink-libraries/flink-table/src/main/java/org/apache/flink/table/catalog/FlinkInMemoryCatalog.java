@@ -33,7 +33,6 @@ import org.apache.flink.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,7 +158,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 				throw new TableAlreadyExistException(catalogName, tableName.getFullName());
 			}
 		} else {
-			tables.put(tableName, deepCopyCatalogTable(table));
+			tables.put(tableName, table.deepCopy());
 
 			if (table.isPartitioned()) {
 				partitions.put(tableName, new LinkedHashMap<>());
@@ -170,7 +169,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public void alterTable(ObjectPath tableName, CatalogTable newTable, boolean ignoreIfNotExists) throws TableNotExistException {
 		if (tableExists(tableName)) {
-			tables.put(tableName, newTable);
+			tables.put(tableName, newTable.deepCopy());
 		} else if (!ignoreIfNotExists) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
 		}
@@ -227,52 +226,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		if (!tableExists(tableName)) {
 			throw new TableNotExistException(catalogName, tableName.getFullName());
 		} else {
-			CatalogTable table = tables.get(tableName);
-
-			// TODO: Should return a deep copy since operations outside the catalog should not impact table stored internally
-			// [BLINK-18866721] read/write APIs in FlinkInMemoryCatalog for meta objects should use a deep copy of those objects
-			// This is only a shallow copy
-			return deepCopyCatalogTable(table);
-		}
-	}
-
-	private CatalogTable deepCopyCatalogTable(CatalogTable table) {
-		if (table instanceof FlinkTempTable) {
-			return table;
-		} else if (table instanceof CatalogView) {
-			return new CatalogView(
-				table.getTableType(),
-				table.getTableSchema(),
-				new HashMap<>(table.getProperties()),
-				table.getRichTableSchema(),
-				table.getTableStats(),
-				table.getComment(),
-				table.getPartitionColumnNames(),
-				table.isPartitioned(),
-				table.getComputedColumns(),
-				table.getRowTimeField(),
-				table.getWatermarkOffset(),
-				table.getCreateTime(),
-				table.getLastAccessTime(),
-				((CatalogView) table).getOriginalQuery(),
-				((CatalogView) table).getExpandedQuery()
-			);
-		} else {
-			return new CatalogTable(
-				table.getTableType(),
-				table.getTableSchema(),
-				new HashMap<>(table.getProperties()),
-				table.getRichTableSchema(),
-				table.getTableStats(),
-				table.getComment(),
-				table.getPartitionColumnNames(),
-				table.isPartitioned(),
-				table.getComputedColumns(),
-				table.getRowTimeField(),
-				table.getWatermarkOffset(),
-				table.getCreateTime(),
-				table.getLastAccessTime()
-			);
+			return tables.get(tableName).deepCopy();
 		}
 	}
 
@@ -315,6 +269,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 			throw new TableNotExistException(catalogName, path.getFullName());
 		} else {
 			if (!isTablePartitioned(path)) {
+				// TODO: should return a deep copy of TableStats in memory
 				return tables.get(path).getTableStats();
 			} else {
 				// TableStats of partitioned table is unknown, the behavior is same as HIVE
@@ -334,6 +289,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 					oldTable.getTableSchema(),
 					oldTable.getProperties(),
 					oldTable.getRichTableSchema(),
+					// TODO: should create a deep copy of TableStats in memory
 					newtTableStats,
 					oldTable.getComment(),
 					oldTable.getPartitionColumnNames(),
@@ -359,7 +315,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 				throw new DatabaseAlreadyExistException(catalogName, dbName);
 			}
 		} else {
-			databases.put(dbName, db);
+			databases.put(dbName, db.deepCopy());
 		}
 	}
 
@@ -375,7 +331,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public void alterDatabase(String dbName, CatalogDatabase newDatabase, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		if (dbExists(dbName)) {
-			databases.put(dbName, newDatabase);
+			databases.put(dbName, newDatabase.deepCopy());
 		} else if (!ignoreIfNotExists) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		}
@@ -391,10 +347,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		if (!dbExists(dbName)) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} else {
-			// TODO: Should return a deep copy since operations outside the catalog should not impact db stored internally
-			// This is only a shallow copy
-			CatalogDatabase db = databases.get(dbName);
-			return new CatalogDatabase(db.getProperties());
+			return databases.get(dbName).deepCopy();
 		}
 	}
 
@@ -422,7 +375,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 				throw new PartitionAlreadyExistException(catalogName, path, partition.getPartitionSpec());
 			}
 		} else {
-			partitions.get(path).put(partition.getPartitionSpec(), partition);
+			partitions.get(path).put(partition.getPartitionSpec(), partition.deepCopy());
 		}
 	}
 
@@ -459,7 +412,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		CatalogPartition.PartitionSpec partitionSpec = newPartition.getPartitionSpec();
 
 		if (partitionExists(path, partitionSpec)) {
-			partitions.get(path).put(partitionSpec, newPartition);
+			partitions.get(path).put(partitionSpec, newPartition.deepCopy());
 		} else if (!ignoreIfNotExists) {
 			throw new PartitionNotExistException(catalogName, path, partitionSpec);
 		}
@@ -490,7 +443,7 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 		}
 
 		if (partitions.get(new ObjectPath(path.getDbName(), path.getObjectName())).get(partitionSpec) != null) {
-			return partitions.get(path).get(partitionSpec);
+			return partitions.get(path).get(partitionSpec).deepCopy();
 		} else {
 			throw new PartitionNotExistException(catalogName, path, partitionSpec);
 		}

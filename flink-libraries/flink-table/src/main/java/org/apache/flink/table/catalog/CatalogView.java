@@ -24,6 +24,7 @@ import org.apache.flink.table.plan.stats.TableStats;
 
 import org.apache.calcite.rex.RexNode;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
@@ -102,6 +103,27 @@ public class CatalogView extends CatalogTable {
 			originalQuery,
 			expandedQuery
 		);
+	}
+
+	@Override
+	public CatalogView deepCopy() {
+		return new CatalogView(
+				getTableType(),
+				getTableSchema(),
+				new HashMap<>(getProperties()),
+				getRichTableSchema(),
+				getTableStats(),
+				getComment(),
+				getPartitionColumnNames(),
+				isPartitioned(),
+				getComputedColumns(),
+				getRowTimeField(),
+				getWatermarkOffset(),
+				getCreateTime(),
+				getLastAccessTime(),
+				getOriginalQuery(),
+				getExpandedQuery()
+			);
 	}
 
 	@Override

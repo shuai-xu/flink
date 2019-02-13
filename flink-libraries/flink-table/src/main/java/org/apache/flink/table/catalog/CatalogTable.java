@@ -26,6 +26,7 @@ import org.apache.flink.util.StringUtils;
 import org.apache.calcite.rex.RexNode;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
@@ -73,7 +74,10 @@ public class CatalogTable {
 		this.tableSchema = tableSchema;
 		this.tableStats = tableStats;
 		this.properties = properties;
-		this.richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
+
+		if (tableSchema != null) {
+			this.richTableSchema = new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes());
+		}
 	}
 
 	public CatalogTable(
@@ -177,6 +181,24 @@ public class CatalogTable {
 
 	public long getLastAccessTime() {
 		return lastAccessTime;
+	}
+
+	public CatalogTable deepCopy() {
+		return new CatalogTable(
+			getTableType(),
+			getTableSchema(),
+			new HashMap<>(getProperties()),
+			getRichTableSchema(),
+			getTableStats(),
+			getComment(),
+			getPartitionColumnNames(),
+			isPartitioned(),
+			getComputedColumns(),
+			getRowTimeField(),
+			getWatermarkOffset(),
+			getCreateTime(),
+			getLastAccessTime()
+		);
 	}
 
 	@Override
