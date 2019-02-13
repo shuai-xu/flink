@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.schedule;
 
+import org.apache.flink.runtime.jobgraph.ControlType;
+import org.apache.flink.runtime.jobgraph.JobControlEdge;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.util.FlinkRuntimeException;
@@ -64,14 +66,24 @@ public class ConcurrentJobVertexGroup {
 				JobVertex jobVertex = iter.next();
 
 				boolean allPredecessorAdded = true;
+				boolean hasPredecessorInThisGroup = false;
 				for (JobEdge jobEdge : jobVertex.getInputs()) {
-					if (!jobVertices.contains(jobEdge.getSource().getProducer())) {
-						hasPrecedingGroup = true;
+					if (jobVertices.contains(jobEdge.getSource().getProducer())) {
+						hasPredecessorInThisGroup = true;
 					}
 					if (remaining.contains(jobEdge.getSource().getProducer())) {
 						allPredecessorAdded = false;
 						break;
 					}
+				}
+				for (JobControlEdge controlEdge : jobVertex.getInControlEdges()) {
+					if (controlEdge.getControlType() == ControlType.START_ON_FINISH &&
+							!jobVertices.contains(controlEdge.getSource())) {
+						hasPrecedingGroup = true;
+					}
+				}
+				if (!hasPredecessorInThisGroup && jobVertex.getNumberOfInputs() > 0) {
+					hasPrecedingGroup = true;
 				}
 				if (allPredecessorAdded) {
 					jobVerticesTopologically.add(jobVertex);

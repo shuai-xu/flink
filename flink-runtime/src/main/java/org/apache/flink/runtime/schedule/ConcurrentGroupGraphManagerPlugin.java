@@ -154,7 +154,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		LOG.info("{} concurrent group was built for job {}", concurrentSchedulingGroups.size(), jobGraph.getJobID());
 		if (LOG.isDebugEnabled()) {
 			for (ConcurrentSchedulingGroup group : concurrentSchedulingGroups) {
-				LOG.debug("Concurrent group has {}", group.getExecutionVertices());
+				LOG.debug("Concurrent group has {} with preceding {}", group.getExecutionVertices(), group.hasPrecedingGroup());
 			}
 		}
 	}
@@ -379,6 +379,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		Set<ConcurrentSchedulingGroup> groupsToSchedule = new HashSet<>();
 		for (ExecutionVertexID vertexID : verticesToSchedule) {
 			Set<ConcurrentSchedulingGroup> groupsBelongTo = executionToConcurrentSchedulingGroups.get(vertexID);
+			if (groupsBelongTo == null) {
+				throw new RuntimeException("Can not find a group for " + vertexID + ", this is logic error.");
+			}
 			if (groupsBelongTo.size() <= 1) {
 				groupsToSchedule.addAll(groupsBelongTo);
 			}
@@ -416,6 +419,8 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 		for (JobVertex jobVertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
 			for (JobControlEdge controlEdge : jobVertex.getOutControlEdges()) {
+				LOG.debug("ControlEdge from {} to {} with type {}",
+						controlEdge.getSource().getID(), controlEdge.getTarget().getID(), controlEdge.getControlType());
 				if (controlEdge.getControlType() == ControlType.START_ON_FINISH) {
 					Set<JobVertex> concurrentAncestors = getAllConcurrentAncestors(controlEdge.getTarget());
 					for (JobVertex ancestor : concurrentAncestors) {
