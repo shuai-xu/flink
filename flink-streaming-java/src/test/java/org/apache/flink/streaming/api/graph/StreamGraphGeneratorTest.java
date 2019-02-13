@@ -1160,13 +1160,9 @@ public class StreamGraphGeneratorTest {
 					.toMap();
 			verifySchedulingDependencies(graph, hashJoin1.getId(), expectedSchedulingModes, null);
 
-			expectedControlEdges = new MapFiller<>(expectedControlEdges)
-					.put(filter1.getId(), ControlType.CONCURRENT)
-					.put(filter2.getId(), ControlType.CONCURRENT)
-					.toMap();
 			verifySchedulingDependencies(graph, map1.getId(),
-					new MapFiller<>(expectedSchedulingModes).put(hashJoin1.getId(), StreamSchedulingMode.AUTO).toMap(),
-					expectedControlEdges);
+					new MapFiller<>(expectedSchedulingModes).put(hashJoin1.getId(), StreamSchedulingMode.SEQUENTIAL).toMap(),
+					null);
 
 			verifySchedulingDependencies(graph, sink1.getId(),
 					new MapFiller<>(expectedSchedulingModes).put(map1.getId(), StreamSchedulingMode.AUTO).toMap(),

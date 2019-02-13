@@ -29,7 +29,6 @@ import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.runtime.jobgraph.ControlType;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
-import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -206,7 +205,7 @@ public class StreamGraphGenerator {
 			for (StreamEdge inEdge : node.getInEdges()) {
 				final StreamSchedulingMode schedulingMode;
 
-				if (DamBehavior.FULL_DAM.equals(inEdge.getDamBehavior())) {
+				if (inEdge.getDamBehavior() != null && inEdge.getDamBehavior().isMaterializing()) {
 					schedulingMode = StreamSchedulingMode.SEQUENTIAL;
 				} else {
 					switch (inEdge.getDataExchangeMode()) {
@@ -236,7 +235,7 @@ public class StreamGraphGenerator {
 			}
 
 			List<StreamNode> laterScheduledInputNodes = readPriorityMap.get(ReadPriority.LOWER);
-			if (laterScheduledInputNodes != null && laterScheduledInputNodes.size() > 0 && readPriorityMap.size() > 1) {
+			if (laterScheduledInputNodes != null) {
 				for (Map.Entry<StreamEdge, ReadPriority> entry : currentNode.getReadPriorityHints().entrySet()) {
 					if (ReadPriority.LOWER.equals(entry.getValue())) {
 						continue;
@@ -246,20 +245,6 @@ public class StreamGraphGenerator {
 					for (StreamNode laterScheduledInputNode : laterScheduledInputNodes) {
 						streamGraph.addControlEdge(
 								firstScheduledInputNode.getId(), laterScheduledInputNode.getId(), ControlType.START_ON_FINISH);
-					}
-				}
-
-				for (StreamNode laterScheduledInputNode : laterScheduledInputNodes) {
-					for (StreamEdge outEdge : currentNode.getOutEdges()) {
-						if (DamBehavior.MATERIALIZING.equals(outEdge.getDamBehavior())) {
-							streamGraph.addControlEdge(laterScheduledInputNode.getId(), outEdge.getTargetId(), ControlType.CONCURRENT);
-						}
-					}
-				}
-			} else {
-				for (StreamEdge outEdge : currentNode.getOutEdges()) {
-					if (DamBehavior.MATERIALIZING.equals(outEdge.getDamBehavior())) {
-						outEdge.setSchedulingMode(StreamSchedulingMode.SEQUENTIAL);
 					}
 				}
 			}

@@ -1269,45 +1269,39 @@ public class StreamingJobGraphGenerator {
 	}
 
 	private void connectControlEdges() {
+		// get all data-transmission edges of the job graph
+		Map<JobVertex, Set<JobVertex>> dataEdges = new HashMap<>();
+		Iterator<JobVertex> itVertex = jobGraph.getVertices().iterator();
+		while (itVertex.hasNext()) {
+			JobVertex producer = itVertex.next();
+			for (IntermediateDataSet dataSet : producer.getProducedDataSets()) {
+				for (JobEdge edge : dataSet.getConsumers()) {
+					Set<JobVertex> consumers = dataEdges.computeIfAbsent(producer, k -> new HashSet<>());
+					consumers.add(edge.getTarget());
+				}
+			}
+		}
+
 		// transform to the control edges of the job graph from the control edges of the stream graph
-		Map<JobVertex, Map<JobVertex, Set<ControlType>>> edgeControlTypes = new HashMap<>();
+		Map<JobVertex, Map<JobVertex, Set<ControlType>>> controlEdges = new HashMap<>();
 		for (StreamNode streamNode : streamGraph.getStreamNodes()) {
 			for (StreamControlEdge controlEdge : streamNode.getInControlEdges()) {
 				JobVertex sourceVertex = nodeToJobVertexMap.get(controlEdge.getSourceId());
 				JobVertex targetVertex = nodeToJobVertexMap.get(controlEdge.getTargetId());
 
-				if (!sourceVertex.getID().equals(targetVertex.getID())) {
-					Map<JobVertex, Set<ControlType>> controlTypeMap = edgeControlTypes.computeIfAbsent(sourceVertex, k -> new HashMap());
+				if (!sourceVertex.getID().equals(targetVertex.getID())
+						&& (!dataEdges.containsKey(sourceVertex) || !dataEdges.get(sourceVertex).contains(targetVertex))
+						&& (!dataEdges.containsKey(targetVertex) || !dataEdges.get(targetVertex).contains(sourceVertex))) {
+					Map<JobVertex, Set<ControlType>> controlTypeMap = controlEdges.computeIfAbsent(sourceVertex, k -> new HashMap());
 					Set<ControlType> controlTypes = controlTypeMap.computeIfAbsent(targetVertex, k -> new HashSet<>());
 					controlTypes.add(controlEdge.getControlType());
 				}
 			}
 		}
 
-		// convert inverse dependencies
-		Iterator<JobVertex> itVertex = jobGraph.getVertices().iterator();
-		while (itVertex.hasNext()) {
-			JobVertex producer = itVertex.next();
-			for (IntermediateDataSet dataSet : producer.getProducedDataSets()) {
-				for (JobEdge edge : dataSet.getConsumers()) {
-					JobVertex consumer = edge.getTarget();
-					if (!edgeControlTypes.containsKey(consumer) || !edgeControlTypes.get(consumer).containsKey(producer)) {
-						continue;
-					}
-
-					edgeControlTypes.get(consumer).remove(producer);
-
-					Map<JobVertex, Set<ControlType>> controlTypeMap = edgeControlTypes.computeIfAbsent(producer, k -> new HashMap<>());
-					Set<ControlType> controlTypes = controlTypeMap.computeIfAbsent(consumer, k -> new HashSet<>());
-					controlTypes.clear();
-					controlTypes.add(ControlType.CONCURRENT);
-				}
-			}
-		}
-
 		// connect the control edges between job vertices
-		for (JobVertex sourceVertex : edgeControlTypes.keySet()) {
-			for (Map.Entry<JobVertex, Set<ControlType>> entry : edgeControlTypes.get(sourceVertex).entrySet()) {
+		for (JobVertex sourceVertex : controlEdges.keySet()) {
+			for (Map.Entry<JobVertex, Set<ControlType>> entry : controlEdges.get(sourceVertex).entrySet()) {
 				JobVertex targetVertex = entry.getKey();
 				final ControlType controlType;
 				if (entry.getValue().contains(ControlType.CONCURRENT)) {

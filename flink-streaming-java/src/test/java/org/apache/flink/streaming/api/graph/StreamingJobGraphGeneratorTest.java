@@ -1317,7 +1317,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 							.put(new Integer[]{source1.getId(), hashJoin1.getId()}, SchedulingMode.CONCURRENT)
 							.put(new Integer[]{source2.getId(), hashJoin1.getId()}, SchedulingMode.CONCURRENT)
 							.toMap(),
-					new MapFiller<>(expectedControlEdges).put(source1Vertex, ControlType.CONCURRENT).toMap());
+					null);
 		}
 
 		// case
@@ -1349,8 +1349,74 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 			verifySchedulingDependencies(streamGraph, firstVertex, null, null);
 			verifySchedulingDependencies(streamGraph, sink1Vertex,
 					new MapFiller<>(expectedSchedulingModes)
-							.put(new Integer[]{hashJoin1.getId(), sink1.getId()}, SchedulingMode.CONCURRENT).toMap(),
-					new MapFiller<>(expectedControlEdges).put(firstVertex, ControlType.CONCURRENT).toMap());
+							.put(new Integer[]{hashJoin1.getId(), sink1.getId()}, SchedulingMode.SEQUENTIAL).toMap(),
+					null);
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+			env.setParallelism(1);
+			env.setMultiHeadChainMode(true);
+
+			DataStream<Integer> source1 = env.addSourceV2(new NoOpSourceV2Function());
+			DataStream<Integer> source2 = env.addSourceV2(new NoOpSourceV2Function());
+
+			DataStream<Integer> hashJoin1 = source1.connect(source2.rescale()).process(new NoOpCoProcessFuntion());
+			TwoInputTransformation hashJoin1Transformation = ((TwoInputTransformation) hashJoin1.getTransformation());
+			hashJoin1Transformation.setReadOrderHint(TwoInputTransformation.ReadOrder.INPUT2_FIRST);
+			hashJoin1Transformation.setDamBehavior(DamBehavior.MATERIALIZING);
+
+			DataStreamSink<Integer> sink1 = hashJoin1.addSink(new NoOpSinkFunction());
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			JobGraph jobGraph = streamGraph.getJobGraph();
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			assertEquals(2, verticesSorted.size());
+
+			int index = 0;
+			JobVertex source2Vertex = verticesSorted.get(index++);
+			JobVertex anotherVertex = verticesSorted.get(index++);
+
+			verifySchedulingDependencies(streamGraph, source2Vertex, null, null);
+			verifySchedulingDependencies(streamGraph, anotherVertex,
+					new MapFiller<>(expectedSchedulingModes)
+							.put(new Integer[]{source2.getId(), hashJoin1.getId()}, SchedulingMode.CONCURRENT).toMap(),
+					null);
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+			env.setParallelism(1);
+			env.setMultiHeadChainMode(true);
+
+			DataStream<Integer> source1 = env.addSourceV2(new NoOpSourceV2Function());
+			DataStream<Integer> source2 = env.addSourceV2(new NoOpSourceV2Function());
+
+			DataStream<Integer> hashJoin1 = source1.rescale().connect(source2).process(new NoOpCoProcessFuntion());
+			TwoInputTransformation hashJoin1Transformation = ((TwoInputTransformation) hashJoin1.getTransformation());
+			hashJoin1Transformation.setReadOrderHint(TwoInputTransformation.ReadOrder.INPUT2_FIRST);
+			hashJoin1Transformation.setDamBehavior(DamBehavior.MATERIALIZING);
+
+			DataStreamSink<Integer> sink1 = hashJoin1.addSink(new NoOpSinkFunction());
+
+			StreamGraph streamGraph = env.getStreamGraph();
+			JobGraph jobGraph = streamGraph.getJobGraph();
+
+			List<JobVertex> verticesSorted = jobGraph.getVerticesSortedTopologicallyFromSources();
+			assertEquals(2, verticesSorted.size());
+
+			int index = 0;
+			JobVertex source1Vertex = verticesSorted.get(index++);
+			JobVertex anotherVertex = verticesSorted.get(index++);
+
+			verifySchedulingDependencies(streamGraph, source1Vertex, null, null);
+			verifySchedulingDependencies(streamGraph, anotherVertex,
+					new MapFiller<>(expectedSchedulingModes)
+							.put(new Integer[]{source1.getId(), hashJoin1.getId()}, SchedulingMode.CONCURRENT).toMap(),
+					null);
 		}
 
 		// case
@@ -1394,7 +1460,7 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 							.put(new Integer[]{source2.getId(), hashJoin1.getId()}, SchedulingMode.SEQUENTIAL)
 							.put(new Integer[]{source2.getId(), hashJoin2.getId()}, SchedulingMode.SEQUENTIAL)
 							.toMap(),
-					new MapFiller<>(expectedControlEdges).put(source2Vertex, ControlType.CONCURRENT).toMap());
+					null);
 		}
 	}
 
