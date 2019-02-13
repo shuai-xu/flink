@@ -28,6 +28,7 @@ import org.junit.Test;
 import static org.apache.flink.table.catalog.CatalogTestUtil.compare;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -115,6 +116,36 @@ public class FlinkInMemoryCatalogTest extends CatalogTestBase {
 	public void testGetFunction_FunctionNotExistException_NoDb() {
 		exception.expect(FunctionNotExistException.class);
 		catalog.getFunction(nonExistObjectPath);
+	}
+
+	@Test
+	public void testAlterFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		CatalogFunction func = createFunction();
+		catalog.createFunction(path1, func, false);
+
+		compare(func, catalog.getFunction(path1));
+
+		CatalogFunction newFunc = createAnotherFunction();
+		catalog.alterFunction(path1, newFunc, false);
+
+		assertNotEquals(func, catalog.getFunction(path1));
+		compare(newFunc, catalog.getFunction(path1));
+	}
+
+	@Test
+	public void testAlterFunction_FunctionNotExistException() {
+		exception.expect(FunctionNotExistException.class);
+		catalog.alterFunction(nonExistDbPath, createFunction(), false);
+	}
+
+	@Test
+	public void testAlterFunction_FunctionNotExist_ignored() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.alterFunction(nonExistObjectPath, createFunction(), true);
+
+		assertFalse(catalog.functionExists(nonExistObjectPath));
 	}
 
 	@Test

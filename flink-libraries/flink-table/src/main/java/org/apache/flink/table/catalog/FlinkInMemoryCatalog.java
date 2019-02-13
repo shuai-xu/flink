@@ -108,6 +108,15 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	}
 
 	@Override
+	public void alterFunction(ObjectPath functionPath, CatalogFunction newFunction, boolean ignoreIfNotExists) throws FunctionNotExistException {
+		if (functionExists(functionPath)) {
+			functions.put(functionPath, newFunction.deepCopy());
+		} else if (!ignoreIfNotExists) {
+			throw new FunctionNotExistException(catalogName, functionPath.getFullName());
+		}
+	}
+
+	@Override
 	public void dropFunction(ObjectPath path, boolean ignoreIfNotExists) throws FunctionNotExistException {
 		if (functionExists(path)) {
 			functions.remove(path);

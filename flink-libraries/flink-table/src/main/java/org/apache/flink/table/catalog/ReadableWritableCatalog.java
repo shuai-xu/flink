@@ -240,6 +240,18 @@ public interface ReadableWritableCatalog extends ReadableCatalog {
 		throws FunctionAlreadyExistException, DatabaseNotExistException;
 
 	/**
+	 * Modifies an existing function.
+	 *
+	 * @param functionPath		Path of the function
+	 * @param newFunction		The new function to register
+	 * @param ignoreIfNotExists    Flag to specify behavior if the function does not exist:
+	 *                           if set to false, throw an exception,
+	 *                           if set to true, nothing happens.
+	 * @throws FunctionNotExistException		Thrown if the function does not exist
+	 */
+	void alterFunction(ObjectPath functionPath, CatalogFunction newFunction, boolean ignoreIfNotExists) throws FunctionNotExistException;
+
+	/**
 	 * Drops a function.
 	 *
 	 * @param functionPath		Path of the function.

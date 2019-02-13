@@ -375,6 +375,11 @@ public class HiveCatalog extends HiveCatalogBase {
 	}
 
 	@Override
+	public void alterFunction(ObjectPath functionPath, CatalogFunction newFunction, boolean ignoreIfNotExists) throws FunctionNotExistException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
 	public void dropFunction(ObjectPath functionPath, boolean ignoreIfNotExists) throws FunctionNotExistException {
 		throw new UnsupportedOperationException();
 	}
