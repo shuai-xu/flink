@@ -65,14 +65,26 @@ class TypesUtil(object):
                 }
 
                 _sql_complex_type_py2j_map = {
-                    DecimalType: j_sql_decimal
+                    DecimalType: j_sql_decimal,
+                    RowType: _gateway.jvm.org.apache.flink.table.api.types.RowType
                 }
 
-        # DecimalType: j_sql_decimal(py_sql_type.precision, py_sql_type.scale)
         # TODO: other complex types
         if isinstance(py_sql_type, DecimalType):
             j_clz = _sql_complex_type_py2j_map.get(type(py_sql_type))
             return j_clz(py_sql_type.precision, py_sql_type.scale)
+        if isinstance(py_sql_type, RowType):
+            j_types = [_sql_basic_types_py2j_map[type(pt)] for pt in py_sql_type.data_types]
+            j_types_arr = TypesUtil._convert_py_list_to_java_array(
+                'org.apache.flink.table.api.types.DataType',
+                j_types
+            )
+            j_names_arr = TypesUtil._convert_py_list_to_java_array(
+                'java.lang.String',
+                py_sql_type.fields_names
+            )
+            j_clz = _sql_complex_type_py2j_map.get(type(py_sql_type))
+            return j_clz(j_types_arr, j_names_arr)
 
         return _sql_basic_types_py2j_map.get(type(py_sql_type))
 

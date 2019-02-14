@@ -36,3 +36,5 @@ out/
 *.iws
 tools/flink
 tools/flink-*
+flink-python-api/lib/pyflink.zip
+
