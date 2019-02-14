@@ -20,8 +20,6 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
@@ -31,6 +29,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobNativeMemory;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -49,15 +48,6 @@ public class NativeMemoryAdjuster implements Resolver {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(NativeMemoryAdjuster.class);
 
-	private static final ConfigOption<Double> NATIVE_SCALE_OPTION =
-		ConfigOptions.key("native.memory.scale.ratio").defaultValue(0.5);
-
-	private static final ConfigOption<Long> NATIVE_SCALE_TIME_OUT_OPTION =
-		ConfigOptions.key("native.memory.scale.timeout.ms").defaultValue(180000L);
-
-	private static final ConfigOption<Long> NATIVE_SCALE_OPPORTUNISTIC_ACTION_DELAY =
-		ConfigOptions.key("native.memory.scale.opportunistic-action.delay.ms").defaultValue(15 * 60 * 1000L);
-
 	private JobID jobID;
 	private HealthMonitor monitor;
 	private double scaleRatio;
@@ -74,11 +64,11 @@ public class NativeMemoryAdjuster implements Resolver {
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(NATIVE_SCALE_OPTION);
-		this.timeout = monitor.getConfig().getLong(NATIVE_SCALE_TIME_OUT_OPTION);
+		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO);
+		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
-		this.opportunisticActionDelay = monitor.getConfig().getLong(NATIVE_SCALE_OPPORTUNISTIC_ACTION_DELAY);
+		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
 
 		vertexMaxOveruses = new HashMap<>();
 		opportunisticActionDelayStart = -1;
@@ -127,7 +117,7 @@ public class NativeMemoryAdjuster implements Resolver {
 		for (JobVertexID jvId : vertexMaxOveruses.keySet()) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			int targetNativeMemory = (int) Math.ceil((vertexMaxOveruses.get(jvId) + currentResource.getNativeMemory()) * (1.0 + scaleRatio));
+			int targetNativeMemory = (int) Math.ceil((vertexMaxOveruses.get(jvId) + currentResource.getNativeMemory()) * scaleRatio);
 			LOGGER.debug("Target native memory for vertex {} is {}.", jvId, targetNativeMemory);
 			ResourceSpec targetResource = new ResourceSpec.Builder(currentResource)
 					.setNativeMemoryInMB(targetNativeMemory).build();

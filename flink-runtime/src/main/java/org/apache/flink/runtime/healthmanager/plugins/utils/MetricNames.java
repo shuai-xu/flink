@@ -38,4 +38,9 @@ public class MetricNames {
 
 	public static final String SOURCE_DELAY = "fetched_delay";
 
+	public static final String TM_CPU_CAPACITY = "Status.ProcessTree.CPU.Allocated";
+	public static final String TM_CPU_USAGE = "Status.ProcessTree.CPU.Usage";
+	public static final String TM_MEM_CAPACITY = "Status.ProcessTree.Memory.Allocated";
+	public static final String TM_MEM_USAGE_TOTAL = "Status.ProcessTree.Memory.RSS";
+	public static final String FULL_GC_COUNT_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Count";
 }

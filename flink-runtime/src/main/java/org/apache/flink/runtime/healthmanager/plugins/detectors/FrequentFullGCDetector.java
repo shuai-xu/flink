@@ -30,6 +30,8 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -53,14 +55,10 @@ public class FrequentFullGCDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(FrequentFullGCDetector.class);
 
-	private static final String FULL_GC_COUNT_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Count";
-
 	private static final ConfigOption<Integer> FULL_GC_COUNT_THRESHOLD =
 		ConfigOptions.key("healthmonitor.full-gc-detector.threshold").defaultValue(3);
 	private static final ConfigOption<Integer> FULL_GC_COUNT_SEVERE_THRESHOLD =
 		ConfigOptions.key("healthmonitor.full-gc-detector.severe-threshold").defaultValue(10);
-	private static final ConfigOption<Long> FULL_GC_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.full-gc-detector.interval.ms").defaultValue(60 * 1000L);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
@@ -83,9 +81,9 @@ public class FrequentFullGCDetector implements Detector {
 
 		gcCountThreshold = monitor.getConfig().getInteger(FULL_GC_COUNT_THRESHOLD);
 		gcCountSevereThreshold = monitor.getConfig().getInteger(FULL_GC_COUNT_SEVERE_THRESHOLD);
-		gcCheckInterval = monitor.getConfig().getLong(FULL_GC_CHECK_INTERVAL);
+		gcCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
 
-		gcMetricSubscription = metricProvider.subscribeAllTMMetric(jobID, FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.RANGE);
+		gcMetricSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.RANGE);
 	}
 
 	@Override

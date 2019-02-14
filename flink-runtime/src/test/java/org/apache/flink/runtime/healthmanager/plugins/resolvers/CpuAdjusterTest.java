@@ -30,6 +30,8 @@ import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.CpuHighDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.CpuLowDetector;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
@@ -72,8 +74,8 @@ public class CpuAdjusterTest {
 		// job level configuration.
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setString("cpu.scale.timeout.ms", "10000");
-		config.setString("cpu.scale.ratio", "1");
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, CpuHighDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
 
@@ -155,10 +157,10 @@ public class CpuAdjusterTest {
 		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_USAGE), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(usageSub);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_CAPACITY), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(capacitySub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
@@ -233,8 +235,8 @@ public class CpuAdjusterTest {
 		// job level configuration.
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setString("cpu.scale.timeout.ms", "10000");
-		config.setString("cpu.scale.ratio", "1");
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, CpuLowDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
 
@@ -295,10 +297,10 @@ public class CpuAdjusterTest {
 		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_USAGE), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(usageSub);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_CAPACITY), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(capacitySub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))

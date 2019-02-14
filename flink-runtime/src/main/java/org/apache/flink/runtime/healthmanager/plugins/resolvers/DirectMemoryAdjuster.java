@@ -20,8 +20,6 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
@@ -30,6 +28,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobDirectMemory;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDirectOOM;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -47,12 +46,6 @@ public class DirectMemoryAdjuster implements Resolver {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DirectMemoryAdjuster.class);
 
-	private static final ConfigOption<Double> DIRECT_SCALE_OPTION =
-		ConfigOptions.key("direct.memory.scale.ratio").defaultValue(0.5);
-
-	private static final ConfigOption<Long> DIRECT_SCALE_TIME_OUT_OPTION =
-		ConfigOptions.key("direct.memory.scale.timeout.ms").defaultValue(180000L);
-
 	private JobID jobID;
 	private HealthMonitor monitor;
 	private double scaleRatio;
@@ -65,8 +58,8 @@ public class DirectMemoryAdjuster implements Resolver {
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(DIRECT_SCALE_OPTION);
-		this.timeout = monitor.getConfig().getLong(DIRECT_SCALE_TIME_OUT_OPTION);
+		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO);
+		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 	}
@@ -102,10 +95,9 @@ public class DirectMemoryAdjuster implements Resolver {
 			int targetDirectMemory = (int) (currentResource.getDirectMemory() * scaleRatio);
 			LOGGER.debug("Target direct memory for vertex {} is {}.", jvId, targetDirectMemory);
 			ResourceSpec targetResource =
-				new ResourceSpec.Builder()
+				new ResourceSpec.Builder(currentResource)
 					.setDirectMemoryInMB(targetDirectMemory)
-					.build()
-					.merge(currentResource);
+					.build();
 
 			adjustJobDirectMemory.addVertex(
 				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);

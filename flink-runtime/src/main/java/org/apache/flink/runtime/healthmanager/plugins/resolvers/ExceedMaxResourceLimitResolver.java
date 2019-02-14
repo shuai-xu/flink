@@ -29,6 +29,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.RescaleJobParallelism;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobExceedMaxResourceLimit;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -48,9 +49,6 @@ public class ExceedMaxResourceLimitResolver implements Resolver {
 	private static final ConfigOption<Double> RATIO_OPTION =
 		ConfigOptions.key("exceed-max-total-resource.rescale.ratio").defaultValue(0.9);
 
-	private static final ConfigOption<Long> TIME_OUT_OPTION =
-		ConfigOptions.key("exceed-max-total-resource.rescale.timeout.ms").defaultValue(180000L);
-
 	private JobID jobID;
 	private HealthMonitor monitor;
 	private double ratio;
@@ -64,7 +62,7 @@ public class ExceedMaxResourceLimitResolver implements Resolver {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
 		this.ratio = monitor.getConfig().getDouble(RATIO_OPTION);
-		this.timeout = monitor.getConfig().getLong(TIME_OUT_OPTION);
+		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 	}

@@ -21,8 +21,6 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
@@ -85,9 +83,6 @@ import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.W
 public class ParallelismScaler implements Resolver {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ParallelismScaler.class);
-
-	private static final ConfigOption<Long> PARALLELISM_SCALE_TIME_OUT_OPTION =
-		ConfigOptions.key("parallelism.scale.timeout.ms").defaultValue(180000L);
 
 	private JobID jobID;
 	private HealthMonitor monitor;
@@ -152,7 +147,7 @@ public class ParallelismScaler implements Resolver {
 
 		this.upScaleTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO);
 		this.downScaleTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO);
-		this.timeout = monitor.getConfig().getLong(PARALLELISM_SCALE_TIME_OUT_OPTION);
+		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT);
 		this.checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);

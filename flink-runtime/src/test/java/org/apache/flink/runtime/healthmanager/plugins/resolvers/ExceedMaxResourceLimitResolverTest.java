@@ -28,6 +28,7 @@ import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.ExceedMaxResourceLimitDetector;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
@@ -64,8 +65,8 @@ public class ExceedMaxResourceLimitResolverTest {
 		// job level configuration.
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setString("exceed-max-total-resource.rescale.timeout.ms", "10000");
-		config.setString("exceed-max-total-resource.rescale.ratio", "0.5");
+		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000L);
+		config.setDouble("exceed-max-total-resource.rescale.ratio", 0.5);
 		config.setInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB, 10);
 		config.setDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE, 10.0);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, ExceedMaxResourceLimitDetector.class.getCanonicalName());

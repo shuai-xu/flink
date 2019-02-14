@@ -29,6 +29,8 @@ import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
@@ -68,8 +70,8 @@ public class NativeMemoryAdjusterTest {
 		// job level configuration.
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setString("native.memory.scale.timeout.ms", "10000");
-		config.setString("native.memory.scale.ratio", "1");
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, MemoryOveruseDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, NativeMemoryAdjuster.class.getCanonicalName());
 
@@ -152,10 +154,10 @@ public class NativeMemoryAdjusterTest {
 		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.Memory.RSS"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_USAGE_TOTAL), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(usageSub);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.Memory.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_CAPACITY), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(capacitySub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))

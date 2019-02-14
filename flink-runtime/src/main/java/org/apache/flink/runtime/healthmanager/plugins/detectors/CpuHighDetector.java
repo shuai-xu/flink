@@ -30,6 +30,8 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -51,11 +53,6 @@ public class CpuHighDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CpuHighDetector.class);
 
-	private static final String TM_CPU_CAPACITY = "Status.ProcessTree.CPU.Allocated";
-	private static final String TM_CPU_USAGE = "Status.ProcessTree.CPU.Usage";
-
-	private static final ConfigOption<Long> HIGH_CPU_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.high-cpu-detector.interval.ms").defaultValue(60 * 1000L);
 	private static final ConfigOption<Double> HIGH_CPU_THRESHOLD =
 		ConfigOptions.key("healthmonitor.high-cpu-detector.threashold").defaultValue(0.8);
 	private static final ConfigOption<Double> HIGH_CPU_SEVERE_THRESHOLD =
@@ -80,12 +77,12 @@ public class CpuHighDetector implements Detector {
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
-		checkInterval = monitor.getConfig().getLong(HIGH_CPU_CHECK_INTERVAL);
+		checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
 		threshold = monitor.getConfig().getDouble(HIGH_CPU_THRESHOLD);
 		severeThreshold = monitor.getConfig().getDouble(HIGH_CPU_SEVERE_THRESHOLD);
 
-		tmCpuAllocatedSubscription = metricProvider.subscribeAllTMMetric(jobID, TM_CPU_CAPACITY, checkInterval, TimelineAggType.AVG);
-		tmCpuUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, TM_CPU_USAGE, checkInterval, TimelineAggType.AVG);
+		tmCpuAllocatedSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_CPU_CAPACITY, checkInterval, TimelineAggType.AVG);
+		tmCpuUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_CPU_USAGE, checkInterval, TimelineAggType.AVG);
 	}
 
 	@Override

@@ -49,4 +49,34 @@ public class HealthMonitorOptions {
 	 */
 	public static final ConfigOption<Integer> MAX_PARTITION_PER_TASK =
 			ConfigOptions.key("parallelism.scale.max.partition.per.task").defaultValue(8);
+
+	/**
+	 * parallelism scale time out.
+	 */
+	public static final ConfigOption<Long> PARALLELISM_SCALE_TIME_OUT =
+			ConfigOptions.key("parallelism.scale.timeout.ms").defaultValue(180000L);
+
+	/**
+	 * resource scale ratio.
+	 */
+	public static final ConfigOption<Double> RESOURCE_SCALE_RATIO =
+			ConfigOptions.key("resource.scale.ratio").defaultValue(1.5);
+
+	/**
+	 * resource check interval.
+	 */
+	public static final ConfigOption<Long> RESOURCE_SCALE_INTERVAL =
+		ConfigOptions.key("resource.scale.interval.ms").defaultValue(180 * 1000L);
+
+	/**
+	 * resource opportunistic action delay.
+	 */
+	public static final ConfigOption<Long> RESOURCE_OPPORTUNISTIC_ACTION_DELAY =
+		ConfigOptions.key("resource.opportunistic-action.delay.second").defaultValue(24 * 60 * 60 * 1000L);
+
+	/**
+	 * resource scale time out.
+	 */
+	public static final ConfigOption<Long> RESOURCE_SCALE_TIME_OUT =
+		ConfigOptions.key("resource.scale.timeout.ms").defaultValue(180000L);
 }

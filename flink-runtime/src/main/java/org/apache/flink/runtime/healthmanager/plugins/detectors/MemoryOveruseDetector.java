@@ -30,6 +30,8 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -47,12 +49,6 @@ import java.util.Map;
 public class MemoryOveruseDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MemoryOveruseDetector.class);
-
-	private static final String TM_MEM_CAPACITY = "Status.ProcessTree.Memory.Allocated";
-	private static final String TM_MEM_USAGE_TOTAL = "Status.ProcessTree.Memory.RSS";
-
-	private static final ConfigOption<Long> MEMORY_OVERUSE_CHECK_INTERVAL =
-		ConfigOptions.key("healthmonitor.memory-overuse-detector.interval.ms").defaultValue(60 * 1000L);
 
 	private static final ConfigOption<Double> MEMORY_OVERUSE_SEVERE_THRESHOLD =
 		ConfigOptions.key("healthmonitor.memory-overuse-detector.severe.threshold").defaultValue(1.2);
@@ -75,11 +71,11 @@ public class MemoryOveruseDetector implements Detector {
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
-		overuseCheckInterval = monitor.getConfig().getLong(MEMORY_OVERUSE_CHECK_INTERVAL);
+		overuseCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
 		severeThreshold = monitor.getConfig().getDouble(MEMORY_OVERUSE_SEVERE_THRESHOLD);
 
-		tmMemCapacitySubscription = metricProvider.subscribeAllTMMetric(jobID, TM_MEM_CAPACITY, overuseCheckInterval, TimelineAggType.MAX);
-		tmMemUsageTotalSubscription = metricProvider.subscribeAllTMMetric(jobID, TM_MEM_USAGE_TOTAL, overuseCheckInterval, TimelineAggType.MAX);
+		tmMemCapacitySubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_CAPACITY, overuseCheckInterval, TimelineAggType.MAX);
+		tmMemUsageTotalSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_USAGE_TOTAL, overuseCheckInterval, TimelineAggType.MAX);
 	}
 
 	@Override

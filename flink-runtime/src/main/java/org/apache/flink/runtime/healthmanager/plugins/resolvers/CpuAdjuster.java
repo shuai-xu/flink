@@ -20,8 +20,6 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
@@ -32,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobCpu;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
@@ -49,15 +48,6 @@ public class CpuAdjuster implements Resolver {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CpuAdjuster.class);
 
-	private static final ConfigOption<Double> CPU_SCALE_RATIO =
-		ConfigOptions.key("cpu.scale.ratio").defaultValue(0.5);
-
-	private static final ConfigOption<Long> CPU_SCALE_TIME_OUT_OPTION =
-		ConfigOptions.key("cpu.scale.timeout.ms").defaultValue(180000L);
-
-	private static final ConfigOption<Long> CPU_SCALE_OPPORTUNISTIC_ACTION_DELAY =
-		ConfigOptions.key("cpu.scale.opportunistic-action.delay.ms").defaultValue(15 * 60 * 1000L);
-
 	private JobID jobID;
 	private HealthMonitor monitor;
 	private double scaleRatio;
@@ -74,11 +64,11 @@ public class CpuAdjuster implements Resolver {
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(CPU_SCALE_RATIO);
-		this.timeout = monitor.getConfig().getLong(CPU_SCALE_TIME_OUT_OPTION);
+		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO);
+		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
-		this.opportunisticActionDelay = monitor.getConfig().getLong(CPU_SCALE_OPPORTUNISTIC_ACTION_DELAY);
+		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
 
 		vertexMaxUtility = new HashMap<>();
 		opportunisticActionDelayStart = -1;
@@ -140,7 +130,7 @@ public class CpuAdjuster implements Resolver {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
 			double utility = vertexMaxUtility.get(jvId);
-			double targetCpu = currentResource.getCpuCores() * Math.max(1.0, utility) * (1.0 + scaleRatio);
+			double targetCpu = currentResource.getCpuCores() * Math.max(1.0, utility) * scaleRatio;
 			LOGGER.debug("Target cpu for vertex {} is {}.", jvId, targetCpu);
 			ResourceSpec targetResource = new ResourceSpec.Builder(currentResource)
 					.setCpuCores(targetCpu).build();
