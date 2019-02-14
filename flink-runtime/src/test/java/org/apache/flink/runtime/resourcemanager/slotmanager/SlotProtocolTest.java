@@ -50,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -101,7 +102,7 @@ public class SlotProtocolTest extends TestLogger {
 
 			slotManager.registerSlotRequest(slotRequest);
 
-			verify(resourceManagerActions).allocateResource(eq(slotRequest.getResourceProfile()));
+			verify(resourceManagerActions).allocateResource(eq(slotRequest.getResourceProfile()), anySet());
 
 			// slot becomes available
 			TaskExecutorGateway taskExecutorGateway = mock(TaskExecutorGateway.class);

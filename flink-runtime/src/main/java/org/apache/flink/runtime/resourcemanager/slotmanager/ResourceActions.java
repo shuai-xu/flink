@@ -23,6 +23,9 @@ import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.instance.InstanceID;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
+
+import java.util.Set;
 
 /**
  * Resource related actions which the {@link SlotManager} can perform.
@@ -46,6 +49,15 @@ public interface ResourceActions {
 	void allocateResource(ResourceProfile resourceProfile) throws ResourceManagerException;
 
 	/**
+	 * Requests to allocate a resource with the given {@link ResourceProfile} and {@link SlotTag}s.
+	 *
+	 * @param resourceProfile for the to be allocated resource
+	 * @param tags for the to be allocated resource
+	 * @throws ResourceManagerException if the resource cannot be allocated
+	 */
+	void allocateResource(ResourceProfile resourceProfile, Set<SlotTag> tags) throws ResourceManagerException;
+
+	/**
 	 * Notifies that an allocation failure has occurred.
 	 *
 	 * @param jobId to which the allocation belonged
@@ -60,4 +72,12 @@ public interface ResourceActions {
 	 * @param resourceProfile for the to be allocated resource
 	 */
 	void cancelResourceAllocation(ResourceProfile resourceProfile);
+
+	/**
+	 * Cancel a previous allocation of a resource with the given {@link ResourceProfile} and {@link SlotTag}s.
+	 *
+	 * @param resourceProfile for the to be allocated resource
+	 * @param tags for the to be allocated resource
+	 */
+	void cancelResourceAllocation(ResourceProfile resourceProfile, Set<SlotTag> tags);
 }

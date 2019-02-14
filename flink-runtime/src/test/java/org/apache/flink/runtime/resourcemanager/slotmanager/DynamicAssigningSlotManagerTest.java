@@ -49,6 +49,7 @@ package org.apache.flink.runtime.resourcemanager.slotmanager;
 	import static org.junit.Assert.assertNotNull;
 	import static org.mockito.Matchers.any;
 	import static org.mockito.Matchers.anyLong;
+	import static org.mockito.Matchers.anySet;
 	import static org.mockito.Matchers.anyString;
 	import static org.mockito.Matchers.eq;
 	import static org.mockito.Mockito.mock;
@@ -168,7 +169,7 @@ public class DynamicAssigningSlotManagerTest {
 
 			slotManager.registerSlotRequest(slotRequest2);
 			assertEquals(1, slotManager.getNumberFreeSlots());
-			verify(resourceManagerActions, times(1)).allocateResource(eq(resourceProfile2));
+			verify(resourceManagerActions, times(1)).allocateResource(eq(resourceProfile2), anySet());
 		}
 	}
 
@@ -222,8 +223,8 @@ public class DynamicAssigningSlotManagerTest {
 			slotManager.registerSlotRequest(slotRequest1);
 			slotManager.registerSlotRequest(slotRequest2);
 
-			verify(resourceManagerActions, times(1)).allocateResource(DEFAULT_TESTING_PROFILE);
-			verify(resourceManagerActions, times(1)).allocateResource(resourceProfile2);
+			verify(resourceManagerActions, times(1)).allocateResource(eq(DEFAULT_TESTING_PROFILE), anySet());
+			verify(resourceManagerActions, times(1)).allocateResource(eq(resourceProfile2), anySet());
 
 			slotManager.registerTaskManager(
 				taskExecutorConnection,

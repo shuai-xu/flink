@@ -46,6 +46,7 @@ import org.apache.flink.runtime.resourcemanager.JobLeaderIdService;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
@@ -90,6 +91,7 @@ import javax.annotation.Nullable;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -718,6 +720,35 @@ public class YarnResourceManagerTest extends TestLogger {
 			CompletableFuture<Map<Long, Exception>> getTotalResourceLimitExceptionsFuture3 =
 				resourceManager.requestTotalResourceLimitExceptions(TIMEOUT);
 			Assert.assertEquals(1, getTotalResourceLimitExceptionsFuture3.get().size());
+		}};
+	}
+
+	@Test
+	public void testSlotWithSameResourceDifferentTags() throws Exception {
+		new Context(){{
+			startResourceManager();
+
+			JobID jobId = new JobID();
+			SlotTag tag1 = new SlotTag("tag1", jobId);
+			SlotTag tag2 = new SlotTag("tag2", jobId);
+			ResourceProfile resourceProfile = new ResourceProfile(0.1, 100);
+
+			CompletableFuture<?> registerSlotRequestFuture1 = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.registerSlotRequest(
+					new SlotRequest(jobId, new AllocationID(), resourceProfile, taskHost, Arrays.asList(tag1)));
+				return null;
+			});
+			registerSlotRequestFuture1.get();
+
+			CompletableFuture<?> registerSlotRequestFuture2 = resourceManager.runInMainThread(() -> {
+				rmServices.slotManager.registerSlotRequest(
+					new SlotRequest(jobId, new AllocationID(), resourceProfile, taskHost, Arrays.asList(tag2)));
+				return null;
+			});
+			registerSlotRequestFuture2.get();
+
+			Mockito.verify(mockResourceManagerClient, Mockito.times(2))
+				.addContainerRequest(any(AMRMClient.ContainerRequest.class));
 		}};
 	}
 }

@@ -53,6 +53,7 @@ import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
 import org.apache.flink.runtime.resourcemanager.exceptions.UnknownTaskExecutorException;
 import org.apache.flink.runtime.resourcemanager.placementconstraint.PlacementConstraint;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.resourcemanager.registration.JobManagerRegistration;
 import org.apache.flink.runtime.resourcemanager.registration.WorkerRegistration;
 import org.apache.flink.runtime.resourcemanager.slotmanager.ResourceActions;
@@ -78,6 +79,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1065,6 +1067,16 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 	public abstract void startNewWorker(ResourceProfile resourceProfile);
 
 	/**
+	 * Allocates a resource using the resource profile and slot tags.
+	 *
+	 * @param resourceProfile The resource description
+	 * @param tags Slot tags
+	 */
+	public void startNewWorker(ResourceProfile resourceProfile, Set<SlotTag> tags) {
+		startNewWorker(resourceProfile);
+	}
+
+	/**
 	 * Callback when a worker was started.
 	 * @param resourceID The worker resource id
 	 */
@@ -1085,6 +1097,17 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 	 */
 	@VisibleForTesting
 	public abstract void cancelNewWorker(ResourceProfile resourceProfile);
+
+	/**
+	 * Cancel a previous resource allocation using the resource profile and slot tags.
+	 *
+	 * @param resourceProfile The resource description
+	 * @param tags Slot tags
+	 */
+	@VisibleForTesting
+	public void cancelNewWorker(ResourceProfile resourceProfile, Set<SlotTag> tags) {
+		cancelNewWorker(resourceProfile);
+	}
 
 	/**
 	 * Gets the number of allocated workers.
@@ -1114,6 +1137,12 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 		}
 
 		@Override
+		public void allocateResource(ResourceProfile resourceProfile, Set<SlotTag> tags) throws ResourceManagerException {
+			validateRunsInMainThread();
+			startNewWorker(resourceProfile, tags);
+		}
+
+		@Override
 		public void notifyAllocationFailure(JobID jobId, AllocationID allocationId, Exception cause) {
 			validateRunsInMainThread();
 
@@ -1127,6 +1156,12 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 		public void cancelResourceAllocation(ResourceProfile resourceProfile) {
 			validateRunsInMainThread();
 			cancelNewWorker(resourceProfile);
+		}
+
+		@Override
+		public void cancelResourceAllocation(ResourceProfile resourceProfile, Set<SlotTag> tags) {
+			validateRunsInMainThread();
+			cancelNewWorker(resourceProfile, tags);
 		}
 	}
 

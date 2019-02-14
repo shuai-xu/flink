@@ -41,6 +41,7 @@ import org.apache.flink.runtime.resourcemanager.JobLeaderIdService;
 import org.apache.flink.runtime.resourcemanager.ResourceManager;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerConfiguration;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 import org.apache.flink.runtime.resourcemanager.slotmanager.SlotManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.RpcService;
@@ -69,9 +70,11 @@ import javax.annotation.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -150,9 +153,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	 **/
 	private final ConcurrentHashMap<Integer, AtomicInteger> numPendingContainerRequests;
 
-	private final Map<TaskManagerResource, Integer> resourceToPriorityMap = new HashMap<>();
+	private final Map<Tuple2<TaskManagerResource, Set<SlotTag>>, Integer> resourceAndTagsToPriorityMap = new HashMap<>();
 
-	private final Map<Integer, TaskManagerResource> priorityToResourceMap = new HashMap<>();
+	private final Map<Integer, Tuple2<TaskManagerResource, Set<SlotTag>>> priorityToResourceAndTagsMap = new HashMap<>();
 
 	/**
 	 * The number of slots not used by any request.
@@ -366,11 +369,15 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 	@Override
 	public void startNewWorker(ResourceProfile resourceProfile) {
+		startNewWorker(resourceProfile, Collections.emptySet());
+	}
+
+	@Override
+	public void startNewWorker(ResourceProfile resourceProfile, Set<SlotTag> tags) {
 		// Priority for worker containers - priorities are intra-application
 		int slotNumber = calculateSlotNumber(resourceProfile);
 		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(flinkConfig, resourceProfile, slotNumber);
-		int priority = generatePriority(tmResource);
-
+		int priority = generatePriority(tmResource, tags);
 		Resource containerResource = generateContainerResource(tmResource);
 
 		int spareSlots = priorityToSpareSlots.getOrDefault(priority, 0);
@@ -421,9 +428,14 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 	@Override
 	public void cancelNewWorker(ResourceProfile resourceProfile) {
+		cancelNewWorker(resourceProfile, Collections.emptySet());
+	}
+
+	@Override
+	public void cancelNewWorker(ResourceProfile resourceProfile, Set<SlotTag> tags) {
 		int slotNumber = calculateSlotNumber(resourceProfile);
 		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(flinkConfig, resourceProfile, slotNumber);
-		int priority = generatePriority(tmResource);
+		int priority = generatePriority(tmResource, tags);
 		Resource containerResource = generateContainerResource(tmResource);
 
 		AtomicInteger pendingNumber = numPendingContainerRequests.get(priority);
@@ -482,7 +494,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 					// We only request new container for it when the container has not register to the RM as otherwise
 					// the job master will ask for it when failover.
 					if (!registered && yarnWorkerNode != null) {
-						if (priorityToResourceMap.containsKey(yarnWorkerNode.getContainer().getPriority().getPriority())) {
+						if (priorityToResourceAndTagsMap.containsKey(yarnWorkerNode.getContainer().getPriority().getPriority())) {
 							// Container completed unexpectedly ~> start a new one
 							final Container container = yarnWorkerNode.getContainer();
 							internalRequestYarnContainer(
@@ -675,7 +687,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		}
 
 		for (Map.Entry<Integer, AtomicInteger> entry : numPendingContainerRequests.entrySet()) {
-			TaskManagerResource taskManagerResource = priorityToResourceMap.get(entry.getKey());
+			Tuple2<TaskManagerResource, Set<SlotTag>> tuple = priorityToResourceAndTagsMap.get(entry.getKey());
+			TaskManagerResource taskManagerResource = tuple == null ? null : tuple.f0;
 			int num = entry.getValue().get();
 			currentTotalCpu += taskManagerResource.getContainerCpuCores() * num;
 			currentTotalMemory += taskManagerResource.getTotalContainerMemory() * num;
@@ -775,14 +788,15 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	 * @param tmResource The resource profile of a request
 	 * @return The priority of this resource profile.
 	 */
-	private int generatePriority(TaskManagerResource tmResource) {
-		Integer priority = resourceToPriorityMap.get(tmResource);
+	private int generatePriority(TaskManagerResource tmResource, Set<SlotTag> tags) {
+		Tuple2<TaskManagerResource, Set<SlotTag>> tuple = new Tuple2<>(tmResource, tags);
+		Integer priority = resourceAndTagsToPriorityMap.get(tuple);
 		if (priority != null) {
 			return priority;
 		} else {
 			priority = latestPriority++;
-			resourceToPriorityMap.put(tmResource, priority);
-			priorityToResourceMap.put(priority, tmResource);
+			resourceAndTagsToPriorityMap.put(tuple, priority);
+			priorityToResourceAndTagsMap.put(priority, tuple);
 			return priority;
 		}
 	}
@@ -792,7 +806,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	 */
 	private void internalRequestYarnContainer(Resource resource, Priority priority) {
 		AtomicInteger pendingNumber = numPendingContainerRequests.get(priority.getPriority());
-		TaskManagerResource tmResource = priorityToResourceMap.get(priority.getPriority());
+		Tuple2<TaskManagerResource, Set<SlotTag>> tuple = priorityToResourceAndTagsMap.get(priority.getPriority());
+		TaskManagerResource tmResource = tuple == null ? null : tuple.f0;
 		if (pendingNumber == null || tmResource == null) {
 			log.error("There is no previous allocation with id {} for {}.", priority, resource);
 		} else {
@@ -875,7 +890,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	}
 
 	private TaskManagerResource getTaskManagerResource(int priority) {
-		TaskManagerResource tmResource = priorityToResourceMap.get(priority);
+		Tuple2<TaskManagerResource, Set<SlotTag>> tuple = priorityToResourceAndTagsMap.get(priority);
+		TaskManagerResource tmResource = tuple == null ? null : tuple.f0;
 		if (tmResource != null) {
 			return tmResource;
 		}

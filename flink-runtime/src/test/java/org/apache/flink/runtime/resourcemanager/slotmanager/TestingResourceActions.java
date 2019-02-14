@@ -23,9 +23,11 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.instance.InstanceID;
+import org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTag;
 
 import javax.annotation.Nonnull;
 
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -64,11 +66,19 @@ public class TestingResourceActions implements ResourceActions {
 	}
 
 	@Override
+	public void allocateResource(ResourceProfile resourceProfile, Set<SlotTag> tags) {
+	}
+
+	@Override
 	public void notifyAllocationFailure(JobID jobId, AllocationID allocationId, Exception cause) {
 		notifyAllocationFailureConsumer.accept(Tuple3.of(jobId, allocationId, cause));
 	}
 
 	@Override
 	public void cancelResourceAllocation(ResourceProfile resourceProfile) {
+	}
+
+	@Override
+	public void cancelResourceAllocation(ResourceProfile resourceProfile, Set<SlotTag> tags) {
 	}
 }

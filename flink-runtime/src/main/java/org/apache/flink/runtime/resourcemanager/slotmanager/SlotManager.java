@@ -53,6 +53,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -388,7 +389,8 @@ public class SlotManager implements AutoCloseable {
 			if (pendingSlotRequest.isAssigned()) {
 				cancelPendingSlotRequest(pendingSlotRequest);
 			} else {
-				resourceActions.cancelResourceAllocation(pendingSlotRequest.getResourceProfile());
+				resourceActions.cancelResourceAllocation(pendingSlotRequest.getResourceProfile(),
+					new HashSet<>(pendingSlotRequest.getSlotRequest().getTags()));
 			}
 
 			return true;
@@ -802,7 +804,8 @@ public class SlotManager implements AutoCloseable {
 			LOG.info("Assigning slot {} to {}", taskManagerSlot.getSlotId(), pendingSlotRequest.getAllocationId());
 			allocateSlot(taskManagerSlot, pendingSlotRequest);
 		} else {
-			resourceActions.allocateResource(pendingSlotRequest.getResourceProfile());
+			resourceActions.allocateResource(pendingSlotRequest.getResourceProfile(),
+				new HashSet<>(pendingSlotRequest.getSlotRequest().getTags()));
 		}
 	}
 

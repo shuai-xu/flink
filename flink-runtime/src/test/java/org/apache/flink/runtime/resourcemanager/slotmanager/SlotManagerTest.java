@@ -260,7 +260,7 @@ public class SlotManagerTest extends TestLogger {
 
 			slotManager.registerSlotRequest(slotRequest);
 
-			verify(resourceManagerActions).allocateResource(eq(resourceProfile));
+			verify(resourceManagerActions).allocateResource(eq(resourceProfile), anySet());
 		}
 	}
 
@@ -278,7 +278,7 @@ public class SlotManagerTest extends TestLogger {
 			"localhost");
 
 		ResourceActions resourceManagerActions = mock(ResourceActions.class);
-		doThrow(new ResourceManagerException("Test exception")).when(resourceManagerActions).allocateResource(any(ResourceProfile.class));
+		doThrow(new ResourceManagerException("Test exception")).when(resourceManagerActions).allocateResource(any(ResourceProfile.class), anySet());
 
 		try (SlotManager slotManager = createSlotManager(resourceManagerId, resourceManagerActions)) {
 
@@ -448,7 +448,7 @@ public class SlotManagerTest extends TestLogger {
 
 			assertTrue("The slot request should be accepted", slotManager.registerSlotRequest(slotRequest));
 
-			verify(resourceManagerActions, times(1)).allocateResource(eq(resourceProfile));
+			verify(resourceManagerActions, times(1)).allocateResource(eq(resourceProfile), anySet());
 
 			slotManager.registerTaskManager(
 				taskExecutorConnection,
@@ -537,7 +537,7 @@ public class SlotManagerTest extends TestLogger {
 
 		// check that we have only called the resource allocation only for the first slot request,
 		// since the second request is a duplicate
-		verify(resourceManagerActions, times(1)).allocateResource(any(ResourceProfile.class));
+		verify(resourceManagerActions, times(1)).allocateResource(any(ResourceProfile.class), anySet());
 	}
 
 	/**
