@@ -29,6 +29,7 @@ import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
@@ -72,7 +73,8 @@ public class NativeMemoryAdjusterTest {
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, MemoryOveruseDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.DETECTOR_CLASSES, MemoryOveruseDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, NativeMemoryAdjuster.class.getCanonicalName());
 
 		// initial job vertex config.

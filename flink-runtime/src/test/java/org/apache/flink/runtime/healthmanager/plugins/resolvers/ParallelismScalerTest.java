@@ -35,6 +35,7 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.BackPressureDete
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DelayIncreasingDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
@@ -83,7 +84,8 @@ public class ParallelismScalerTest {
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES,
 				HighDelayDetector.class.getCanonicalName() + "," +
-				DelayIncreasingDetector.class.getCanonicalName());
+				DelayIncreasingDetector.class.getCanonicalName() + "," +
+				TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
 
 		// initial job vertex config.
@@ -234,7 +236,8 @@ public class ParallelismScalerTest {
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000L);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 2.0);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, BackPressureDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.DETECTOR_CLASSES, BackPressureDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
 
 		// initial job vertex config.
@@ -489,7 +492,8 @@ public class ParallelismScalerTest {
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 1.5);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 1.0);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, OverParallelizedDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.DETECTOR_CLASSES, OverParallelizedDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
 
 		// initial job vertex config.

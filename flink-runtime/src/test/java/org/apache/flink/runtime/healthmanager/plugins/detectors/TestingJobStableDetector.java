@@ -16,16 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.healthmanager.plugins.symptoms;
+package org.apache.flink.runtime.healthmanager.plugins.detectors;
 
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 
 /**
- * Symptom indicating job is not stable.
+ * Testing JobStableDetector class.
  */
-public class JobUnstable implements Symptom {
-
-	public static final JobUnstable INSTANCE = new JobUnstable();
-
-	private JobUnstable() {}
+public class TestingJobStableDetector extends JobStuckDetector {
+	@Override
+	public Symptom detect() throws Exception {
+		return new JobStable(Long.MAX_VALUE);
+	}
 }

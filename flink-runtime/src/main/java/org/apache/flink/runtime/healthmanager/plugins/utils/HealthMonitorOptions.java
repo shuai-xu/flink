@@ -45,6 +45,12 @@ public class HealthMonitorOptions {
 			ConfigOptions.key("parallelism.scale.interval.ms").defaultValue(60 * 1000L);
 
 	/**
+	 * parallelism stable time.
+	 */
+	public static final ConfigOption<Long> PARALLELISM_SCALE_STABLE_TIME =
+		ConfigOptions.key("parallelism.scale.stable-time.ms").defaultValue(10 * 60 * 1000L);
+
+	/**
 	 * max partition per task.
 	 */
 	public static final ConfigOption<Integer> MAX_PARTITION_PER_TASK =
@@ -67,6 +73,12 @@ public class HealthMonitorOptions {
 	 */
 	public static final ConfigOption<Long> RESOURCE_SCALE_INTERVAL =
 		ConfigOptions.key("resource.scale.interval.ms").defaultValue(180 * 1000L);
+
+	/**
+	 * resource stable time.
+	 */
+	public static final ConfigOption<Long> RESOURCE_SCALE_STABLE_TIME =
+		ConfigOptions.key("resource.scale.stable-time.ms").defaultValue(3 * 60 * 1000L);
 
 	/**
 	 * resource opportunistic action delay.

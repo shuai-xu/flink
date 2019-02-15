@@ -25,7 +25,15 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
  */
 public class JobStable implements Symptom {
 
-	public static final JobStable INSTANCE = new JobStable();
+	public static final JobStable UNSTABLE = new JobStable(-1);
 
-	private JobStable() {}
+	private final long stableTime;
+
+	public JobStable(long stableTime) {
+		this.stableTime = stableTime;
+	}
+
+	public long getStableTime() {
+		return stableTime;
+	}
 }

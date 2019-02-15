@@ -27,7 +27,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobHeapMemory;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
@@ -53,6 +53,7 @@ public class HeapMemoryAdjuster implements Resolver {
 	private double scaleRatio;
 	private long timeout;
 	private long opportunisticActionDelay;
+	private long stableTime;
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
@@ -69,6 +70,7 @@ public class HeapMemoryAdjuster implements Resolver {
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
+		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_STABLE_TIME);
 
 		vertexToScaleUp = new HashSet<>();
 		opportunisticActionDelayStart = -1;
@@ -88,14 +90,13 @@ public class HeapMemoryAdjuster implements Resolver {
 			vertexToScaleUp.clear();
 		}
 
-		JobUnstable jobUnstable = null;
+		JobStable jobStable = null;
 		JobVertexHeapOOM jobVertexHeapOOM = null;
 		JobVertexFrequentFullGC jobVertexFrequentFullGC = null;
 
 		for (Symptom symptom : symptomList) {
-			if (symptom instanceof JobUnstable) {
-				jobUnstable = (JobUnstable) symptom;
-				LOGGER.debug("Job unstable detected.");
+			if (symptom instanceof JobStable) {
+				jobStable = (JobStable) symptom;
 			}
 
 			if (symptom instanceof JobVertexHeapOOM) {
@@ -110,7 +111,7 @@ public class HeapMemoryAdjuster implements Resolver {
 			}
 		}
 
-		if (jobUnstable != null && jobVertexHeapOOM == null) {
+		if ((jobStable == null || jobStable.getStableTime() < stableTime) && jobVertexHeapOOM == null) {
 			LOGGER.debug("Job unstable, should not rescale.");
 			return null;
 		}

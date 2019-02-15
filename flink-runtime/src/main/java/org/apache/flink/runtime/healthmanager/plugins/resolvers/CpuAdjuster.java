@@ -27,7 +27,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobCpu;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
@@ -53,6 +53,7 @@ public class CpuAdjuster implements Resolver {
 	private double scaleRatio;
 	private long timeout;
 	private long opportunisticActionDelay;
+	private long stableTime;
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
@@ -69,6 +70,7 @@ public class CpuAdjuster implements Resolver {
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
+		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_STABLE_TIME);
 
 		vertexMaxUtility = new HashMap<>();
 		opportunisticActionDelayStart = -1;
@@ -90,10 +92,10 @@ public class CpuAdjuster implements Resolver {
 
 		JobVertexHighCpu jobVertexHighCpu = null;
 		JobVertexLowCpu jobVertexLowCpu = null;
+		JobStable jobStable = null;
 		for (Symptom symptom : symptomList) {
-			if (symptom instanceof JobUnstable) {
-				LOGGER.debug("Job unstable, should not rescale.");
-				return null;
+			if (symptom instanceof JobStable) {
+				jobStable = (JobStable) symptom;
 			}
 
 			if (symptom instanceof JobVertexHighCpu) {
@@ -103,6 +105,11 @@ public class CpuAdjuster implements Resolver {
 			if (symptom instanceof  JobVertexLowCpu) {
 				jobVertexLowCpu = (JobVertexLowCpu) symptom;
 			}
+		}
+
+		if (jobStable == null || jobStable.getStableTime() < stableTime) {
+			LOGGER.debug("Job unstable, should not rescale.");
+			return null;
 		}
 
 		if (jobVertexHighCpu != null) {

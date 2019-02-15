@@ -27,7 +27,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobNativeMemory;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -53,6 +53,7 @@ public class NativeMemoryAdjuster implements Resolver {
 	private double scaleRatio;
 	private long timeout;
 	private long opportunisticActionDelay;
+	private long stableTime;
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
@@ -69,6 +70,7 @@ public class NativeMemoryAdjuster implements Resolver {
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
+		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_STABLE_TIME);
 
 		vertexMaxOveruses = new HashMap<>();
 		opportunisticActionDelayStart = -1;
@@ -89,11 +91,11 @@ public class NativeMemoryAdjuster implements Resolver {
 		}
 
 		JobVertexNativeMemOveruse jobVertexNativeMemOveruse = null;
+		JobStable jobStable = null;
 
 		for (Symptom symptom : symptomList) {
-			if (symptom instanceof JobUnstable) {
-				LOGGER.debug("Job unstable, should not rescale.");
-				return null;
+			if (symptom instanceof JobStable) {
+				jobStable = (JobStable) symptom;
 			}
 
 			if (symptom instanceof JobVertexNativeMemOveruse) {
@@ -106,6 +108,11 @@ public class NativeMemoryAdjuster implements Resolver {
 					}
 				}
 			}
+		}
+
+		if (jobStable == null || jobStable.getStableTime() < stableTime) {
+			LOGGER.debug("Job unstable, should not rescale.");
+			return null;
 		}
 
 		if (vertexMaxOveruses.isEmpty()) {

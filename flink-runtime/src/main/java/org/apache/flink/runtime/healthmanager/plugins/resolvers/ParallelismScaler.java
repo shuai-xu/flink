@@ -32,8 +32,8 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.RescaleJobParallelism;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStuck;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobUnstable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexBackPressure;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayIncreasing;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
@@ -93,6 +93,7 @@ public class ParallelismScaler implements Resolver {
 	private long timeout;
 	private long checkInterval;
 	private int maxPartitionPerTask;
+	private long stableTime;
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
@@ -119,7 +120,7 @@ public class ParallelismScaler implements Resolver {
 	private JobVertexDelayIncreasing delayIncreasingSymptom;
 	private JobVertexBackPressure backPressureSymptom;
 	private JobVertexOverParallelized overParallelizedSymptom;
-	private JobUnstable jobUnstableSymptom;
+	private JobStable jobStableSymptom;
 	private JobVertexFrequentFullGC frequentFullGCSymptom;
 	private JobVertexFailover failoverSymptom;
 	private JobStuck jobStuckSymptom;
@@ -152,6 +153,7 @@ public class ParallelismScaler implements Resolver {
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.maxPartitionPerTask = monitor.getConfig().getInteger(MAX_PARTITION_PER_TASK);
+		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STABLE_TIME);
 
 		inputTpsSubs = new HashMap<>();
 		outputTpsSubs = new HashMap<>();
@@ -350,7 +352,7 @@ public class ParallelismScaler implements Resolver {
 
 	private void parseSymptoms(List<Symptom> symptomList) {
 		// clear old symptoms
-		jobUnstableSymptom = null;
+		jobStableSymptom = null;
 		frequentFullGCSymptom = null;
 		failoverSymptom = null;
 		jobStuckSymptom = null;
@@ -361,10 +363,8 @@ public class ParallelismScaler implements Resolver {
 
 		// read new symptoms
 		for (Symptom symptom : symptomList) {
-			if (symptom instanceof JobUnstable) {
-				jobUnstableSymptom = (JobUnstable) symptom;
-				LOGGER.debug("Job unstable detected.");
-				continue;
+			if (symptom instanceof JobStable) {
+				jobStableSymptom = (JobStable) symptom;
 			}
 
 			if (symptom instanceof JobVertexFrequentFullGC) {
@@ -412,7 +412,8 @@ public class ParallelismScaler implements Resolver {
 	}
 
 	private boolean diagnose() {
-		if (jobUnstableSymptom != null ||
+		if (jobStableSymptom == null ||
+			jobStableSymptom.getStableTime() < stableTime ||
 			frequentFullGCSymptom != null ||
 			failoverSymptom != null ||
 			jobStuckSymptom != null) {
