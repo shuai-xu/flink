@@ -19,6 +19,8 @@
 package org.apache.flink.runtime.healthmanager.plugins.detectors;
 
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
@@ -46,6 +48,9 @@ public class JobStableDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(JobStableDetector.class);
 
+	public static final ConfigOption<Boolean> INPUT_REQUIRED =
+		ConfigOptions.key("healthmonitor.job-stable-detector.input-required").defaultValue(true);
+
 	private HealthMonitor monitor;
 
 	private long interval;
@@ -53,6 +58,8 @@ public class JobStableDetector implements Detector {
 	private Map<JobVertexID, TaskMetricSubscription> inputCountSubs;
 
 	private long lastStableTime = 0;
+
+	private boolean inputRequired;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -64,15 +71,19 @@ public class JobStableDetector implements Detector {
 
 		interval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 
-		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
-			inputCountSubs.put(vertexId,
+		inputRequired = monitor.getConfig().getBoolean(INPUT_REQUIRED);
+
+		if (inputRequired) {
+			for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
+				inputCountSubs.put(vertexId,
 					monitor.getMetricProvider().subscribeTaskMetric(
-							monitor.getJobID(),
-							vertexId,
-							MetricNames.TASK_INPUT_COUNT,
-							MetricAggType.MIN,
-							interval,
-							TimelineAggType.EARLIEST));
+						monitor.getJobID(),
+						vertexId,
+						MetricNames.TASK_INPUT_COUNT,
+						MetricAggType.MIN,
+						interval,
+						TimelineAggType.EARLIEST));
+			}
 		}
 	}
 
@@ -85,14 +96,18 @@ public class JobStableDetector implements Detector {
 	public Symptom detect() throws Exception {
 
 		RestServerClient.JobStatus status = this.monitor.getRestServerClient().getJobStatus(this.monitor.getJobID());
+		long startRunningTime = Long.MIN_VALUE;
 		for (Tuple2<Long, ExecutionState> state: status.getTaskStatus().values()) {
 			if (!state.f1.equals(ExecutionState.RUNNING)) {
 				LOGGER.debug("Some task not running yet!");
 				return JobStable.UNSTABLE;
 			}
+			if (startRunningTime < state.f0) {
+				startRunningTime = state.f0;
+			}
 		}
 
-		if (this.monitor.getJobStartExecutionTime() > lastStableTime) {
+		if (inputRequired && this.monitor.getJobStartExecutionTime() > lastStableTime) {
 			long startInputTime = Long.MIN_VALUE;
 			for (JobVertexID vertexID : inputCountSubs.keySet()) {
 				Tuple2<Long, Double> currentInputCount = inputCountSubs.get(vertexID).getValue();
@@ -106,6 +121,10 @@ public class JobStableDetector implements Detector {
 				}
 			}
 			lastStableTime = startInputTime;
+		}
+
+		if (lastStableTime < startRunningTime) {
+			lastStableTime = startRunningTime;
 		}
 
 		long stableTime = System.currentTimeMillis() - lastStableTime;
