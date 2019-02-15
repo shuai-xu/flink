@@ -59,6 +59,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions.MAX_PARTITION_PER_TASK;
+import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_DELAY;
 import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_LATENCY_COUNT;
 import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_LATENCY_SUM;
 import static org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames.SOURCE_PARTITION_COUNT;
@@ -113,6 +114,7 @@ public class ParallelismScaler implements Resolver {
 	private Map<JobVertexID, TaskMetricSubscription> sourcePartitionCountSubs;
 	private Map<JobVertexID, TaskMetricSubscription> sourcePartitionLatencyCountRangeSubs;
 	private Map<JobVertexID, TaskMetricSubscription> sourcePartitionLatencySumRangeSubs;
+	private Map<JobVertexID, TaskMetricSubscription> sourceDelayRateSubs;
 
 	// symptoms
 
@@ -168,6 +170,7 @@ public class ParallelismScaler implements Resolver {
 		sourcePartitionCountSubs = new HashMap<>();
 		sourcePartitionLatencyCountRangeSubs = new HashMap<>();
 		sourcePartitionLatencySumRangeSubs = new HashMap<>();
+		sourceDelayRateSubs = new HashMap<>();
 
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 
@@ -210,6 +213,9 @@ public class ParallelismScaler implements Resolver {
 				sourceProcessLatencySumRangeSubs.put(vertexId,
 						metricProvider.subscribeTaskMetric(
 								jobID, vertexId, SOURCE_PROCESS_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
+				sourceDelayRateSubs.put(vertexId,
+						metricProvider.subscribeTaskMetric(
+								jobID, vertexId, SOURCE_DELAY, MetricAggType.AVG, checkInterval, TimelineAggType.RATE));
 			}
 
 			// task latency
@@ -328,7 +334,7 @@ public class ParallelismScaler implements Resolver {
 
 		// Step-4. calculate tpsRatio for sub dags
 
-		Map<JobVertexID, Double> subDagTargetTpsRatio = getSubDagTargetTpsRatio();
+		Map<JobVertexID, Double> subDagTargetTpsRatio = getSubDagTargetTpsRatio(taskMetrics);
 
         // Step-5. set parallelisms
 
@@ -510,7 +516,7 @@ public class ParallelismScaler implements Resolver {
 			TaskMetricSubscription sourcePartitionCountSub = sourcePartitionCountSubs.get(vertexId);
 			TaskMetricSubscription sourcePartitionLatencyCountRangeSub = sourcePartitionLatencyCountRangeSubs.get(vertexId);
 			TaskMetricSubscription sourcePartitionLatencySumRangeSub = sourcePartitionLatencySumRangeSubs.get(vertexId);
-
+			TaskMetricSubscription sourceDelayIncreasingRateSub = sourceDelayRateSubs.get(vertexId);
 			// check metrics complete
 
 			if (inputTpsSub.getValue() == null || now - inputTpsSub.getValue().f0 > checkInterval * 2 || inputTpsSub.getValue().f1 <= 0.0 ||
@@ -590,6 +596,11 @@ public class ParallelismScaler implements Resolver {
 				workload = (taskLatency - waitOutputPerInputRecord) * inputTps;
 			}
 
+			double delayIncreasingRate = 0;
+			if (sourceDelayIncreasingRateSub != null) {
+				delayIncreasingRate = sourceDelayIncreasingRateSub.getValue().f1 / 1.0e3;
+			}
+
 			TaskMetrics taskMetrics = new TaskMetrics(
 				vertexId,
 				isParallelReader,
@@ -598,7 +609,8 @@ public class ParallelismScaler implements Resolver {
 				taskLatency,
 				sourceLatency,
 				waitOutputPerInputRecord,
-				workload
+				workload,
+				delayIncreasingRate
 			);
 
 			LOGGER.debug("Metrics for vertex {}.", taskMetrics.toString());
@@ -608,25 +620,33 @@ public class ParallelismScaler implements Resolver {
 		return metrics;
 	}
 
-	private Map<JobVertexID, Double> getSubDagTargetTpsRatio() {
+	private Map<JobVertexID, Double> getSubDagTargetTpsRatio(
+			Map<JobVertexID, TaskMetrics> taskMetrics) {
 		Map<JobVertexID, Double> subDagTargetTpsRatio = new HashMap<>();
 
 		// find sub dags to upscale
 
 		Set<JobVertexID> subDagRootsToUpScale = new HashSet<>();
 
+		Set<JobVertexID> backPressureVertices = new HashSet<>();
+		if (needScaleUpForBackpressure) {
+			backPressureVertices.addAll(backPressureSymptom.getJobVertexIDs());
+			for (JobVertexID vertexID : backPressureVertices) {
+				subDagRootsToUpScale.add(vertex2SubDagRoot.get(vertexID));
+				subDagTargetTpsRatio.put(vertex2SubDagRoot.get(vertexID), upScaleTpsRatio);
+			}
+		}
+
 		if (needScaleUpForDelay) {
 			Collection<JobVertexID> verticesToUpScale = CollectionUtils.intersection(
 				highDelaySymptom.getJobVertexIDs(), delayIncreasingSymptom.getJobVertexIDs());
 			for (JobVertexID vertexId : verticesToUpScale) {
 				subDagRootsToUpScale.add(vertex2SubDagRoot.get(vertexId));
-			}
-		}
-
-		if (needScaleUpForBackpressure) {
-			Set<JobVertexID> verticesToUpScale = new HashSet<>(backPressureSymptom.getJobVertexIDs());
-			for (JobVertexID vertexId : verticesToUpScale) {
-				subDagRootsToUpScale.add(vertex2SubDagRoot.get(vertexId));
+				double ratio = 1 / (1 - taskMetrics.get(vertexId).delayIncreasingRate);
+				if (ratio < upScaleTpsRatio) {
+					ratio = upScaleTpsRatio;
+				}
+				subDagTargetTpsRatio.put(vertex2SubDagRoot.get(vertexId), ratio);
 			}
 		}
 
@@ -647,9 +667,7 @@ public class ParallelismScaler implements Resolver {
 		LOGGER.debug("Roots of sub-dags need to scale down: {}.", vertexToDownScale);
 
 		// for sub dags that need to rescale, set target scale ratio
-
-		subDagRootsToUpScale.forEach(subDagRoot -> subDagTargetTpsRatio.put(subDagRoot, upScaleTpsRatio));
-		LOGGER.debug("Target tps ratio for sub-dags before adjusting: {}.", subDagTargetTpsRatio);
+		LOGGER.debug("Target scale up tps ratio for sub-dags before adjusting: {}.", subDagTargetTpsRatio);
 
 		// scale up downstream sub dags according to upstream sub dags
 
@@ -740,6 +758,9 @@ public class ParallelismScaler implements Resolver {
 					double partitionCount = sourcePartitionCountSubs.get(vertexId).getValue().f1;
 					if (partitionCount / targetParallelism > maxPartitionPerTask) {
 						targetParallelism = (int) Math.ceil(partitionCount / maxPartitionPerTask);
+					}
+					if (partitionCount > 0 && maxParallelism > partitionCount) {
+						maxParallelism = (int) partitionCount;
 					}
 				}
 
@@ -838,8 +859,8 @@ public class ParallelismScaler implements Resolver {
 						members.add(upStreamEpg);
 						ppgLeader2Members.put(upStreamEpg, members);
 						ppgMember2Leader.put(upStreamEpg, upStreamEpg);
-						ppgLeader2Base.put(upStreamEpg, 1);
-						ppgMember2Factor.put(upStreamEpg, epgLeader2TargetParallelism.get(upStreamEpg));
+						ppgLeader2Base.put(upStreamEpg, epgLeader2TargetParallelism.get(upStreamEpg));
+						ppgMember2Factor.put(upStreamEpg, 1);
 					}
 
 					JobVertexID downStreamEpg = epgMember2Leader.get(downStreamVertex);
@@ -848,8 +869,8 @@ public class ParallelismScaler implements Resolver {
 						members.add(downStreamEpg);
 						ppgLeader2Members.put(downStreamEpg, members);
 						ppgMember2Leader.put(downStreamEpg, downStreamEpg);
-						ppgLeader2Base.put(downStreamEpg, 1);
-						ppgMember2Factor.put(downStreamEpg, epgLeader2TargetParallelism.get(downStreamEpg));
+						ppgLeader2Base.put(downStreamEpg, epgLeader2TargetParallelism.get(downStreamEpg));
+						ppgMember2Factor.put(downStreamEpg, 1);
 					}
 
 					mergeProportionalParallelismGroups(
@@ -1178,6 +1199,7 @@ public class ParallelismScaler implements Resolver {
 		private final double sourceLatencyPerRecord;
 		private final double waitOutputPerRecord;
 		private final double workload;
+		private final double delayIncreasingRate;
 
 		public TaskMetrics(
 			JobVertexID jobVertexId,
@@ -1187,7 +1209,8 @@ public class ParallelismScaler implements Resolver {
 			double taskLatencyPerRecord,
 			double sourceLatencyPerRecord,
 			double waitOutputPerRecord,
-			double workload) {
+			double workload,
+			double delayIncreasingRate) {
 
 			this.jobVertexID = jobVertexId;
 			this.isParallelSource = isParallelSource;
@@ -1197,6 +1220,7 @@ public class ParallelismScaler implements Resolver {
 			this.sourceLatencyPerRecord = sourceLatencyPerRecord;
 			this.waitOutputPerRecord = waitOutputPerRecord;
 			this.workload = workload;
+			this.delayIncreasingRate = delayIncreasingRate;
 		}
 
 		public JobVertexID getJobVertexID() {
@@ -1239,5 +1263,8 @@ public class ParallelismScaler implements Resolver {
 				+ ", workload:" + workload + "}";
 		}
 
+		public double getDelayIncreasingRate() {
+			return delayIncreasingRate;
+		}
 	}
 }

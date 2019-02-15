@@ -22,7 +22,6 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
@@ -171,16 +170,16 @@ public class ParallelismScalerTest {
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
 		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
@@ -195,8 +194,6 @@ public class ParallelismScalerTest {
 			new Configuration()
 		);
 
-		Whitebox.setInternalState(monitor, "lastExecution", 0);
-
 		monitor.start();
 
 		Thread.sleep(10000);
@@ -207,7 +204,7 @@ public class ParallelismScalerTest {
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
 		vertexParallelismResource.put(vertex1, new Tuple2<>(4, ResourceSpec.newBuilder().build()));
 		vertexParallelismResource.put(vertex2, new Tuple2<>(4, ResourceSpec.newBuilder().build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
+		Mockito.verify(restServerClient, Mockito.atLeast(1))
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
@@ -233,7 +230,7 @@ public class ParallelismScalerTest {
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setString("healthmonitor.back-pressure.threshold.ms", "0");
-		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000L);
+		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 2.0);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, BackPressureDetector.class.getCanonicalName() + "," +
@@ -317,22 +314,22 @@ public class ParallelismScalerTest {
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+			Tuple2.of(now, ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
 		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
@@ -346,8 +343,6 @@ public class ParallelismScalerTest {
 			executorService,
 			new Configuration()
 		);
-
-		Whitebox.setInternalState(monitor, "lastExecution", 0);
 
 		monitor.start();
 
@@ -488,7 +483,7 @@ public class ParallelismScalerTest {
 		// job level configuration.
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000L);
+		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 1.5);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 1.0);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
@@ -584,22 +579,22 @@ public class ParallelismScalerTest {
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+			Tuple2.of(now, ExecutionState.SCHEDULED));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
 
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
 		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
+			Tuple2.of(now, ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
@@ -616,8 +611,6 @@ public class ParallelismScalerTest {
 
 		monitor.start();
 
-		Whitebox.setInternalState(monitor, "lastExecution", 0);
-
 		Thread.sleep(10000);
 
 		monitor.stop();
@@ -626,7 +619,7 @@ public class ParallelismScalerTest {
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
 		vertexParallelismResource.put(vertex1, new Tuple2<>(2, ResourceSpec.newBuilder().build()));
 		vertexParallelismResource.put(vertex2, new Tuple2<>(2, ResourceSpec.newBuilder().build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
+		Mockito.verify(restServerClient, Mockito.atLeast(1))
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));

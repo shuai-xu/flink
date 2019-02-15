@@ -51,7 +51,7 @@ public class LowDelayDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(LowDelayDetector.class);
 
-	private static final ConfigOption<Long> LOW_DELAY_THRESHOLD =
+	public static final ConfigOption<Long> LOW_DELAY_THRESHOLD =
 		ConfigOptions.key("healthmonitor.low-delay.threshold").defaultValue(5 * 60 * 1000L);
 
 	private JobID jobID;

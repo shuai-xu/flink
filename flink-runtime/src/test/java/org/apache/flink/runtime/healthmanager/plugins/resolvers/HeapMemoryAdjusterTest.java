@@ -22,7 +22,6 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
@@ -163,12 +162,6 @@ public class HeapMemoryAdjusterTest {
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobStatus(Mockito.eq(jobID));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobConfig(Mockito.eq(jobID));
 	}
 
 	/**
@@ -196,6 +189,7 @@ public class HeapMemoryAdjusterTest {
 		config.setString(HealthMonitor.DETECTOR_CLASSES, FrequentFullGCDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
+		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_SEVERE_THRESHOLD, 3);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs = new HashMap<>();
@@ -233,7 +227,7 @@ public class HeapMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				callCount++;
-				if (callCount <= 2) {
+				if (callCount <= 3) {
 					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
 					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 4.0));
 					return fullGCs;
@@ -276,8 +270,6 @@ public class HeapMemoryAdjusterTest {
 			new Configuration()
 		);
 
-		Whitebox.setInternalState(monitor, "lastExecution", 0);
-
 		monitor.start();
 
 		Thread.sleep(10000);
@@ -298,11 +290,5 @@ public class HeapMemoryAdjusterTest {
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobStatus(Mockito.eq(jobID));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobConfig(Mockito.eq(jobID));
 	}
 }

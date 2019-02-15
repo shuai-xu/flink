@@ -53,9 +53,9 @@ public class CpuHighDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CpuHighDetector.class);
 
-	private static final ConfigOption<Double> HIGH_CPU_THRESHOLD =
+	public static final ConfigOption<Double> HIGH_CPU_THRESHOLD =
 		ConfigOptions.key("healthmonitor.high-cpu-detector.threashold").defaultValue(0.8);
-	private static final ConfigOption<Double> HIGH_CPU_SEVERE_THRESHOLD =
+	public static final ConfigOption<Double> HIGH_CPU_SEVERE_THRESHOLD =
 		ConfigOptions.key("healthmonitor.high-cpu-detector.severe.threashold").defaultValue(1.2);
 
 	private JobID jobID;
@@ -100,8 +100,6 @@ public class CpuHighDetector implements Detector {
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
 
-		long now = System.currentTimeMillis();
-
 		Map<String, Tuple2<Long, Double>> tmCapacities = tmCpuAllocatedSubscription.getValue();
 		Map<String, Tuple2<Long, Double>> tmUsages = tmCpuUsageSubscription.getValue();
 
@@ -119,7 +117,7 @@ public class CpuHighDetector implements Detector {
 
 			double capacity = tmCapacities.get(tmId).f1;
 			double usage = tmUsages.get(tmId).f1;
-
+			LOGGER.debug("TM {}, capacity {}, usage {}.", tmId, capacity, usage);
 			if (capacity == 0.0) {
 				LOGGER.warn("Skip vertex {}, capacity is 0. SHOULD NOT HAPPEN!", tmId);
 				continue;

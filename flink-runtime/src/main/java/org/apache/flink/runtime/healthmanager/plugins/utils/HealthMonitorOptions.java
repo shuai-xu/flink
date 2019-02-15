@@ -30,13 +30,13 @@ public class HealthMonitorOptions {
 	 * max parallelism per workload.
 	 */
 	public static final ConfigOption<Double> PARALLELISM_MAX_RATIO =
-			ConfigOptions.key("healthmonitor.parallelism.ratio.max").defaultValue(4.0);
+			ConfigOptions.key("parallelism.scale.ratio.max").defaultValue(4.0);
 
 	/**
 	 * min parallelism per workload.
 	 */
 	public static final ConfigOption<Double> PARALLELISM_MIN_RATIO =
-			ConfigOptions.key("healthmonitor.parallelism.ratio.min").defaultValue(2.0);
+			ConfigOptions.key("parallelism.scale.ratio.min").defaultValue(2.0);
 
 	/**
 	 * parallelism check interval.

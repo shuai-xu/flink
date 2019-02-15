@@ -85,7 +85,7 @@ public class CpuAdjuster implements Resolver {
 	public Action resolve(List<Symptom> symptomList) {
 		LOGGER.debug("Start resolving.");
 
-		if (opportunisticActionDelayStart < monitor.getLastExecution()) {
+		if (opportunisticActionDelayStart < monitor.getJobStartExecutionTime()) {
 			opportunisticActionDelayStart = -1;
 			vertexMaxUtility.clear();
 		}

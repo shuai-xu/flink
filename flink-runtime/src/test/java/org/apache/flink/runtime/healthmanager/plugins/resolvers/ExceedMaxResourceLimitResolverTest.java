@@ -160,6 +160,6 @@ public class ExceedMaxResourceLimitResolverTest {
 		Mockito.verify(restServerClient, Mockito.times(3))
 			.getJobStatus(Mockito.eq(jobID));
 
-		Mockito.verify(restServerClient, Mockito.times(2));
+		//Mockito.verify(restServerClient, Mockito.times(2));
 	}
 }

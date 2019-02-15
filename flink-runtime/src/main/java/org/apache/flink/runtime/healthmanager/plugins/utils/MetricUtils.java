@@ -19,13 +19,43 @@
 package org.apache.flink.runtime.healthmanager.plugins.utils;
 
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
+import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
 
 /**
  * Utils for validation of metrics.
  */
 public class MetricUtils {
+
+	/**
+	 * Get start execute time of the job.
+	 */
+	public static long getStartExecuteTime(HealthMonitor monitor) {
+
+		long startTime = Long.MIN_VALUE;
+
+		// when all task start running, the job go into start time.
+		RestServerClient.JobStatus status;
+		try {
+			status = monitor.getRestServerClient().getJobStatus(monitor.getJobID());
+		} catch (Exception e) {
+			// job not stable.
+			return Long.MAX_VALUE;
+		}
+		for (Tuple2<Long, ExecutionState> state : status.getTaskStatus().values()) {
+			if (!state.f1.equals(ExecutionState.RUNNING)) {
+				// job not stable.
+				return Long.MAX_VALUE;
+			}
+			if (startTime < state.f0) {
+				startTime = state.f0;
+			}
+		}
+		return startTime;
+	}
+
 	/**
 	 * Validate current value of task metric.
 	 */
@@ -34,8 +64,8 @@ public class MetricUtils {
 		long now = System.currentTimeMillis();
 		for (TaskMetricSubscription metric : metrics) {
 			Tuple2<Long, Double> val = metric.getValue();
-			if (val == null || val.f0 < monitor.getLastExecution() ||
-					now - val.f0 > validInterval * 2) {
+			if (val == null || val.f0 < monitor.getJobStartExecutionTime() ||
+					now - val.f0 > validInterval) {
 				return false;
 			}
 		}
@@ -48,8 +78,8 @@ public class MetricUtils {
 	public static boolean validateTmMetric(HealthMonitor monitor, long validInterval, Tuple2<Long, Double>... metrics) {
 		long now = System.currentTimeMillis();
 		for (Tuple2<Long, Double> metric : metrics) {
-			if (metric == null || metric.f0 < monitor.getLastExecution() ||
-				now - metric.f0 > validInterval * 2) {
+			if (metric == null || metric.f0 < monitor.getJobStartExecutionTime() ||
+				now - metric.f0 > validInterval) {
 				return false;
 			}
 		}

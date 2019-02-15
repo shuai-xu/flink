@@ -32,8 +32,7 @@ import org.apache.flink.runtime.healthmanager.plugins.ActionSelector;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
-import org.apache.flink.runtime.healthmanager.plugins.actionselectors.FirstValidActionSelector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.BackPressureDetector;
+import org.apache.flink.runtime.healthmanager.plugins.actionselectors.RescaleResourcePriorActionSelector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DelayIncreasingDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DirectOOMDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.ExceedMaxResourceLimitDetector;
@@ -51,6 +50,7 @@ import org.apache.flink.runtime.healthmanager.plugins.resolvers.ExceedMaxResourc
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.NativeMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.ParallelismScaler;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -70,12 +70,12 @@ public class HealthMonitor {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(HealthMonitor.class);
 
-	private static final ConfigOption<Long> HEALTH_CHECK_INTERNAL =
+	public static final ConfigOption<Long> HEALTH_CHECK_INTERNAL =
 			ConfigOptions.key("healthmonitor.health.check.interval.ms").defaultValue(10000L);
 
-	private static final ConfigOption<String> ACTION_SELECTOR_CLASS =
+	public static final ConfigOption<String> ACTION_SELECTOR_CLASS =
 			ConfigOptions.key("healthmonitor.action.selector.class")
-					.defaultValue(FirstValidActionSelector.class.getCanonicalName());
+					.defaultValue(RescaleResourcePriorActionSelector.class.getCanonicalName());
 
 	public static final ConfigOption<String> DETECTOR_CLASSES =
 			ConfigOptions.key("healthmonitor.detector.classes")
@@ -88,7 +88,7 @@ public class HealthMonitor {
 						+ DelayIncreasingDetector.class.getCanonicalName() + ","
 						+ OverParallelizedDetector.class.getCanonicalName() + ","
 						+ FailoverDetector.class.getCanonicalName() + ","
-						+ BackPressureDetector.class.getCanonicalName() + ","
+						//+ BackPressureDetector.class.getCanonicalName() + ","
 						+ ExceedMaxResourceLimitDetector.class.getCanonicalName() + ","
 						+ JobStableDetector.class.getCanonicalName() + ","
 						+ JobStuckDetector.class.getCanonicalName());
@@ -116,7 +116,7 @@ public class HealthMonitor {
 	private List<Resolver> resolvers;
 	private ActionSelector actionSelector;
 
-	private volatile long lastExecution = System.currentTimeMillis();
+	private volatile long jobStartExecutionTime = Long.MAX_VALUE;
 
 	private volatile long successActionCount = 0;
 	private volatile long failedActionCount = 0;
@@ -262,8 +262,12 @@ public class HealthMonitor {
 		return jobConfig;
 	}
 
-	public long getLastExecution() {
-		return lastExecution;
+	public long getJobStartExecutionTime() {
+		if (jobStartExecutionTime == Long.MAX_VALUE) {
+			// check and set last start execution time.
+			jobStartExecutionTime = MetricUtils.getStartExecuteTime(this);
+		}
+		return jobStartExecutionTime;
 	}
 
 	/**
@@ -281,6 +285,7 @@ public class HealthMonitor {
 
 			// reset job config.
 			jobConfig = null;
+			jobStartExecutionTime = Long.MAX_VALUE;
 
 			// 1. check abnormal symptoms.
 			for (Detector detector: detectors) {
@@ -355,7 +360,6 @@ public class HealthMonitor {
 					failedActionCount++;
 				}
 
-				lastExecution = System.currentTimeMillis();
 			}
 
 		}

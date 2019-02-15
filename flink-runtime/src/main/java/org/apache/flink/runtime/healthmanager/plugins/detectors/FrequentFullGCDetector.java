@@ -55,9 +55,9 @@ public class FrequentFullGCDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(FrequentFullGCDetector.class);
 
-	private static final ConfigOption<Integer> FULL_GC_COUNT_THRESHOLD =
+	public static final ConfigOption<Integer> FULL_GC_COUNT_THRESHOLD =
 		ConfigOptions.key("healthmonitor.full-gc-detector.threshold").defaultValue(3);
-	private static final ConfigOption<Integer> FULL_GC_COUNT_SEVERE_THRESHOLD =
+	public static final ConfigOption<Integer> FULL_GC_COUNT_SEVERE_THRESHOLD =
 		ConfigOptions.key("healthmonitor.full-gc-detector.severe-threshold").defaultValue(10);
 
 	private JobID jobID;

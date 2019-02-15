@@ -32,7 +32,6 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.CpuHighDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.CpuLowDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
-import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
@@ -77,6 +76,7 @@ public class CpuAdjusterTest {
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
+		config.setDouble(CpuHighDetector.HIGH_CPU_SEVERE_THRESHOLD, 0.9);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, CpuHighDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
@@ -125,11 +125,29 @@ public class CpuAdjusterTest {
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
 				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
+				usage1.put("tmId", Tuple2.of(now, 1.0));
+				return usage1;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
 				usage1.put("tmId", Tuple2.of(now, 2.0));
 				return usage1;
 			}
 		});
 		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
+				capacity.put("tmId", Tuple2.of(now, 1.0));
+				return capacity;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
 			@Override
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
@@ -159,10 +177,10 @@ public class CpuAdjusterTest {
 		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_USAGE), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(usageSub);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_CAPACITY), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(capacitySub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
@@ -299,10 +317,10 @@ public class CpuAdjusterTest {
 		});
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_USAGE), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(usageSub);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_CPU_CAPACITY), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(capacitySub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))

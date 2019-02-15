@@ -46,7 +46,7 @@ public class ExceedMaxResourceLimitResolver implements Resolver {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExceedMaxResourceLimitResolver.class);
 
-	private static final ConfigOption<Double> RATIO_OPTION =
+	public static final ConfigOption<Double> RATIO_OPTION =
 		ConfigOptions.key("exceed-max-total-resource.rescale.ratio").defaultValue(0.9);
 
 	private JobID jobID;

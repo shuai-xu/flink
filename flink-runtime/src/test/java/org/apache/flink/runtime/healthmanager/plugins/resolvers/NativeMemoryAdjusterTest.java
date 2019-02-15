@@ -76,6 +76,7 @@ public class NativeMemoryAdjusterTest {
 		config.setString(HealthMonitor.DETECTOR_CLASSES, MemoryOveruseDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, NativeMemoryAdjuster.class.getCanonicalName());
+		config.setDouble(MemoryOveruseDetector.MEMORY_OVERUSE_SEVERE_THRESHOLD, 1.0);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
@@ -117,6 +118,14 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
+				usage1.put("tmId", Tuple2.of(now, 9.0 * 1024 * 1024));
+				return usage1;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
 				usage1.put("tmId", Tuple2.of(now, 15.0 * 1024 * 1024));
 				return usage1;
 			}
@@ -129,7 +138,16 @@ public class NativeMemoryAdjusterTest {
 				return usage2;
 			}
 		});
+
 		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+					InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				capacity1.put("tmId", Tuple2.of(now, 10.0 * 1024 * 1024));
+				return capacity1;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
 			@Override
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
@@ -211,11 +229,5 @@ public class NativeMemoryAdjusterTest {
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobStatus(Mockito.eq(jobID));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobConfig(Mockito.eq(jobID));
 	}
 }

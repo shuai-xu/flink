@@ -39,14 +39,20 @@ public class RescaleResourcePriorActionSelector implements ActionSelector {
 		ConfigOptions.key("action.selector.blacklist.interval.ms")
 			.defaultValue(300_000L);
 
+	private static final ConfigOption<Boolean> ACTION_RESCALE_RESOURCE_FIRST =
+			ConfigOptions.key("action.selector.rescale.resource.first")
+					.defaultValue(false);
+
 	private Action lastFailedAction;
 	private long lastFailedTime;
 	private long blacklistThreshold;
 	private JobID jobId;
+	private boolean rescaleResourceFirst;
 
 	@Override
 	public void open(HealthMonitor monitor) {
 		blacklistThreshold = monitor.getConfig().getLong(ACTION_BLACK_LIST_INTERVAL);
+		rescaleResourceFirst = monitor.getConfig().getBoolean(ACTION_RESCALE_RESOURCE_FIRST);
 		jobId = monitor.getJobID();
 	}
 
@@ -74,12 +80,18 @@ public class RescaleResourcePriorActionSelector implements ActionSelector {
 			}
 		}
 
-		if (adjustJobResource != null && adjustJobResource.getActionMode() == Action.ActionMode.IMMEDIATE) {
-			return adjustJobResource;
+		if (rescaleResourceFirst) {
+			if (adjustJobResource != null && adjustJobResource.getActionMode() == Action.ActionMode.IMMEDIATE) {
+				return adjustJobResource;
+			}
 		}
 
 		if (rescaleJobParallelism != null && rescaleJobParallelism.getActionMode() == Action.ActionMode.IMMEDIATE){
 			return rescaleJobParallelism;
+		}
+
+		if (adjustJobResource != null && adjustJobResource.getActionMode() == Action.ActionMode.IMMEDIATE) {
+			return adjustJobResource;
 		}
 
 		return null;

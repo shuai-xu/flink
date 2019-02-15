@@ -48,7 +48,6 @@ public class JobStableDetector implements Detector {
 
 	private HealthMonitor monitor;
 
-	private long threshold;
 	private long interval;
 
 	private Map<JobVertexID, TaskMetricSubscription> inputCountSubs;
@@ -86,9 +85,15 @@ public class JobStableDetector implements Detector {
 	public Symptom detect() throws Exception {
 
 		RestServerClient.JobStatus status = this.monitor.getRestServerClient().getJobStatus(this.monitor.getJobID());
+		for (Tuple2<Long, ExecutionState> state: status.getTaskStatus().values()) {
+			if (!state.f1.equals(ExecutionState.RUNNING)) {
+				LOGGER.debug("Some task not running yet!");
+				return JobStable.UNSTABLE;
+			}
+		}
 
-		if (this.monitor.getLastExecution() > lastStableTime) {
-			long startInputTime = Long.MAX_VALUE;
+		if (this.monitor.getJobStartExecutionTime() > lastStableTime) {
+			long startInputTime = Long.MIN_VALUE;
 			for (JobVertexID vertexID : inputCountSubs.keySet()) {
 				Tuple2<Long, Double> currentInputCount = inputCountSubs.get(vertexID).getValue();
 				if (!MetricUtils.validateTaskMetric(monitor, interval * 2, inputCountSubs.get(vertexID))
@@ -96,21 +101,11 @@ public class JobStableDetector implements Detector {
 					LOGGER.debug("Some task has no input yet!");
 					return JobStable.UNSTABLE;
 				}
-				if (startInputTime > currentInputCount.f0) {
+				if (startInputTime < currentInputCount.f0) {
 					startInputTime = currentInputCount.f0;
 				}
 			}
-		}
-
-		for (Tuple2<Long, ExecutionState> state: status.getTaskStatus().values()) {
-			if (!state.f1.equals(ExecutionState.RUNNING)) {
-				LOGGER.debug("Some task not running yet!");
-				return JobStable.UNSTABLE;
-			}
-
-			if (state.f0 > lastStableTime) {
-				lastStableTime = state.f0;
-			}
+			lastStableTime = startInputTime;
 		}
 
 		long stableTime = System.currentTimeMillis() - lastStableTime;

@@ -50,7 +50,7 @@ public class MemoryOveruseDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MemoryOveruseDetector.class);
 
-	private static final ConfigOption<Double> MEMORY_OVERUSE_SEVERE_THRESHOLD =
+	public static final ConfigOption<Double> MEMORY_OVERUSE_SEVERE_THRESHOLD =
 		ConfigOptions.key("healthmonitor.memory-overuse-detector.severe.threshold").defaultValue(1.2);
 
 	private JobID jobID;

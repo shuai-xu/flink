@@ -52,8 +52,8 @@ public class HighDelayDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(HighDelayDetector.class);
 
-	private static final ConfigOption<Long> HIGH_DELAY_THRESHOLD =
-		ConfigOptions.key("healthmonitor.high-delay.threshold").defaultValue(10 * 60 * 1000L);
+	public static final ConfigOption<Long> HIGH_DELAY_THRESHOLD =
+		ConfigOptions.key("healthmonitor.high-delay.threshold.ms").defaultValue(10 * 60 * 1000L);
 
 	private JobID jobID;
 	private HealthMonitor healthMonitor;
