@@ -26,7 +26,6 @@ import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -72,6 +71,9 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	/** A extensible field for user specified resources from {@link ResourceSpec}. */
 	private Map<String, Resource> extendedResources = new HashMap<>(1);
 
+	/** The hash code of this {@link ResourceProfile}. */
+	private volatile int hashResult;
+
 	// ------------------------------------------------------------------------
 
 	/**
@@ -99,6 +101,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 		if (extendedResources != null) {
 			this.extendedResources.putAll(extendedResources);
 		}
+		updateHashCode();
 	}
 
 	/**
@@ -254,33 +257,39 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	@Override
 	public int compareTo(@Nonnull ResourceProfile other) {
 		int cmp = Integer.compare(this.getMemoryInMB(), other.getMemoryInMB());
-		if (cmp == 0) {
-			cmp = Double.compare(this.cpuCores, other.cpuCores);
+		if (cmp != 0) {
+			return cmp;
 		}
-		if (cmp == 0) {
-			Iterator<Map.Entry<String, Resource>> thisIterator = extendedResources.entrySet().iterator();
-			Iterator<Map.Entry<String, Resource>> otherIterator = other.extendedResources.entrySet().iterator();
-			while (thisIterator.hasNext() && otherIterator.hasNext()) {
-				Map.Entry<String, Resource> thisResource = thisIterator.next();
-				Map.Entry<String, Resource> otherResource = otherIterator.next();
-				if ((cmp = otherResource.getKey().compareTo(thisResource.getKey())) != 0) {
-					return cmp;
+		cmp = Double.compare(this.cpuCores, other.cpuCores);
+		if (cmp != 0) {
+			return cmp;
+		}
+		if (!extendedResources.isEmpty() && !other.extendedResources.isEmpty()) {
+			boolean hasUniqueResource = (extendedResources.size() != other.extendedResources.size());
+			for (Map.Entry<String, Resource> resourceEntry : extendedResources.entrySet()) {
+				Resource otherResource = other.extendedResources.get(resourceEntry.getKey());
+				if (otherResource == null) {
+					hasUniqueResource = true;
+					continue;
 				}
-				if (!otherResource.getValue().getResourceAggregateType().equals(thisResource.getValue().getResourceAggregateType())) {
+				Resource thisResource = resourceEntry.getValue();
+				if (!otherResource.getResourceAggregateType().equals(thisResource.getResourceAggregateType())) {
 					return 1;
 				}
-				if ((cmp = Double.compare(thisResource.getValue().getValue(), otherResource.getValue().getValue())) != 0) {
+				if ((cmp = Double.compare(thisResource.getValue(), otherResource.getValue())) != 0) {
 					return cmp;
 				}
 			}
-			if (thisIterator.hasNext()) {
-				return 1;
+			if (hasUniqueResource) {
+				// All the common resources are equal but at least one of them has unique resource(s).
+				// In this case just use hash code to get a consistent comparison result.
+				return this.hashCode() > other.hashCode() ? 1 : -1;
 			}
-			if (otherIterator.hasNext()) {
-				return -1;
-			}
+			return cmp;
+		} else {
+			// At least one of them has no extended resource.
+			return extendedResources.size() - other.extendedResources.size();
 		}
-		return cmp;
 	}
 
 	/**
@@ -344,6 +353,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 				}
 			}
 		}
+		updateHashCode();
 	}
 
 	public ResourceProfile multiply(int multiplier) {
@@ -366,6 +376,10 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 
 	@Override
 	public int hashCode() {
+		return hashResult;
+	}
+
+	private void updateHashCode() {
 		final long cpuBits =  Double.doubleToLongBits(cpuCores);
 		int result = (int) (cpuBits ^ (cpuBits >>> 32));
 		result = 31 * result + heapMemoryInMB;
@@ -373,7 +387,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 		result = 31 * result + nativeMemoryInMB;
 		result = 31 * result + networkMemoryInMB;
 		result = 31 * result + extendedResources.hashCode();
-		return result;
+		this.hashResult = result;
 	}
 
 	@Override
@@ -383,9 +397,13 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 		}
 		else if (obj != null && obj.getClass() == ResourceProfile.class) {
 			ResourceProfile that = (ResourceProfile) obj;
+			if (this.hashCode() != that.hashCode()) {
+				return false;
+			}
 			return this.cpuCores == that.cpuCores &&
 					this.heapMemoryInMB == that.heapMemoryInMB &&
 					this.directMemoryInMB == that.directMemoryInMB &&
+					this.nativeMemoryInMB == that.nativeMemoryInMB &&
 					this.networkMemoryInMB == that.networkMemoryInMB &&
 					Objects.equals(extendedResources, that.extendedResources);
 		}
@@ -394,16 +412,20 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 
 	@Override
 	public String toString() {
-		final StringBuilder resources = new StringBuilder(extendedResources.size() * 10);
-		for (Map.Entry<String, Resource> resource : extendedResources.entrySet()) {
-			resources.append(", ").append(resource.getKey()).append('=').append(resource.getValue().getValue());
+		String strExtendedResource = "";
+		if (!extendedResources.isEmpty()) {
+			final StringBuilder resources = new StringBuilder(extendedResources.size() * 10);
+			for (Map.Entry<String, Resource> resource : extendedResources.entrySet()) {
+				resources.append(", ").append(resource.getKey()).append('=').append(resource.getValue().getValue());
+			}
+			strExtendedResource = resources.toString();
 		}
 		return "ResourceProfile{" +
 			"cpuCores=" + cpuCores +
 			", heapMemoryInMB=" + heapMemoryInMB +
 			", directMemoryInMB=" + directMemoryInMB +
 			", nativeMemoryInMB=" + nativeMemoryInMB +
-			", networkMemoryInMB=" + networkMemoryInMB + resources +
+			", networkMemoryInMB=" + networkMemoryInMB + strExtendedResource +
 			'}';
 	}
 

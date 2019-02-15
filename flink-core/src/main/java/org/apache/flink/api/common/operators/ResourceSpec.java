@@ -236,8 +236,12 @@ public class ResourceSpec implements Serializable {
 	@Override
 	public String toString() {
 		String extend = "";
-		for (Resource resource : extendedResources.values()) {
-			extend += ", " + resource.getName() + "=" + resource.getValue();
+		if (!extendedResources.isEmpty()) {
+			StringBuilder stringBuilder = new StringBuilder(extendedResources.size() * 10);
+			for (Resource resource : extendedResources.values()) {
+				stringBuilder.append(", ").append(resource.getName()).append("=").append(resource.getValue());
+			}
+			extend = stringBuilder.toString();
 		}
 		return "ResourceSpec{" +
 				"cpuCores=" + cpuCores +

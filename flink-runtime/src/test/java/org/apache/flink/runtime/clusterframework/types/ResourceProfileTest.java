@@ -98,6 +98,7 @@ public class ResourceProfileTest {
 		ResourceSpec rs1 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
 		ResourceSpec rs2 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
 		assertTrue(ResourceProfile.fromResourceSpec(rs1, 0).equals(ResourceProfile.fromResourceSpec(rs2, 0)));
+		assertFalse(ResourceProfile.fromResourceSpec(rs1, 0).equals(ResourceProfile.fromResourceSpec(rs2, 100)));
 
 		ResourceSpec rs3 = ResourceSpec.newBuilder().
 				setCpuCores(1.0).
@@ -117,6 +118,36 @@ public class ResourceProfileTest {
 				setGPUResource(2.2).
 				build();
 		assertTrue(ResourceProfile.fromResourceSpec(rs3, 100).equals(ResourceProfile.fromResourceSpec(rs5, 100)));
+
+		ResourceSpec rs6 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setNativeMemoryInMB(11).
+			setGPUResource(2.2).
+			build();
+		assertFalse(ResourceProfile.fromResourceSpec(rs5, 100).equals(ResourceProfile.fromResourceSpec(rs6, 100)));
+
+		ResourceSpec rs7 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setNativeMemoryInMB(11).
+			setGPUResource(2.2).
+			build();
+		assertTrue(ResourceProfile.fromResourceSpec(rs7, 100).equals(ResourceProfile.fromResourceSpec(rs6, 100)));
+
+		ResourceSpec rs8 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setDirectMemoryInMB(12).
+			build();
+		assertFalse(ResourceProfile.fromResourceSpec(rs1, 100).equals(ResourceProfile.fromResourceSpec(rs8, 100)));
+
+		ResourceSpec rs9 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setDirectMemoryInMB(12).
+			build();
+		assertTrue(ResourceProfile.fromResourceSpec(rs8, 100).equals(ResourceProfile.fromResourceSpec(rs9, 100)));
 	}
 
 	@Test
@@ -148,6 +179,53 @@ public class ResourceProfileTest {
 				setGPUResource(2.2).
 				build();
 		assertEquals(0, ResourceProfile.fromResourceSpec(rs3, 0).compareTo(ResourceProfile.fromResourceSpec(rs5, 0)));
+
+		ResourceSpec rs6 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			addExtendedResource(new CommonExtendedResource("io", 30)).
+			build();
+		ResourceSpec rs7 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			addExtendedResource(new CommonExtendedResource("io", 40)).
+			addExtendedResource(new CommonExtendedResource("bandwidth", 20)).
+			build();
+		assertEquals(-1, ResourceProfile.fromResourceSpec(rs6, 0).compareTo(ResourceProfile.fromResourceSpec(rs7, 0)));
+		assertEquals(1, ResourceProfile.fromResourceSpec(rs7, 0).compareTo(ResourceProfile.fromResourceSpec(rs6, 0)));
+
+		ResourceSpec rs8 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			addExtendedResource(new CommonExtendedResource("io", 60)).
+			build();
+		assertEquals(-1, ResourceProfile.fromResourceSpec(rs7, 0).compareTo(ResourceProfile.fromResourceSpec(rs8, 0)));
+		assertEquals(1, ResourceProfile.fromResourceSpec(rs8, 0).compareTo(ResourceProfile.fromResourceSpec(rs7, 0)));
+
+		ResourceSpec rs9 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			addExtendedResource(new CommonExtendedResource("bandwidth", 20)).
+			build();
+		assertEquals(-1, ResourceProfile.fromResourceSpec(rs9, 0).compareTo(ResourceProfile.fromResourceSpec(rs7, 0)));
+		assertEquals(1, ResourceProfile.fromResourceSpec(rs7, 0).compareTo(ResourceProfile.fromResourceSpec(rs9, 0)));
+
+		ResourceSpec rs10 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			addExtendedResource(new CommonExtendedResource("io", 40)).
+			build();
+		assertEquals(1, ResourceProfile.fromResourceSpec(rs10, 0).compareTo(ResourceProfile.fromResourceSpec(rs7, 0)));
+		assertEquals(-1, ResourceProfile.fromResourceSpec(rs7, 0).compareTo(ResourceProfile.fromResourceSpec(rs10, 0)));
+
+		ResourceSpec rs11 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			addExtendedResource(new CommonExtendedResource("io", 40)).
+			addExtendedResource(new CommonExtendedResource("bandwidth", 20)).
+			build();
+		assertEquals(0, ResourceProfile.fromResourceSpec(rs11, 0).compareTo(ResourceProfile.fromResourceSpec(rs7, 0)));
+		assertEquals(0, ResourceProfile.fromResourceSpec(rs7, 0).compareTo(ResourceProfile.fromResourceSpec(rs11, 0)));
 	}
 
 	@Test
