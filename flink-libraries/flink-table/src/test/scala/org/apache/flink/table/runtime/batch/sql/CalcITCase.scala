@@ -82,6 +82,36 @@ class CalcITCase extends BatchTestBase {
   }
 
   @Test
+  def testManySelectWithFilter(): Unit = {
+    val data = Seq(
+      (true, 1, 2, 3, 4, 5, 6, 7),
+      (false, 1, 2, 3, 4, 5, 6, 7)
+    )
+    tEnv.registerCollection("MyT", data, 'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h)
+    checkResult(
+      """
+        |SELECT
+        |  a, b, c, d, e, f, g, h,
+        |  a, b, c, g, d, e, f, h,
+        |  h, g, f, e, d, c, b, a,
+        |  h, f, e, d, g, c, b, a,
+        |  c, a, b, g, f, e, h, d,
+        |  a, b, c, d, e, f, g, h,
+        |  a, b, c, g, d, e, f, h,
+        |  h, g, f, e, d, c, b, a,
+        |  h, f, e, d, g, c, b, a,
+        |  c, a, b, g, f, e, h, d
+        |FROM MyT WHERE a
+      """.stripMargin,
+      Seq(row(
+        true, 1, 2, 3, 4, 5, 6, 7, true, 1, 2, 6, 3, 4, 5, 7, 7, 6, 5, 4, 3, 2, 1,
+        true, 7, 5, 4, 3, 6, 2, 1, true, 2, true, 1, 6, 5, 4, 7, 3, true, 1, 2, 3,
+        4, 5, 6, 7, true, 1, 2, 6, 3, 4, 5, 7, 7, 6, 5, 4, 3, 2, 1, true, 7, 5, 4,
+        3, 6, 2, 1, true, 2, true, 1, 6, 5, 4, 7, 3
+      )))
+  }
+
+  @Test
   def testManySelect(): Unit = {
     checkResult(
       """
@@ -574,7 +604,7 @@ class CalcITCase extends BatchTestBase {
       assertEquals(smallData3(idx).getField(2), baseRow.getField(2))
     }
   }
-  
+
   @Test
   def testArrayType(): Unit = {
     // literals
@@ -607,7 +637,7 @@ class CalcITCase extends BatchTestBase {
       )
     )
   }
-  
+
   @Test
   def testMapType(): Unit = {
     // literals
@@ -648,7 +678,7 @@ class CalcITCase extends BatchTestBase {
     registerCollection("MyTable", data, tpe, Seq(false, false, false), 'a, 'b, 'c)
 
     val table = parseQuery("SELECT ROW(a, b, c), ARRAY[12, b], MAP[a, c] FROM MyTable " +
-      "WHERE (a, b, c) = ('foo', 12, TIMESTAMP '1984-07-12 14:34:24')")
+        "WHERE (a, b, c) = ('foo', 12, TIMESTAMP '1984-07-12 14:34:24')")
     val result = executeQuery(table)
 
     val baseRow = result.head.getField(0).asInstanceOf[Row]
@@ -741,16 +771,17 @@ class CalcITCase extends BatchTestBase {
     tEnv.registerFunction("splitUDF1", splitUDF1)
 
     // uses SQL escaping (be aware that even Scala multi-line strings parse backslash!)
-    val sqlQuery = s"""
-                      |SELECT
-                      |  splitUDF0(a, U&'${'\\'}0001', 0) AS a0,
-                      |  splitUDF1(a, U&'${'\\'}0001', 0) AS a1,
-                      |  splitUDF0(b, U&'"', 1) AS b0,
-                      |  splitUDF1(b, U&'"', 1) AS b1,
-                      |  splitUDF0(c, U&'${'\\'}${'\\'}"${'\\'}0004', 0) AS c0,
-                      |  splitUDF1(c, U&'${'\\'}"#0004' UESCAPE '#', 0) AS c1
-                      |FROM T1
-                      |""".stripMargin
+    val sqlQuery =
+      s"""
+         |SELECT
+         |  splitUDF0(a, U&'${'\\'}0001', 0) AS a0,
+         |  splitUDF1(a, U&'${'\\'}0001', 0) AS a1,
+         |  splitUDF0(b, U&'"', 1) AS b0,
+         |  splitUDF1(b, U&'"', 1) AS b1,
+         |  splitUDF0(c, U&'${'\\'}${'\\'}"${'\\'}0004', 0) AS c0,
+         |  splitUDF1(c, U&'${'\\'}"#0004' UESCAPE '#', 0) AS c1
+         |FROM T1
+         |""".stripMargin
 
     val t1 = tEnv.fromCollection(data, 'a, 'b, 'c)
 
@@ -804,6 +835,7 @@ object BinaryStringFunction extends ScalarFunction {
 
 object DateFunction extends ScalarFunction {
   def eval(d: Integer): Integer = d
+
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]): DataType =
     DataTypes.DATE
 }
@@ -811,6 +843,7 @@ object DateFunction extends ScalarFunction {
 // Understand type: Row wrapped as TypeInfoWrappedDataType.
 object RowFunc extends ScalarFunction {
   def eval(s: String): Row = Row.of(s)
+
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
     new RowTypeInfo(Types.STRING)
 }
@@ -822,6 +855,7 @@ object RowToStrFunc extends ScalarFunction {
 // generic.
 object ListFunc extends ScalarFunction {
   def eval(s: String): java.util.List[String] = util.Arrays.asList(s)
+
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
     new ListTypeInfo(Types.STRING)
 }
@@ -829,6 +863,7 @@ object ListFunc extends ScalarFunction {
 // internal but wrapped as TypeInfoWrappedDataType.
 object StringFunc extends ScalarFunction {
   def eval(s: String): String = s
+
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
     Types.STRING
 }
@@ -843,8 +878,6 @@ class MyPojo() {
     this.f2 = f2
   }
 
-  def canEqual(other: Any): Boolean = other.isInstanceOf[MyPojo]
-
   override def equals(other: Any): Boolean = other match {
     case that: MyPojo =>
       (that canEqual this) &&
@@ -853,11 +886,14 @@ class MyPojo() {
     case _ => false
   }
 
+  def canEqual(other: Any): Boolean = other.isInstanceOf[MyPojo]
+
   override def toString = s"MyPojo($f1, $f2)"
 }
 
 object MyPojoFunc extends ScalarFunction {
   def eval(s: MyPojo): Int = s.f2
+
   override def getParameterTypes(signature: Array[Class[_]]) =
     Array(DataTypes.pojoBuilder(classOf[MyPojo])
         .field("f1", DataTypes.INT)
@@ -867,6 +903,7 @@ object MyPojoFunc extends ScalarFunction {
 
 object MyToPojoFunc extends ScalarFunction {
   def eval(s: Int): MyPojo = new MyPojo(s, s)
+
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) =
     DataTypes.pojoBuilder(classOf[MyPojo])
         .field("f1", DataTypes.INT)
@@ -879,6 +916,7 @@ object LiteralHashCode extends ScalarFunction {
     val code = s.hashCode()
     if (t == "string") "str" + code else if (t == "int") code else throw new RuntimeException
   }
+
   override def getResultType(arguments: Array[AnyRef], signature: Array[Class[_]]) = {
     if (arguments(1) == "string") {
       DataTypes.STRING

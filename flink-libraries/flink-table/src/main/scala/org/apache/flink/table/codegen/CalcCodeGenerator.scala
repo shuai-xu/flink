@@ -29,6 +29,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
+import org.apache.flink.table.plan.util.FlinkRexUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 
 import scala.collection.JavaConversions._
@@ -165,7 +166,8 @@ object CalcCodeGenerator {
 
     def produceProjectionCode = {
       val underFilterLimit = condition match {
-        case call: Some[RexCall] => call.get.operands.length <= PROJECTION_FOR_LOOP_FILTER_LIMIT
+        case cond: Some[RexNode] =>
+          FlinkRexUtil.findAllInputRefs(cond.get).size() <= PROJECTION_FOR_LOOP_FILTER_LIMIT
         case _ => true
       }
       // we cannot use for-loop optimization if projection contains other calculations
@@ -173,8 +175,7 @@ object CalcCodeGenerator {
       val simpleProjection = projection.forall { rexNode => rexNode.isInstanceOf[RexInputRef] }
 
       val projectionExpression = if (underFilterLimit && simpleProjection) {
-        val inputMapping =
-          projection.map { rexNode => rexNode.asInstanceOf[RexInputRef].getIndex }.toArray
+        val inputMapping = projection.map(_.asInstanceOf[RexInputRef].getIndex).toArray
         ProjectionCodeGenerator.generateProjectionExpression(
           ctx, inputType, outRowType, inputMapping,
           outRowClass, inputTerm, nullCheck = config.getNullCheck)

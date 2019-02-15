@@ -281,6 +281,21 @@ object FlinkRexUtil {
   }
 
   /**
+    * Find all inputRefs.
+    * @return InputRef HashSet.
+    */
+  private[flink] def findAllInputRefs(node: RexNode): util.HashSet[RexInputRef] = {
+    val set = new util.HashSet[RexInputRef]
+    node.accept(new RexVisitorImpl[Void](true) {
+      override def visitInputRef(inputRef: RexInputRef): Void = {
+        set.add(inputRef)
+        null
+      }
+    })
+    set
+  }
+
+  /**
     * Adjust the condition's field indices according to mapOldToNewIndex.
     *
     * @param c The condition to be adjusted.
