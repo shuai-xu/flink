@@ -27,7 +27,7 @@ import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment =>
 import org.apache.flink.streaming.api.graph.StreamGraph
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction, UserDefinedFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv, _}
 import org.apache.flink.table.api.types._
@@ -50,7 +50,7 @@ import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
@@ -92,7 +92,14 @@ abstract class TableEnvironment(
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
   // Table API/SQL function catalog (built in, does not contain external functions)
-  private[flink] val functionCatalog: FunctionCatalog = BuiltInFunctionCatalog.instance()
+  private val builtInFunctionCatalog: BuiltInFunctionCatalog = BuiltInFunctionCatalog.instance()
+
+  // Table API/SQL function catalog which chained external catalogs and built-in function catalog.
+  // The chained order:
+  //    default external function catalog in CatalogManager precedes built-in function catalog
+  private[flink] lazy val chainedFunctionCatalog: FunctionCatalog =
+    new ChainedFunctionCatalog(
+      new ExternalFunctionCatalog(catalogManager, typeFactory), builtInFunctionCatalog)
 
   // the configuration to create a Calcite planner
   protected var frameworkConfig: FrameworkConfig = createFrameworkConfig
@@ -266,12 +273,12 @@ abstract class TableEnvironment(
 
     calciteConfig.getSqlOperatorTable match {
       case None =>
-        functionCatalog.getSqlOperatorTable
+        chainedFunctionCatalog.getSqlOperatorTable
       case Some(table) =>
         if (calciteConfig.replacesSqlOperatorTable) {
           table
         } else {
-          ChainedSqlOperatorTable.of(functionCatalog.getSqlOperatorTable, table)
+          ChainedSqlOperatorTable.of(chainedFunctionCatalog.getSqlOperatorTable, table)
         }
     }
   }
@@ -450,6 +457,14 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Registers a UDF class under a unique name. The UDF class must have a default public
+    * constructor in order to be instantiated in runtime.
+    */
+  def registerFunction(functionName: String, udf: UserDefinedFunction): Unit = {
+    chainedFunctionCatalog.registerFunction(functionName, udf.getClass)
+  }
+
+  /**
     * Registers a [[ScalarFunction]] under a unique name. Replaces already existing
     * user-defined functions under this name.
     */
@@ -458,10 +473,10 @@ abstract class TableEnvironment(
     checkForInstantiation(function.getClass)
 
     // register in Table API
-    functionCatalog.registerFunction(name, function.getClass)
+    builtInFunctionCatalog.registerFunction(name, function.getClass)
 
     // register in SQL API
-    functionCatalog.registerSqlFunction(
+    builtInFunctionCatalog.registerSqlFunction(
       createScalarSqlFunction(name, name, function, typeFactory)
     )
   }
@@ -523,12 +538,12 @@ abstract class TableEnvironment(
     }
 
     // register in Table API
-    functionCatalog.registerFunction(name, function.getClass)
+    builtInFunctionCatalog.registerFunction(name, function.getClass)
 
     // register in SQL API
     val sqlFunctions =
       createTableSqlFunction(name, name, function, implicitResultType, typeFactory)
-    functionCatalog.registerSqlFunction(sqlFunctions)
+    builtInFunctionCatalog.registerSqlFunction(sqlFunctions)
   }
 
   /**
@@ -547,7 +562,7 @@ abstract class TableEnvironment(
     val accType = getAccumulatorTypeOfAggregateFunction(function, implicitly[TypeInformation[ACC]])
 
     // register in Table API
-    functionCatalog.registerFunction(name, function.getClass)
+    builtInFunctionCatalog.registerFunction(name, function.getClass)
 
     // register in SQL API
     val sqlFunctions = createAggregateSqlFunction(
@@ -558,7 +573,7 @@ abstract class TableEnvironment(
       accType,
       typeFactory)
 
-    functionCatalog.registerSqlFunction(sqlFunctions)
+    builtInFunctionCatalog.registerSqlFunction(sqlFunctions)
   }
 
   /**
@@ -1081,7 +1096,7 @@ abstract class TableEnvironment(
     * Gets the names of all functions registered in this environment.
     */
   def listUserDefinedFunctions(): Array[String] = {
-    functionCatalog.getSqlOperatorTable.getOperatorList.map(e => e.getName).toArray
+    chainedFunctionCatalog.getSqlOperatorTable.getOperatorList.map(e => e.getName).toArray
   }
 
   /**
@@ -1439,7 +1454,7 @@ abstract class TableEnvironment(
 
   /** Returns the chained [[FunctionCatalog]]. */
   private[flink] def getFunctionCatalog: FunctionCatalog = {
-    functionCatalog
+    chainedFunctionCatalog
   }
 
   private def createFrameworkConfig: FrameworkConfig = {
@@ -1451,7 +1466,7 @@ abstract class TableEnvironment(
       .operatorTable(getSqlOperatorTable)
       // set the executor to evaluate constant expressions
       .executor(new ExpressionReducer(config))
-      .context(FlinkChainContext.chain(Contexts.of(config), Contexts.of(functionCatalog)))
+      .context(FlinkChainContext.chain(Contexts.of(config), Contexts.of(chainedFunctionCatalog)))
       .build
   }
 

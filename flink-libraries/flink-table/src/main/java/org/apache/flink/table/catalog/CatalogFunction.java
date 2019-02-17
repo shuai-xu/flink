@@ -65,4 +65,13 @@ public class CatalogFunction {
 	public CatalogFunction deepCopy() {
 		return new CatalogFunction(source, clazzName, new HashMap(properties));
 	}
+
+	@Override
+	public String toString() {
+		return "CatalogFunction{" +
+			"source=" + source +
+			", clazzName='" + clazzName + '\'' +
+			", properties=" + properties +
+			'}';
+	}
 }

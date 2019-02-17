@@ -340,7 +340,7 @@ object BuiltInFunctionCatalog {
   /**
     * Create a new function catalog with built-in functions.
     */
-  def instance(): FunctionCatalog = {
+  def instance(): BuiltInFunctionCatalog = {
     _instance
   }
 }

@@ -22,6 +22,7 @@ package org.apache.flink.table.functions.utils
 import java.lang.reflect.{Method, Modifier}
 import java.lang.{Integer => JInt, Long => JLong}
 import java.sql.{Date, Time, Timestamp}
+
 import com.google.common.primitives.Primitives
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
@@ -42,10 +43,10 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.hive.functions._
 import org.apache.flink.table.api.types._
+import org.apache.flink.table.catalog.CatalogPartition.PartitionSpec
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
-
 import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
 import org.apache.hadoop.hive.ql.udf.generic.{GenericUDAFResolver2, GenericUDF, GenericUDTF}
 
@@ -704,7 +705,7 @@ object UserDefinedFunctionUtils {
         alias = Some(Seq(name) ++ extraNames)
         unwrap(child)
       case Call(name, args) =>
-        val function = tableEnv.functionCatalog.lookupFunction(name, args)
+        val function = tableEnv.chainedFunctionCatalog.lookupFunction(name, args)
         unwrap(function)
       case c: TableFunctionCall => c
       case _ =>

@@ -159,7 +159,7 @@ public class SqlJobUtil {
 				now);
 
 		ReadableWritableCatalog catalog = (ReadableWritableCatalog) tableEnv.getDefaultCatalog();
-		// TODO: need to consider if a default db doesn't exist
+
 		catalog.createTable(
 			new ObjectPath(tableEnv.getDefaultDatabaseName(), tableName),
 			catalogTable,
@@ -227,11 +227,8 @@ public class SqlJobUtil {
 				}
 
 				// Register in catalog
-				// TODO: [BLINK-18570607] re-enable register external functions in SqlJobUtil
-//				tableEnv.registerExternalFunction(
-//					null, functionName, sqlCreateFunction.getClassName(), false);
-				throw new UnsupportedOperationException(
-					"catalogs haven't support registering functions yet");
+				tableEnv.registerFunction(
+					functionName, sqlCreateFunction.getClassName(), false);
 			}
 		}
 
