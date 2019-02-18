@@ -98,7 +98,8 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 					}
 				}
 				for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
-					if (output.getConsumers().get(0).getSchedulingMode() == SchedulingMode.CONCURRENT) {
+					if (output.getConsumers().size() > 0 &&
+							output.getConsumers().get(0).getSchedulingMode() == SchedulingMode.CONCURRENT) {
 						hasConcurrentUpstream = true;
 						break;
 					}
@@ -112,11 +113,13 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 					}
 				}
 				for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
-					JobEdge jobEdge = output.getConsumers().get(0);
-					if (!visitedJobEdge.contains(jobEdge) && jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT) {
-						visitedJobEdge.add(jobEdge);
-						concurrentVertices.add(jobEdge.getTarget());
-						concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getTarget(), visitedJobEdge, visitedControlEdge));
+					if (output.getConsumers().size() > 0) {
+						JobEdge jobEdge = output.getConsumers().get(0);
+						if (!visitedJobEdge.contains(jobEdge) && jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT) {
+							visitedJobEdge.add(jobEdge);
+							concurrentVertices.add(jobEdge.getTarget());
+							concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getTarget(), visitedJobEdge, visitedControlEdge));
+						}
 					}
 				}
 				for (JobControlEdge controlEdge : jobVertex.getOutControlEdges()) {
