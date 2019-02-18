@@ -227,8 +227,8 @@ public class SqlJobUtil {
 				}
 
 				// Register in catalog
-				tableEnv.registerFunction(
-					functionName, sqlCreateFunction.getClassName(), false);
+//				tableEnv.registerFunction(
+//					functionName, sqlCreateFunction.getClassName(), false);
 			}
 		}
 
