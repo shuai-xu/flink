@@ -222,7 +222,7 @@ class InputGateFetcher<IN> implements InputFetcher, InputGateListener {
 			if (bufferOrEvent.isEvent()) {
 				checkArgument(bufferOrEvent.getEvent() instanceof EndOfPartitionEvent);
 
-				LOG.info("receive event:" + bufferOrEvent.getEvent());
+				LOG.debug("receive event:" + bufferOrEvent.getEvent());
 				if (inputGate.isFinished()) {
 					LOG.info("Input gate {} is finished", inputGate);
 					synchronized (checkpointLock) {

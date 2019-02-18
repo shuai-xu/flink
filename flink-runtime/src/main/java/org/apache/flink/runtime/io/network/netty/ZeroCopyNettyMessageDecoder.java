@@ -265,12 +265,12 @@ public class ZeroCopyNettyMessageDecoder extends ChannelInboundHandlerAdapter {
 	 */
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		LOG.info("Channel get inactive, currentNettyMessage = {}", currentNettyMessage);
 		super.channelInactive(ctx);
 
 		if (currentNettyMessage != null
 				&& currentNettyMessage instanceof NettyMessage.BufferResponse
 				&& ((NettyMessage.BufferResponse) currentNettyMessage).getBuffer() != null) {
+			LOG.info("Channel get inactive and the buffer of currentNettyMessage {} is released", currentNettyMessage);
 			((NettyMessage.BufferResponse) currentNettyMessage).getBuffer().release();
 		}
 
