@@ -24,6 +24,7 @@ import org.apache.flink.runtime.executiongraph.AccessExecution;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
 import org.apache.flink.runtime.executiongraph.AccessExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.AccessExecutionVertex;
+import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ErrorInfo;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
 import org.apache.flink.runtime.rest.handler.legacy.ExecutionGraphCache;
@@ -36,6 +37,7 @@ import org.apache.flink.runtime.rest.messages.job.JobExceptionsEndFilterQueryPar
 import org.apache.flink.runtime.rest.messages.job.JobExceptionsMessageParameters;
 import org.apache.flink.runtime.rest.messages.job.JobExceptionsStartFilterQueryParameter;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
+import org.apache.flink.runtime.util.EvictingBoundedList;
 import org.apache.flink.runtime.util.FixedSortedSet;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.history.ArchivedJson;
@@ -56,7 +58,7 @@ import java.util.concurrent.Executor;
 /**
  * Handler serving the job exceptions.
  */
-public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExceptionsInfo, JobExceptionsMessageParameters> implements JsonArchivist {
+public class JobExceptionsHandler extends AbstractExecutionGraphsHandler<JobExceptionsInfo, JobExceptionsMessageParameters> implements JsonArchivist {
 
 	static final int MAX_NUMBER_EXCEPTION_TO_REPORT = 200;
 
@@ -80,23 +82,25 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 	}
 
 	@Override
-	protected JobExceptionsInfo handleRequest(HandlerRequest<EmptyRequestBody, JobExceptionsMessageParameters> request, AccessExecutionGraph executionGraph) {
+	protected JobExceptionsInfo handleRequest(HandlerRequest<EmptyRequestBody, JobExceptionsMessageParameters> request,
+		AccessExecutionGraph executionGraph, EvictingBoundedList<ArchivedExecutionGraph> historicalGraphs) {
 		List<Long> startList = request.getQueryParameter(JobExceptionsStartFilterQueryParameter.class);
 		List<Long> endList = request.getQueryParameter(JobExceptionsEndFilterQueryParameter.class);
 		Long start = startList.isEmpty() ? -1L : startList.get(0);
 		Long end = endList.isEmpty() ? System.currentTimeMillis() : endList.get(0);
-		return createJobExceptionsInfo(executionGraph, start, end);
+		return createJobExceptionsInfo(executionGraph, historicalGraphs, start, end);
 	}
 
 	@Override
 	public Collection<ArchivedJson> archiveJsonWithPath(AccessExecutionGraph graph) throws IOException {
-		ResponseBody json = createJobExceptionsInfo(graph, -1L, System.currentTimeMillis());
+		ResponseBody json = createJobExceptionsInfo(graph, null, -1L, System.currentTimeMillis());
 		String path = getMessageHeaders().getTargetRestEndpointURL()
 			.replace(':' + JobIDPathParameter.KEY, graph.getJobID().toString());
 		return Collections.singletonList(new ArchivedJson(path, json));
 	}
 
-	private static JobExceptionsInfo createJobExceptionsInfo(AccessExecutionGraph executionGraph, Long start, Long end) {
+	private static JobExceptionsInfo createJobExceptionsInfo(AccessExecutionGraph executionGraph,
+		EvictingBoundedList<ArchivedExecutionGraph> historicalGraphs, Long start, Long end) {
 		ErrorInfo rootException = executionGraph.getFailureInfo();
 		String rootExceptionMessage = null;
 		Long rootTimestamp = null;
@@ -111,28 +115,14 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 			taskExceptionList = new FixedSortedSet<>(MAX_NUMBER_EXCEPTION_TO_REPORT, Comparator.reverseOrder());
 		int numExceptionsSofar = 0;
 		boolean truncated = false;
-		for (AccessExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()) {
-			for (AccessExecutionVertex executionVertex : jobVertex.getTaskVertices()) {
-				// Task can not be null.
-				AccessExecution task = executionVertex.getCurrentExecutionAttempt();
-				JobExceptionsInfo.ExecutionExceptionInfo
-					executionExceptionInfo = generateExecutionExceptionInfo(
-						jobVertex,
-						executionVertex,
-						task);
-				if (executionExceptionInfo != null && executionExceptionInfo.getTimestamp() >= start
-					&& executionExceptionInfo.getTimestamp() <= end) {
-					taskExceptionList.add(executionExceptionInfo);
-					numExceptionsSofar++;
-				}
-
-				for (int i = task.getAttemptNumber() - 1; i >= 0; i--) {
-					try {
-						task = executionVertex.getPriorExecutionAttempt(i);
-					} catch (Exception e) {
-						break;
-					}
-					executionExceptionInfo = generateExecutionExceptionInfo(
+		for (AccessExecutionJobVertex currentJobVertex : executionGraph.getVerticesTopologically()) {
+			List<AccessExecutionJobVertex> vertexList = getVertex(historicalGraphs, currentJobVertex);
+			for (AccessExecutionJobVertex jobVertex : vertexList) {
+				for (AccessExecutionVertex executionVertex : jobVertex.getTaskVertices()) {
+					// Task can not be null.
+					AccessExecution task = executionVertex.getCurrentExecutionAttempt();
+					JobExceptionsInfo.ExecutionExceptionInfo
+						executionExceptionInfo = generateExecutionExceptionInfo(
 						jobVertex,
 						executionVertex,
 						task);
@@ -141,14 +131,43 @@ public class JobExceptionsHandler extends AbstractExecutionGraphHandler<JobExcep
 						taskExceptionList.add(executionExceptionInfo);
 						numExceptionsSofar++;
 					}
-				}
-				if (!truncated && numExceptionsSofar >= MAX_NUMBER_EXCEPTION_TO_REPORT) {
-					truncated = true;
+
+					for (int i = task.getAttemptNumber() - 1; i >= 0; i--) {
+						try {
+							task = executionVertex.getPriorExecutionAttempt(i);
+						} catch (Exception e) {
+							break;
+						}
+						executionExceptionInfo = generateExecutionExceptionInfo(
+							jobVertex,
+							executionVertex,
+							task);
+						if (executionExceptionInfo != null && executionExceptionInfo.getTimestamp() >= start
+							&& executionExceptionInfo.getTimestamp() <= end) {
+							taskExceptionList.add(executionExceptionInfo);
+							numExceptionsSofar++;
+						}
+					}
+					if (!truncated && numExceptionsSofar >= MAX_NUMBER_EXCEPTION_TO_REPORT) {
+						truncated = true;
+					}
 				}
 			}
 		}
 
 		return new JobExceptionsInfo(rootExceptionMessage, rootTimestamp, new ArrayList<>(taskExceptionList), truncated);
+	}
+
+	private static List<AccessExecutionJobVertex> getVertex(EvictingBoundedList<ArchivedExecutionGraph> historicalGraphs, AccessExecutionJobVertex jobVertex){
+		List<AccessExecutionJobVertex> vertexList = new ArrayList<>();
+		vertexList.add(jobVertex);
+		if (historicalGraphs != null) {
+			for (ArchivedExecutionGraph graph: historicalGraphs) {
+				AccessExecutionJobVertex v = graph.getJobVertex(jobVertex.getJobVertexId());
+				vertexList.add(v);
+			}
+		}
+		return vertexList;
 	}
 
 	private static JobExceptionsInfo.ExecutionExceptionInfo generateExecutionExceptionInfo(AccessExecutionJobVertex jobVertex, AccessExecutionVertex executionVertex, AccessExecution task) {
