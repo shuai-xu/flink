@@ -29,7 +29,7 @@ import java.util.Collection;
  */
 public class CheckpointMessageParameters extends JobMessageParameters {
 
-	protected final CheckpointIdPathParameter checkpointIdPathParameter = new CheckpointIdPathParameter();
+	public final CheckpointIdPathParameter checkpointIdPathParameter = new CheckpointIdPathParameter();
 
 	@Override
 	public Collection<MessagePathParameter<?>> getPathParameters() {

@@ -47,6 +47,11 @@ import org.apache.flink.runtime.rest.messages.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionInfosHeaders;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionsInfos;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointMessageParameters;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatisticDetailsHeaders;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointingStatisticsHeaders;
+import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rest.messages.job.JobExceptionsMessageParameters;
 import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
@@ -368,6 +373,29 @@ public class RestServerClientImpl implements RestServerClient {
 				return totalResourceLimit;
 			}
 		).get();
+	}
+
+	@Override
+	public Map<JobVertexID, TaskCheckpointStatistics> getJobVertexCheckPointStates(JobID jobId) throws Exception {
+		final CheckpointingStatisticsHeaders header = CheckpointingStatisticsHeaders.getInstance();
+		final JobMessageParameters param = header.getUnresolvedMessageParameters();
+		param.jobPathParameter.resolve(jobId);
+		CheckpointStatistics.CompletedCheckpointStatistics latestCheckpoints = sendRequest(header, param, EmptyRequestBody.getInstance()).get().getLatestCheckpoints().getCompletedCheckpointStatistics();
+		Map<JobVertexID, TaskCheckpointStatistics> result = new HashMap<>();
+		if (latestCheckpoints != null) {
+			Long latestCheckpointId = latestCheckpoints.getId();
+			final CheckpointStatisticDetailsHeaders checkpointStatisticDetailsHeaders = CheckpointStatisticDetailsHeaders.getInstance();
+			final CheckpointMessageParameters checkpointMessageParameters = checkpointStatisticDetailsHeaders.getUnresolvedMessageParameters();
+			checkpointMessageParameters.jobPathParameter.resolve(jobId);
+			checkpointMessageParameters.checkpointIdPathParameter.resolve(latestCheckpointId);
+			sendRequest(checkpointStatisticDetailsHeaders, checkpointMessageParameters, EmptyRequestBody.getInstance()).thenApply(
+				(CheckpointStatistics checkpointStatistics) -> {
+					result.putAll(checkpointStatistics.getCheckpointStatisticsPerTask());
+					return result;
+				}
+			).get();
+		}
+		return result;
 	}
 
 	private Map<String, Map<String, Tuple2<Long, Double>>> updateMetricFromComponentsMetricCollection(ComponentsMetricCollectionResponseBody cmc,

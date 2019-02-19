@@ -27,6 +27,7 @@ import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.JobException;
+import org.apache.flink.runtime.checkpoint.CheckpointStatsStatus;
 import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.dispatcher.Dispatcher;
@@ -71,6 +72,13 @@ import org.apache.flink.runtime.rest.messages.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionInfosHeaders;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionsInfos;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointMessageParameters;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatisticDetailsHeaders;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointingStatistics;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointingStatisticsHeaders;
+import org.apache.flink.runtime.rest.messages.checkpoints.MinMaxAvgStatistics;
+import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rest.messages.job.JobExceptionsMessageParameters;
 import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
@@ -243,6 +251,18 @@ public class RestServerClientImplTest extends TestLogger {
 		}
 	}
 
+	@Test
+	public void testGetJobVertexCheckPointStates() throws Exception {
+		TestCheckpointStatisticDetailsHandler testCheckpointStatisticDetailsHandler = new TestCheckpointStatisticDetailsHandler();
+		TestCheckpointingStatisticsHandler checkpointingStatisticsHandler = new TestCheckpointingStatisticsHandler();
+		try (TestRestServerEndpoint ignored = createRestServerEndpoint(testCheckpointStatisticDetailsHandler, checkpointingStatisticsHandler)) {
+			Map<JobVertexID, TaskCheckpointStatistics> vertexCheckPointStates = restServerClientImpl.getJobVertexCheckPointStates(jobId);
+			jobGraph.getVertices().forEach(v -> {
+				Assert.assertTrue(vertexCheckPointStates.get(v.getID()).getStateSize() == 2L);
+			});
+		}
+	}
+
 	private class TestListJobsHandler extends TestHandler<EmptyRequestBody, MultipleJobsDetails, EmptyMessageParameters> {
 
 		private TestListJobsHandler() {
@@ -364,6 +384,167 @@ public class RestServerClientImplTest extends TestLogger {
 			exceptionMap.put(System.currentTimeMillis(), new Exception("aa"));
 			TotalResourceLimitExceptionsInfos exceptionsInfos = new TotalResourceLimitExceptionsInfos(exceptionMap);
 			return CompletableFuture.completedFuture(exceptionsInfos);
+		}
+
+	}
+
+	private class TestCheckpointingStatisticsHandler extends TestHandler<EmptyRequestBody, CheckpointingStatistics, JobMessageParameters> {
+		private TestCheckpointingStatisticsHandler() {
+			super(CheckpointingStatisticsHeaders.getInstance());
+		}
+
+		@Override
+		protected CompletableFuture<CheckpointingStatistics> handleRequest(@Nonnull HandlerRequest<EmptyRequestBody, JobMessageParameters> request, @Nonnull DispatcherGateway gateway) throws RestHandlerException {
+			final CheckpointingStatistics.Counts counts = new CheckpointingStatistics.Counts(1, 2, 3, 4, 5);
+			final CheckpointingStatistics.Summary summary = new CheckpointingStatistics.Summary(
+				new MinMaxAvgStatistics(1L, 1L, 1L),
+				new MinMaxAvgStatistics(2L, 2L, 2L),
+				new MinMaxAvgStatistics(3L, 3L, 3L));
+
+			final Map<JobVertexID, TaskCheckpointStatistics> checkpointStatisticsPerTask = new HashMap<>(2);
+
+			checkpointStatisticsPerTask.put(
+				new JobVertexID(),
+				new TaskCheckpointStatistics(
+					1L,
+					CheckpointStatsStatus.COMPLETED,
+					1L,
+					2L,
+					3L,
+					4L,
+					5,
+					6));
+
+			checkpointStatisticsPerTask.put(
+				new JobVertexID(),
+				new TaskCheckpointStatistics(
+					1L,
+					CheckpointStatsStatus.COMPLETED,
+					2L,
+					3L,
+					4L,
+					5L,
+					6,
+					7));
+
+			final CheckpointStatistics.CompletedCheckpointStatistics completed = new CheckpointStatistics.CompletedCheckpointStatistics(
+				1L,
+				CheckpointStatsStatus.COMPLETED,
+				false,
+				42L,
+				41L,
+				1337L,
+				1L,
+				0L,
+				10,
+				10,
+				Collections.emptyMap(),
+				null,
+				false);
+
+			final CheckpointStatistics.CompletedCheckpointStatistics savepoint = new CheckpointStatistics.CompletedCheckpointStatistics(
+				2L,
+				CheckpointStatsStatus.COMPLETED,
+				true,
+				11L,
+				10L,
+				43L,
+				1L,
+				0L,
+				9,
+				9,
+				checkpointStatisticsPerTask,
+				"externalPath",
+				false);
+
+			final CheckpointStatistics.FailedCheckpointStatistics failed = new CheckpointStatistics.FailedCheckpointStatistics(
+				3L,
+				CheckpointStatsStatus.FAILED,
+				false,
+				5L,
+				10L,
+				4L,
+				2L,
+				0L,
+				11,
+				9,
+				Collections.emptyMap(),
+				100L,
+				"Test failure");
+
+			CheckpointingStatistics.RestoredCheckpointStatistics restored = new CheckpointingStatistics.RestoredCheckpointStatistics(
+				4L,
+				1445L,
+				true,
+				"foobar");
+
+			CheckpointStatistics.PendingCheckpointStatistics pending = new CheckpointStatistics.PendingCheckpointStatistics(
+				5L,
+				CheckpointStatsStatus.IN_PROGRESS,
+				false,
+				42L,
+				41L,
+				1337L,
+				1L,
+				0L,
+				10,
+				10,
+				Collections.emptyMap()
+			);
+
+			final CheckpointingStatistics.LatestCheckpoints latestCheckpoints = new CheckpointingStatistics.LatestCheckpoints(
+				completed,
+				savepoint,
+				failed,
+				restored);
+
+			CheckpointingStatistics cs =  new CheckpointingStatistics(
+				counts,
+				summary,
+				latestCheckpoints,
+				Arrays.asList(completed, savepoint, failed, pending));
+			return CompletableFuture.completedFuture(cs);
+		}
+
+	}
+
+	private class TestCheckpointStatisticDetailsHandler extends TestHandler<EmptyRequestBody, CheckpointStatistics, CheckpointMessageParameters> {
+		private TestCheckpointStatisticDetailsHandler() {
+			super(CheckpointStatisticDetailsHeaders.getInstance());
+		}
+
+		@Override
+		protected CompletableFuture<CheckpointStatistics> handleRequest(@Nonnull HandlerRequest<EmptyRequestBody, CheckpointMessageParameters> request, @Nonnull DispatcherGateway gateway) throws RestHandlerException {
+			final Map<JobVertexID, TaskCheckpointStatistics> checkpointStatisticsPerTask = new HashMap<>(2);
+
+			jobGraph.getVertices().forEach(v -> {
+				checkpointStatisticsPerTask.put(
+					v.getID(),
+					new TaskCheckpointStatistics(
+						1L,
+						CheckpointStatsStatus.COMPLETED,
+						1L,
+						2L,
+						3L,
+						4L,
+						5,
+						6));
+			});
+			CheckpointStatistics.CompletedCheckpointStatistics checkpointStatistics  = new CheckpointStatistics.CompletedCheckpointStatistics(
+				1L,
+				CheckpointStatsStatus.COMPLETED,
+				false,
+				42L,
+				41L,
+				1337L,
+				1L,
+				0L,
+				10,
+				10,
+				checkpointStatisticsPerTask,
+				null,
+				false);
+			return CompletableFuture.completedFuture(checkpointStatistics);
 		}
 
 	}
