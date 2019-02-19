@@ -22,7 +22,7 @@ import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, 
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.catalog.CatalogFunction
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.Accumulator0
-import org.junit.{Ignore, Test}
+import org.junit.Test
 
 /**
   * Test for FunctionCatalogUtils.
@@ -41,8 +41,6 @@ class FunctionCatalogUtilsTest {
     assert(sqlFunc != null)
   }
 
-  // TODO: re-enable this UT with [BLINK-18982742]
-  @Ignore
   @Test
   def testInitiateTableFunction(): Unit = {
     val catalogFunc = new CatalogFunction(classOf[TestTableFunction].getName)

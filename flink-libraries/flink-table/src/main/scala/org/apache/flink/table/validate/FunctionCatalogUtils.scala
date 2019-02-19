@@ -53,19 +53,18 @@ object FunctionCatalogUtils {
             typeFactory)
             .asInstanceOf[ScalarSqlFunction]
 
-        // Does not support TableFunction and AggregateFunction currently
-        // because, according to testing, the following previous code does not work
-        // TODO: [BLINK-18982742] support initializing TableFunction from catalogs function classes
-//        case _: TableFunction[_] =>
-//          val implicitResultType = UserDefinedFunctionUtils.getImplicitResultType(
-//            functionInstance.asInstanceOf[TableFunction[_]])
-//          UserDefinedFunctionUtils.createTableSqlFunction(
-//            name,
-//            name,
-//            functionInstance.asInstanceOf[TableFunction[_]],
-//            implicitResultType.asInstanceOf[DataType],
-//            typeFactory
-//          )
+        case _: TableFunction[_] =>
+          val f = functionInstance.asInstanceOf[TableFunction[_]]
+
+          UserDefinedFunctionUtils.createTableSqlFunction(
+            name,
+            name,
+            f,
+            // Conform to how built-in TableFunctions are registered in BuiltInFunctionCatalog
+            f.getResultType(Array[AnyRef](), Array[Class[_]]()),
+            typeFactory
+          )
+
         case _: AggregateFunction[_, _] =>
           val f = functionInstance.asInstanceOf[AggregateFunction[_, _]]
           val implicitResultType = new TypeInfoWrappedDataType(TypeExtractor
@@ -84,9 +83,10 @@ object FunctionCatalogUtils {
             externalAccType,
             typeFactory
           )
-        case default =>
+
+        case _ =>
           throw new UnsupportedOperationException(
-            "Does not support initializing functions other than ScalarFunction")
+            s"Function ${name} should be of ScalarFunction, TableFunction, or AggregateFunction")
       }
     }
 
