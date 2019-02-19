@@ -93,9 +93,23 @@ public class ZooKeeperUtils {
 
 		ZkClientACLMode aclMode = ZkClientACLMode.fromConfig(configuration);
 
-		if (disableSaslClient && aclMode == ZkClientACLMode.CREATOR) {
-			String errorMessage = "Cannot set ACL role to " + aclMode + "  since SASL authentication is " +
-					"disabled through the " + SecurityOptions.ZOOKEEPER_SASL_DISABLE.key() + " property";
+		boolean enableAclClient = false;
+		String aclScheme = null, aclAuth = null;
+		if (disableSaslClient) {
+			aclScheme = configuration.getValue(HighAvailabilityOptions.ZOOKEEPER_ACL_SCHEME);
+			aclAuth = configuration.getValue(HighAvailabilityOptions.ZOOKEEPER_ACL_AUTH);
+
+			if (aclScheme != null && !aclScheme.isEmpty()) {
+				enableAclClient = true;
+				LOG.info("Access Zookeeper using {} ACL authentication.", aclScheme);
+			}
+		} else {
+			LOG.info("Access Zookeeper using SASL authentication.");
+		}
+
+		boolean isAuthEnabled = !disableSaslClient || enableAclClient;
+		if (!isAuthEnabled && aclMode == ZkClientACLMode.CREATOR) {
+			String errorMessage = "Cannot set ACL role to " + aclMode + " since authentication is not enabled.";
 			LOG.warn(errorMessage);
 			throw new IllegalConfigurationException(errorMessage);
 		}
@@ -112,7 +126,7 @@ public class ZooKeeperUtils {
 
 		LOG.info("Using '{}' as Zookeeper namespace.", rootWithNamespace);
 
-		CuratorFramework cf = CuratorFrameworkFactory.builder()
+		CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder()
 				.connectString(zkQuorum)
 				.sessionTimeoutMs(sessionTimeout)
 				.connectionTimeoutMs(connectionTimeout)
@@ -120,10 +134,20 @@ public class ZooKeeperUtils {
 				// Curator prepends a '/' manually and throws an Exception if the
 				// namespace starts with a '/'.
 				.namespace(rootWithNamespace.startsWith("/") ? rootWithNamespace.substring(1) : rootWithNamespace)
-				.aclProvider(aclProvider)
-				.build();
+				.aclProvider(aclProvider);
+
+		CuratorFramework cf = enableAclClient ?	builder.authorization(aclScheme, aclAuth.getBytes()).build() : builder.build();
 
 		cf.start();
+
+		// set acl for the namespace path
+		if (enableAclClient) {
+			try {
+				cf.setACL().withACL(builder.getAclProvider().getDefaultAcl()).forPath("/");
+			} catch (Exception e) {
+				throw new RuntimeException("Set ACL for the namespace path '" + cf.getNamespace() + "' failed.", e);
+			}
+		}
 
 		return cf;
 	}

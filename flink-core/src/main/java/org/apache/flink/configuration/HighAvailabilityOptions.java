@@ -195,6 +195,14 @@ public class HighAvailabilityOptions {
 				" set to “creator” if the ZooKeeper server configuration has the “authProvider” property mapped to use" +
 				" SASLAuthenticationProvider and the cluster is configured to run in secure mode (Kerberos).");
 
+	public static final ConfigOption<String> ZOOKEEPER_ACL_SCHEME =
+			key("zookeeper.acl.scheme")
+					.noDefaultValue();
+
+	public static final ConfigOption<String> ZOOKEEPER_ACL_AUTH =
+			key("zookeeper.acl.auth")
+					.noDefaultValue();
+
 	// --------------------------- FileSystem ----------------------------------
 
 	public static final ConfigOption<String> HA_FILESYSTEM_JOBGRAPHS_PATH =
