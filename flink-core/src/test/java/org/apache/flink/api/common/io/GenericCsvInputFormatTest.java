@@ -544,6 +544,29 @@ public class GenericCsvInputFormatTest {
 		}
 	}
 
+	@Test(expected = ParseException.class)
+	public void testReadEmptyLine() {
+		// not lenient, expect a 'Rows too short' ParseException
+		try {
+			final String fileContent = "\n"; // too short, an empty line
+			final FileInputSplit split = createTempFile(fileContent);
+
+			final Configuration parameters = new Configuration();
+
+			format.setFieldDelimiter("|");
+			format.setFieldTypesGeneric(StringValue.class, null, IntValue.class);
+
+			format.configure(parameters);
+			format.open(split);
+
+			Value[] values = new Value[]{new StringValue(), new IntValue()};
+
+			format.nextRecord(values);
+		} catch (IOException e) {
+			fail("Test failed due to a " + e.getClass().getSimpleName() + ": " + e.getMessage());
+		}
+	}
+
 	@Test
 	public void testReadWithCharset() throws IOException {
 		// Unicode row fragments

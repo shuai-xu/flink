@@ -53,6 +53,9 @@ public class CsvOptions {
 	public static final ConfigOption<Boolean> EMPTY_COLUMN_AS_NULL = key("emptyColumnAsNull".toLowerCase())
 		.defaultValue(false);
 
+	public static final ConfigOption<Boolean> LENIENT = key("lenient".toLowerCase())
+		.defaultValue(false);
+
 	public static final ConfigOption<String> OPTIONAL_QUOTE_CHARACTER = key("quoteCharacter".toLowerCase())
 		.noDefaultValue();
 
@@ -81,6 +84,7 @@ public class CsvOptions {
 		OPTIONAL_WRITE_MODE.key(),
 		OPTIONAL_OVER_RIDE_MODE.key(),
 		EMPTY_COLUMN_AS_NULL.key(),
+		LENIENT.key(),
 		OPTIONAL_QUOTE_CHARACTER.key(),
 		OPTIONAL_FIRST_LINE_AS_HEADER.key(),
 		PARALLELISM.key(),

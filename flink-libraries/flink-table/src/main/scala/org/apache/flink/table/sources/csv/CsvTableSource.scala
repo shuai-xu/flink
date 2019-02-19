@@ -503,6 +503,15 @@ object CsvTableSource {
     }
 
     /**
+      * Skip records or throw exception when parse error.
+      * Equivalent to ignoreParseErrors if set to true.
+      */
+    def setLenient(lenient: Boolean): Builder = {
+      this.lenient = lenient
+      this
+    }
+
+    /**
       * enableEmptyColumnAsNull.
       */
     def enableEmptyColumnAsNull(): Builder = {

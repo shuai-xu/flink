@@ -115,6 +115,7 @@ public class CsvTableFactory implements
 		final String lineDelim = getJavaEscapedDelim(properties.getString(CsvOptions.OPTIONAL_LINE_DELIM));
 		final String charset = properties.getString(CsvOptions.OPTIONAL_CHARSET);
 		final boolean emptyColumnAsNull = properties.getBoolean(CsvOptions.EMPTY_COLUMN_AS_NULL);
+		final boolean lenient = properties.getBoolean(CsvOptions.LENIENT);
 		final String timeZone = properties.getString(CsvOptions.OPTIONAL_TIME_ZONE);
 		final TimeZone tz = (timeZone == null) ? TimeZone.getTimeZone("UTC") : TimeZone.getTimeZone(timeZone);
 		final boolean enumerateNestedFiles = properties.getBoolean(CsvOptions.OPTIONAL_ENUMERATE_NESTED_FILES);
@@ -153,6 +154,8 @@ public class CsvTableFactory implements
 		if (emptyColumnAsNull) {
 			builder.enableEmptyColumnAsNull();
 		}
+
+		builder.setLenient(lenient);
 
 		final String quoteCharacter = getJavaEscapedDelim(properties.getString(CsvOptions.OPTIONAL_QUOTE_CHARACTER));
 		if (quoteCharacter != null) {
