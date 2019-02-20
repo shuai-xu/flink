@@ -78,6 +78,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -201,8 +202,8 @@ public class RestServerClientImpl implements RestServerClient {
 		endList.add(endTime);
 		parameters.start.resolve(startList);
 		parameters.end.resolve(endList);
-		return sendRequest(headers, parameters, EmptyRequestBody.getInstance()).thenApply(
-			(JobExceptionsInfo exceptionsInfo) -> {
+		Map<JobVertexID, List<JobException>> failovers = sendRequest(headers, parameters, EmptyRequestBody.getInstance())
+			.thenApply((JobExceptionsInfo exceptionsInfo) -> {
 				List<JobExceptionsInfo.ExecutionExceptionInfo> exceptions = exceptionsInfo.getAllExceptions();
 				Map<JobVertexID, List<JobException>> jobVertexId2exceptions = new HashMap<>();
 				for (JobExceptionsInfo.ExecutionExceptionInfo exception : exceptions) {
@@ -220,6 +221,8 @@ public class RestServerClientImpl implements RestServerClient {
 				return jobVertexId2exceptions;
 			}
 		).get();
+		LOGGER.debug("get failovers of job {} from {} to {} : {}.", jobID, new Date(startTime).toString(), new Date(endTime).toString(), failovers);
+		return failovers;
 	}
 
 	@Override

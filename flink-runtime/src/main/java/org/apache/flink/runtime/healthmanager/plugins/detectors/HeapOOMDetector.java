@@ -76,8 +76,7 @@ public class HeapOOMDetector implements Detector {
 		List<JobVertexID> jobVertexIDs = new LinkedList<>();
 		for (JobVertexID vertexID: exceptions.keySet()) {
 			for (JobException exception : exceptions.get(vertexID)) {
-				if (exception.getCause() instanceof OutOfMemoryError &&
-						exception.getMessage().contains("Java heap space")) {
+				if (exception.getMessage().contains("Java heap space")) {
 					jobVertexIDs.add(vertexID);
 					break;
 				}

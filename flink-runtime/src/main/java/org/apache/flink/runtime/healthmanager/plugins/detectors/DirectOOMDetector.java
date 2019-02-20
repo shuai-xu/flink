@@ -76,8 +76,7 @@ public class DirectOOMDetector implements Detector {
 		List<JobVertexID> jobVertexIDs = new LinkedList<>();
 		for (JobVertexID vertexID: exceptions.keySet()) {
 			for (JobException exception : exceptions.get(vertexID)) {
-				if (exception.getCause() instanceof OutOfMemoryError &&
-						exception.getMessage().contains("Direct buffer memory")) {
+				if (exception.getMessage().contains("Direct buffer memory")) {
 					jobVertexIDs.add(vertexID);
 					break;
 				}

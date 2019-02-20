@@ -420,9 +420,8 @@ public class ParallelismScaler implements Resolver {
 	private boolean diagnose() {
 		if (jobStableSymptom == null ||
 			jobStableSymptom.getStableTime() < stableTime ||
-			frequentFullGCSymptom != null ||
-			failoverSymptom != null ||
-			jobStuckSymptom != null) {
+			frequentFullGCSymptom != null && frequentFullGCSymptom.isSevere() ||
+			failoverSymptom != null) {
 
 			LOGGER.debug("Job is not stable, should not rescale parallelism.");
 			return false;
@@ -519,7 +518,7 @@ public class ParallelismScaler implements Resolver {
 			TaskMetricSubscription sourceDelayIncreasingRateSub = sourceDelayRateSubs.get(vertexId);
 			// check metrics complete
 
-			if (inputTpsSub.getValue() == null || now - inputTpsSub.getValue().f0 > checkInterval * 2 || inputTpsSub.getValue().f1 <= 0.0 ||
+			if (inputTpsSub.getValue() == null || now - inputTpsSub.getValue().f0 > checkInterval * 2 ||
 				taskLatencyCountRangeSub.getValue() == null || now - taskLatencyCountRangeSub.getValue().f0 > checkInterval * 2 ||
 				taskLatencySumRangeSub.getValue() == null || now - taskLatencySumRangeSub.getValue().f0 > checkInterval * 2) {
 				LOGGER.debug("input metric missing " + vertexId);
