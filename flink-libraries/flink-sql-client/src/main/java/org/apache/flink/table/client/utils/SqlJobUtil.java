@@ -22,6 +22,7 @@ import org.apache.flink.sql.parser.ddl.SqlAnalyzeTable;
 import org.apache.flink.sql.parser.ddl.SqlColumnType;
 import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
+import org.apache.flink.sql.parser.ddl.SqlCreateView;
 import org.apache.flink.sql.parser.ddl.SqlNodeInfo;
 import org.apache.flink.sql.parser.ddl.SqlTableColumn;
 import org.apache.flink.sql.parser.impl.FlinkSqlParserImpl;
@@ -42,8 +43,7 @@ import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.catalog.CatalogTable;
-import org.apache.flink.table.catalog.ObjectPath;
-import org.apache.flink.table.catalog.ReadableWritableCatalog;
+import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -76,7 +76,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -87,7 +89,7 @@ public class SqlJobUtil {
 	private static final Logger LOG = LoggerFactory.getLogger(SqlJobUtil.class);
 
 	/**
-	 * Register an external table to table environment.
+	 * Register an external table to current catalog.
 	 * @param tableEnv     table environment
 	 * @param sqlNodeInfo  external table defined in ddl.
 	 */
@@ -158,12 +160,66 @@ public class SqlJobUtil {
 				now,
 				now);
 
-		ReadableWritableCatalog catalog = (ReadableWritableCatalog) tableEnv.getDefaultCatalog();
+		tableEnv.registerTable(tableName, catalogTable);
+	}
 
-		catalog.createTable(
-			new ObjectPath(tableEnv.getDefaultDatabaseName(), tableName),
-			catalogTable,
-			true);
+	/**
+	 * Register an external view to current catalog.
+	 * @param tableEnv
+	 * @param sqlNodeInfo
+	 */
+	public static void registerExternalView(TableEnvironment tableEnv, SqlNodeInfo sqlNodeInfo) {
+		final SqlCreateView sqlCreateView = (SqlCreateView) sqlNodeInfo.getSqlNode();
+		final String viewName = sqlCreateView.getName();
+		String subQuerySql = sqlCreateView.getSubQuerySql();
+		final List<String> aliasNames = sqlCreateView.getFieldNames();
+
+		Table view = tableEnv.sqlQuery(subQuerySql);
+
+		if (!aliasNames.isEmpty()) {
+			// if we have alias column names
+			// packing the original query with a SELECT clause
+			String viewSql = "SELECT %s FROM (" + subQuerySql.trim() + ")";
+			StringBuilder aliasClause = new StringBuilder();
+			List<String> inputFields = view.getRelNode().getRowType().getFieldNames();
+			assert aliasNames.size() == inputFields.size();
+			if (aliasNames.size() != inputFields.size()) {
+				throw new RuntimeException("View definition and input fields not match: \nDef Fields: "
+					+ aliasNames.toString() + "\nInput Fields: " + inputFields.toString());
+			}
+
+			for (int idx = 0; idx < aliasNames.size(); ++idx) {
+				aliasClause.append("`" + inputFields.get(idx) + "` as `" + aliasNames.get(idx) + "`");
+				if (idx < aliasNames.size() - 1) {
+					aliasClause.append(", ");
+				}
+			}
+			subQuerySql = String.format(viewSql, aliasClause.toString());
+			view = tableEnv.sqlQuery(subQuerySql);
+		}
+
+		String expandedSubQuerySql = tableEnv.getValidatedSqlQuery(subQuerySql);
+
+		long now = System.currentTimeMillis();
+		CatalogView catalogView = new CatalogView(
+			null,
+			view.getSchema(),
+			Collections.emptyMap(),
+			null,
+			TableStats.UNKNOWN(),
+			null,
+			new LinkedHashSet<>(),
+			false,
+			Collections.emptyMap(),
+			null,
+			-1L,
+			now,
+			now,
+			subQuerySql,
+			expandedSubQuerySql
+		);
+
+		tableEnv.registerView(viewName, catalogView);
 	}
 
 	/**
@@ -227,8 +283,11 @@ public class SqlJobUtil {
 				}
 
 				// Register in catalog
-//				tableEnv.registerFunction(
-//					functionName, sqlCreateFunction.getClassName(), false);
+				// TODO: [BLINK-18570607] re-enable register external functions in SqlJobUtil
+//				tableEnv.registerExternalFunction(
+//					null, functionName, sqlCreateFunction.getClassName(), false);
+				throw new UnsupportedOperationException(
+					"catalogs haven't support registering functions yet");
 			}
 		}
 

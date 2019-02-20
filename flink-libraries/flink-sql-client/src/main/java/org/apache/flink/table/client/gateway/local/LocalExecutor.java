@@ -78,7 +78,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Executor that performs the Flink communication locally. The calls are blocking depending on the
@@ -89,8 +88,6 @@ public class LocalExecutor implements Executor {
 	private static final Logger LOG = LoggerFactory.getLogger(LocalExecutor.class);
 
 	private static final String DEFAULT_ENV_FILE = "sql-client-defaults.yaml";
-
-	private static final AtomicInteger TMP_VIEW_SEQUENCE_ID = new AtomicInteger(0);
 
 	// deployment
 
@@ -398,37 +395,7 @@ public class LocalExecutor implements Executor {
 			sqlNodeList
 				.stream()
 				.filter((node) -> node.getSqlNode() instanceof SqlCreateView)
-				.forEach((node) -> {
-					String subQuery = ((SqlCreateView) (node.getSqlNode())).getSubQuerySql();
-					Table view = tEnv.sqlQuery(subQuery);
-					List<String> aliasNames = ((SqlCreateView) node.getSqlNode()).getFieldNames();
-
-					if (!aliasNames.isEmpty()) {
-						String tmpView =
-							"_tmp_" + ((SqlCreateView) node.getSqlNode()).getName() +
-								"_" + TMP_VIEW_SEQUENCE_ID.incrementAndGet();
-						tEnv.registerTable(tmpView, view);
-
-						String viewSql = "SELECT * FROM" + tmpView;
-						StringBuilder aliasClause = new StringBuilder();
-						List<String> inputFields = view.getRelNode().getRowType().getFieldNames();
-						assert aliasNames.size() == inputFields.size();
-						if (aliasNames.size() != inputFields.size()) {
-							throw new RuntimeException("View definition and input fields not match: \nDef Fields: "
-								+ aliasNames.toString() + "\nInput Fields: " + inputFields.toString());
-						}
-
-						for (int idx = 0; idx < aliasNames.size(); ++idx) {
-							aliasClause.append("`" + inputFields.get(idx) + "` as `" + aliasNames.get(idx) + "`");
-							if (idx < aliasNames.size() - 1) {
-								aliasClause.append(", ");
-							}
-						}
-						view = tEnv.sqlQuery(String.format(viewSql, aliasClause.toString()));
-					}
-
-					tEnv.registerTable(((SqlCreateView) node.getSqlNode()).getName(), view);
-				});
+				.forEach((node) -> SqlJobUtil.registerExternalView(tEnv, node));
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not create a view from ddl: " + ddl, e);
 		}
@@ -468,6 +435,19 @@ public class LocalExecutor implements Executor {
 				});
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not create a udx from ddl: " + ddl, e);
+		}
+	}
+
+	@Override
+	public void dropTable(SessionContext session, String tableName) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			tEnv.dropTable(tableName);
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not drop a table or view from current catalog.", e);
 		}
 	}
 

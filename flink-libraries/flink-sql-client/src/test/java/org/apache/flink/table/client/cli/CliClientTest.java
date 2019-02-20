@@ -252,5 +252,10 @@ public class CliClientTest extends TestLogger {
 		public void createFunction(SessionContext session, String ddl) throws SqlExecutionException {
 			// nothing to do
 		}
+
+		@Override
+		public void dropTable(SessionContext session, String tableName) throws SqlExecutionException {
+			// nothing to do
+		}
 	}
 }

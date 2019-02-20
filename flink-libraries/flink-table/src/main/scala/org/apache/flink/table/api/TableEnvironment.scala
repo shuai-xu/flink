@@ -609,6 +609,30 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Drops a [[Table]], [[CatalogTable]], or [[CatalogView]]
+    * from the TableEnvironment's default catalog.
+    * Dropped tables can not be referenced in SQL queries.
+    */
+  def dropTable(name: String): Unit = {
+    val catalog = getDefaultCatalog()
+    val path = new ObjectPath(getDefaultDatabaseName(), name)
+    catalog.asInstanceOf[ReadableWritableCatalog].dropTable(path, true)
+  }
+
+  /**
+    * Registers a [[CatalogView]] under a unique name in the TableEnvironment's default catalog.
+    * Registered views can be referenced in SQL queries.
+    *
+    * @param name The name under which the view will be registered.
+    * @param catalogView The view to register.
+    */
+  def registerView(name: String, catalogView: CatalogView): Unit = {
+    val catalog = getDefaultCatalog()
+    val path = new ObjectPath(getDefaultDatabaseName(), name)
+    catalog.asInstanceOf[ReadableWritableCatalog].createView(path, catalogView, false)
+  }
+
+  /**
     * Registers or replace a [[Table]] under a unique name in the TableEnvironment's catalog.
     * Registered tables can be referenced in SQL queries.
     *
@@ -1447,6 +1471,10 @@ abstract class TableEnvironment(
     planner
   }
 
+  private[flink] def getFlinkPlanner: FlinkPlannerImpl = {
+    flinkPlanner
+  }
+
   /** Returns the [[FlinkTypeFactory]] of this TableEnvironment. */
   private[flink] def getTypeFactory: FlinkTypeFactory = {
     typeFactory
@@ -1615,6 +1643,23 @@ abstract class TableEnvironment(
 
   def setUserClassLoader(userClassLoader: ClassLoader): Unit = {
     this.userClassloader = userClassLoader
+  }
+
+  /**
+    * Returns validated SQL string for a given subquery.
+    */
+  def getValidatedSqlQuery(originalSubQuery: String): String = {
+    // parse the sql query
+    val parsed = flinkPlanner.parse(originalSubQuery)
+    if (null != parsed && parsed.getKind.belongsTo(SqlKind.QUERY)) {
+      // validate the sql query
+      val validated = flinkPlanner.validate(parsed)
+      validated.toSqlString(null, false).getSql
+    } else {
+      throw new TableException(
+        "Unsupported SQL query! getValidatedSqlQuery() only accepts SQL queries of type " +
+          "SELECT, UNION, INTERSECT, EXCEPT, VALUES, and ORDER_BY.")
+    }
   }
 }
 
@@ -1795,5 +1840,4 @@ object TableEnvironment {
       case t: InternalType => Array(t)
     }
   }
-
 }

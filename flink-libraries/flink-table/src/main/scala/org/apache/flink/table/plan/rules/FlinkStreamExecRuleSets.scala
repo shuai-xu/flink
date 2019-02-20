@@ -69,6 +69,8 @@ object FlinkStreamExecRuleSets {
   val TABLE_REF_RULES: RuleSet = RuleSets.ofList(
     // rules to convert catalog table to normal table.
     CatalogTableRules.STREAM_TABLE_SCAN_RULE,
+    // rules to convert catalog view to rel node.
+    CatalogViewRules.VIEW_SCAN_RULE,
     TableScanRule.INSTANCE,
     EnumerableToLogicalTableScan.INSTANCE)
 

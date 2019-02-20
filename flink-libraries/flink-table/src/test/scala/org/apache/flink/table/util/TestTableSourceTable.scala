@@ -52,5 +52,5 @@ class TestTableSourceTable(
   override def getRowType(relDataTypeFactory: RelDataTypeFactory) =
     relDataTypeFactory.asInstanceOf[FlinkTypeFactory]
         .buildLogicalRowType(
-          tableSource.getTableSchema, tableSource.isInstanceOf[StreamTableSource[_]])
+          tableSource.getTableSchema, Option.apply(tableSource.isInstanceOf[StreamTableSource[_]]))
 }

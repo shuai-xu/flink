@@ -24,9 +24,9 @@ import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, Flink
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
 import org.apache.flink.table.plan.util.SameRelObjectShuttle
 import org.apache.flink.util.Preconditions
-
-import org.apache.calcite.plan.{Context, RelOptPlanner}
+import org.apache.calcite.plan.{Context, Contexts, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
+import org.apache.flink.table.calcite.FlinkChainContext
 
 /**
   * Query optimizer for Batch.
@@ -81,7 +81,8 @@ class BatchOptimizer(tEnv: BatchTableEnvironment) extends AbstractOptimizer {
     Preconditions.checkNotNull(programs)
 
     val optimizedPlan = programs.optimize(relNode, new BatchOptimizeContext {
-      override def getContext: Context = tEnv.getFrameworkConfig.getContext
+      override def getContext: Context = FlinkChainContext.chain(
+        tEnv.getFrameworkConfig.getContext, Contexts.of(tEnv.getFlinkPlanner))
 
       override def getRelOptPlanner: RelOptPlanner = tEnv.getPlanner
     })

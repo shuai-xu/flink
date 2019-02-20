@@ -145,6 +145,11 @@ public interface Executor {
 	void createFunction(SessionContext session, String ddl) throws SqlExecutionException;
 
 	/**
+	 * Drop a table or view.
+	 */
+	void dropTable(SessionContext session, String tableName) throws SqlExecutionException;
+
+	/**
 	 * Stops the executor.
 	 */
 	void stop(SessionContext session);

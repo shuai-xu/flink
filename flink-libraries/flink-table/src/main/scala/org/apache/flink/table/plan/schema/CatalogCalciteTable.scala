@@ -50,7 +50,12 @@ class CatalogCalciteTable(
     val table: CatalogTable)
     extends FlinkTable with ConfigurableTable {
 
-  val isStreaming = table.getProperties.remove(CatalogTableConfig.IS_STREAMING).toBoolean
+  val isStreaming =
+    if (table.getProperties.containsKey(CatalogTableConfig.IS_STREAMING)) {
+      Option.apply(table.getProperties.remove(CatalogTableConfig.IS_STREAMING).toBoolean)
+    } else {
+      Option.empty
+    }
 
   /**
    * Creates a copy of this table, changing statistic.
@@ -59,7 +64,9 @@ class CatalogCalciteTable(
    * @return Copy of this table, substituting statistic.
    */
   override def copy(statistic: FlinkStatistic): CatalogCalciteTable = {
-    table.getProperties.put(CatalogTableConfig.IS_STREAMING, isStreaming.toString)
+    if (isStreaming.isDefined) {
+      table.getProperties.put(CatalogTableConfig.IS_STREAMING, isStreaming.get.toString)
+    }
     return new CatalogCalciteTable(name, table)
   }
 
@@ -86,7 +93,10 @@ class CatalogCalciteTable(
       table.getCreateTime,
       table.getLastAccessTime)
 
-    newTable.getProperties.put(CatalogTableConfig.IS_STREAMING, isStreaming.toString)
+    if (isStreaming.isDefined) {
+      newTable.getProperties.put(CatalogTableConfig.IS_STREAMING, isStreaming.get.toString)
+    }
+
     new CatalogCalciteTable(name, newTable)
   }
 
@@ -112,9 +122,13 @@ class CatalogCalciteTable(
    * @return table sink
    */
   def tableSink: TableSink[Any] = {
-    isStreaming match {
-      case true => streamTableSink
-      case false => batchTableSink
+    if (isStreaming.isDefined) {
+      isStreaming.get match {
+        case true => streamTableSink
+        case false => batchTableSink
+      }
+    } else {
+      throw new RuntimeException("isStreaming flag should be set for external tables")
     }
   }
 
@@ -139,32 +153,45 @@ class CatalogCalciteTable(
    * @return the stream table source
    */
   def streamTableSource: StreamTableSource[Any] =
-    if (!isStreaming) {
-      null
-    } else {
-      ExternalTableUtil.toTableSource(name, table, true) match {
-        case t: StreamTableSource[Any] => t
-        case _ => null
+    if (isStreaming.isDefined) {
+      if (!isStreaming.get) {
+        null
+      } else {
+        ExternalTableUtil.toTableSource(name, table, true) match {
+          case t: StreamTableSource[Any] => t
+          case _ => null
+        }
       }
+    } else {
+      null
     }
 
   /**
    * Create a table parser for a catalog table.
    * @return
    */
-  def tableSourceParser: TableSourceParser = ExternalTableUtil.toParser(name, table, isStreaming)
+  def tableSourceParser: TableSourceParser =
+    if (isStreaming.isDefined) {
+      ExternalTableUtil.toParser(name, table, isStreaming.get)
+    } else {
+      null
+    }
 
   /**
    * Create a batch table source from a catalog table.
    * @return the batch table source
    */
   def batchTableSource: BatchTableSource[Any] =
-    if (isStreaming) {
-      null
-    } else {
-      ExternalTableUtil.toTableSource(name, table, false) match {
-        case t: BatchTableSource[Any] => t
-        case _ => null
+    if (isStreaming.isDefined) {
+      if (isStreaming.get) {
+        null
+      } else {
+        ExternalTableUtil.toTableSource(name, table, false) match {
+          case t: BatchTableSource[Any] => t
+          case _ => null
+        }
       }
+    } else {
+      null
     }
 }

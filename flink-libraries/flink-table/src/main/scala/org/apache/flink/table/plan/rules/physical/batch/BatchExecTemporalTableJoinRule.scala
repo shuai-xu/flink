@@ -73,7 +73,7 @@ object BatchExecTemporalTableJoinRule {
     val cluster = join.getCluster
     val typeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     val tableRowType = typeFactory.buildLogicalRowType(
-      tableSource.getTableSchema, isStreaming = false)
+      tableSource.getTableSchema, isStreaming = Option.apply(false))
 
     val providedTrait = join.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)
     var requiredTrait = input.getTraitSet.replace(FlinkConventions.BATCH_PHYSICAL)

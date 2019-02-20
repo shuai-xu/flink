@@ -72,7 +72,7 @@ object StreamExecTemporalTableJoinRule {
     val cluster = join.getCluster
     val typeFactory = cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     val tableRowType = typeFactory.buildLogicalRowType(
-      tableSource.getTableSchema, isStreaming = true)
+      tableSource.getTableSchema, isStreaming = Option.apply(true))
 
     val providedTrait = join.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
     var requiredTrait = input.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)

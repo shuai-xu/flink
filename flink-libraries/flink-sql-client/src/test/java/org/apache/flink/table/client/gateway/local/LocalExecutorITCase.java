@@ -891,6 +891,56 @@ public class LocalExecutorITCase extends TestLogger {
 			session,
 			"CREATE VIEW TestViewDDL AS SELECT scalarDDL(IntegerField1) FROM TableNumber1");
 
+		// Test Two-level Views
+		executor.createView(
+			session,
+			"CREATE VIEW TestViewOfView AS SELECT * FROM TestViewDDL");
+
+		try {
+			final ResultDescriptor desc = executor.executeQuery(session, "SELECT * FROM TestViewOfView");
+
+			assertTrue(desc.isMaterialized());
+
+			final List<String> actualResults = retrieveTableResult(executor, session, desc.getResultId());
+
+			final List<String> expectedResults = new ArrayList<>();
+			expectedResults.add("47");
+			expectedResults.add("27");
+			expectedResults.add("37");
+			expectedResults.add("37");
+			expectedResults.add("47");
+			expectedResults.add("57");
+
+			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testStreamQueryExecutionFromDDLViewWithUDF() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		// Create a scalar function
+		executor.createFunction(
+			session,
+			"CREATE FUNCTION scalarDDL "
+				+ "AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF'");
+		// Create a view
+		executor.createView(
+			session,
+			"CREATE VIEW TestViewDDL AS SELECT scalarDDL(IntegerField1) FROM TableNumber1");
+
 		try {
 			final ResultDescriptor desc = executor.executeQuery(session, "SELECT * FROM TestViewDDL");
 
@@ -907,6 +957,126 @@ public class LocalExecutorITCase extends TestLogger {
 			expectedResults.add("57");
 
 			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testBatchQueryExecutionFromComplexDDLView() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "batch");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createTable(
+			session,
+			"CREATE TABLE TableFromDDL1(IntegerField1 INT, StringField1 VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + url.getPath() + "'" +
+				", commentsPrefix = '#')");
+
+		executor.createTable(
+			session,
+			"CREATE TABLE TableFromDDL2(IntegerField1 INT, StringField1 VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + url.getPath() + "'" +
+				", commentsPrefix = '#')");
+
+		executor.createView(
+			session,
+			"CREATE VIEW TestViewDDL (f1, f2)" +
+				"AS SELECT IntegerField1, StringField1 FROM TableFromDDL1 " +
+				"UNION ALL SELECT IntegerField1, StringField1 FROM TableFromDDL2");
+
+		try {
+			final ResultDescriptor desc = executor.executeQuery(session, "SELECT scalarUDF(f1) FROM TestViewDDL");
+
+			assertTrue(desc.isMaterialized());
+
+			final List<String> actualResults = retrieveTableResult(executor, session, desc.getResultId());
+
+			final List<String> expectedResults = new ArrayList<>();
+			expectedResults.add("47");
+			expectedResults.add("27");
+			expectedResults.add("37");
+			expectedResults.add("37");
+			expectedResults.add("47");
+			expectedResults.add("57");
+
+			expectedResults.add("47");
+			expectedResults.add("27");
+			expectedResults.add("37");
+			expectedResults.add("37");
+			expectedResults.add("47");
+			expectedResults.add("57");
+
+			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+		} finally {
+			executor.stop(session);
+		}
+	}
+
+	@Test(expected = SqlExecutionException.class)
+	public void testBatchQueryExecutionFromViewReferencingUnknownTable() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "batch");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createView(
+			session,
+			"CREATE VIEW InvalidView AS SELECT * FROM UnknownTable"
+		);
+	}
+
+	@Test(expected = SqlExecutionException.class)
+	public void testBatchQueryExecutionFromViewReferencingDeletedTable() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "batch");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createTable(
+			session,
+			"CREATE TABLE TableFromDDL(IntegerField1 INT, StringField1 VARCHAR)" +
+				" WITH (" +
+				"  type = 'CSV'" +
+				", path = '" + url.getPath() + "'" +
+				", commentsPrefix = '#')");
+
+		executor.createView(
+			session,
+			"CREATE VIEW TestViewDDL (f1, f2) AS SELECT * FROM TableFromDDL"
+		);
+
+		executor.dropTable(session, "TableFromDDL");
+
+		try {
+			final ResultDescriptor desc = executor.executeQuery(session, "SELECT scalarUDF(f1) FROM TestViewDDL");
 		} finally {
 			executor.stop(session);
 		}

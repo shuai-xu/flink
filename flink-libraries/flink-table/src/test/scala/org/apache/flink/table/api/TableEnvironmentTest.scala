@@ -35,6 +35,7 @@ import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendT
 import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 import org.apache.flink.types.Row
 
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TableEnvironmentTest extends TableTestBase {
@@ -728,6 +729,18 @@ class TableEnvironmentTest extends TableTestBase {
     val resultTable = new Table(util.tableEnv, node.children.head)
 
     util.verifyPlan(resultTable)
+  }
+
+  @Test
+  def testValidatedQuery(): Unit = {
+    val util = batchTestUtil()
+    util.addTable[(Int, Double, String)]("MyTable", 'a, 'b, 'c)
+
+    val sql = "SELECT a FROM MyTable"
+
+    val expected = "SELECT `MyTable`.`a`\nFROM `builtin`.`default`.`MyTable` AS `MyTable`"
+
+    assertEquals(expected, util.tableEnv.getValidatedSqlQuery(sql))
   }
 }
 

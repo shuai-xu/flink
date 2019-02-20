@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.optimize
 
 import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.calcite.{FlinkChainContext, FlinkTypeFactory}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
@@ -31,13 +31,11 @@ import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.SameRelObjectShuttle
 import org.apache.flink.table.sinks.BaseRetractStreamTableSink
 import org.apache.flink.util.Preconditions
-
-import org.apache.calcite.plan.{Context, RelOptPlanner}
+import org.apache.calcite.plan.{Context, Contexts, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rex.RexBuilder
-
 import java.util
 
 import scala.collection.JavaConversions._
@@ -140,7 +138,8 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
     Preconditions.checkNotNull(programs)
 
     val optimizeNode = programs.optimize(relNode, new StreamOptimizeContext() {
-      override def getContext: Context = tEnv.getPlanner.getContext
+      override def getContext: Context = FlinkChainContext.chain(
+        tEnv.getFrameworkConfig.getContext, Contexts.of(tEnv.getFlinkPlanner))
 
       override def getRelOptPlanner: RelOptPlanner = tEnv.getPlanner
 
