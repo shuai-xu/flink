@@ -31,15 +31,13 @@ class DataStream(object):
         get_method(self._j_datastream, "print")()
 
 
-class DataStreamSource(object):
+class DataStreamSource(DataStream):
 
-    def __init__(self, ds_source):
-        self._j_datastream_source = ds_source
+    def __init__(self, j_ds_source):
+        self._j_datastream_source = j_ds_source
 
-    def flat_map(self, flat_mapper):
-        if isinstance(flat_mapper, JavaFlatMapFunction):
-            self._j_datastream_source.flatMap(flat_mapper._j_flat_map_function)
-        else:
-            # TODO: support pure python flatMapFunction
-            raise Exception('Not supported now')
+    def set_parallelism(self, parallelism):
+        # type: (int) -> None
+
+        self._j_datastream_source.setParallelism(parallelism)
 

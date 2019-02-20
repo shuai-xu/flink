@@ -70,21 +70,21 @@ NOTE: Use the prebound Execution Environments and Table Environment to implement
 
   Batch - Use the 'b_env' and 'bt_env' variable
 
-    * data_set = b_env.readTextFile("/path/to/data")
+    * data_set = b_env.read_text_file("/path/to/data")
     * data_set.writeAsText("/path/to/output")
     * b_env.execute("My batch program")
     *
-    * batch_table = bt_env.fromDataSet(data_set)
-    * bt_env.registerTable(batch_table, "tableName")
-    * result = bt_env.sqlQuery("SELECT * FROM tableName").collect
+    * batch_table = bt_env.from_data_set(data_set)
+    * bt_env.register_table(batch_table, "tableName")
+    * result = bt_env.sql_query("SELECT * FROM tableName").collect
     HINT: You can use print() on a DataSet to print the contents to the shell.
 
   Streaming - Use the 's_env' and 'st_env' variable
 
-    * ds = s_env.fromElements(1, 2, 3, 4)
-    * ds.countWindowAll(2).sum(0).print()
+    * ds = s_env.from_elements(1, 2, 3, 4)
+    * ds.count_window_all(2).sum(0).print()
     *
-    * st = st_env.fromDataStream(dataStream, 'num)
+    * st = st_env.from_data_stream(dataStream, 'num)
     * res_table = st.select('num).where('num % 2 === 1 )
     * res_stream = res_table.toAppendStream[Row]
     * res_stream.print
@@ -97,6 +97,6 @@ print(welcome_msg)
 
 # streaming
 s_env = StreamExecutionEnvironment.get_execution_environment()
-st_env = TableEnvironment.getTableEnvironment(s_env)
+st_env = TableEnvironment.get_table_environment(s_env)
 
 # todo: batch

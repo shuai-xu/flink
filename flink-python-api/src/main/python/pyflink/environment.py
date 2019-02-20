@@ -219,12 +219,14 @@ class StreamExecutionEnvironment(object):
         return DataStream(j_ds)
 
     def add_source(self, source_func):
+        # (JavaSourceFunction) -> DataStreamSource
+
         if isinstance(source_func, JavaSourceFunction):
             j_ds = self._j_env.addSource(source_func._j_source_function)
         else:
             # TODO: support pure python SourceFunction (DataStream API)
             j_ds = None
-        return DataStream(j_ds)
+        return DataStreamSource(j_ds)
 
     # TODO: SourceFunction,  SourceContext, addSourceV2
 
