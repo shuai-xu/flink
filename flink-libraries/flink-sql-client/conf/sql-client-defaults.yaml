@@ -120,7 +120,7 @@ deployment:
 #      type: hive
 #      connector:
 #        hive.metastore.uris: thrift://localhost:9083
-#      is-default: false
+#      is-default: true
 #      default-database: default
 #  - name: mygeneric
 #    catalog:
