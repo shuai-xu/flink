@@ -53,7 +53,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
     // can't as of non-proctime field
     expectExceptionThrown(
-      "SELECT * FROM MyTable AS T JOIN temporalTest " +
+      "SELECT * FROM MyTable AS T JOIN LATERAL temporalTest " +
         "FOR SYSTEM_TIME AS OF T.rt AS D ON T.a = D.id",
       "Currently only support join temporal table as of on left table's proctime field",
       classOf[TableException])
@@ -67,7 +67,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
     // can't on non-key fields
     expectExceptionThrown(
-      "SELECT * FROM MyTable AS T JOIN temporalTest " +
+      "SELECT * FROM MyTable AS T JOIN LATERAL temporalTest " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.age",
       "Temporal table join requires an equality condition on ALL of " +
         "temporal table's primary key(s) or unique key(s) or index field(s)",
@@ -76,7 +76,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
     // only support left or inner join
     expectExceptionThrown(
-      "SELECT * FROM MyTable AS T RIGHT JOIN temporalTest " +
+      "SELECT * FROM MyTable AS T RIGHT JOIN LATERAL temporalTest " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id",
       "Unsupported join type for semi-join RIGHT",
       classOf[IllegalArgumentException]
@@ -84,7 +84,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
     // only support join on raw key of right table
     expectExceptionThrown(
-      "SELECT * FROM MyTable AS T LEFT JOIN temporalTest " +
+      "SELECT * FROM MyTable AS T LEFT JOIN LATERAL temporalTest " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON concat('rk:', T.a) = concat(D.id, '=rk')",
       "Temporal table join requires an equality condition on ALL of " +
         "temporal table's primary key(s) or unique key(s) or index field(s)",
@@ -99,7 +99,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     val temporalTable = new TestInvalidTemporalTable(new InvalidTableFunctionResultType)
     streamUtil.tableEnv.registerTableSource("temporalTable", temporalTable)
     expectExceptionThrown(
-      "SELECT * FROM T AS T JOIN temporalTable " +
+      "SELECT * FROM T AS T JOIN LATERAL temporalTable " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
       "The TableSource [TestInvalidTemporalTable(id, name, age, ts)] " +
         "return type Row(id: Integer, name: String, age: Integer, ts: Timestamp) " +
@@ -110,7 +110,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     val temporalTable2 = new TestInvalidTemporalTable(new InvalidTableFunctionEvalSignature1)
     streamUtil.tableEnv.registerTableSource("temporalTable2", temporalTable2)
     expectExceptionThrown(
-      "SELECT * FROM T AS T JOIN temporalTable2 " +
+      "SELECT * FROM T AS T JOIN LATERAL temporalTable2 " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
       "Expected: eval(java.lang.Integer, org.apache.flink.table.dataformat.BinaryString, " +
         "java.lang.Long) \n" +
@@ -120,31 +120,31 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
     val temporalTable3 = new TestInvalidTemporalTable(new ValidTableFunction)
     streamUtil.tableEnv.registerTableSource("temporalTable3", temporalTable3)
-    streamUtil.explainSql("SELECT * FROM T AS T JOIN temporalTable3 " +
+    streamUtil.explainSql("SELECT * FROM T AS T JOIN LATERAL temporalTable3 " +
                             "FOR SYSTEM_TIME AS OF T.proc AS D " +
                             "ON T.a = D.id AND T.b = D.name AND T.ts = D.ts")
 
     val temporalTable4 = new TestInvalidTemporalTable(new ValidTableFunction2)
     streamUtil.tableEnv.registerTableSource("temporalTable4", temporalTable4)
-    streamUtil.explainSql("SELECT * FROM T AS T JOIN temporalTable3 " +
+    streamUtil.explainSql("SELECT * FROM T AS T JOIN LATERAL temporalTable3 " +
                             "FOR SYSTEM_TIME AS OF T.proc AS D " +
                             "ON T.a = D.id AND T.b = D.name AND T.ts = D.ts")
 
     val temporalTable5 = new TestInvalidTemporalTable(new ValidAsyncTableFunction)
     streamUtil.tableEnv.registerTableSource("temporalTable5", temporalTable5)
-    streamUtil.explainSql("SELECT * FROM T AS T JOIN temporalTable4 " +
+    streamUtil.explainSql("SELECT * FROM T AS T JOIN LATERAL temporalTable4 " +
                             "FOR SYSTEM_TIME AS OF T.proc AS D " +
                             "ON T.a = D.id AND T.b = D.name AND T.ts = D.ts")
 
     val temporalTable6 = new TestInvalidTemporalTable(new InvalidAsyncTableFunctionResultType)
     streamUtil.tableEnv.registerTableSource("temporalTable6", temporalTable6)
-    streamUtil.explainSql("SELECT * FROM T AS T JOIN temporalTable6 " +
+    streamUtil.explainSql("SELECT * FROM T AS T JOIN LATERAL temporalTable6 " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts")
 
     val temporalTable7 = new TestInvalidTemporalTable(new InvalidAsyncTableFunctionEvalSignature1)
     streamUtil.tableEnv.registerTableSource("temporalTable7", temporalTable7)
     expectExceptionThrown(
-      "SELECT * FROM T AS T JOIN temporalTable7 " +
+      "SELECT * FROM T AS T JOIN LATERAL temporalTable7 " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
       "Expected: eval(org.apache.flink.streaming.api.functions.async.ResultFuture, " +
         "java.lang.Integer, org.apache.flink.table.dataformat.BinaryString, java.lang.Long) \n" +
@@ -156,7 +156,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     val temporalTable8 = new TestInvalidTemporalTable(new InvalidAsyncTableFunctionEvalSignature2)
     streamUtil.tableEnv.registerTableSource("temporalTable8", temporalTable8)
     expectExceptionThrown(
-      "SELECT * FROM T AS T JOIN temporalTable8 " +
+      "SELECT * FROM T AS T JOIN LATERAL temporalTable8 " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
       "Expected: eval(org.apache.flink.streaming.api.functions.async.ResultFuture, " +
         "java.lang.Integer, org.apache.flink.table.dataformat.BinaryString, java.lang.Long) \n" +
@@ -167,7 +167,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
     val temporalTable9 = new TestInvalidTemporalTable(new ValidAsyncTableFunction)
     streamUtil.tableEnv.registerTableSource("temporalTable9", temporalTable9)
-    streamUtil.explainSql("SELECT * FROM T AS T JOIN temporalTable9 " +
+    streamUtil.explainSql("SELECT * FROM T AS T JOIN LATERAL temporalTable9 " +
                             "FOR SYSTEM_TIME AS OF T.proc AS D " +
                             "ON T.a = D.id AND T.b = D.name AND T.ts = D.ts")
   }
@@ -175,7 +175,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
   @Test
   def testJoinOnDifferentKeyTypes(): Unit = {
     // Will do implicit type coercion.
-    streamUtil.verifyPlan("SELECT * FROM MyTable AS T JOIN temporalTest "
+    streamUtil.verifyPlan("SELECT * FROM MyTable AS T JOIN LATERAL temporalTest "
       + "FOR SYSTEM_TIME AS OF T.proc AS D ON T.b = D.id")
   }
 
@@ -191,7 +191,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
 
   @Test
   def testJoinTemporalTable(): Unit = {
-    val sql = "SELECT * FROM MyTable AS T JOIN temporalTest " +
+    val sql = "SELECT * FROM MyTable AS T JOIN LATERAL temporalTest " +
       "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id"
 
     streamUtil.verifyPlan(sql)
@@ -209,7 +209,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
   def testJoinTemporalTableWithNestedQuery(): Unit = {
     val sql = "SELECT * FROM " +
       "(SELECT a, b, proc FROM MyTable WHERE c > 1000) AS T " +
-      "JOIN temporalTest " +
+      "JOIN LATERAL temporalTest " +
       "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id"
 
     streamUtil.verifyPlan(sql)
@@ -233,7 +233,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     val sql =
       """
         |SELECT * FROM MyTable AS T
-        |JOIN temporalTest FOR SYSTEM_TIME AS OF T.proc AS D
+        |JOIN LATERAL temporalTest FOR SYSTEM_TIME AS OF T.proc AS D
         |ON T.a = D.id AND D.age = 10
         |WHERE T.c > 1000
       """.stripMargin
@@ -246,7 +246,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     val sql =
       """
         |SELECT * FROM MyTable AS T
-        |JOIN temporalTest FOR SYSTEM_TIME AS OF T.proc AS D
+        |JOIN LATERAL temporalTest FOR SYSTEM_TIME AS OF T.proc AS D
         |ON T.a = D.id AND D.age = 10
         |WHERE cast(D.name as bigint) > 1000
       """.stripMargin
@@ -259,7 +259,7 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     val sql =
       """
         |SELECT * FROM MyTable AS T
-        |JOIN temporalTest FOR SYSTEM_TIME AS OF T.proc AS D
+        |JOIN LATERAL temporalTest FOR SYSTEM_TIME AS OF T.proc AS D
         |ON T.a = D.id AND D.age = 10 AND D.name = 'AAA'
         |WHERE T.c > 1000
       """.stripMargin
