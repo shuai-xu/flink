@@ -109,16 +109,8 @@ public class IncrementalKeyedStateSnapshot implements KeyedStateHandle {
 
 	@Override
 	public KeyedStateHandle getIntersection(KeyGroupRange otherKeyGroupRange) {
-		if (keyGroupRange.getIntersection(otherKeyGroupRange).getNumberOfKeyGroups() > 0) {
-			return this;
-		} else {
-			return new IncrementalKeyedStateSnapshot(
-				KeyGroupRange.EMPTY_KEY_GROUP_RANGE,
-				this.checkpointId,
-				this.sharedState,
-				this.privateState,
-				this.metaStateHandle);
-		}
+		return KeyGroupRange.EMPTY_KEY_GROUP_RANGE.equals(this.keyGroupRange.getIntersection(otherKeyGroupRange)) ?
+			null : this;
 	}
 
 	@Override
