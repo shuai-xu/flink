@@ -191,6 +191,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	/** The allowed max concurrent checkpoints number in task side. */
 	private final int maxConcurrentCheckpoints;
 
+	private long initTime = -1L;
+
 	// ------------------------------------------------------------------------
 
 	/**
@@ -277,6 +279,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			// -------- Initialize ---------
 			LOG.debug("Initializing {}.", getName());
 
+			final long invokeStartTime = System.currentTimeMillis();
+			this.initTime = -1L;
+			getEnvironment().getMetricGroup().gauge("taskInitTime.ms", () -> this.initTime);
+
 			asyncOperationsThreadPool = Executors.newCachedThreadPool();
 
 			CheckpointExceptionHandlerFactory cpExceptionHandlerFactory = createCheckpointExceptionHandlerFactory();
@@ -329,6 +335,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			if (canceled) {
 				throw new CancelTaskException();
 			}
+
+			this.initTime = System.currentTimeMillis() - invokeStartTime;
 
 			// let the task do its work
 			isRunning = true;
