@@ -46,22 +46,25 @@ class TypesUtil(object):
         if (_sql_basic_types_py2j_map is None) or (_sql_complex_type_py2j_map is None):
             with _init_lock:
                 _gateway = get_gateway()
-                j_sql_types = _gateway.jvm.org.apache.flink.table.api.types.Types
+                j_sql_types = _gateway.jvm.org.apache.flink.table.api.types.DataTypes
                 j_sql_decimal = _gateway.jvm.org.apache.flink.table.api.types.DECIMAL
                 _sql_basic_types_py2j_map = {
-                    StringType: j_sql_types.STRING,
-                    IntegerType: j_sql_types.INT,
-                    BooleanType: j_sql_types.BOOLEAN,
-                    DoubleType: j_sql_types.DOUBLE,
-                    FloatType: j_sql_types.FLOAT,
-                    ByteType: j_sql_types.BYTE,
-                    LongType: j_sql_types.LONG,
-                    ShortType: j_sql_types.SHORT,
-                    CharType: j_sql_types.CHAR,
-                    BinaryType: j_sql_types.BYTE_ARRAY,
-                    DateType: j_sql_types.DATE,
-                    TimestampType: j_sql_types.TIMESTAMP,
-                    TimeType: j_sql_types.TIME,
+                    DataTypes.STRING: j_sql_types.STRING,
+                    DataTypes.INT: j_sql_types.INT,
+                    DataTypes.BOOLEAN: j_sql_types.BOOLEAN,
+                    DataTypes.DOUBLE: j_sql_types.DOUBLE,
+                    DataTypes.FLOAT: j_sql_types.FLOAT,
+                    DataTypes.BYTE: j_sql_types.BYTE,
+                    DataTypes.LONG: j_sql_types.LONG,
+                    DataTypes.SHORT: j_sql_types.SHORT,
+                    DataTypes.CHAR: j_sql_types.CHAR,
+                    DataTypes.BYTE_ARRARY: j_sql_types.BYTE_ARRAY,
+                    DataTypes.DATE: j_sql_types.DATE,
+                    DataTypes.TIME: j_sql_types.TIME,
+                    DataTypes.TIMESTAMP: j_sql_types.TIMESTAMP,
+                    DataTypes.ROWTIME_INDICATOR: j_sql_types.ROWTIME_INDICATOR,
+                    DataTypes.PROCTIME_INDICATOR: j_sql_types.PROCTIME_INDICATOR
+                    # TODO: interval...
                 }
 
                 _sql_complex_type_py2j_map = {
@@ -86,7 +89,7 @@ class TypesUtil(object):
             j_clz = _sql_complex_type_py2j_map.get(type(py_sql_type))
             return j_clz(j_types_arr, j_names_arr)
 
-        return _sql_basic_types_py2j_map.get(type(py_sql_type))
+        return _sql_basic_types_py2j_map.get(py_sql_type)
 
     @staticmethod
     def to_py_sql_type(j_sql_type):
@@ -95,22 +98,24 @@ class TypesUtil(object):
         if (_sql_basic_types_j2py_map is None) or (_sql_complex_type_j2py_map is None):
             with _init_lock:
                 _gateway = get_gateway()
-                j_sql_types = _gateway.jvm.org.apache.flink.table.api.types.Types
+                j_data_types = _gateway.jvm.org.apache.flink.table.api.types.DataTypes
                 # j_sql_decimal = _gateway.jvm.org.apache.flink.table.api.types.DECIMAL
                 _sql_basic_types_j2py_map = {
-                    j_sql_types.STRING: StringType(),
-                    j_sql_types.INT: IntegerType(),
-                    j_sql_types.BOOLEAN: BooleanType(),
-                    j_sql_types.DOUBLE: DoubleType,
-                    j_sql_types.FLOAT: FloatType(),
-                    j_sql_types.BYTE: ByteType(),
-                    j_sql_types.LONG: LongType(),
-                    j_sql_types.SHORT: ShortType(),
-                    j_sql_types.CHAR: CharType(),
-                    j_sql_types.BYTE_ARRAY: BinaryType(),
-                    j_sql_types.DATE: DateType(),
-                    j_sql_types.TIMESTAMP: TimestampType(),
-                    j_sql_types.TIME: TimeType()
+                    j_data_types.STRING: DataTypes.STRING,
+                    j_data_types.INT: DataTypes.INT,
+                    j_data_types.BOOLEAN: DataTypes.BOOLEAN,
+                    j_data_types.DOUBLE: DataTypes.DOUBLE,
+                    j_data_types.FLOAT: DataTypes.FLOAT,
+                    j_data_types.BYTE: DataTypes.BYTE,
+                    j_data_types.LONG: DataTypes.LONG,
+                    j_data_types.SHORT: DataTypes.SHORT,
+                    j_data_types.CHAR: DataTypes.CHAR,
+                    j_data_types.BYTE_ARRAY: DataTypes.BYTE_ARRARY,
+                    j_data_types.DATE: DataTypes.DATE,
+                    j_data_types.TIMESTAMP: DataTypes.TIMESTAMP,
+                    j_data_types.PROCTIME_INDICATOR: DataTypes.PROCTIME_INDICATOR,
+                    j_data_types.ROWTIME_INDICATOR: DataTypes.ROWTIME_INDICATOR,
+                    j_data_types.TIME: DataTypes.TIME
                 }
 
                 _sql_complex_type_j2py_map = {
@@ -122,7 +127,7 @@ class TypesUtil(object):
         # if isinstance(py_sql_type, DecimalType):
         #     j_clz = _sql_complex_type_py2j_map.get(type(py_sql_type))
         #     return j_clz(py_sql_type.precision, py_sql_type.scale)
-        return _sql_basic_types_j2py_map.get(type(j_sql_type))
+        return _sql_basic_types_j2py_map.get(j_sql_type)
 
     @staticmethod
     def jarray_to_pylist(jarr):

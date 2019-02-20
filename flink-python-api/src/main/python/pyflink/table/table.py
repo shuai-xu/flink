@@ -17,6 +17,7 @@
 ################################################################################
 
 from py4j.java_gateway import get_method
+from pyflink.table.table_schema import TableSchema
 
 
 __all__ = [
@@ -126,6 +127,12 @@ class Table(object):
 
     def write_to_sink(self, j_sink):
         return self._java_table.writeToSink(j_sink._j_table_sink)
+
+    def get_schema(self):
+        # type: () -> TableSchema
+        j_schema = self._java_table.getSchema()
+
+        return TableSchema(j_schema=j_schema)
 
 
 class GroupedTable(object):

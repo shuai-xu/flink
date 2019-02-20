@@ -24,6 +24,15 @@ class DataType(object):
     def type_name(cls):
         return cls.__name__[:-4].lower()
 
+    def __hash__(self):
+        return hash(self.type_name())
+
+    def __eq__(self, other):
+        return self.type_name() == other.type_name()
+
+    def __ne__(self, other):
+        return self.type_name() != other.type_name()
+
 
 class NullType(DataType):
     """None data types.  SQL NULL
@@ -91,9 +100,21 @@ class TimeType(DateType):
     """
 
 
-class TimestampType(DateType):
+class TimestampType(DataType):
     """Timestamp data type.  SQL TIMESTAMP
     """
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+    def __eq__(self, other):
+        return self.id == other.id and self.name == other.name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(self.id) ^ hash(self.name)
 
 
 class DecimalType(DataType):
@@ -113,6 +134,9 @@ class DecimalType(DataType):
     def __init__(self, precision=38, scale=18):
         self.precision = precision
         self.scale = scale
+
+    def __hash__(self):
+        hash(self.precision) << 8 ^ hash(self.scale)
 
 
 class RowType(DataType):
@@ -147,3 +171,25 @@ class RowType(DataType):
             str(self.fields_names),
             '}'
         )
+
+
+class DataTypes(object):
+    """
+    Utils for types
+    """
+    STRING = StringType()
+    BOOLEAN = BooleanType()
+    SHORT = ShortType()
+    DOUBLE = DoubleType()
+    FLOAT = FloatType()
+    BYTE = ByteType()
+    INT = IntegerType()
+    LONG = LongType()
+    CHAR = CharType()
+    BYTE_ARRARY = BinaryType()
+    DATE = DateType()
+    TIME = TimeType()
+    TIMESTAMP = TimestampType(0, "TimestampType")
+    INTERVAL_MILLIS = TimestampType(1, "IntervalMillis")
+    ROWTIME_INDICATOR = TimestampType(2, "RowTimeIndicator")
+    PROCTIME_INDICATOR = TimestampType(3, "ProctimeTimeIndicator")
