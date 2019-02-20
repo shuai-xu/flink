@@ -103,7 +103,7 @@ public class NodePartialResProcessorTest extends MockNodeTestBase {
 		connect(4, 3);
 		connect(5, 2);
 		connect(6, 4, 5);
-		new NodePartialResProcessor().process(Collections.singletonList(nodeList.get(6)), new DAGProcessContext(tEnv, null));
+		new NodePartialResProcessor().process(Collections.singletonList(nodeList.get(6)), new DAGProcessContext(tEnv));
 		assertEquals(buildResource(0, 0, 0), nodeList.get(0).getResource());
 		assertEquals(buildResource(0, 0, 0), nodeList.get(1).getResource());
 		verify((BatchExecTableSourceScan) nodeList.get(1)).setResForSourceAndConversion(buildResourceSpec(0.7, 50, 10), buildResourceSpec(0.5, 20, 30));
@@ -142,7 +142,7 @@ public class NodePartialResProcessorTest extends MockNodeTestBase {
 		updateNode(4, mock(StreamExecCalc.class));
 		connect(3, 0, 1, 2);
 		connect(4, 3);
-		new NodePartialResProcessor().process(Collections.singletonList(nodeList.get(4)), new DAGProcessContext(tEnv, null));
+		new NodePartialResProcessor().process(Collections.singletonList(nodeList.get(4)), new DAGProcessContext(tEnv));
 		assertEquals(buildResource(0, 0, 0), nodeList.get(0).getResource());
 		assertEquals(buildResource(0, 0, 0), nodeList.get(1).getResource());
 		verify((StreamExecTableSourceScan) nodeList.get(1)).setResForSourceAndConversion(buildResourceSpec(0.7, 50, 10), buildResourceSpec(0.5, 20, 30));

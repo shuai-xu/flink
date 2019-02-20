@@ -19,6 +19,7 @@
 package org.apache.flink.table.resource.batch.parallelism;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
@@ -62,8 +63,8 @@ public class BatchParallelismProcessor implements DAGProcessor {
 		NodeResourceUtil.InferMode inferMode = NodeResourceUtil.getInferMode(tableConf);
 		getShuffleStageParallelismCalculator(tableConf, inferMode).calculate(nodeShuffleStageMap.values());
 		Double cpuLimit = tableConf.getDouble(TableConfigOptions.SQL_RESOURCE_RUNNING_UNIT_CPU_TOTAL);
-		if (cpuLimit > 0) {
-			Map<BatchExecNode<?>, Set<NodeRunningUnit>> nodeRunningUnitMap = context.getRunningUnitMap();
+		if (cpuLimit > 0 && !tableConf.getBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED)) {
+			Map<BatchExecNode<?>, Set<NodeRunningUnit>> nodeRunningUnitMap = ((BatchTableEnvironment) context.getTableEnvironment()).getRUKeeper().getRunningUnitMap();
 			BatchParallelismAdjuster.adjustParallelism(cpuLimit, nodeRunningUnitMap, nodeShuffleStageMap);
 		}
 	}

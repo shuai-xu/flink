@@ -39,18 +39,18 @@ import org.apache.flink.table.plan.logical.LogicalRelNode
 import org.apache.flink.table.plan.nodes.calcite._
 import org.apache.flink.table.plan.nodes.exec.{ExecNode, StreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.stream._
-import org.apache.flink.table.plan.nodes.process.DAGProcessContext
+import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.plan.optimize.{Optimizer, StreamOptimizer}
 import org.apache.flink.table.plan.schema.{TableSourceSinkTable, _}
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SubplanReuseUtil}
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.sinks.{DataStreamTableSink, _}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.util._
 
 import org.apache.calcite.plan._
-import org.apache.calcite.rel.{RelCollationTraitDef, RelNode}
+import org.apache.calcite.rel.RelCollationTraitDef
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 
@@ -111,6 +111,8 @@ abstract class StreamTableEnvironment(
       .build()
 
   override protected def getOptimizer: Optimizer = new StreamOptimizer(this)
+
+  override protected def getDagProcessors: ChainedDAGProcessors = getConfig.getStreamDAGProcessors
 
   /**
     * Triggers the program execution with jobName.
@@ -636,23 +638,6 @@ abstract class StreamTableEnvironment(
     }
 
     withProctime
-  }
-
-  /**
-    * Convert [[StreamPhysicalRel]] DAG to [[StreamExecNode]] DAG and translate them.
-    */
-  private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[StreamExecNode[_]] = {
-    require(rels.nonEmpty && rels.forall(_.isInstanceOf[StreamExecNode[_]]))
-    // reuse subplan
-    val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
-    // convert StreamPhysicalRel DAG to StreamExecNode DAG
-    val nodeDag = reusedPlan.map(_.asInstanceOf[StreamExecNode[_]])
-    // call processors
-    val dagProcessors = getConfig.getStreamDAGProcessors
-    require(dagProcessors != null)
-    val postNodeDag = dagProcessors.process(nodeDag, new DAGProcessContext(this))
-
-    postNodeDag.map(_.asInstanceOf[StreamExecNode[_]])
   }
 
   /**

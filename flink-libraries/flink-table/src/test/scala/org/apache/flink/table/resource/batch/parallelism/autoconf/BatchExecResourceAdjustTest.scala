@@ -51,6 +51,16 @@ class BatchExecResourceAdjustTest extends TableTestBase {
     testResource(util)
   }
 
+  @Test
+  def testAdjustRangePartition(): Unit = {
+    util.getTableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED,
+      true
+    )
+    setAdjustResource(util, 100)
+    testResource(util)
+  }
+
   private def testResource(util: BatchTableTestUtil): Unit = {
     val customerSchema = TpcHSchemaProvider.getSchema("customer")
     val colStatsOfCustomer =

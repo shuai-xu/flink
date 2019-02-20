@@ -23,7 +23,6 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
-import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitorImpl
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, ExecNodeVisitorImpl}
 import org.apache.flink.table.plan.nodes.physical.batch._
 import org.apache.flink.table.plan.nodes.process.{DAGProcessContext, DAGProcessor}
@@ -145,7 +144,7 @@ class DeadlockBreakupProcessor extends DAGProcessor{
     }
   }
 
-  class DeadlockBreakupVisitor(finder: ReuseNodeFinder) extends BatchExecNodeVisitorImpl {
+  class DeadlockBreakupVisitor(finder: ReuseNodeFinder) extends ExecNodeVisitorImpl {
 
     private def rewriteJoin(
         join: BatchExecJoinBase,
@@ -184,17 +183,18 @@ class DeadlockBreakupProcessor extends DAGProcessor{
       }
     }
 
-    override def visit(hashJoin: BatchExecHashJoinBase): Unit = {
-      super.visit(hashJoin)
-      val joinInfo = hashJoin.joinInfo
-      val columns = if (hashJoin.leftIsBuild) joinInfo.rightKeys else joinInfo.leftKeys
-      val distribution = FlinkRelDistribution.hash(columns)
-      rewriteJoin(hashJoin, hashJoin.leftIsBuild, distribution)
-    }
-
-    override def visit(nestedLoopJoin: BatchExecNestedLoopJoinBase): Unit = {
-      super.visit(nestedLoopJoin)
-      rewriteJoin(nestedLoopJoin, nestedLoopJoin.leftIsBuild, FlinkRelDistribution.ANY)
+    override def visit(node: ExecNode[_, _]): Unit = {
+      super.visit(node)
+      node match {
+        case hashJoin: BatchExecHashJoinBase =>
+          val joinInfo = hashJoin.joinInfo
+          val columns = if (hashJoin.leftIsBuild) joinInfo.rightKeys else joinInfo.leftKeys
+          val distribution = FlinkRelDistribution.hash(columns)
+          rewriteJoin(hashJoin, hashJoin.leftIsBuild, distribution)
+        case nestedLoopJoin: BatchExecNestedLoopJoinBase =>
+          rewriteJoin(nestedLoopJoin, nestedLoopJoin.leftIsBuild, FlinkRelDistribution.ANY)
+        case _ => // do nothing
+      }
     }
   }
 

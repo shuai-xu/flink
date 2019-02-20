@@ -40,12 +40,13 @@ import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
 import org.apache.flink.table.plan.nodes.calcite.LogicalSink
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
-import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecSink, BatchPhysicalRel}
-import org.apache.flink.table.plan.nodes.process.DAGProcessContext
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
+import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink
+import org.apache.flink.table.plan.nodes.process.{ChainedDAGProcessors, DAGProcessContext}
 import org.apache.flink.table.plan.optimize.{BatchOptimizer, Optimizer}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkNodeOptUtil, FlinkRelOptUtil, SubplanReuseUtil}
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SubplanReuseUtil}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
@@ -83,7 +84,7 @@ class BatchTableEnvironment(
     config: TableConfig)
     extends TableEnvironment(streamEnv, config) {
 
-  private val ruKeeper = new RunningUnitKeeper(this)
+  private val ruKeeper = new RunningUnitKeeper(getConfig.getConf)
 
   /** Fetch [[RunningUnitKeeper]] bond with this table env. */
   private[table] def getRUKeeper: RunningUnitKeeper = ruKeeper
@@ -120,6 +121,8 @@ class BatchTableEnvironment(
   override protected def getFlinkCostFactory: FlinkCostFactory = FlinkBatchCost.FACTORY
 
   override protected def getOptimizer: Optimizer = new BatchOptimizer(this)
+
+  override protected def getDagProcessors: ChainedDAGProcessors = getConfig.getBatchDAGProcessors
 
   /**
     * Triggers the program execution with specific job name.
@@ -192,7 +195,6 @@ class BatchTableEnvironment(
     val streamGraph = StreamGraphGenerator.generate(context, streamingTransformations)
 
     setupOperatorMetricCollect()
-    ruKeeper.clear()
 
     streamingTransformations.clear()
     streamGraph
@@ -349,32 +351,6 @@ class BatchTableEnvironment(
         throw new TableException("Cannot generate BoundedStream due to an invalid logical plan. " +
           "This is a bug and should not happen. Please file an issue.")
     }
-  }
-
-  /**
-    * Convert [[BatchPhysicalRel]] DAG to [[BatchExecNode]] DAG and translate them.
-    */
-  @VisibleForTesting
-  private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[BatchExecNode[_]] = {
-    require(rels.nonEmpty && rels.forall(_.isInstanceOf[BatchPhysicalRel]))
-    // reuse subplan
-    val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
-    // convert BatchPhysicalRel DAG to BatchExecNode DAG
-    val nodeDag = reusedPlan.map(_.asInstanceOf[BatchExecNode[_]])
-    // breakup deadlock
-    // TODO move DeadlockBreakupProcessor into batch DAGProcessors
-    val nodeDagWithoutDeadlock = new DeadlockBreakupProcessor().process(
-      nodeDag, new DAGProcessContext(this))
-    // build running units
-    nodeDagWithoutDeadlock.foreach(n => ruKeeper.buildRUs(n.asInstanceOf[BatchExecNode[_]]))
-    // call processors
-    val dagProcessors = getConfig.getBatchDAGProcessors
-    require(dagProcessors != null)
-    val postNodeDag = dagProcessors.process(
-      nodeDagWithoutDeadlock, new DAGProcessContext(this, ruKeeper.getRunningUnitMap))
-
-    dumpOptimizedPlanIfNeed(postNodeDag)
-    postNodeDag.map(_.asInstanceOf[BatchExecNode[_]])
   }
 
   /**
@@ -558,6 +534,12 @@ class BatchTableEnvironment(
     }
   }
 
+  // TODO remove after refactoring scheduling.
+  override private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[ExecNode[_, _]] = {
+    this.ruKeeper.clear()
+    super.translateNodeDag(rels)
+  }
+
   /**
     * Merge global job parameters and table config parameters,
     * and set the merged result to GlobalJobParameters
@@ -665,20 +647,6 @@ class BatchTableEnvironment(
     if (config.getConf.getBoolean(TableConfigOptions.SQL_EXEC_OPERATOR_METRIC_DUMP_ENABLED)
         && dumpFilePath != null) {
       streamGraph.dumpPlanWithMetrics(dumpFilePath, jobResult)
-    }
-  }
-
-  /**
-    * Dump optimized plan if config enabled.
-    *
-    * @param optimizedNodes optimized plan
-    */
-  private[this] def dumpOptimizedPlanIfNeed(optimizedNodes: Seq[ExecNode[_, _]]): Unit = {
-    val dumpFilePath = config.getConf.getString(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_PATH)
-    val planDump = config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_ENABLED)
-
-    if (planDump && dumpFilePath != null) {
-      dumpExecNodes(optimizedNodes, dumpFilePath)
     }
   }
 }

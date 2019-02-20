@@ -19,6 +19,8 @@
 package org.apache.flink.table.plan.nodes.process;
 
 import org.apache.flink.table.plan.nodes.exec.ExecNode;
+import org.apache.flink.table.plan.util.DeadlockBreakupProcessor;
+import org.apache.flink.table.resource.batch.BatchRunningUnitBuildProcessor;
 import org.apache.flink.table.resource.batch.managedmem.BatchManagedMemoryProcessor;
 import org.apache.flink.table.resource.batch.parallelism.BatchParallelismProcessor;
 import org.apache.flink.table.resource.common.NodePartialResProcessor;
@@ -40,8 +42,15 @@ public class ChainedDAGProcessors {
 
 	public static ChainedDAGProcessors buildBatchProcessors() {
 		ChainedDAGProcessors processors = new ChainedDAGProcessors();
+		// detect deadlock, may change the node dag. It must be the first processor.
+		processors.addProcessor(new DeadlockBreakupProcessor());
+		// build runningUnits on dag and set into RunningUnitKeeper.
+		processors.addProcessor(new BatchRunningUnitBuildProcessor());
+		// set heap and direct memory, cpu.
 		processors.addProcessor(new NodePartialResProcessor());
+		// set parallelism, depend on BatchRunningUnitBuildProcessor and NodePartialResProcessor.
 		processors.addProcessor(new BatchParallelismProcessor());
+		// set managed memory.
 		processors.addProcessor(new BatchManagedMemoryProcessor());
 		return processors;
 	}

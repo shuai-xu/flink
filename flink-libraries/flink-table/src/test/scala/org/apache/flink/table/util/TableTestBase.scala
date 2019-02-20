@@ -41,7 +41,8 @@ import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.plan.stats.TableStats
-import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
+import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkNodeOptUtil, FlinkRelOptUtil}
+import org.apache.flink.table.resource.batch.BatchRunningUnitBuildProcessor
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.types.Row
 
@@ -531,7 +532,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
       .buildPlanIfNeeded(tableEnv.sinkNodes)
     if (!printResource) {
-      tableEnv.getConfig.setBatchDAGProcessors(new ChainedDAGProcessors)
+      excludeResourceProcessors
     }
     val sinkExecNodes = tableEnv.compileToExecNode(optSinkNodes: _*)
 
@@ -587,7 +588,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     optimized match {
       case batchExecNode: BatchExecNode[_] =>
         if (!printResource) {
-          tableEnv.getConfig.setBatchDAGProcessors(new ChainedDAGProcessors())
+          excludeResourceProcessors
         }
         val optimizedNodes = tableEnv.translateNodeDag(Seq(batchExecNode))
         require(optimizedNodes.length == 1)
@@ -607,6 +608,13 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
       case _ =>
         FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel)
     }
+  }
+
+  private def excludeResourceProcessors: Unit = {
+    val chainedDAGProcessors = new ChainedDAGProcessors
+    chainedDAGProcessors.addProcessor(new DeadlockBreakupProcessor)
+    chainedDAGProcessors.addProcessor(new BatchRunningUnitBuildProcessor)
+    tableEnv.getConfig.setBatchDAGProcessors(chainedDAGProcessors)
   }
 }
 

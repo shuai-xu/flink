@@ -43,14 +43,20 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalNode, LogicalRelNode, SinkNode}
 import org.apache.flink.table.plan.nodes.exec.ExecNode
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
+import org.apache.flink.table.plan.nodes.process.{ChainedDAGProcessors, DAGProcessContext}
 import org.apache.flink.table.plan.optimize.Optimizer
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
+import org.apache.flink.table.plan.util.SubplanReuseUtil
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
+import org.apache.flink.table.util.PlanUtil.dumpExecNodes
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
+
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
@@ -64,6 +70,7 @@ import org.apache.calcite.sql.{SqlIdentifier, SqlInsert, SqlOperatorTable, _}
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
 import org.apache.commons.lang3.StringUtils
+
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
 import _root_.java.util.concurrent.atomic.AtomicInteger
@@ -222,7 +229,39 @@ abstract class TableEnvironment(
     * to [[ExecNode]] DAG and translate them.
     */
   @VisibleForTesting
-  private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[ExecNode[_, _]]
+  private[flink] def translateNodeDag(rels: Seq[RelNode]): Seq[ExecNode[_, _]] = {
+    require(rels.nonEmpty && rels.forall(_.isInstanceOf[FlinkPhysicalRel]))
+    // reuse subplan
+    val reusedPlan = SubplanReuseUtil.reuseSubplan(rels, config)
+    // convert FlinkPhysicalRel DAG to ExecNode DAG
+    val nodeDag = reusedPlan.map(_.asInstanceOf[ExecNode[_, _]])
+    // call processors
+    val dagProcessors = getDagProcessors
+    require(dagProcessors != null)
+    val postNodeDag = dagProcessors.process(nodeDag, new DAGProcessContext(this))
+
+    dumpOptimizedPlanIfNeed(postNodeDag)
+    postNodeDag
+  }
+
+  /**
+    * Returns [[ChainedDAGProcessors]] set in [[TableConfig]]
+    */
+  protected def getDagProcessors: ChainedDAGProcessors
+
+  /**
+    * Dump optimized plan if config enabled.
+    *
+    * @param optimizedNodes optimized plan
+    */
+  private[this] def dumpOptimizedPlanIfNeed(optimizedNodes: Seq[ExecNode[_, _]]): Unit = {
+    val dumpFilePath = config.getConf.getString(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_PATH)
+    val planDump = config.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_PLAN_DUMP_ENABLED)
+
+    if (planDump && dumpFilePath != null) {
+      dumpExecNodes(optimizedNodes, dumpFilePath)
+    }
+  }
 
   /**
     * Translates a [[ExecNode]] DAG into a [[StreamTransformation]] DAG.

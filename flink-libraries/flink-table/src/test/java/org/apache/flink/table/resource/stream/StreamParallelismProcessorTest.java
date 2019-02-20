@@ -51,6 +51,7 @@ public class StreamParallelismProcessorTest extends MockNodeTestBase {
 	private StreamExecutionEnvironment sEnv = StreamExecutionEnvironment.getExecutionEnvironment();
 	private DAGProcessContext context;
 	private StreamTableEnvironment tEnv;
+	private StreamParallelismProcessor processor = new StreamParallelismProcessor();
 
 	@Before
 	public void setUp() {
@@ -80,7 +81,7 @@ public class StreamParallelismProcessorTest extends MockNodeTestBase {
 		when(((StreamExecDataStreamScan) nodeList.get(4)).getSourceTransformation(any()).getParallelism()).thenReturn(7);
 		updateNode(5, mock(StreamExecDataStreamScan.class));
 		connect(3, 0, 1, 2, 4, 5);
-		new StreamParallelismProcessor().process(Collections.singletonList(nodeList.get(3)), context);
+		processor.process(Collections.singletonList(nodeList.get(3)), context);
 		assertEquals(5, nodeList.get(0).getResource().getParallelism());
 		assertEquals(30, nodeList.get(1).getResource().getParallelism());
 		assertEquals(1, nodeList.get(2).getResource().getParallelism());
@@ -121,7 +122,7 @@ public class StreamParallelismProcessorTest extends MockNodeTestBase {
 		connect(3, 1);
 		connect(5, 3);
 		connect(6, 4, 5);
-		new StreamParallelismProcessor().process(Collections.singletonList(nodeList.get(6)), context);
+		processor.process(Collections.singletonList(nodeList.get(6)), context);
 		assertEquals(5, nodeList.get(0).getResource().getParallelism());
 		assertEquals(10, nodeList.get(1).getResource().getParallelism());
 		assertEquals(10, nodeList.get(2).getResource().getParallelism());

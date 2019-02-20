@@ -53,6 +53,7 @@ public class NodePartialResProcessor implements DAGProcessor {
 
 	@Override
 	public List<ExecNode<?, ?>> process(List<ExecNode<?, ?>> sinkNodes, DAGProcessContext context) {
+		calculatedNodeSet.clear();
 		tEnv = context.getTableEnvironment();
 		for (ExecNode sinkNode : sinkNodes) {
 			calculate(sinkNode);

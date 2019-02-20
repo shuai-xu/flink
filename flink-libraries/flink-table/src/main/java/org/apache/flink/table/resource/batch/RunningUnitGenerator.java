@@ -76,7 +76,7 @@ public class RunningUnitGenerator extends BatchExecNodeVisitorImpl {
 		return runningUnits;
 	}
 
-	private void addIntoInputRunningUnit(List<NodeStageExchangeInfo> inputInfoList, BatchExecNodeStage nodeStage) {
+	protected void addIntoInputRunningUnit(List<NodeStageExchangeInfo> inputInfoList, BatchExecNodeStage nodeStage) {
 		for (NodeStageExchangeInfo inputInfo : inputInfoList) {
 			if (inputInfo.exchangeMode == DataExchangeMode.BATCH) {
 				nodeStage.addDependStage(inputInfo.outStage, BatchExecNodeStage.DependType.DATA_TRIGGER);
@@ -92,7 +92,7 @@ public class RunningUnitGenerator extends BatchExecNodeVisitorImpl {
 		}
 	}
 
-	private void newRunningUnitWithNodeStage(BatchExecNodeStage nodeStage) {
+	protected void newRunningUnitWithNodeStage(BatchExecNodeStage nodeStage) {
 		NodeRunningUnit runningUnit = new NodeRunningUnit();
 		runningUnits.add(runningUnit);
 		runningUnit.addNodeStage(nodeStage);
@@ -114,7 +114,7 @@ public class RunningUnitGenerator extends BatchExecNodeVisitorImpl {
 		visitSource(values);
 	}
 
-	private void visitSource(BatchExecNode<?> sourceNode) {
+	protected void visitSource(BatchExecNode<?> sourceNode) {
 		List<NodeStageExchangeInfo> outputInfoList = outputInfoMap.get(sourceNode);
 		if (outputInfoList == null) {
 			BatchExecNodeStage nodeStage = new BatchExecNodeStage(sourceNode, 0);
@@ -124,7 +124,7 @@ public class RunningUnitGenerator extends BatchExecNodeVisitorImpl {
 		}
 	}
 
-	private List<NodeStageExchangeInfo> visitOneStageSingleNode(BatchExecNode<?> singleNode) {
+	protected List<NodeStageExchangeInfo> visitOneStageSingleNode(BatchExecNode<?> singleNode) {
 		List<NodeStageExchangeInfo> outputInfoList = outputInfoMap.get(singleNode);
 		if (outputInfoList == null) {
 			BatchExecNode<?> input = (BatchExecNode<?>) singleNode.getInputNodes().get(0);
@@ -188,7 +188,7 @@ public class RunningUnitGenerator extends BatchExecNodeVisitorImpl {
 		visitTwoStageSingleNode(hashAggregate);
 	}
 
-	private List<NodeStageExchangeInfo> visitTwoStageSingleNode(BatchExecNode<?> singleNode) {
+	protected List<NodeStageExchangeInfo> visitTwoStageSingleNode(BatchExecNode<?> singleNode) {
 		List<NodeStageExchangeInfo> outputInfoList = outputInfoMap.get(singleNode);
 		if (outputInfoList == null) {
 			BatchExecNode<?> input = (BatchExecNode<?>) singleNode.getInputNodes().get(0);
@@ -253,7 +253,7 @@ public class RunningUnitGenerator extends BatchExecNodeVisitorImpl {
 		visitTwoStageSingleNode(hashAggregate);
 	}
 
-	private List<NodeStageExchangeInfo> visitBuildProbeJoin(BatchExecJoinBase hashJoin,
+	protected List<NodeStageExchangeInfo> visitBuildProbeJoin(BatchExecJoinBase hashJoin,
 			boolean leftIsBuild) {
 		List<NodeStageExchangeInfo> outputInfoList = outputInfoMap.get(hashJoin);
 		if (outputInfoList == null) {

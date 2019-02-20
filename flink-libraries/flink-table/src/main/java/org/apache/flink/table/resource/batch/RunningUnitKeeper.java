@@ -22,19 +22,16 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
-import org.apache.flink.table.api.BatchTableEnvironment;
 import org.apache.flink.table.api.TableConfigOptions;
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode;
-import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink;
 import org.apache.flink.table.resource.batch.schedule.RunningUnitGraphManagerPlugin;
 import org.apache.flink.table.util.NodeResourceUtil;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.InstantiationUtil;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -44,45 +41,30 @@ import java.util.Set;
 import static org.apache.flink.table.resource.batch.schedule.RunningUnitGraphManagerPlugin.RUNNING_UNIT_CONF_KEY;
 
 /**
- * Assign nodes to runningUnits.
+ * Holds runningUnits.
  */
 public class RunningUnitKeeper {
-	private static final Logger LOG = LoggerFactory.getLogger(RunningUnitKeeper.class);
-	private final BatchTableEnvironment tableEnv;
-	private List<NodeRunningUnit> runningUnits;
+	private final Configuration tableConf;
+	private List<NodeRunningUnit> runningUnits = new ArrayList<>();
 	private final Map<BatchExecNode<?>, Set<NodeRunningUnit>> nodeRunningUnitMap = new LinkedHashMap<>();
-	// node --> shuffleStage
 	private final Map<BatchExecNode<?>, Set<BatchExecNodeStage>> nodeStagesMap = new LinkedHashMap<>();
-	private boolean supportRunningUnit = true;
 
-	public RunningUnitKeeper(BatchTableEnvironment tableEnv) {
-		this.tableEnv = tableEnv;
+	public RunningUnitKeeper(Configuration tableConf) {
+		this.tableConf = tableConf;
 	}
 
+	/**
+	 * called when {@link org.apache.flink.table.api.BatchTableEnvironment} translate node dag.
+	 */
 	public void clear() {
-		if (runningUnits != null) {
-			runningUnits.clear();
-		}
+		runningUnits.clear();
 		nodeRunningUnitMap.clear();
 		nodeStagesMap.clear();
 	}
 
-	private Configuration getTableConf() {
-		return tableEnv.getConfig().getConf();
-	}
-
-	public void buildRUs(BatchExecNode<?> rootNode) {
-		if (rootNode instanceof BatchExecSink<?>) {
-			rootNode = (BatchExecNode<?>) ((BatchExecSink) rootNode).getInput();
-		}
-		// not support external shuffle temporarily
-		if (getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_SORT_RANGE_ENABLED)) {
-			supportRunningUnit = false;
-			return;
-		}
-		RunningUnitGenerator visitor = new RunningUnitGenerator(getTableConf());
-		rootNode.accept(visitor);
-		runningUnits = visitor.getRunningUnits();
+	public void setRunningUnits(List<NodeRunningUnit> runningUnits) {
+		Preconditions.checkArgument(runningUnits != null, "runningUnits should not be null.");
+		this.runningUnits.addAll(runningUnits);
 		for (NodeRunningUnit runningUnit : runningUnits) {
 			for (BatchExecNode<?> node : runningUnit.getNodeSet()) {
 				nodeRunningUnitMap.computeIfAbsent(node, k -> new LinkedHashSet<>()).add(runningUnit);
@@ -92,9 +74,12 @@ public class RunningUnitKeeper {
 	}
 
 	public void setScheduleConfig(StreamGraphGenerator.Context context) {
-		if (supportRunningUnit &&
-				NodeResourceUtil.enableRunningUnitSchedule(getTableConf()) &&
-				!getTableConf().getBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH)) {
+		if (runningUnits.isEmpty()) {
+			// no build runningUnits.
+			return;
+		}
+		if (NodeResourceUtil.enableRunningUnitSchedule(tableConf) &&
+				!tableConf.getBoolean(TableConfigOptions.SQL_EXEC_DATA_EXCHANGE_MODE_ALL_BATCH)) {
 			context.getConfiguration().setString(JobManagerOptions.GRAPH_MANAGER_PLUGIN, RunningUnitGraphManagerPlugin.class.getName());
 			try {
 				InstantiationUtil.writeObjectToConfig(runningUnits, context.getConfiguration(), RUNNING_UNIT_CONF_KEY);
@@ -105,7 +90,7 @@ public class RunningUnitKeeper {
 	}
 
 	public void addTransformation(BatchExecNode<?> node, StreamTransformation<?> transformation) {
-		if (!supportRunningUnit || !nodeStagesMap.containsKey(node)) {
+		if (!nodeStagesMap.containsKey(node)) {
 			return;
 		}
 		for (BatchExecNodeStage nodeStage : nodeStagesMap.get(node)) {

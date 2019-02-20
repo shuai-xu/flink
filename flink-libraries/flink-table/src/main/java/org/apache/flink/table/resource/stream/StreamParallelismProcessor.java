@@ -47,6 +47,7 @@ public class StreamParallelismProcessor implements DAGProcessor {
 
 	@Override
 	public List<ExecNode<?, ?>> process(List<ExecNode<?, ?>> sinkNodes, DAGProcessContext context) {
+		calculatedNodeSet.clear();
 		sinkNodes.forEach(s -> Preconditions.checkArgument(s instanceof StreamExecNode));
 		tEnv = context.getTableEnvironment();
 		for (ExecNode sinkNode : sinkNodes) {

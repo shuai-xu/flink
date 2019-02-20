@@ -139,4 +139,6 @@ class MockTableEnvironment extends TableEnvironment(
   override protected def getOptimizer: Optimizer = ???
 
   override private[flink] def translateNodeDag(rels: Seq[RelNode]) = ???
+
+  override protected def getDagProcessors = ???
 }
