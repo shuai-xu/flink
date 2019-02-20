@@ -441,7 +441,7 @@ public class JobGraph implements Serializable {
 		return maxParallelism;
 	}
 
-	public Collection<Collection<ExecutionVertexID>> getResultPartitionConsumerExecutionVertices(
+	public List<Collection<ExecutionVertexID>> getResultPartitionConsumerExecutionVertices(
 		IntermediateDataSetID resultID,
 		int partitionNumber) {
 
@@ -454,7 +454,7 @@ public class JobGraph implements Serializable {
 				+ "/" + result.getProducer().getParallelism());
 		}
 
-		Collection<Collection<ExecutionVertexID>> consumerVertices = new ArrayList<>();
+		List<Collection<ExecutionVertexID>> consumerVertices = new ArrayList<>();
 		for (JobEdge edge : getResult(resultID).getConsumers()) {
 			consumerVertices.add(edge.getConsumerExecutionVertices(partitionNumber));
 		}

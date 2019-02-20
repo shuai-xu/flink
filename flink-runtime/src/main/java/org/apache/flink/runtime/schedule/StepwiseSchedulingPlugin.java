@@ -22,7 +22,9 @@ import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 
@@ -79,12 +81,24 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 	@Override
 	public void onResultPartitionConsumable(ResultPartitionConsumableEvent event) {
 		final List<ExecutionVertexID> verticesToSchedule = new ArrayList<>();
-		final Collection<Collection<ExecutionVertexID>> consumerVertices = jobGraph
+		final List<Collection<ExecutionVertexID>> consumerVertices = jobGraph
 			.getResultPartitionConsumerExecutionVertices(event.getResultID(), event.getPartitionNumber());
-		for (Collection<ExecutionVertexID> executionVertexIDs : consumerVertices) {
-			for (ExecutionVertexID executionVertexID : executionVertexIDs) {
-				if (isReadyToSchedule(executionVertexID)) {
-					verticesToSchedule.add(executionVertexID);
+		final IntermediateDataSet dataSet = jobGraph.getResult(event.getResultID());
+		for (int i = 0; i < consumerVertices.size(); i++) {
+			Collection<ExecutionVertexID> executionVertexIDs = consumerVertices.get(i);
+
+			if (dataSet.getConsumers().get(i).getDistributionPattern() == DistributionPattern.ALL_TO_ALL) {
+				// For ALL-to-ALL edges, all downstream tasks of a certain job vertex should be all fulfilled
+				// at the same time, otherwise none of them is fulfilled
+				if (executionVertexIDs.size() > 0 && isReadyToSchedule(executionVertexIDs.iterator().next())) {
+					verticesToSchedule.addAll(executionVertexIDs);
+				}
+			} else {
+				// For POINTWISE edges, check the downstream tasks one by one
+				for (ExecutionVertexID executionVertexID : executionVertexIDs) {
+					if (isReadyToSchedule(executionVertexID)) {
+						verticesToSchedule.add(executionVertexID);
+					}
 				}
 			}
 		}
