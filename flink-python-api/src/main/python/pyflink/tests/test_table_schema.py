@@ -19,6 +19,7 @@ from pyflink import StreamExecutionEnvironment
 from pyflink.table import TableEnvironment
 from pyflink.table.table_schema import TableSchema
 from pyflink.sql.data_type import *
+from pyflink.util.type_util import TypesUtil
 
 import os
 import pytest
@@ -84,4 +85,9 @@ def test_schema():
      |-- a
      |-- a
     '''
+
+
+def test_rowtype():
+    out_row_type = RowType([StringType(), IntegerType()], ["image_raw", "label"])
+    j_row_type = TypesUtil.to_java_sql_type(out_row_type)
 

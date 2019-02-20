@@ -77,7 +77,7 @@ class TypesUtil(object):
             j_clz = _sql_complex_type_py2j_map.get(type(py_sql_type))
             return j_clz(py_sql_type.precision, py_sql_type.scale)
         if isinstance(py_sql_type, RowType):
-            j_types = [_sql_basic_types_py2j_map[type(pt)] for pt in py_sql_type.data_types]
+            j_types = [_sql_basic_types_py2j_map[pt] for pt in py_sql_type.data_types]
             j_types_arr = TypesUtil._convert_py_list_to_java_array(
                 'org.apache.flink.table.api.types.DataType',
                 j_types

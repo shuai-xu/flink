@@ -89,10 +89,11 @@ def launch_java_gateway(conf = None):
 
 
 def launch_java_process(port):
-    env = dict(os.environ)
-    bin_dir = env.get('FLINK_BIN_DIR')
-    if bin_dir is None:
-        raise Exception("FLINK_BIN_DIR has not been set!")
+
+    flink_home = os.environ['FLINK_HOME']
+    if flink_home is None:
+        raise Exception("FLINK_HOME has not been set!")
+    bin_dir = flink_home + '/bin'
 
     shell_gateway = 'org.apache.flink.api.python.PythonShellGatewayServer'
     p = None
