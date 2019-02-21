@@ -20,6 +20,7 @@ package org.apache.flink.sql.parser.node;
 
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlCreateView;
+import org.apache.flink.sql.parser.plan.FlinkSqlValidator;
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableList;
 
@@ -34,13 +35,14 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSnapshot;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.Util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Converts a SQL parse tree. (consisting of
@@ -51,9 +53,9 @@ public class SqlToTreeConverter {
 
 	private final Map<String, SqlTreeNode> context = new HashMap<>();
 	private final List<SqlTreeNode> nodes = new ArrayList<>();
-	private final SqlValidator validator;
+	private final FlinkSqlValidator validator;
 
-	public SqlToTreeConverter(SqlValidator validator) {
+	public SqlToTreeConverter(FlinkSqlValidator validator) {
 		this.validator = validator;
 	}
 
@@ -126,7 +128,14 @@ public class SqlToTreeConverter {
 
 		if (validator.isAggregate(query)) {
 			SqlNodeList groupList = query.getGroup();
-			input = SqlTreeNodes.group(groupList.getParserPosition(), input, groupList);
+			if (groupList != null) {
+				input = SqlTreeNodes.group(groupList.getParserPosition(), input, groupList);
+			} else {
+				// it's an aggregate without GROUP BY
+				SqlNode agg = validator.getAggregate(query);
+				requireNonNull(agg, "Can not find aggregate from query: " + query);
+				input = SqlTreeNodes.group(agg.getParserPosition(), input);
+			}
 		} else {
 			SqlNodeList selectList = query.getSelectList();
 			input = SqlTreeNodes.select(query.getParserPosition(), input, selectList);

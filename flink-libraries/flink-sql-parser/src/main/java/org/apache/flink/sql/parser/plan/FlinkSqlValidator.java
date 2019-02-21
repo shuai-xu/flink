@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorImpl;
@@ -58,6 +59,11 @@ public class FlinkSqlValidator extends SqlValidatorImpl {
 	@Override
 	protected RelDataType getLogicalTargetRowType(RelDataType targetRowType, SqlInsert insert) {
 		return ((JavaTypeFactory) typeFactory).toSql(targetRowType);
+	}
+
+	// make the method accessible.
+	public SqlNode getAggregate(SqlSelect select) {
+		return super.getAggregate(select);
 	}
 
 	public void validateSCNamespace(SqlValidatorNamespace namespace) {

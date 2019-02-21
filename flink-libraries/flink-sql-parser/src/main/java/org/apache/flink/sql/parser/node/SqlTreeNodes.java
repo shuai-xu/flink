@@ -65,6 +65,10 @@ public class SqlTreeNodes {
 		return new SqlJoinNode(pos, left, right, joinType);
 	}
 
+	public static SqlTreeNode group(SqlParserPos pos, SqlTreeNode input) {
+		return new SqlGroupNode(pos, input, "");
+	}
+
 	public static SqlTreeNode union(SqlParserPos pos, List<SqlTreeNode> nodes) {
 		List<SqlTreeNode> children = new ArrayList<>();
 		for (SqlTreeNode node : nodes) {
