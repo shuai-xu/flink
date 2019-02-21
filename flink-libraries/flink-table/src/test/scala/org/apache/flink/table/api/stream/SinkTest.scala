@@ -238,7 +238,7 @@ class SinkTest(subplanReuseEnabled: Boolean)  extends TableTestBase {
 
   @Test
   def testMultiSinksWithTemporalTableSource(): Unit = {
-    util.addTable[(Int, Double, Int)](
+    util.addTable[(Long, Double, Long)](
       "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
     util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
 
@@ -435,7 +435,7 @@ class SinkTest(subplanReuseEnabled: Boolean)  extends TableTestBase {
 
   @Test
   def testSingleSinkWithTemporalTableSource(): Unit = {
-    util.addTable[(Int, Double, Int)](
+    util.addTable[(Long, Double, Long)](
       "MyTable", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
     util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
 

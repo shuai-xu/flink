@@ -50,8 +50,10 @@ object TemporalJoinCodeGenerator {
     tableReturnTypeInfo: TypeInformation[_],
     tableReturnClass: Class[_],
     lookupKeyInOrder: Array[Int],
-    lookupKeysFromInput: Map[Int, Int], // lookup key index -> input field index
-    lookupKeysFromConstant: Map[Int, RexLiteral],  // lookup key index -> constant value
+    // lookup key index -> input field index
+    lookupKeysFromInput: Map[Int, Int],
+    // lookup key index -> (constant, expected type)
+    lookupKeysFromConstant: Map[Int, (RexLiteral, InternalType)],
     lookupFunction: TableFunction[_],
     enableObjectReuse: Boolean)
   : GeneratedFunction[FlatMapFunction[BaseRow, BaseRow], BaseRow] = {
@@ -109,8 +111,10 @@ object TemporalJoinCodeGenerator {
     tableReturnTypeInfo: TypeInformation[_],
     tableReturnClass: Class[_],
     lookupKeyInOrder: Array[Int],
-    lookupKeysFromInput: Map[Int, Int], // lookup key index -> input field index
-    lookupKeysFromConstant: Map[Int, RexLiteral],
+    // lookup key index -> input field index
+    lookupKeysFromInput: Map[Int, Int],
+    // lookup key index -> (constant, expected type)
+    lookupKeysFromConstant: Map[Int, (RexLiteral, InternalType)],
     asyncLookupFunction: AsyncTableFunction[_])
   : GeneratedFunction[AsyncFunction[BaseRow, BaseRow], BaseRow] = {
 
@@ -162,7 +166,7 @@ object TemporalJoinCodeGenerator {
     inputType: InternalType,
     lookupKeyInOrder: Array[Int],
     lookupKeysFromInput: Map[Int, Int], // lookup key index -> input field index
-    lookupKeysFromConstant: Map[Int, RexLiteral],
+    lookupKeysFromConstant: Map[Int, (RexLiteral, InternalType)],
     fieldCopy: Boolean): (String, String) = {
 
     // the total number of lookupKeys should equal to fromInput plus fromConstant
@@ -179,10 +183,13 @@ object TemporalJoinCodeGenerator {
           config.getNullCheck,
           fieldCopy)
       } else if (lookupKeysFromConstant.contains(i)) {
-        val literal = lookupKeysFromConstant(i)
-        val resultType = FlinkTypeFactory.toInternalType(literal.getType)
+        val literal = lookupKeysFromConstant(i)._1
         val value = literal.getValue3
-        generateLiteral(ctx, literal.getType, resultType, value, config.getNullCheck)
+        // do not get the result type from literal directly,
+        // we should use the type expected by lookupable table
+        val resultType = lookupKeysFromConstant(i)._2
+        val relDataType = typeFactory.createTypeFromInternalType(resultType, value == null)
+        generateLiteral(ctx, relDataType, resultType, value, config.getNullCheck)
       } else {
         throw new CodeGenException("This should never happen!")
       }

@@ -71,6 +71,29 @@ class TemporalTableJoinITCase extends StreamingTestBase {
   }
 
   @Test
+  def testJoinTemporalTableOnConstantKey(): Unit = {
+    val stream: DataStream[(Int, Int, String)] = env.fromCollection(data)
+    val streamTable = stream.toTable(tEnv, 'id, 'len, 'content, 'proc.proctime)
+    tEnv.registerTable("T", streamTable)
+
+    val temporalTable = new TestingTemporalTableSource()
+    tEnv.registerTableSource("csvTemporal", temporalTable)
+
+    val sql = "SELECT T.id, T.len, T.content, D.name FROM T JOIN csvTemporal " +
+      "for system_time as of PROCTIME() AS D ON D.id = 1"
+
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = Seq(
+      "1,12,Julian,Julian", "2,15,Hello,Julian", "3,15,Fabian,Julian",
+      "8,11,Hello world,Julian", "9,12,Hello world!,Julian")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+    assertEquals(0, temporalTable.getFetcherResourceCount)
+  }
+
+  @Test
   def testJoinTemporalTableOnNullableKey(): Unit = {
 
     implicit val tpe: TypeInformation[Row] = new RowTypeInfo(

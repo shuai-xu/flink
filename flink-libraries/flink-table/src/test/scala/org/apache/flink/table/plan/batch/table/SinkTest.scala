@@ -236,7 +236,7 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinksWithTemporalTableSource(): Unit = {
-    util.addTable[(Int, Double, Int, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
+    util.addTable[(Long, Double, Long, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
     util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
 
     val query1 =
@@ -415,7 +415,7 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testSingleSinkWithTemporalTableSource(): Unit = {
-    util.addTable[(Int, Double, Int, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
+    util.addTable[(Long, Double, Long, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
     util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
     val query =
       """

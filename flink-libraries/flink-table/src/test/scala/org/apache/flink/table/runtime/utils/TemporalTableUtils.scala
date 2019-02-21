@@ -17,7 +17,7 @@
  */
 package org.apache.flink.table.runtime.utils
 
-import java.lang.{Integer => JInt}
+import java.lang.{Long => JLong}
 import java.util.Collections
 import java.util.concurrent.{CompletableFuture, ExecutorService, Executors}
 import java.util.function.{Consumer, Supplier}
@@ -26,7 +26,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.api.functions.{AsyncTableFunction, FunctionContext, TableFunction}
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.{DataType, TypeConverters}
 import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow}
 import org.apache.flink.table.sources._
@@ -38,16 +38,16 @@ import org.junit.Assert
 object TemporalTableUtils {
 
   // index by id
-  val singleKeyTable: Map[Int, (Int, Int, String)] = Map(
-    1 -> (11, 1, "Julian"),
-    2 -> (22, 2, "Jark"),
-    3 -> (33, 3, "Fabian"))
+  val singleKeyTable: Map[Long, (Int, Long, String)] = Map(
+    1L -> (11, 1L, "Julian"),
+    2L -> (22, 2L, "Jark"),
+    3L -> (33, 3L, "Fabian"))
 
   // index by (id, name)
-  val doubleKeyTable: Map[(Int, String), (Int, Int, String)] = Map(
-    (1, "Julian") -> (11, 1, "Julian"),
-    (2, "Jark") -> (22, 2, "Jark"),
-    (3, "Fabian") -> (33, 3, "Fabian"))
+  val doubleKeyTable: Map[(Long, String), (Int, Long, String)] = Map(
+    (1L, "Julian") -> (11, 1L, "Julian"),
+    (2L, "Jark") -> (22, 2L, "Jark"),
+    (3L, "Fabian") -> (33, 3L, "Fabian"))
 
   class TestingTemporalTableSourceWithDoubleKey(async: Boolean = false)
     extends TestingTemporalTableSource(async) {
@@ -91,7 +91,7 @@ object TemporalTableUtils {
     override def getReturnType: DataType =
       TypeConverters.createInternalTypeFromTypeInfo(
         new BaseRowTypeInfo(
-          Array(Types.INT, Types.INT, Types.STRING).asInstanceOf[Array[TypeInformation[_]]],
+          Array(Types.INT, Types.LONG, Types.STRING).asInstanceOf[Array[TypeInformation[_]]],
           Array( "age", "id", "name")))
 
 
@@ -149,7 +149,7 @@ object TemporalTableUtils {
 
   // lookup data table using id index
   class TestingSingleKeyFetcher(idIndex: Int) extends TestingDoubleKeyFetcher(idIndex, 1) {
-    def eval(id: JInt): Unit = {
+    def eval(id: JLong): Unit = {
       if (id != null) {
         val value = TemporalTableUtils.singleKeyTable.get(id)
         if (value.isDefined) {
@@ -176,7 +176,7 @@ object TemporalTableUtils {
       resourceCounter -= 1
     }
 
-    def eval(id: JInt, name: BinaryString): Unit = {
+    def eval(id: JLong, name: BinaryString): Unit = {
       if (id != null && name != null) {
         val value = TemporalTableUtils.doubleKeyTable.get((id, name.toString))
         if (value.isDefined) {
@@ -185,7 +185,7 @@ object TemporalTableUtils {
       }
     }
 
-    def collect(age: Int, id: Int, name: String): Unit = {
+    def collect(age: Int, id: Long, name: String): Unit = {
       reuse.update(0, age)
       reuse.update(1, id)
       reuse.update(2, name)
@@ -196,7 +196,7 @@ object TemporalTableUtils {
   class TestingAsyncSingleKeyFetcher(leftKeyIdx: Int)
     extends TestingAsyncDoubleKeyFetcher(leftKeyIdx, 1) {
 
-    def eval(asyncCollector: ResultFuture[BaseRow], id: JInt): Unit = {
+    def eval(asyncCollector: ResultFuture[BaseRow], id: JLong): Unit = {
       CompletableFuture
       .supplyAsync(new SingleKeySupplier(id), executor)
       .thenAccept(new Consumer[BaseRow] {
@@ -213,7 +213,7 @@ object TemporalTableUtils {
       })
     }
 
-    class SingleKeySupplier(id: JInt) extends Supplier[BaseRow] {
+    class SingleKeySupplier(id: JLong) extends Supplier[BaseRow] {
       override def get(): BaseRow = {
         if (id != null) {
           val value = TemporalTableUtils.singleKeyTable.get(id)
@@ -227,7 +227,7 @@ object TemporalTableUtils {
         }
       }
 
-      def collect(age: Int, id: Int, name: String): BaseRow = {
+      def collect(age: Int, id: Long, name: String): BaseRow = {
         val row = new GenericRow(3)
         row.update(0, age)
         row.update(1, id)
@@ -267,7 +267,7 @@ object TemporalTableUtils {
       }
     }
 
-    def eval(asyncCollector: ResultFuture[BaseRow], id: JInt, name: BinaryString): Unit = {
+    def eval(asyncCollector: ResultFuture[BaseRow], id: JLong, name: BinaryString): Unit = {
       CompletableFuture
       .supplyAsync(new DoubleKeySupplier(id, name.toString), executor)
       .thenAccept(new Consumer[BaseRow] {
@@ -284,7 +284,7 @@ object TemporalTableUtils {
       })
     }
 
-    class DoubleKeySupplier(id: JInt, name: String) extends Supplier[BaseRow] {
+    class DoubleKeySupplier(id: JLong, name: String) extends Supplier[BaseRow] {
       override def get(): BaseRow = {
         if (id != null && name != null) {
           val value = TemporalTableUtils.doubleKeyTable.get((id, name))
@@ -298,7 +298,7 @@ object TemporalTableUtils {
         }
       }
 
-      def collect(age: Int, id: Int, name: String): BaseRow = {
+      def collect(age: Int, id: Long, name: String): BaseRow = {
         val row = new GenericRow(3)
         row.update(0, age)
         row.update(1, id)

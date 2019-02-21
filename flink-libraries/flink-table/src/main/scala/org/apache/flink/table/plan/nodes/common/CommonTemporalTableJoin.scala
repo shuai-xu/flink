@@ -86,6 +86,7 @@ abstract class CommonTemporalTableJoin(
   val joinKeyPairs: util.List[IntPair] = getTemporalTableJoinKeyPairs(joinInfo, tableCalcProgram)
   val indexKeys: util.List[IndexKey] = getTableIndexKeys(tableSource)
   // constant keys which maybe empty if calc program is None
+  // [lookupkeyIndexInTableSource, (lookupkeyTypeInTableSource, literal)]
   val constantLookupKeys: util.Map[Int, (InternalType, Object)] = analyzeConstantLookupKeys(
     cluster, 
     tableCalcProgram, 
@@ -175,9 +176,10 @@ abstract class CommonTemporalTableJoin(
       joinInfo,
       constantLookupKeys)
 
-    val lookupKeysFromConstant: Map[Int, RexLiteral] = constantLookupKeys.toMap.map {
-      case (i, (_, o)) => (i, relBuilder.literal(o).asInstanceOf[RexLiteral])
-    }
+    val lookupKeysFromConstant: Map[Int, (RexLiteral, InternalType)] =
+      constantLookupKeys.toMap.map {
+        case (i, (t, o)) => (i, (relBuilder.literal(o).asInstanceOf[RexLiteral], t))
+      }
 
     val lookupKeyPairs = joinKeyPairs.filter(p => checkedIndexInOrder.contains(p.target))
     // lookup key index -> input field index
