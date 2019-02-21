@@ -244,6 +244,14 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		scheduleInConcurrentGroup(verticesToSchedule);
 	}
 
+	@Override
+	public boolean allowLazyDeployment() {
+		if (jobGraph.getJobType() == JobType.INFINITE_STREAM) {
+			return false;
+		}
+		return true;
+	}
+
 	@VisibleForTesting
 	Set<ConcurrentSchedulingGroup> getConcurrentSchedulingGroups() {
 		return concurrentSchedulingGroups;
