@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
+import org.apache.flink.runtime.executiongraph.AccessExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
 import org.apache.flink.runtime.messages.FlinkJobNotFoundException;
 import org.apache.flink.runtime.rest.NotFoundException;
@@ -42,6 +43,8 @@ import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nonnull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -120,4 +123,20 @@ public abstract class AbstractExecutionGraphsHandler<R extends ResponseBody, M e
 	 */
 	protected abstract R handleRequest(HandlerRequest<EmptyRequestBody, M> request, AccessExecutionGraph executionGraph,
 			EvictingBoundedList<ArchivedExecutionGraph> historicalGraphs) throws RestHandlerException;
+
+	protected static List<AccessExecutionJobVertex> getVertex(EvictingBoundedList<ArchivedExecutionGraph> historicalGraphs, AccessExecutionJobVertex jobVertex){
+		List<AccessExecutionJobVertex> vertexList = new ArrayList<>();
+		vertexList.add(jobVertex);
+		if (historicalGraphs != null) {
+			for (ArchivedExecutionGraph graph: historicalGraphs) {
+				if (graph != null) {
+					AccessExecutionJobVertex v = graph.getJobVertex(jobVertex.getJobVertexId());
+					if (v != null) {
+						vertexList.add(v);
+					}
+				}
+			}
+		}
+		return vertexList;
+	}
 }

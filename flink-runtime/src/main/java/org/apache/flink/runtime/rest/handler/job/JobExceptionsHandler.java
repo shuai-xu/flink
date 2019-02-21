@@ -158,18 +158,6 @@ public class JobExceptionsHandler extends AbstractExecutionGraphsHandler<JobExce
 		return new JobExceptionsInfo(rootExceptionMessage, rootTimestamp, new ArrayList<>(taskExceptionList), truncated);
 	}
 
-	private static List<AccessExecutionJobVertex> getVertex(EvictingBoundedList<ArchivedExecutionGraph> historicalGraphs, AccessExecutionJobVertex jobVertex){
-		List<AccessExecutionJobVertex> vertexList = new ArrayList<>();
-		vertexList.add(jobVertex);
-		if (historicalGraphs != null) {
-			for (ArchivedExecutionGraph graph: historicalGraphs) {
-				AccessExecutionJobVertex v = graph.getJobVertex(jobVertex.getJobVertexId());
-				vertexList.add(v);
-			}
-		}
-		return vertexList;
-	}
-
 	private static JobExceptionsInfo.ExecutionExceptionInfo generateExecutionExceptionInfo(AccessExecutionJobVertex jobVertex, AccessExecutionVertex executionVertex, AccessExecution task) {
 		String t = task != null ? task.getFailureCauseAsString() : null;
 		if (t != null && !t.equals(ExceptionUtils.STRINGIFIED_NULL_EXCEPTION)) {
