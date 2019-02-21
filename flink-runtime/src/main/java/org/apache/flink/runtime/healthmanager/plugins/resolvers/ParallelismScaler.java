@@ -32,6 +32,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.RescaleJobParallelism;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.HighStateSizeDetector;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStuck;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexBackPressure;
@@ -39,6 +40,7 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayInc
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighDelay;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighStateSize;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
@@ -126,6 +128,7 @@ public class ParallelismScaler implements Resolver {
 	private JobVertexFrequentFullGC frequentFullGCSymptom;
 	private JobVertexFailover failoverSymptom;
 	private JobStuck jobStuckSymptom;
+	private JobVertexHighStateSize highStateSizeSymptom;
 
 	// diagnose
 
@@ -346,7 +349,8 @@ public class ParallelismScaler implements Resolver {
 
 		// Step-6. generate parallelism rescale action
 
-		RescaleJobParallelism rescaleJobParallelism = generateRescaleParallelismAction(targetParallelisms, monitor.getJobConfig());
+		Map<JobVertexID, Integer> minParallelisms = getVertexMinParallelisms(monitor.getJobConfig());
+		RescaleJobParallelism rescaleJobParallelism = generateRescaleParallelismAction(targetParallelisms, minParallelisms, monitor.getJobConfig());
 
 		if (rescaleJobParallelism != null && !rescaleJobParallelism.isEmpty()) {
 			LOGGER.info("RescaleJobParallelism action generated: {}.", rescaleJobParallelism);
@@ -366,6 +370,7 @@ public class ParallelismScaler implements Resolver {
 		delayIncreasingSymptom = null;
 		backPressureSymptom = null;
 		overParallelizedSymptom = null;
+		highDelaySymptom = null;
 
 		// read new symptoms
 		for (Symptom symptom : symptomList) {
@@ -412,6 +417,12 @@ public class ParallelismScaler implements Resolver {
 			if (symptom instanceof JobVertexOverParallelized) {
 				overParallelizedSymptom = (JobVertexOverParallelized) symptom;
 				LOGGER.debug("Over parallelized detected for vertices {}.", overParallelizedSymptom.getJobVertexIDs());
+				continue;
+			}
+
+			if (symptom instanceof HighStateSizeDetector) {
+				highDelaySymptom = (JobVertexHighDelay) symptom;
+				LOGGER.debug("High state size detected for vertices {}.", highDelaySymptom.getJobVertexIDs());
 				continue;
 			}
 		}
@@ -727,6 +738,30 @@ public class ParallelismScaler implements Resolver {
 		return targetParallelisms;
 	}
 
+	private  Map<JobVertexID, Integer> getVertexMinParallelisms(RestServerClient.JobConfig jobConfig) {
+		Map<JobVertexID, Integer> minParallelisms = new HashMap<>();
+		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexId);
+			minParallelisms.put(vertexId, 1);
+
+			int minParallelism;
+			if (isSource.get(vertexId) && sourcePartitionCountSubs.get(vertexId).getValue() != null) {
+				double partitionCount = sourcePartitionCountSubs.get(vertexId).getValue().f1;
+				minParallelism = (int) Math.ceil(partitionCount / maxPartitionPerTask);
+
+				if (minParallelism > minParallelisms.get(vertexId)) {
+					minParallelisms.put(vertexId, minParallelism);
+				}
+
+				if (highStateSizeSymptom != null && highStateSizeSymptom.getJobVertexIDs().contains(vertexId)) {
+					minParallelisms.put(vertexId, vertexConfig.getParallelism());
+				}
+			}
+		}
+		return minParallelisms;
+
+	}
+
 	private void updateTargetParallelismsSubjectToConstraints(Map<JobVertexID, Integer> targetParallelisms, RestServerClient.JobConfig jobConfig) {
 
 		// EqualParallelismGroups (EPG)
@@ -763,6 +798,11 @@ public class ParallelismScaler implements Resolver {
 					}
 				}
 
+			}
+
+			// when vertex has high state size we should not down scale the node.
+			if (highStateSizeSymptom != null && targetParallelism < vertexConfig.getParallelism() && highStateSizeSymptom.getJobVertexIDs().contains(vertexId)) {
+				targetParallelism = vertexConfig.getParallelism();
 			}
 
 			// parallelism > 0
@@ -1124,7 +1164,10 @@ public class ParallelismScaler implements Resolver {
 		}
 	}
 
-	private RescaleJobParallelism generateRescaleParallelismAction(Map<JobVertexID, Integer> targetParallelisms, RestServerClient.JobConfig jobConfig) {
+	private RescaleJobParallelism generateRescaleParallelismAction(
+			Map<JobVertexID, Integer> targetParallelisms,
+			Map<JobVertexID, Integer> minParallelisms,
+			RestServerClient.JobConfig jobConfig) {
 
 		if (targetParallelisms.isEmpty()) {
 			return null;
@@ -1159,7 +1202,7 @@ public class ParallelismScaler implements Resolver {
 
 				RestServerClient.JobConfig adjustedJobConfig = MaxResourceLimitUtil
 					.scaleDownJobConfigToMaxResourceLimit(
-						targetJobConfig, maxCpuLimit, maxMemoryLimit);
+						targetJobConfig, minParallelisms, maxCpuLimit, maxMemoryLimit);
 
 				if (adjustedJobConfig == null) {
 					LOGGER.debug("Give up adjusting.");

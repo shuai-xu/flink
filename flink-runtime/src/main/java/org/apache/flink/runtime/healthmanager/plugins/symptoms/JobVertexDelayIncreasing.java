@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.healthmanager.plugins.symptoms;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.util.List;
@@ -27,21 +26,10 @@ import java.util.List;
 /**
  * Symptom indicating job vertices delay increasing.
  */
-public class JobVertexDelayIncreasing implements Symptom {
+public class JobVertexDelayIncreasing extends AbstractJobVertexSymptom {
 
-	private JobID jobID;
-	private List<JobVertexID> jobVertexIDs;
-
-	public JobVertexDelayIncreasing(JobID jobID, List<JobVertexID> jobVertexIDs) {
-		this.jobID = jobID;
-		this.jobVertexIDs = jobVertexIDs;
-	}
-
-	public JobID getJobID() {
-		return jobID;
-	}
-
-	public List<JobVertexID> getJobVertexIDs() {
-		return jobVertexIDs;
+	public JobVertexDelayIncreasing(JobID jobID,
+			List<JobVertexID> jobVertexIDs) {
+		super(jobID, jobVertexIDs);
 	}
 }

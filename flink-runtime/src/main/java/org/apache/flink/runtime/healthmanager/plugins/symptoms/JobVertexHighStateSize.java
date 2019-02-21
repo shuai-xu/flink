@@ -24,11 +24,10 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import java.util.List;
 
 /**
- * Symptom indicating job vertices low delay.
+ * Symptom indicating job vertex has high state size.
  */
-public class JobVertexLowDelay extends AbstractJobVertexSymptom {
-
-	public JobVertexLowDelay(JobID jobID,
+public class JobVertexHighStateSize extends AbstractJobVertexSymptom {
+	public JobVertexHighStateSize(JobID jobID,
 			List<JobVertexID> jobVertexIDs) {
 		super(jobID, jobVertexIDs);
 	}

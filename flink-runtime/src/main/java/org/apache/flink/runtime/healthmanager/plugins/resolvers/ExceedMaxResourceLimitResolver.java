@@ -36,6 +36,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -97,11 +98,11 @@ public class ExceedMaxResourceLimitResolver implements Resolver {
 		if (totalCpu > maxCpuLimit || totalMem > maxMemoryLimit) {
 			LOGGER.debug("Current job total resource exceed max limit. Down scale job to max resource limit <cpu, mem>=<{}, {}>.",
 				maxCpuLimit, maxMemoryLimit);
-			targetJobConfig = MaxResourceLimitUtil.scaleDownJobConfigToMaxResourceLimit(currentJobConfig, maxCpuLimit, maxMemoryLimit);
+			targetJobConfig = MaxResourceLimitUtil.scaleDownJobConfigToMaxResourceLimit(currentJobConfig, new HashMap<>(), maxCpuLimit, maxMemoryLimit);
 		} else {
 			LOGGER.debug("Current job total resource does not exceed max limit. Down scale job by ratio {}. Limit <cpu, mem>=<{}, {}>.",
 				ratio, totalCpu * ratio, (int) (totalMem * ratio));
-			targetJobConfig = MaxResourceLimitUtil.scaleDownJobConfigToMaxResourceLimit(currentJobConfig, totalCpu * ratio, (int) (totalMem * ratio));
+			targetJobConfig = MaxResourceLimitUtil.scaleDownJobConfigToMaxResourceLimit(currentJobConfig, new HashMap<>(), totalCpu * ratio, (int) (totalMem * ratio));
 		}
 
 		RescaleJobParallelism rescaleJobParallelism = new RescaleJobParallelism(jobID, timeout);

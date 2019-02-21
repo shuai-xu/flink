@@ -24,6 +24,8 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 /**
  * Util for max resource limit.
  */
@@ -32,6 +34,7 @@ public class MaxResourceLimitUtil {
 
 	public static RestServerClient.JobConfig scaleDownJobConfigToMaxResourceLimit(
 		RestServerClient.JobConfig jobConfig,
+		Map<JobVertexID, Integer> minParallelisms,
 		double maxCpuLimit,
 		int maxMemoryLimit) {
 
@@ -61,6 +64,9 @@ public class MaxResourceLimitUtil {
 
 				int parallelism = (int) Math.floor(originVertexConfig.getParallelism() * ratio);
 				parallelism = parallelism < 1 ? 1 : parallelism;
+				if (parallelism < minParallelisms.getOrDefault(vertexId, 1)) {
+					parallelism = minParallelisms.get(vertexId);
+				}
 				if (parallelism < originVertexConfig.getParallelism()) {
 					downScaled = true;
 				}

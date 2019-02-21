@@ -19,7 +19,6 @@
 package org.apache.flink.runtime.healthmanager.plugins.symptoms;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import java.util.List;
@@ -27,24 +26,13 @@ import java.util.List;
 /**
  * Symptom indicating job vertices direct oom.
  */
-public class JobVertexFrequentFullGC implements Symptom {
+public class JobVertexFrequentFullGC extends AbstractJobVertexSymptom {
 
-	private JobID jobID;
-	private List<JobVertexID> jobVertexIDs;
 	private boolean severe;
 
 	public JobVertexFrequentFullGC(JobID jobID, List<JobVertexID> jobVertexIDs, boolean severe) {
-		this.jobID = jobID;
-		this.jobVertexIDs = jobVertexIDs;
+		super(jobID, jobVertexIDs);
 		this.severe = severe;
-	}
-
-	public JobID getJobID() {
-		return jobID;
-	}
-
-	public List<JobVertexID> getJobVertexIDs() {
-		return jobVertexIDs;
 	}
 
 	public boolean isSevere() {

@@ -42,13 +42,13 @@ public class HealthMonitorOptions {
 	 * parallelism check interval.
 	 */
 	public static final ConfigOption<Long> PARALLELISM_SCALE_INTERVAL =
-			ConfigOptions.key("parallelism.scale.interval.ms").defaultValue(60 * 1000L);
+			ConfigOptions.key("parallelism.scale.interval.ms").defaultValue(3 * 60 * 1000L);
 
 	/**
 	 * parallelism stable time.
 	 */
 	public static final ConfigOption<Long> PARALLELISM_SCALE_STABLE_TIME =
-		ConfigOptions.key("parallelism.scale.stable-time.ms").defaultValue(10 * 60 * 1000L);
+		ConfigOptions.key("parallelism.scale.stable-time.ms").defaultValue(6 * 60 * 1000L);
 
 	/**
 	 * max partition per task.
