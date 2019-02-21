@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -27,8 +28,10 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
+import org.apache.flink.runtime.io.network.DataExchangeMode;
 import org.apache.flink.runtime.jobgraph.ControlType;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
+import org.apache.flink.runtime.operators.DamBehavior;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -62,8 +65,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder;
 
@@ -227,14 +232,21 @@ public class StreamGraphGenerator {
 		}
 
 		// add control edges
+		ExecutionMode executionMode = streamGraph.getExecutionConfig().getExecutionMode();
 		for (StreamNode currentNode : streamGraph.getStreamNodes()) {
-			Map<ReadPriority, List<StreamNode>> readPriorityMap = new HashMap<>();
+			Set<StreamNode> laterScheduledInputNodes = new HashSet<>();
 			for (Map.Entry<StreamEdge, ReadPriority> entry : currentNode.getReadPriorityHints().entrySet()) {
-				readPriorityMap.computeIfAbsent(entry.getValue(), k -> new ArrayList())
-						.add(streamGraph.getStreamNode(entry.getKey().getSourceId()));
+				StreamEdge inEdge = entry.getKey();
+				DataExchangeMode dataExchangeMode = inEdge.getDataExchangeMode();
+				DamBehavior damBehavior = inEdge.getDamBehavior();
+
+				if (ReadPriority.LOWER.equals(entry.getValue())
+						&& (DataExchangeMode.PIPELINED.equals(dataExchangeMode) ||
+								(DataExchangeMode.AUTO.equals(dataExchangeMode) && ExecutionMode.PIPELINED.equals(executionMode)))) {
+					laterScheduledInputNodes.add(streamGraph.getStreamNode(inEdge.getSourceId()));
+				}
 			}
 
-			List<StreamNode> laterScheduledInputNodes = readPriorityMap.get(ReadPriority.LOWER);
 			if (laterScheduledInputNodes != null) {
 				for (Map.Entry<StreamEdge, ReadPriority> entry : currentNode.getReadPriorityHints().entrySet()) {
 					if (ReadPriority.LOWER.equals(entry.getValue())) {

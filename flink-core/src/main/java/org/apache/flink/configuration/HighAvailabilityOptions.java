@@ -197,11 +197,13 @@ public class HighAvailabilityOptions {
 
 	public static final ConfigOption<String> ZOOKEEPER_ACL_SCHEME =
 			key("zookeeper.acl.scheme")
-					.noDefaultValue();
+			.noDefaultValue()
+			.withDescription("The scheme for zookeeper acl auth.");
 
 	public static final ConfigOption<String> ZOOKEEPER_ACL_AUTH =
 			key("zookeeper.acl.auth")
-					.noDefaultValue();
+			.noDefaultValue()
+			.withDescription("The encrypted key for zookeeper acl auth.");
 
 	// --------------------------- FileSystem ----------------------------------
 

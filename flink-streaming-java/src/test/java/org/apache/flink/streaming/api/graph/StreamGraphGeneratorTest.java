@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.api.graph;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.common.functions.FilterFunction;
@@ -1166,6 +1167,87 @@ public class StreamGraphGeneratorTest {
 
 			verifySchedulingDependencies(graph, sink1.getId(),
 					new MapFiller<>(expectedSchedulingModes).put(map1.getId(), StreamSchedulingMode.AUTO).toMap(),
+					null);
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+
+			DataStream<Integer> filter1 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> forward1 = filter1.forward();
+			((PartitionTransformation) forward1.getTransformation()).setDataExchangeMode(DataExchangeMode.BATCH);
+
+			DataStream<Integer> filter2 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> hashJoin1 = forward1.connect(filter2).process(new NoOpCoProcessFuntion());
+			TwoInputTransformation hashJoin1Transformation = ((TwoInputTransformation) hashJoin1.getTransformation());
+			hashJoin1Transformation.setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+			DataStreamSink sink1 = hashJoin1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			Map<Integer, StreamSchedulingMode> expectedSchedulingModes = new HashMap<>();
+
+			verifySchedulingDependencies(graph, source1.getId(), null, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(source1.getId(), StreamSchedulingMode.AUTO)
+					.toMap();
+			verifySchedulingDependencies(graph, filter1.getId(), expectedSchedulingModes, null);
+			verifySchedulingDependencies(graph, filter2.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(filter1.getId(), StreamSchedulingMode.SEQUENTIAL)
+					.put(filter2.getId(), StreamSchedulingMode.AUTO)
+					.toMap();
+			verifySchedulingDependencies(graph, hashJoin1.getId(), expectedSchedulingModes, null);
+
+			verifySchedulingDependencies(graph, sink1.getId(),
+					new MapFiller<>(expectedSchedulingModes).put(hashJoin1.getId(), StreamSchedulingMode.AUTO).toMap(),
+					null);
+		}
+
+		// case
+		{
+			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			// set BATCH execution mode
+			env.getConfig().setExecutionMode(ExecutionMode.BATCH);
+
+			DataStream<Integer> source1 = env.fromElements(1, 10);
+
+			DataStream<Integer> filter1 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> forward1 = filter1.forward();
+			((PartitionTransformation) forward1.getTransformation()).setDataExchangeMode(DataExchangeMode.AUTO);
+
+			DataStream<Integer> filter2 = source1.filter(new NoOpIntFilter());
+			DataStream<Integer> hashJoin1 = forward1.connect(filter2).process(new NoOpCoProcessFuntion());
+			TwoInputTransformation hashJoin1Transformation = ((TwoInputTransformation) hashJoin1.getTransformation());
+			hashJoin1Transformation.setReadOrderHint(ReadOrder.INPUT2_FIRST);
+
+			DataStreamSink sink1 = hashJoin1.addSink(new NoOpSinkFunction());
+
+			StreamGraph graph = env.getStreamGraph();
+			Map<Integer, StreamSchedulingMode> expectedSchedulingModes = new HashMap<>();
+
+			verifySchedulingDependencies(graph, source1.getId(), null, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(source1.getId(), StreamSchedulingMode.AUTO)
+					.toMap();
+			verifySchedulingDependencies(graph, filter1.getId(), expectedSchedulingModes, null);
+			verifySchedulingDependencies(graph, filter2.getId(), expectedSchedulingModes, null);
+
+			expectedSchedulingModes = new MapFiller<>(expectedSchedulingModes)
+					.put(filter1.getId(), StreamSchedulingMode.AUTO)
+					.put(filter2.getId(), StreamSchedulingMode.AUTO)
+					.toMap();
+			verifySchedulingDependencies(graph, hashJoin1.getId(), expectedSchedulingModes, null);
+
+			verifySchedulingDependencies(graph, sink1.getId(),
+					new MapFiller<>(expectedSchedulingModes).put(hashJoin1.getId(), StreamSchedulingMode.AUTO).toMap(),
 					null);
 		}
 	}
