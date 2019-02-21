@@ -30,6 +30,7 @@ import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch
 
 import _root_.java.util.{Set => JSet}
 
+import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.JavaConversions._
 
 /**
@@ -89,8 +90,14 @@ class ParquetVectorizedColumnRowTableSource(
       fieldTypes: Array[InternalType],
       fieldNames: Array[String],
       fieldNullables: Array[Boolean]): ParquetTableSource[ColumnarRow] = {
+    val newUniqueKeys = if (uniqueKeySet != null) {
+      uniqueKeySet.filter(_.forall(fieldNames.contains)).asJava
+    } else {
+      null
+    }
     val tableSource = new ParquetVectorizedColumnRowTableSource(
-      filePath, fieldTypes, fieldNames, fieldNullables, enumerateNestedFiles, numTimes, sourceName)
+      filePath, fieldTypes, fieldNames, fieldNullables, enumerateNestedFiles, numTimes,
+      sourceName, newUniqueKeys)
     tableSource.setFilterPredicate(filterPredicate)
     tableSource.setFilterPushedDown(filterPushedDown)
     tableSource.setLimit(limit)

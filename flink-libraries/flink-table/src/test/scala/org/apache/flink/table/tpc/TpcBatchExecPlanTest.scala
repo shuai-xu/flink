@@ -36,6 +36,7 @@ import org.scalatest.prop.PropertyChecks
 
 import java.util.{Set => JSet}
 
+import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
 
 abstract class TpcBatchExecPlanTest(
@@ -86,7 +87,7 @@ abstract class TpcBatchExecPlanTest(
       fieldNames: Array[String],
       fieldNullables: Array[Boolean]): ParquetTableSource[ColumnarRow] = {
       val newUniqueKeys = if (uniqueKeySet != null) {
-        uniqueKeySet.filter(_.forall(fieldNames.contains))
+        uniqueKeySet.filter(_.forall(fieldNames.contains)).asJava
       } else {
         null
       }
