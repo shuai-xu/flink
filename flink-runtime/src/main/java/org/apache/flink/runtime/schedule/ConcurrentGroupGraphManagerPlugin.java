@@ -201,17 +201,23 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 	@Override
 	public void onExecutionVertexFailover(ExecutionVertexFailoverEvent event) {
 		final Set<ConcurrentSchedulingGroup> groupToSchedule = new HashSet<>();
-		for (ExecutionVertexID executionVertexID : event.getAffectedExecutionVertexIDs()) {
-			if (isReadyToSchedule(executionVertexID)) {
-				Set<ConcurrentSchedulingGroup> groupsBelongTo = executionToConcurrentSchedulingGroups.get(executionVertexID);
-				if (groupsBelongTo.size() == 1) {
-					groupToSchedule.add(groupsBelongTo.iterator().next());
+
+		// For streaming job, region always will be less than concurrent group.
+		if (jobGraph.getJobType() == JobType.INFINITE_STREAM) {
+			scheduler.scheduleExecutionVertices(event.getAffectedExecutionVertexIDs());
+		} else {
+			for (ExecutionVertexID executionVertexID : event.getAffectedExecutionVertexIDs()) {
+				if (isReadyToSchedule(executionVertexID)) {
+					Set<ConcurrentSchedulingGroup> groupsBelongTo = executionToConcurrentSchedulingGroups.get(executionVertexID);
+					if (groupsBelongTo.size() == 1) {
+						groupToSchedule.add(groupsBelongTo.iterator().next());
+					}
 				}
 			}
-		}
 
-		for (ConcurrentSchedulingGroup group : groupToSchedule) {
-			scheduler.scheduleExecutionVertices(group.getExecutionVertices());
+			for (ConcurrentSchedulingGroup group : groupToSchedule) {
+				scheduler.scheduleExecutionVertices(group.getExecutionVertices());
+			}
 		}
 	}
 

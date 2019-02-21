@@ -100,7 +100,7 @@ class TaskManagerFailsITCase(_system: ActorSystem)
       val jobGraph = new JobGraph("Pointwise Job", sender, receiver)
       val jobID = jobGraph.getJobID
 
-      val cluster = TestingUtils.startTestingCluster(num_tasks, 2)
+      val cluster = TestingUtils.startTestingCluster(num_tasks * 2, 1)
 
       val jmGateway = cluster.getLeaderGateway(TestingUtils.TESTING_DURATION)
 
@@ -153,7 +153,7 @@ class TaskManagerFailsITCase(_system: ActorSystem)
       val jobGraph = new JobGraph("Pointwise Job", sender, receiver)
       val jobID = jobGraph.getJobID
 
-      val cluster = TestingUtils.startTestingCluster(num_tasks, 2)
+      val cluster = TestingUtils.startTestingCluster(num_tasks * 2, 1)
 
       val taskManagers = cluster.getTaskManagers
       val jmGateway = cluster.getLeaderGateway(TestingUtils.TESTING_DURATION)

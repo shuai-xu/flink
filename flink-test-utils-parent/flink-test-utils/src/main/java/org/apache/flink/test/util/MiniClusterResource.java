@@ -211,6 +211,7 @@ public class MiniClusterResource extends ExternalResource {
 
 	private void startLegacyMiniCluster() throws Exception {
 		final Configuration configuration = new Configuration(miniClusterResourceConfiguration.getConfiguration());
+		configuration.setDouble(TaskManagerOptions.TASK_MANAGER_CORE, miniClusterResourceConfiguration.getCoresPerTaskManager());
 		configuration.setInteger(ConfigConstants.LOCAL_NUMBER_TASK_MANAGER, miniClusterResourceConfiguration.getNumberTaskManagers());
 		configuration.setInteger(TaskManagerOptions.NUM_TASK_SLOTS, miniClusterResourceConfiguration.getNumberSlotsPerTaskManager());
 		configuration.setString(CoreOptions.TMP_DIRS, temporaryFolder.newFolder().getAbsolutePath());
@@ -284,6 +285,8 @@ public class MiniClusterResource extends ExternalResource {
 
 		private final int numberSlotsPerTaskManager;
 
+		private final double coresPerTaskManager;
+
 		private final Time shutdownTimeout;
 
 		public MiniClusterResourceConfiguration(
@@ -294,6 +297,7 @@ public class MiniClusterResource extends ExternalResource {
 				configuration,
 				numberTaskManagers,
 				numberSlotsPerTaskManager,
+				1.0,
 				AkkaUtils.getTimeoutAsTime(configuration));
 		}
 
@@ -301,10 +305,38 @@ public class MiniClusterResource extends ExternalResource {
 				Configuration configuration,
 				int numberTaskManagers,
 				int numberSlotsPerTaskManager,
+				double coresPerTaskManager) {
+			this(
+					configuration,
+					numberTaskManagers,
+					numberSlotsPerTaskManager,
+					AkkaUtils.getTimeoutAsTime(configuration));
+			configuration.setDouble(TaskManagerOptions.TASK_MANAGER_CORE, coresPerTaskManager);
+		}
+
+		public MiniClusterResourceConfiguration(
+				Configuration configuration,
+				int numberTaskManagers,
+				int numberSlotsPerTaskManager,
+				Time shutdownTimeout) {
+			this(
+					configuration,
+					numberTaskManagers,
+					numberSlotsPerTaskManager,
+					1.0,
+					shutdownTimeout);
+		}
+
+		public MiniClusterResourceConfiguration(
+				Configuration configuration,
+				int numberTaskManagers,
+				int numberSlotsPerTaskManager,
+				double coresPerTaskManager,
 				Time shutdownTimeout) {
 			this.configuration = Preconditions.checkNotNull(configuration);
 			this.numberTaskManagers = numberTaskManagers;
 			this.numberSlotsPerTaskManager = numberSlotsPerTaskManager;
+			this.coresPerTaskManager = coresPerTaskManager;
 			this.shutdownTimeout = Preconditions.checkNotNull(shutdownTimeout);
 		}
 
@@ -318,6 +350,10 @@ public class MiniClusterResource extends ExternalResource {
 
 		public int getNumberSlotsPerTaskManager() {
 			return numberSlotsPerTaskManager;
+		}
+
+		public double getCoresPerTaskManager() {
+			return coresPerTaskManager;
 		}
 
 		public Time getShutdownTimeout() {

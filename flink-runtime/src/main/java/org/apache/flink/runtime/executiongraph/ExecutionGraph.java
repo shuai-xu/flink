@@ -1545,6 +1545,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 					alreadyScheduledCount++;
 				} else {
+					LOG.debug("Execution {} is in {} state", ev.getTaskNameWithSubtaskIndex(), ev.getExecutionState());
 					unhealthyCount++;
 				}
 			}

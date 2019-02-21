@@ -63,6 +63,7 @@ public abstract class AbstractTestBase extends TestBaseUtils {
 		new MiniClusterResource.MiniClusterResourceConfiguration(
 			new Configuration(),
 			1,
+			DEFAULT_PARALLELISM,
 			DEFAULT_PARALLELISM));
 
 	@ClassRule
