@@ -37,12 +37,15 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * ITCase for utils in SqlJobUtil.
+ */
 public class SqlJobUtilITCase {
 
 	@Test
 	public void testValidatedQueryStreamMode() {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTableEnvironment streamEnv = TableEnvironment.getTableEnvironment(env);;
+		StreamTableEnvironment streamEnv = TableEnvironment.getTableEnvironment(env);
 
 		List<Row> data = new ArrayList<>();
 		data.add(Row.of(1, 1L, "Hi"));
