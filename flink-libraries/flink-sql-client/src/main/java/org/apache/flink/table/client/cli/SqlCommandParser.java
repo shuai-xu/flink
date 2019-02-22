@@ -144,6 +144,10 @@ public final class SqlCommandParser {
 			"DROP\\s+VIEW\\s+(.*)",
 			SINGLE_OPERAND),
 
+		DROP_TABLE(
+			"DROP\\s+TABLE\\s+(.*)",
+			SINGLE_OPERAND),
+
 		CREATE_FUNCTION(
 			"(CREATE\\s+FUNCTION.*)",
 			SINGLE_OPERAND),

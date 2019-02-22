@@ -285,6 +285,9 @@ public class CliClient {
 			case CREATE_FUNCTION:
 				callCreateFunction(cmdCall);
 				break;
+			case DROP_TABLE:
+				callDropTable(cmdCall);
+				break;
 			case SOURCE:
 				callSource(cmdCall);
 				break;
@@ -541,6 +544,15 @@ public class CliClient {
 			// rollback change
 			context.addView(view);
 			printExecutionException(CliStrings.MESSAGE_VIEW_NOT_REMOVED, e);
+		}
+	}
+
+	private void callDropTable(SqlCommandCall cmdCall) {
+		try {
+			executor.dropTable(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_TABLE_DROP);
+		} catch (SqlExecutionException e) {
+			printExecutionException(e);
 		}
 	}
 

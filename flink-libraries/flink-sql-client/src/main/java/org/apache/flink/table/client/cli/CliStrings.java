@@ -45,6 +45,7 @@ public final class CliStrings {
 		.append(formatCommand(SqlCommand.CLEAR, "Clears the current terminal."))
 		.append(formatCommand(SqlCommand.HELP, "Prints the available commands."))
 		.append(formatCommand(SqlCommand.CREATE_TABLE, "Creates a table with SQL DDL. Syntax: 'CREATE TABLE <name> (<field_name, field_type>) with (<key>=<value>)"))
+		.append(formatCommand(SqlCommand.DROP_TABLE, "Deletes a previously created table or virtual table. Syntax: 'DROP TABLE <name>;'"))
 		.append(formatCommand(SqlCommand.SHOW_TABLES, "Shows all registered tables."))
 		.append(formatCommand(SqlCommand.SHOW_FUNCTIONS, "Shows all registered user-defined functions."))
 		.append(formatCommand(SqlCommand.DESCRIBE, "Describes the schema of a table with the given name."))
@@ -142,6 +143,8 @@ public final class CliStrings {
 	public static final String MESSAGE_VIEW_REMOVED = "View has been removed.";
 
 	public static final String MESSAGE_TABLE_CREATE = "Table has been created.";
+
+	public static final String MESSAGE_TABLE_DROP = "Table has been removed.";
 
 	public static final String MESSAGE_FUNCTION_CREATE = "Function has been created.";
 

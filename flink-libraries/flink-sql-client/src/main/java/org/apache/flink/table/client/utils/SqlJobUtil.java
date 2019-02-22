@@ -35,6 +35,7 @@ import org.apache.flink.table.api.Column;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.functions.UserDefinedFunction;
 import org.apache.flink.table.api.types.DataType;
@@ -64,6 +65,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlProperty;
@@ -198,7 +200,7 @@ public class SqlJobUtil {
 			view = tableEnv.sqlQuery(subQuerySql);
 		}
 
-		String expandedSubQuerySql = tableEnv.getValidatedSqlQuery(subQuerySql);
+		String expandedSubQuerySql = getValidatedSqlQuery(tableEnv, subQuerySql);
 
 		long now = System.currentTimeMillis();
 		CatalogView catalogView = new CatalogView(
@@ -590,6 +592,23 @@ public class SqlJobUtil {
 			builder.uniqueIndex(uniqueKey.stream().toArray(String[]::new));
 		}
 		return builder.build();
+	}
+
+	/**
+	 * Returns validated SQL string for a given subquery.
+	 */
+	public static String getValidatedSqlQuery(TableEnvironment tEnv, String originalSubQuery) {
+		// parse the sql query
+		SqlNode parsed = tEnv.getFlinkPlanner().parse(originalSubQuery);
+		if (null != parsed && parsed.getKind().belongsTo(SqlKind.QUERY)) {
+			// validate the sql query
+			SqlNode validated = tEnv.getFlinkPlanner().validate(parsed);
+			return validated.toSqlString(null, false).getSql();
+		} else {
+			throw new TableException(
+				"Unsupported SQL query! getValidatedSqlQuery() only accepts SQL queries of type " +
+					"SELECT, UNION, INTERSECT, EXCEPT, VALUES, and ORDER_BY.");
+		}
 	}
 
 	private static class MockTableSource

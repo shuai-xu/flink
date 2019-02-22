@@ -655,7 +655,7 @@ abstract class TableEnvironment(
   def dropTable(name: String): Unit = {
     val catalog = getDefaultCatalog()
     val path = new ObjectPath(getDefaultDatabaseName(), name)
-    catalog.asInstanceOf[ReadableWritableCatalog].dropTable(path, true)
+    catalog.asInstanceOf[ReadableWritableCatalog].dropTable(path, false)
   }
 
   /**
@@ -1682,23 +1682,6 @@ abstract class TableEnvironment(
 
   def setUserClassLoader(userClassLoader: ClassLoader): Unit = {
     this.userClassloader = userClassLoader
-  }
-
-  /**
-    * Returns validated SQL string for a given subquery.
-    */
-  def getValidatedSqlQuery(originalSubQuery: String): String = {
-    // parse the sql query
-    val parsed = flinkPlanner.parse(originalSubQuery)
-    if (null != parsed && parsed.getKind.belongsTo(SqlKind.QUERY)) {
-      // validate the sql query
-      val validated = flinkPlanner.validate(parsed)
-      validated.toSqlString(null, false).getSql
-    } else {
-      throw new TableException(
-        "Unsupported SQL query! getValidatedSqlQuery() only accepts SQL queries of type " +
-          "SELECT, UNION, INTERSECT, EXCEPT, VALUES, and ORDER_BY.")
-    }
   }
 }
 
