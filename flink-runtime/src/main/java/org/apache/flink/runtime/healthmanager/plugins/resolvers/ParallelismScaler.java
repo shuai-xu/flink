@@ -591,6 +591,7 @@ public class ParallelismScaler implements Resolver {
 			double waitOutputPerInputRecord = inputTps <= 0.0 ? 0.0 : waitOutput * outputTps / inputTps;
 
 			double workload;
+			double partitionLatency = 0;
 			if (isParallelReader) {
 				// reset task latency.
 				double processLatencyCount = sourceProcessLatencyCountRangeSub.getValue().f1;
@@ -600,7 +601,7 @@ public class ParallelismScaler implements Resolver {
 				double partitionCount = sourcePartitionCountSub.getValue().f1;
 				double partitionLatencyCount = sourcePartitionLatencyCountRangeSub.getValue().f1;
 				double partitionLatencySum = sourcePartitionLatencySumRangeSub.getValue().f1;
-				double partitionLatency = partitionLatencyCount <= 0.0 ? 0.0 : partitionLatencySum / partitionCount / 1.0e9;
+				partitionLatency = partitionLatencyCount <= 0.0 ? 0.0 : partitionLatencySum / partitionLatencyCount / 1.0e9;
 				workload = partitionLatency <= 0.0 ? 0.0 : partitionCount * (taskLatency - waitOutputPerInputRecord) / partitionLatency;
 			} else {
 				workload = (taskLatency - waitOutputPerInputRecord) * inputTps;
@@ -620,7 +621,8 @@ public class ParallelismScaler implements Resolver {
 				sourceLatency,
 				waitOutputPerInputRecord,
 				workload,
-				delayIncreasingRate
+				delayIncreasingRate,
+				partitionLatency
 			);
 
 			LOGGER.debug("Metrics for vertex {}.", taskMetrics.toString());
@@ -1242,6 +1244,7 @@ public class ParallelismScaler implements Resolver {
 		private final double waitOutputPerRecord;
 		private final double workload;
 		private final double delayIncreasingRate;
+		private final double partitionLatency;
 
 		public TaskMetrics(
 			JobVertexID jobVertexId,
@@ -1252,7 +1255,8 @@ public class ParallelismScaler implements Resolver {
 			double sourceLatencyPerRecord,
 			double waitOutputPerRecord,
 			double workload,
-			double delayIncreasingRate) {
+			double delayIncreasingRate,
+			double partitionLatency) {
 
 			this.jobVertexID = jobVertexId;
 			this.isParallelSource = isParallelSource;
@@ -1263,6 +1267,7 @@ public class ParallelismScaler implements Resolver {
 			this.waitOutputPerRecord = waitOutputPerRecord;
 			this.workload = workload;
 			this.delayIncreasingRate = delayIncreasingRate;
+			this.partitionLatency =  partitionLatency;
 		}
 
 		public JobVertexID getJobVertexID() {
@@ -1302,7 +1307,9 @@ public class ParallelismScaler implements Resolver {
 				+ ", taskLatencyPerRecord:" + taskLatencyPerRecord
 				+ ", sourceLatencyPerRecord:" + sourceLatencyPerRecord
 				+ ", waitOutputPerRecord:" + waitOutputPerRecord
-				+ ", workload:" + workload + "}";
+				+ ", workload:" + workload
+				+ ", delayIncreasingRate:" + delayIncreasingRate
+				+ ", partitionLatency:" + partitionLatency + "}";
 		}
 
 		public double getDelayIncreasingRate() {
