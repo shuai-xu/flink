@@ -45,6 +45,7 @@ import org.apache.flink.runtime.dispatcher.DispatcherId;
 import org.apache.flink.runtime.dispatcher.HistoryServerArchivist;
 import org.apache.flink.runtime.dispatcher.MiniDispatcher;
 import org.apache.flink.runtime.healthmanager.HealthManager;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServicesUtils;
@@ -377,12 +378,14 @@ public abstract class ClusterEntrypoint implements FatalErrorHandler, LeaderShip
 			dispatcher.start();
 			dispatcherLeaderRetrievalService.start(dispatcherGatewayRetriever);
 
-			LOG.debug("Starting HeathManager");
-			healthManager = new HealthManager(
+			if (configuration.getBoolean(HealthMonitorOptions.ENABLE_HEALTH_MANAGER)) {
+				LOG.debug("Starting HeathManager");
+				healthManager = new HealthManager(
 					webMonitorEndpoint.getRestBaseUrl(),
 					metricRegistry,
 					configuration);
-			healthManager.start();
+				healthManager.start();
+			}
 		}
 	}
 

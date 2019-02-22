@@ -27,6 +27,12 @@ import org.apache.flink.configuration.ConfigOptions;
 public class HealthMonitorOptions {
 
 	/**
+	 * enable health manager.
+	 */
+	public static final ConfigOption<Boolean> ENABLE_HEALTH_MANAGER =
+			ConfigOptions.key("healthmanager.enabled").defaultValue(false);
+
+	/**
 	 * max parallelism per workload.
 	 */
 	public static final ConfigOption<Double> PARALLELISM_MAX_RATIO =
