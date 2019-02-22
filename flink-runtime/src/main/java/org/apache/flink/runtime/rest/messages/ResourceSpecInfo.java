@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.rest.messages;
 
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.resources.Resource;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonCreator;
@@ -26,8 +27,10 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgn
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * ResourceSpec Info class.
@@ -58,7 +61,7 @@ public class ResourceSpecInfo implements ResponseBody, Serializable {
 	private final int stateSizeInMB;
 
 	@JsonProperty(FIELD_NAME_EXTENDED_RESOURCES)
-	private final Map<String, Resource> extendedResources;
+	private final Map<String, ResourceInfo> extendedResources;
 
 	@JsonCreator
 	public ResourceSpecInfo(
@@ -67,7 +70,7 @@ public class ResourceSpecInfo implements ResponseBody, Serializable {
 		@JsonProperty(FIELD_NAME_DIRECT_MEMORY) int directMemoryInMB,
 		@JsonProperty(FIELD_NAME_NATIVE_MEMORY) int nativeMemoryInMB,
 		@JsonProperty(FIELD_NAME_STATE_SIZE) int stateSizeInMB,
-		@JsonProperty(FIELD_NAME_EXTENDED_RESOURCES) Map<String, Resource> extendedResources) {
+		@JsonProperty(FIELD_NAME_EXTENDED_RESOURCES) Map<String, ResourceInfo> extendedResources) {
 		this.cpuCores = cpuCores;
 		this.heapMemoryInMB = heapMemoryInMB;
 		this.nativeMemoryInMB = nativeMemoryInMB;
@@ -102,7 +105,7 @@ public class ResourceSpecInfo implements ResponseBody, Serializable {
 	}
 
 	@JsonIgnore
-	public Map<String, Resource> getExtendedResources() {
+	public Map<String, ResourceInfo> getExtendedResources() {
 		return extendedResources;
 	}
 
@@ -134,7 +137,8 @@ public class ResourceSpecInfo implements ResponseBody, Serializable {
 	public ResourceSpec convertToResourceSpec() {
 		Resource[] resources;
 		if (extendedResources != null && extendedResources.size() > 0) {
-			resources = extendedResources.values().toArray(new Resource[extendedResources.size()]);
+			List<Resource> resourcesTmp = extendedResources.values().stream().map(ResourceInfo::convertToResource).collect(Collectors.toList());
+			resources = resourcesTmp.toArray(new Resource[extendedResources.size()]);
 		} else {
 			resources = new Resource[0];
 		}
@@ -145,5 +149,80 @@ public class ResourceSpecInfo implements ResponseBody, Serializable {
 			.setNativeMemoryInMB(this.nativeMemoryInMB)
 			.setStateSizeInMB(this.stateSizeInMB)
 			.addExtendedResource(resources).build();
+	}
+
+	/**
+	 * json format for org.apache.flink.api.common.resources.Resource.
+	 */
+	public static final class ResourceInfo {
+
+		public static final String FIELD_NAME_RESOURCE_NAME = "name";
+		public static final String FIELD_NAME_RESOURCE_VALUE = "value";
+		public static final String FIELD_NAME_RESOURCE_AGGREGATE_TYPE = "resource-aggregate-type";
+
+		@JsonProperty(FIELD_NAME_RESOURCE_NAME)
+		private final String name;
+
+		@JsonProperty(FIELD_NAME_RESOURCE_VALUE)
+		private final Double value;
+
+		@JsonProperty(FIELD_NAME_RESOURCE_AGGREGATE_TYPE)
+		private final Resource.ResourceAggregateType  resourceAggregateType;
+
+		@JsonCreator
+		public ResourceInfo (
+			@JsonProperty(FIELD_NAME_RESOURCE_NAME) String name,
+			@JsonProperty(FIELD_NAME_RESOURCE_VALUE) Double value,
+			@JsonProperty(FIELD_NAME_RESOURCE_AGGREGATE_TYPE) Resource.ResourceAggregateType resourceAggregateType) {
+			this.name = name;
+			this.value = value;
+			this.resourceAggregateType = resourceAggregateType;
+		}
+
+		public ResourceInfo (Resource resource) {
+			this.name = resource.getName();
+			this.value = resource.getValue();
+			this.resourceAggregateType = resource.getResourceAggregateType();
+		}
+
+		@JsonIgnore
+		public String getName() {
+			return name;
+		}
+
+		@JsonIgnore
+		public Double getValue() {
+			return value;
+		}
+
+		@JsonIgnore
+		public Resource.ResourceAggregateType  getResourceAggregateType() {
+			return resourceAggregateType;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+
+			if (null == o || this.getClass() != o.getClass()) {
+				return false;
+			}
+
+			ResourceInfo that = (ResourceInfo) o;
+			return Objects.equals(name, that.name) &&
+				value == that.value &&
+				Objects.equals(resourceAggregateType, that.resourceAggregateType);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(name, value, resourceAggregateType);
+		}
+
+		public Resource convertToResource() {
+			return new CommonExtendedResource(this.name, this.value, this.resourceAggregateType);
+		}
 	}
 }

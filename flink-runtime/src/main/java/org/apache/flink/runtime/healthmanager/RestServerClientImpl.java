@@ -20,6 +20,7 @@ package org.apache.flink.runtime.healthmanager;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.JobException;
@@ -347,13 +348,19 @@ public class RestServerClientImpl implements RestServerClient {
 			Tuple2<Integer, ResourceSpec> parallism2Resource = id2resource.getValue();
 			ResourceSpec resourceSpec = parallism2Resource.f1;
 			Integer parallelism = parallism2Resource.f0;
+			Map<String, ResourceSpecInfo.ResourceInfo> extendedResource = new HashMap<>();
+			if (resourceSpec.getExtendedResources().size() > 0) {
+				for (Map.Entry<String, Resource> name2Resource : resourceSpec.getExtendedResources().entrySet()) {
+					extendedResource.put(name2Resource.getKey(), new ResourceSpecInfo.ResourceInfo(name2Resource.getValue()));
+				}
+			}
 			ResourceSpecInfo resourceSpecInfo = new ResourceSpecInfo(
 				resourceSpec.getCpuCores(),
 				resourceSpec.getHeapMemory(),
 				resourceSpec.getDirectMemory(),
 				resourceSpec.getNativeMemory(),
 				resourceSpec.getStateSize(),
-				resourceSpec.getExtendedResources()
+				extendedResource
 			);
 			vertexParallelismResourceJsonMap.put(idStr, new UpdatingJobRequest.VertexResource(parallelism, resourceSpecInfo));
 		}

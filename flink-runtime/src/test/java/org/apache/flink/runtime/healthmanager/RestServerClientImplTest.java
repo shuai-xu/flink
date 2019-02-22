@@ -20,6 +20,8 @@ package org.apache.flink.runtime.healthmanager;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.CommonExtendedResource;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
@@ -148,12 +150,16 @@ public class RestServerClientImplTest extends TestLogger {
 
 	private JobID jobId;
 
+	private Resource[] rs = new Resource[]{
+		new CommonExtendedResource("ps2",
+			1D, Resource.ResourceAggregateType.AGGREGATE_TYPE_SUM)
+	};
 	private ResourceSpec resourceSpec = new ResourceSpec.Builder().setCpuCores(1)
 		.setHeapMemoryInMB(10)
 		.setNativeMemoryInMB(20)
 		.setNativeMemoryInMB(30)
 		.setDirectMemoryInMB(40)
-		.setStateSizeInMB(50).build();
+		.setStateSizeInMB(50).addExtendedResource(rs).build();
 
 	@Before
 	public void setUp() throws Exception {
@@ -646,13 +652,17 @@ public class RestServerClientImplTest extends TestLogger {
 				inputVertexId = new ArrayList<>();
 			}
 			ResourceSpec resourceSpec = vertex.getMinResources();
+			Map<String, ResourceSpecInfo.ResourceInfo> extendedResource = new HashMap<>();
+			Resource resource = new CommonExtendedResource("ps2", 1D, Resource.ResourceAggregateType.AGGREGATE_TYPE_SUM);
+			ResourceSpecInfo.ResourceInfo resourceInfo = new ResourceSpecInfo.ResourceInfo(resource);
+			extendedResource.put("ps2", resourceInfo);
 			ResourceSpecInfo resourceSpecInfo = new ResourceSpecInfo(
 				resourceSpec.getCpuCores(),
 				resourceSpec.getHeapMemory(),
 				resourceSpec.getDirectMemory(),
 				resourceSpec.getNativeMemory(),
 				resourceSpec.getStateSize(),
-				resourceSpec.getExtendedResources()
+				extendedResource
 			);
 			AbstractID coLocationGroupId = vertex.getCoLocationGroup() != null ? vertex.getCoLocationGroup().getId() : null;
 			JobGraphOverviewInfo.VertexConfigInfo vertexConfigInfo = new JobGraphOverviewInfo.VertexConfigInfo(vertexID, vertex.getName(),

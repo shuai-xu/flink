@@ -20,6 +20,7 @@ package org.apache.flink.runtime.rest.handler.job;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -91,13 +92,19 @@ public class JobGraphOverviewHandler extends AbstractRestHandler<RestfulGateway,
 						inputVertexId = new ArrayList<>();
 					}
 					ResourceSpec resourceSpec = vertex.getMinResources();
+					Map<String, ResourceSpecInfo.ResourceInfo> extendedResource = new HashMap<>();
+					if (resourceSpec.getExtendedResources().size() > 0) {
+						for (Map.Entry<String, Resource> name2Resource : resourceSpec.getExtendedResources().entrySet()) {
+							extendedResource.put(name2Resource.getKey(), new ResourceSpecInfo.ResourceInfo(name2Resource.getValue()));
+						}
+					}
 					ResourceSpecInfo resourceSpecInfo = new ResourceSpecInfo(
 						resourceSpec.getCpuCores(),
 						resourceSpec.getHeapMemory(),
 						resourceSpec.getDirectMemory(),
 						resourceSpec.getNativeMemory(),
 						resourceSpec.getStateSize(),
-						resourceSpec.getExtendedResources()
+						extendedResource
 					);
 					AbstractID coLocationGroupId = vertex.getCoLocationGroup() != null ? vertex.getCoLocationGroup().getId() : null;
 					JobGraphOverviewInfo.VertexConfigInfo vertexConfigInfo = new JobGraphOverviewInfo.VertexConfigInfo(vertexID, vertex.getName(),
