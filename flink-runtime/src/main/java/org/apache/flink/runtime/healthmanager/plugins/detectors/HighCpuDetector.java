@@ -29,9 +29,10 @@ import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -41,38 +42,44 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * CpuLowDetector detects low cpu usage of a job.
- * Detects {@link JobVertexLowCpu} if the max avg cpu usage of the TM
- * is lower than threshold.
+ * HighCpuDetector detects high cpu usage of a job.
+ * Detects {@link JobVertexHighCpu} if the max avg cpu usage of the TM
+ * is higher than threshold.
  */
-public class CpuLowDetector implements Detector {
+public class HighCpuDetector implements Detector {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(CpuLowDetector.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(HighCpuDetector.class);
 
-	public static final ConfigOption<Double> LOW_CPU_THRESHOLD =
-		ConfigOptions.key("healthmonitor.low-cpu-detector.threashold").defaultValue(0.4);
+	public static final ConfigOption<Double> HIGH_CPU_THRESHOLD =
+		ConfigOptions.key("healthmonitor.high-cpu-detector.threashold").defaultValue(0.8);
+	public static final ConfigOption<Double> HIGH_CPU_SEVERE_THRESHOLD =
+		ConfigOptions.key("healthmonitor.high-cpu-detector.severe.threashold").defaultValue(1.2);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
+	private HealthMonitor monitor;
 
 	private long checkInterval;
 	private double threshold;
+	private double severeThreshold;
 
 	private JobTMMetricSubscription tmCpuAllocatedSubscription;
 	private JobTMMetricSubscription tmCpuUsageSubscription;
 
 	@Override
 	public void open(HealthMonitor monitor) {
-
+		this.monitor = monitor;
 		jobID = monitor.getJobID();
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
 		checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
-		threshold = monitor.getConfig().getDouble(LOW_CPU_THRESHOLD);
+		threshold = monitor.getConfig().getDouble(HIGH_CPU_THRESHOLD);
+		severeThreshold = monitor.getConfig().getDouble(HIGH_CPU_SEVERE_THRESHOLD);
 
 		tmCpuAllocatedSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_CPU_CAPACITY, checkInterval, TimelineAggType.AVG);
 		tmCpuUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_CPU_USAGE, checkInterval, TimelineAggType.AVG);
@@ -93,8 +100,6 @@ public class CpuLowDetector implements Detector {
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
 
-		long now = System.currentTimeMillis();
-
 		Map<String, Tuple2<Long, Double>> tmCapacities = tmCpuAllocatedSubscription.getValue();
 		Map<String, Tuple2<Long, Double>> tmUsages = tmCpuUsageSubscription.getValue();
 
@@ -102,37 +107,46 @@ public class CpuLowDetector implements Detector {
 			return null;
 		}
 
+		boolean severe = false;
 		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
 		for (String tmId : tmCapacities.keySet()) {
-			if (now - tmCapacities.get(tmId).f0 > checkInterval * 2 ||
-				now - tmUsages.get(tmId).f0 > checkInterval * 2) {
+			if (!MetricUtils.validateTmMetric(monitor, checkInterval * 2, tmCapacities.get(tmId), tmUsages.get(tmId))) {
 				LOGGER.debug("Skip tm {}, metrics missing.", tmId);
 				continue;
 			}
 
 			double capacity = tmCapacities.get(tmId).f1;
 			double usage = tmUsages.get(tmId).f1;
-
+			LOGGER.debug("TM {}, capacity {}, usage {}.", tmId, capacity, usage);
 			if (capacity == 0.0) {
 				LOGGER.warn("Skip vertex {}, capacity is 0. SHOULD NOT HAPPEN!", tmId);
 				continue;
 			}
 			double utility = usage / capacity;
 
-			List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
-			for (ExecutionVertexID jobExecutionVertexId : jobExecutionVertexIds) {
-				JobVertexID jvId = jobExecutionVertexId.getJobVertexID();
-				if (!vertexMaxUtility.containsKey(jvId) || vertexMaxUtility.get(jvId) < utility) {
-					vertexMaxUtility.put(jvId, utility);
+			if (utility > threshold) {
+				if (utility > severeThreshold) {
+					severe = true;
 				}
+				List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
+				for (ExecutionVertexID jobExecutionVertexId : jobExecutionVertexIds) {
+					JobVertexID jvId = jobExecutionVertexId.getJobVertexID();
+					if (!vertexMaxUtility.containsKey(jvId) || vertexMaxUtility.get(jvId) < utility) {
+						vertexMaxUtility.put(jvId, utility);
+					}
+				}
+				LOGGER.debug("Cpu high detected for tm {}, capacity {}, usage {}, utility {}, tasks of vertices {}.",
+					tmId,
+					capacity,
+					usage,
+					utility,
+					jobExecutionVertexIds.stream().map(evid -> evid.getJobVertexID()).collect(Collectors.toList()));
 			}
-
-			vertexMaxUtility.entrySet().removeIf(entry -> entry.getValue() >= threshold);
 		}
 
 		if (vertexMaxUtility != null && !vertexMaxUtility.isEmpty()) {
-			LOGGER.info("Cpu low detected for vertices with max utilities {}.", vertexMaxUtility);
-			return new JobVertexLowCpu(jobID, vertexMaxUtility);
+			LOGGER.info("Cpu high detected for vertices with max utilities {}.", vertexMaxUtility);
+			return new JobVertexHighCpu(jobID, vertexMaxUtility, severe);
 		}
 		return null;
 	}

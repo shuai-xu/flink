@@ -28,8 +28,8 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.CpuHighDetector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.CpuLowDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.HighCpuDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LowCpuDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
@@ -76,8 +76,8 @@ public class CpuAdjusterTest {
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
-		config.setDouble(CpuHighDetector.HIGH_CPU_SEVERE_THRESHOLD, 0.9);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, CpuHighDetector.class.getCanonicalName() + "," +
+		config.setDouble(HighCpuDetector.HIGH_CPU_SEVERE_THRESHOLD, 0.9);
+		config.setString(HealthMonitor.DETECTOR_CLASSES, HighCpuDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
 
@@ -257,7 +257,7 @@ public class CpuAdjusterTest {
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, CpuLowDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.DETECTOR_CLASSES, LowCpuDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
 
 		// initial job vertex config.

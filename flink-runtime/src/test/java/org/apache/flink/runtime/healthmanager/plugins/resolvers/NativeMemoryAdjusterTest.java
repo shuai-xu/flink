@@ -28,7 +28,7 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.MemoryOveruseDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.HighNativeMemoryDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
@@ -73,10 +73,10 @@ public class NativeMemoryAdjusterTest {
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, MemoryOveruseDetector.class.getCanonicalName() + "," +
+		config.setString(HealthMonitor.DETECTOR_CLASSES, HighNativeMemoryDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, NativeMemoryAdjuster.class.getCanonicalName());
-		config.setDouble(MemoryOveruseDetector.MEMORY_OVERUSE_SEVERE_THRESHOLD, 1.0);
+		config.setDouble(HighNativeMemoryDetector.HIGH_NATIVE_MEM_SEVERE_THRESHOLD, 1.0);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
@@ -90,7 +90,7 @@ public class NativeMemoryAdjusterTest {
 		// job vertex config after first round rescale.
 		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs2 = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setNativeMemoryInMB(20).build());
+			1, 3, new ResourceSpec.Builder().setNativeMemoryInMB(30).build());
 		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
 			1, 3, new ResourceSpec.Builder().setNativeMemoryInMB(20).build());
 		vertexConfigs2.put(vertex1, vertex1Config2);
@@ -110,18 +110,13 @@ public class NativeMemoryAdjusterTest {
 		Map<String, Tuple2<Long, Double>> capacity1 = new HashMap<>();
 		Map<String, Tuple2<Long, Double>> capacity2 = new HashMap<>();
 		Map<String, Tuple2<Long, Double>> capacity3 = new HashMap<>();
+		Map<String, Tuple2<Long, Double>> zero = new HashMap<>();
 
 		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
 		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
+		JobTMMetricSubscription zeroSub = Mockito.mock(JobTMMetricSubscription.class);
+
 		Mockito.when(usageSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				usage1.put("tmId", Tuple2.of(now, 9.0 * 1024 * 1024));
-				return usage1;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
 			@Override
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
@@ -132,9 +127,17 @@ public class NativeMemoryAdjusterTest {
 		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
 			@Override
 			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				usage1.put("tmId", Tuple2.of(now, 15.0 * 1024 * 1024));
+				return usage1;
+			}
+		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				usage2.put("tmId", Tuple2.of(now, 30.0 * 1024 * 1024));
+				usage2.put("tmId", Tuple2.of(now, 40.0 * 1024 * 1024));
 				return usage2;
 			}
 		});
@@ -160,7 +163,7 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				capacity2.put("tmId", Tuple2.of(now, 20.0 * 1024 * 1024));
+				capacity2.put("tmId", Tuple2.of(now, 30.0 * 1024 * 1024));
 				return capacity2;
 			}
 		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
@@ -168,8 +171,18 @@ public class NativeMemoryAdjusterTest {
 			public Map<String, Tuple2<Long, Double>> answer(
 					InvocationOnMock invocationOnMock) throws Throwable {
 				long now = System.currentTimeMillis();
-				capacity3.put("tmId", Tuple2.of(now, 40.0 * 1024 * 1024));
+				capacity3.put("tmId", Tuple2.of(now, 80.0 * 1024 * 1024));
 				return capacity3;
+			}
+		});
+
+		Mockito.when(zeroSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				long now = System.currentTimeMillis();
+				zero.put("tmId", Tuple2.of(now, 0.0));
+				return zero;
 			}
 		});
 
@@ -179,6 +192,12 @@ public class NativeMemoryAdjusterTest {
 		Mockito.when(metricProvider.subscribeAllTMMetric(
 			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_CAPACITY), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(capacitySub);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_HEAP_USED), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			.thenReturn(zeroSub);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_NON_HEAP_USED), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			.thenReturn(zeroSub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
 			.thenReturn(Arrays.asList(executionVertexID1));
@@ -187,19 +206,12 @@ public class NativeMemoryAdjusterTest {
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
 			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
+			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
 		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
-
-		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
-		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats2);
 
 		// mock slow scheduling.
 		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
-			.thenReturn(jobStatus).thenReturn(jobStatus2);
+			.thenReturn(jobStatus);
 
 		HealthMonitor monitor = new HealthMonitor(
 			jobID,
@@ -224,7 +236,7 @@ public class NativeMemoryAdjusterTest {
 				Mockito.eq(vertexParallelismResource));
 
 		vertexParallelismResource.clear();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(60).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setNativeMemoryInMB(80).build()));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),

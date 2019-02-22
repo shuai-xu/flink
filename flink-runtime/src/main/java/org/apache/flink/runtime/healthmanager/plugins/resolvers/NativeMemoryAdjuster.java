@@ -28,7 +28,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobNativeMemory;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexNativeMemOveruse;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighNativeMemory;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -58,7 +58,7 @@ public class NativeMemoryAdjuster implements Resolver {
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
 
-	private Map<JobVertexID, Double> vertexMaxOveruses;
+	private Map<JobVertexID, Double> vertexMaxUtilities;
 	private long opportunisticActionDelayStart;
 
 	@Override
@@ -72,7 +72,7 @@ public class NativeMemoryAdjuster implements Resolver {
 		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_STABLE_TIME);
 
-		vertexMaxOveruses = new HashMap<>();
+		vertexMaxUtilities = new HashMap<>();
 		opportunisticActionDelayStart = -1;
 	}
 
@@ -87,10 +87,10 @@ public class NativeMemoryAdjuster implements Resolver {
 
 		if (opportunisticActionDelayStart < monitor.getJobStartExecutionTime()) {
 			opportunisticActionDelayStart = -1;
-			vertexMaxOveruses.clear();
+			vertexMaxUtilities.clear();
 		}
 
-		JobVertexNativeMemOveruse jobVertexNativeMemOveruse = null;
+		JobVertexHighNativeMemory jobVertexNativeMemHigh = null;
 		JobStable jobStable = null;
 
 		for (Symptom symptom : symptomList) {
@@ -98,33 +98,34 @@ public class NativeMemoryAdjuster implements Resolver {
 				jobStable = (JobStable) symptom;
 			}
 
-			if (symptom instanceof JobVertexNativeMemOveruse) {
-				jobVertexNativeMemOveruse = (JobVertexNativeMemOveruse) symptom;
-				LOGGER.debug("Native memory overuse detected for vertices with max overuses {}.", jobVertexNativeMemOveruse.getOveruses());
-				Map<JobVertexID, Double> overuses = jobVertexNativeMemOveruse.getOveruses();
-				for (JobVertexID jvId : overuses.keySet()) {
-					if (!vertexMaxOveruses.containsKey(jvId) || vertexMaxOveruses.get(jvId) < overuses.get(jvId)) {
-						vertexMaxOveruses.put(jvId, overuses.get(jvId));
+			if (symptom instanceof JobVertexHighNativeMemory) {
+				jobVertexNativeMemHigh = (JobVertexHighNativeMemory) symptom;
+				LOGGER.debug("Native memory high detected for vertices with max utilities {}.", jobVertexNativeMemHigh.getUtilities());
+				Map<JobVertexID, Double> utilities = jobVertexNativeMemHigh.getUtilities();
+				for (JobVertexID jvId : utilities.keySet()) {
+					if (!vertexMaxUtilities.containsKey(jvId) || vertexMaxUtilities.get(jvId) < utilities.get(jvId)) {
+						vertexMaxUtilities.put(jvId, utilities.get(jvId));
 					}
 				}
 			}
 		}
 
-		if (jobStable == null || jobStable.getStableTime() < stableTime) {
-			LOGGER.debug("Job unstable, should not rescale.");
+		if ((jobStable == null || jobStable.getStableTime() < stableTime) &&
+			(jobVertexNativeMemHigh == null || !jobVertexNativeMemHigh.isCritical())) {
+			LOGGER.debug("Job unstable and memory overuse not critical, should not rescale.");
 			return null;
 		}
 
-		if (vertexMaxOveruses.isEmpty()) {
+		if (vertexMaxUtilities.isEmpty()) {
 			return null;
 		}
 
 		AdjustJobNativeMemory adjustJobNativeMemory = new AdjustJobNativeMemory(jobID, timeout);
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
-		for (JobVertexID jvId : vertexMaxOveruses.keySet()) {
+		for (JobVertexID jvId : vertexMaxUtilities.keySet()) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			int targetNativeMemory = (int) Math.ceil((vertexMaxOveruses.get(jvId) + currentResource.getNativeMemory()) * scaleRatio);
+			int targetNativeMemory = (int) Math.ceil(currentResource.getNativeMemory() * Math.max(1.0, vertexMaxUtilities.get(jvId)) * scaleRatio);
 			LOGGER.debug("Target native memory for vertex {} is {}.", jvId, targetNativeMemory);
 			ResourceSpec targetResource = new ResourceSpec.Builder(currentResource)
 					.setNativeMemoryInMB(targetNativeMemory).build();
@@ -146,7 +147,7 @@ public class NativeMemoryAdjuster implements Resolver {
 
 		if (!adjustJobNativeMemory.isEmpty()) {
 			long now = System.currentTimeMillis();
-			if ((jobVertexNativeMemOveruse != null && jobVertexNativeMemOveruse.isSevere()) ||
+			if ((jobVertexNativeMemHigh != null && jobVertexNativeMemHigh.isSevere()) ||
 				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
 				adjustJobNativeMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
