@@ -22,31 +22,36 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{AggregateUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.KeyedProcessOperator
-import org.apache.flink.table.runtime.aggregate.{LastRowFunction, MiniBatchLastRowFunction}
+import org.apache.flink.table.runtime.aggregate.{FirstLastRowFunction, MiniBatchFirstLastRowFunction}
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.rel.`type`.RelDataType
+
 import java.util
 
 import scala.collection.JavaConversions._
 
 /**
-  * Flink RelNode which deduplicate on keys and keeps only last row.
+  * Flink RelNode which deduplicate on keys and keeps only first row or last row.
+  * Note: only support sort on proctime now.
   */
-class StreamExecLastRow(
+class StreamExecFirstLastRow(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     input: RelNode,
     uniqueKeys: Array[Int],
     isRowtime: Boolean,
+    isLastRowMode: Boolean,
     ruleDescription: String)
   extends SingleRel(cluster, traitSet, input)
   with StreamPhysicalRel
@@ -57,18 +62,19 @@ class StreamExecLastRow(
   def getUniqueKeys: Array[Int] = uniqueKeys
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    new StreamExecLastRow(
+    new StreamExecFirstLastRow(
       cluster,
       traitSet,
       inputs.get(0),
       uniqueKeys,
       isRowtime,
+      isLastRowMode,
       ruleDescription)
   }
 
   override def isDeterministic: Boolean = true
 
-  override def producesUpdates: Boolean = true
+  override def producesUpdates: Boolean = isLastRowMode
 
   override def consumesRetractions: Boolean = true
 
@@ -81,6 +87,7 @@ class StreamExecLastRow(
       .item("key", uniqueKeys.map(fieldNames.get).mkString(", "))
       .item("select", fieldNames.mkString(", "))
       .item("order", orderString)
+      .item("mode", if (isLastRowMode) "LastRow" else "FirstRow")
   }
 
   //~ ExecNode methods -----------------------------------------------------------
@@ -90,7 +97,12 @@ class StreamExecLastRow(
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
-    val tableConfig = tableEnv.getConfig
+    val inputIsAccRetract = StreamExecRetractionRules.isAccRetract(getInput)
+
+    if (inputIsAccRetract) {
+      throw new TableException(
+        TableErrors.INST.sqlFirstLastRowTranslateRetractNotSupported())
+    }
 
     val inputTransform = getInputNodes.get(0).translateToPlan(tableEnv)
       .asInstanceOf[StreamTransformation[BaseRow]]
@@ -106,20 +118,19 @@ class StreamExecLastRow(
     if (rowTimeFieldIndex.size() > 1) {
       throw new RuntimeException("More than one row time field. Currently this is not supported!")
     }
-    val orderIndex = if (rowTimeFieldIndex.isEmpty) {
-      -1
-    } else {
-      throw new TableException("Currently not support LastRow on rowtime.")
+    if (rowTimeFieldIndex.nonEmpty) {
+      throw new TableException("Currently not support FirstLastRow on rowtime.")
     }
+
+    val tableConfig = tableEnv.getConfig
 
     val operator = if (tableConfig.getConf.contains(
       TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)) {
-      val processFunction = new MiniBatchLastRowFunction(
+      val processFunction = new MiniBatchFirstLastRowFunction(
         rowTypeInfo,
         generateRetraction,
-        orderIndex,
-        tableConfig)
-
+        tableConfig,
+        isLastRowMode)
       new KeyedBundleOperator(
         processFunction,
         AggregateUtil.getMiniBatchTrigger(tableConfig),
@@ -127,12 +138,11 @@ class StreamExecLastRow(
         tableConfig.getConf.getBoolean(
           TableConfigOptions.SQL_EXEC_MINI_BATCH_FLUSH_BEFORE_SNAPSHOT))
     } else {
-      val processFunction = new LastRowFunction(
-        rowTypeInfo,
-        generateRetraction,
-        orderIndex,
-        tableConfig)
-
+      val processFunction = new FirstLastRowFunction(
+          rowTypeInfo,
+          generateRetraction,
+          tableConfig,
+          isLastRowMode)
       val operator = new KeyedProcessOperator[BaseRow, BaseRow, BaseRow](processFunction)
       operator.setRequireState(true)
       operator
@@ -158,6 +168,7 @@ class StreamExecLastRow(
     val fieldNames = getRowType.getFieldNames
     val keyNames = uniqueKeys.map(fieldNames.get).mkString(", ")
     val orderString = if (isRowtime) "ROWTIME" else "PROCTIME"
-    s"LastRow: (key: ($keyNames), select: (${fieldNames.mkString(", ")}), order: ($orderString))"
+    s"${if (isLastRowMode) "LastRow" else "FirstRow"}" +
+      s": (key: ($keyNames), select: (${fieldNames.mkString(", ")}), order: ($orderString))"
   }
 }

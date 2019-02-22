@@ -22,57 +22,59 @@ import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.sort.RecordEqualiser
-import org.apache.flink.util.Collector
+import org.apache.flink.util.{Collector, Preconditions}
 
-trait LastRowFunctionBase {
+trait FirstLastRowFunctionBase {
 
   def processLastRow(
     currentKey: BaseRow,
     preRow: BaseRow,
     currentRow: BaseRow,
     generateRetraction: Boolean,
-    rowtimeIndex: Int,
     stateCleaningEnabled: Boolean,
     pkRow: KeyedValueState[BaseRow, BaseRow],
     equaliser: RecordEqualiser,
     out: Collector[BaseRow]): Unit = {
+    // should be accumulate msg.
+    Preconditions.checkArgument(BaseRowUtil.isAccumulateMsg(currentRow))
 
-    // ignore record with timestamp smaller than preRow
-    if (preRow != null && !isLastRow(preRow, currentRow, rowtimeIndex)) {
+    // ignore same record
+    if (!stateCleaningEnabled && preRow != null &&
+      equaliser.equalsWithoutHeader(preRow, currentRow)) {
       return
     }
 
-    if (BaseRowUtil.isAccumulateMsg(currentRow)) {
-      // ignore same record
-      if (!stateCleaningEnabled && preRow != null &&
-        equaliser.equalsWithoutHeader(preRow, currentRow)) {
-        return
-      }
-
-      pkRow.put(currentKey, currentRow)
-      if (preRow != null && generateRetraction) {
-        preRow.setHeader(BaseRowUtil.RETRACT_MSG)
-        out.collect(preRow)
-      }
-      out.collect(currentRow)
-    } else {
-      pkRow.remove(currentKey)
-      if (preRow != null) {
-        preRow.setHeader(BaseRowUtil.RETRACT_MSG)
-        out.collect(preRow)
-      } else {
-        // else input is a delete row we ingnore it, as delete on nothing means nothing.
-      }
+    pkRow.put(currentKey, currentRow)
+    if (preRow != null && generateRetraction) {
+      preRow.setHeader(BaseRowUtil.RETRACT_MSG)
+      out.collect(preRow)
     }
+    out.collect(currentRow)
   }
 
-  def isLastRow(preRow: BaseRow, currentRow: BaseRow, rowtimeIndex: Int): Boolean = {
-    if (rowtimeIndex != -1) {
-      val preRowTime = preRow.getLong(rowtimeIndex)
-      val currentRowTime = currentRow.getLong(rowtimeIndex)
-      currentRowTime >= preRowTime
-    } else {
-      true
+  def processFirstRow(
+    currentKey: BaseRow,
+    preRow: BaseRow,
+    currentRow: BaseRow,
+    generateRetraction: Boolean,
+    stateCleaningEnabled: Boolean,
+    pkRow: KeyedValueState[BaseRow, BaseRow],
+    equaliser: RecordEqualiser,
+    out: Collector[BaseRow]): Unit = {
+    // should be accumulate msg.
+    Preconditions.checkArgument(BaseRowUtil.isAccumulateMsg(currentRow))
+
+    // ignore record with timestamp bigger than preRow
+    if (!isFirstRow(preRow, currentRow)) {
+      return
     }
+
+    pkRow.put(currentKey, currentRow)
+    out.collect(currentRow)
   }
+
+  def isFirstRow(preRow: BaseRow, currentRow: BaseRow): Boolean = {
+      preRow == null
+  }
+
 }

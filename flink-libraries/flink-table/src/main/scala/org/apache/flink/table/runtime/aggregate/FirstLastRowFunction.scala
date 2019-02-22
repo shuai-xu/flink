@@ -21,7 +21,7 @@ package org.apache.flink.table.runtime.aggregate
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.{ExecutionContext, ProcessFunction}
@@ -35,16 +35,16 @@ import org.apache.flink.util.Collector
   *
   * @param rowTypeInfo        the typeInfo of the input row.
   * @param generateRetraction the flag whether to generate retractions in this operator.
-  * @param rowtimeIndex       the index of rowtime field which is used to order data.
   * @param tableConfig        the table config.
+  * @param isLastRowMode      if true, keep last row; else keep first row
   */
-class LastRowFunction(
-   rowTypeInfo: BaseRowTypeInfo,
-   generateRetraction: Boolean,
-   rowtimeIndex: Int,
-   tableConfig: TableConfig)
+class FirstLastRowFunction(
+    rowTypeInfo: BaseRowTypeInfo,
+    generateRetraction: Boolean,
+    tableConfig: TableConfig,
+    isLastRowMode: Boolean)
   extends ProcessFunctionWithCleanupState[BaseRow, BaseRow](tableConfig)
-  with LastRowFunctionBase
+  with FirstLastRowFunctionBase
   with Logging {
 
   protected var pkRow: KeyedValueState[BaseRow, BaseRow] = _
@@ -54,13 +54,15 @@ class LastRowFunction(
 
   override def open(ctx: ExecutionContext): Unit = {
     super.open(ctx)
-    initCleanupTimeState("LastRowFunctionCleanupTime")
+    val stateName = s"${if (isLastRowMode) "LastRow" else "FirstRow"}FunctionCleanupTime"
+    initCleanupTimeState(stateName)
     val rowStateDesc = new ValueStateDescriptor("rowState", rowTypeInfo)
     pkRow = ctx.getKeyedValueState(rowStateDesc)
 
     val generator = new EqualiserCodeGenerator(
       rowTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo))
-    val generatedEqualiser = generator.generateRecordEqualiser("LastRowValueEqualiser")
+    val equaliserName = s"${if (isLastRowMode) "LastRow" else "FirstRow"}ValueEqualiser"
+    val generatedEqualiser = generator.generateRecordEqualiser(equaliserName)
     equaliser = generatedEqualiser.newInstance(ctx.getRuntimeContext.getUserCodeClassLoader)
   }
 
@@ -75,16 +77,27 @@ class LastRowFunction(
 
     val currentKey = executionContext.currentKey()
     val preRow = pkRow.get(currentKey)
-    processLastRow(
-      currentKey,
-      preRow,
-      input,
-      generateRetraction,
-      rowtimeIndex,
-      stateCleaningEnabled,
-      pkRow,
-      equaliser,
-      out)
+    if (isLastRowMode) {
+      processLastRow(
+        currentKey,
+        preRow,
+        input,
+        generateRetraction,
+        stateCleaningEnabled,
+        pkRow,
+        equaliser,
+        out)
+    } else {
+      processFirstRow(
+        currentKey,
+        preRow,
+        input,
+        generateRetraction,
+        stateCleaningEnabled,
+        pkRow,
+        equaliser,
+        out)
+    }
   }
 
   override def close(): Unit = super.close()

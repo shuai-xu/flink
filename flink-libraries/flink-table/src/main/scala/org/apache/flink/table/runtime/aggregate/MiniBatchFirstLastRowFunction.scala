@@ -18,11 +18,10 @@
 
 package org.apache.flink.table.runtime.aggregate
 
-import java.util.{Map => JMap}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.{BundleFunction, ExecutionContext}
@@ -31,21 +30,24 @@ import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
 
+import java.util.{Map => JMap}
+
 /**
-  * This function is used to get the last row for every key partition in miniBatch mode.
+  * This function is used to get the first row or last row for every key partition in miniBatch
+  * mode.
   *
   * @param rowTypeInfo        the type info of the input row.
   * @param generateRetraction the flag whether to generate retractions in this operator.
-  * @param rowtimeIndex       the index of rowtime field which is used to order data.
   * @param tableConfig        the table config.
+  * @param isLastRowMode      if true, keep last row; else keep first row
   */
-class MiniBatchLastRowFunction(
+class MiniBatchFirstLastRowFunction(
     rowTypeInfo: BaseRowTypeInfo,
     generateRetraction: Boolean,
-    rowtimeIndex: Int,
-    tableConfig: TableConfig)
+    tableConfig: TableConfig,
+    isLastRowMode: Boolean)
   extends BundleFunction[BaseRow, BaseRow, BaseRow, BaseRow]
-  with LastRowFunctionBase
+  with FirstLastRowFunctionBase
   with Logging {
 
   protected var pkRow: KeyedValueState[BaseRow, BaseRow] = _
@@ -61,12 +63,14 @@ class MiniBatchLastRowFunction(
 
     val generator = new EqualiserCodeGenerator(
       rowTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo))
-    val generatedEqualiser = generator.generateRecordEqualiser("LastRowValueEqualiser")
+    val equaliserName = s"${if (isLastRowMode) "LastRow" else "FirstRow"}ValueEqualiser"
+    val generatedEqualiser = generator.generateRecordEqualiser(equaliserName)
     equaliser = generatedEqualiser.newInstance(ctx.getRuntimeContext.getUserCodeClassLoader)
   }
 
   override def addInput(value: BaseRow, input: BaseRow): BaseRow = {
-    if (value == null || isLastRow(value, input, rowtimeIndex)) {
+    if (value == null || isLastRowMode ||
+      (!isLastRowMode && isFirstRow(value, input))) {
       // put the input into buffer
       ser.copy(input)
     } else {
@@ -84,16 +88,28 @@ class MiniBatchLastRowFunction(
       val currentRow = entry.getValue
       val preRow = preRowsMap.get(currentKey)
 
-      processLastRow(
-        currentKey,
-        preRow,
-        currentRow,
-        generateRetraction,
-        rowtimeIndex,
-        stateCleaningEnabled = false,
-        pkRow,
-        equaliser,
-        out)
+      if (isLastRowMode) {
+        processLastRow(
+          currentKey,
+          preRow,
+          currentRow,
+          generateRetraction,
+          stateCleaningEnabled = false,
+          pkRow,
+          equaliser,
+          out)
+      } else {
+        processFirstRow(
+          currentKey,
+          preRow,
+          currentRow,
+          generateRetraction,
+          stateCleaningEnabled = false,
+          pkRow,
+          equaliser,
+          out
+        )
+      }
     }
   }
 }

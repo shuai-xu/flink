@@ -518,6 +518,16 @@ public interface TableErrorCode {
 	)
 	String sqlSortInternalError();
 
+	/** ----------------------------- FirstLastRow ----------------------------- .**/
+	@ErrCode(
+		codeId = "SQL-00080001",
+		cause = "FirstLastRow: Retraction on FirstLastRow is not supported yet. ",
+		details = "",
+		action = "please re-check sql grammar. \n" +
+			"Note: FirstLastRow should not follow a non-windowed GroupBy aggregation."
+	)
+	String sqlFirstLastRowTranslateRetractNotSupported();
+
 	/** ----------------------------- topn ----------------------------- .**/
 	/** ----------------------------- retraction ----------------------------- .**/
 	/** ----------------------------- build-in func ----------------------------- .**/

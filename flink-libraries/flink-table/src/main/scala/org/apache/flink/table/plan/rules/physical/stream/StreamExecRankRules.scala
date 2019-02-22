@@ -128,7 +128,7 @@ object StreamExecRankRules {
         }
 
       // sort on time attribute and limit 1 should be handled by StreamExecFirstLastRowRule
-      !(limit1 && sortOnTimeAttribute && isRowNumberFunction)
+      !(!rank.outputRankFunColumn && limit1 && sortOnTimeAttribute && isRowNumberFunction)
     }
 
     override def convert(rel: RelNode): RelNode = {

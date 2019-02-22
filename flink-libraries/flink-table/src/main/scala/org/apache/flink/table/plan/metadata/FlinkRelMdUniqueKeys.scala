@@ -512,7 +512,7 @@ class FlinkRelMdUniqueKeys private extends MetadataHandler[BuiltInMetadata.Uniqu
   }
 
   def getUniqueKeys(
-      rel: StreamExecLastRow,
+      rel: StreamExecFirstLastRow,
       mq: RelMetadataQuery,
       ignoreNulls: Boolean): util.Set[ImmutableBitSet] = {
     ImmutableSet.of(ImmutableBitSet.of(rel.getUniqueKeys.map(Integer.valueOf(_)).toIterable.asJava))

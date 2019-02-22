@@ -22,12 +22,11 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.sql.SqlKind
-import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalRank
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecLastRow
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecFirstLastRow
 import org.apache.flink.table.plan.util.ConstantRankRange
 
 class StreamExecFirstLastRowRule
@@ -50,20 +49,18 @@ class StreamExecFirstLastRowRule
     }
 
     val inputRowType = rank.getInput.getRowType
-    val sortOnTimeAttributeAndLastRow =
+    val sortOnTimeAttribute =
       if (sortCollation.getFieldCollations.isEmpty || sortCollation.getFieldCollations.size() > 1) {
         false
       } else {
         val fieldCollation = sortCollation.getFieldCollations.get(0)
         val fieldType = inputRowType.getFieldList.get(fieldCollation.getFieldIndex).getType
 
-        // TODO: support FirstRow in the future
-        val isLastRow = fieldCollation.direction.isDescending
-        FlinkTypeFactory.isTimeIndicatorType(fieldType) && isLastRow
+        FlinkTypeFactory.isTimeIndicatorType(fieldType)
       }
 
     // LastRow must sort on rowtime/proctime desc and fetch the top1 row
-    limit1 && sortOnTimeAttributeAndLastRow && isRowNumberFunction
+    !rank.outputRankFunColumn && limit1 && sortOnTimeAttribute && isRowNumberFunction
   }
 
   override def convert(rel: RelNode): RelNode = {
@@ -80,17 +77,14 @@ class StreamExecFirstLastRowRule
       .replace(requiredDistribution)
     val convInput: RelNode = RelOptRule.convert(rank.getInput, requiredTraitSet)
 
-    if (isLastRow) {
-      new StreamExecLastRow(
-        rel.getCluster,
-        rank.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL),
-        convInput,
-        rank.partitionKey.toArray,
-        isRowtime,
-        description)
-    } else {
-      throw new TableException("Support FirstRow in the future")
-    }
+    new StreamExecFirstLastRow(
+      rel.getCluster,
+      rank.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL),
+      convInput,
+      rank.partitionKey.toArray,
+      isRowtime,
+      isLastRow,
+      description)
   }
 }
 

@@ -36,11 +36,31 @@ StreamExecCalc(select=[a, 3 AS rank_num])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSimpleFirstRowOnProctime">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c])
++- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[PROCTIME], mode=[FirstRow])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSimpleLastRowOnRowtime">
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, b, c])
-+- StreamExecLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[ROWTIME])
++- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[LastRow])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSimpleFirstRowOnRowtime">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a, b, c])
++- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[FirstRow])
    +- StreamExecExchange(distribution=[hash[a]])
       +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
@@ -51,7 +71,7 @@ StreamExecCalc(select=[a, b, c])
       <![CDATA[
 StreamExecCalc(select=[a, b, c, PROCTIME(proctime) AS proctime, rowtime, 1 AS rank_num])
 +- StreamExecCalc(select=[a, b, c, proctime, rowtime, 1 AS rk])
-   +- StreamExecLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[PROCTIME])
+   +- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[PROCTIME], mode=[LastRow])
       +- StreamExecExchange(distribution=[hash[a]])
          +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>

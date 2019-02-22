@@ -19,7 +19,6 @@
 package org.apache.flink.table.api.stream.sql
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.junit.{Before, Test}
@@ -93,9 +92,8 @@ class FirstLastRowTest extends TableTestBase {
     util.verifyPlan(sql)
   }
 
-  @Test(expected = classOf[TableException])
+  @Test
   def testSimpleFirstRowOnProctime(): Unit = {
-    // TODO: support it in the future
     val sql =
       """
         |SELECT a, b, c
@@ -109,9 +107,8 @@ class FirstLastRowTest extends TableTestBase {
     util.verifyPlan(sql)
   }
 
-  @Test(expected = classOf[TableException])
+  @Test
   def testSimpleFirstRowOnRowtime(): Unit = {
-    // TODO: support it in the future
     val sql =
       """
         |SELECT a, b, c

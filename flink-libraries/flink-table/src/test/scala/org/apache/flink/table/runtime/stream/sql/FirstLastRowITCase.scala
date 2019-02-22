@@ -31,8 +31,34 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 @RunWith(classOf[Parameterized])
-class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
+class FirstLastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   extends StreamingWithMiniBatchTestBase(miniBatch, mode) {
+
+  @Test
+  def testFirstRowOnProctime(): Unit = {
+    val t = failingDataSource(StreamTestData.get3TupleData)
+            .toTable(tEnv, 'a, 'b, 'c, 'proc.proctime)
+    tEnv.registerTable("T", t)
+
+    val sql =
+      """
+        |SELECT a, b, c
+        |FROM (
+        |  SELECT *,
+        |    ROW_NUMBER() OVER (PARTITION BY b ORDER BY proc) as rowNum
+        |  FROM T
+        |)
+        |WHERE rowNum = 1
+      """.stripMargin
+
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("1,1,Hi", "2,2,Hello", "4,3,Hello world, how are you?",
+                        "7,4,Comment#1", "11,5,Comment#5", "16,6,Comment#10")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
 
   @Test
   def testLastRowOnProctime(): Unit = {
@@ -60,6 +86,44 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
   }
 
+  @Test
+  def testFirstRowOnRowtime(): Unit = {
+    val data = List(
+      (3L, 2L, "Hello world", 3),
+      (2L, 2L, "Hello", 2),
+      (6L, 3L, "Luke Skywalker", 6),
+      (5L, 3L, "I am fine.", 5),
+      (7L, 4L, "Comment#1", 7),
+      (9L, 4L, "Comment#3", 9),
+      (10L, 4L, "Comment#4", 10),
+      (8L, 4L, "Comment#2", 8),
+      (1L, 1L, "Hi", 1),
+      (4L, 3L, "Helloworld, how are you?", 4))
+
+    val t = failingDataSource(data)
+            .assignTimestampsAndWatermarks(
+              new TimestampAndWatermarkWithOffset[(Long, Long, String, Int)](10L))
+            .toTable(tEnv, 'ts.rowtime, 'key, 'str, 'int)
+    tEnv.registerTable("T", t)
+
+    val sql =
+      """
+        |SELECT key, str, `int`
+        |FROM (
+        |  SELECT *,
+        |    ROW_NUMBER() OVER (PARTITION BY key ORDER BY ts) as rowNum
+        |  FROM T
+        |)
+        |WHERE rowNum = 1
+      """.stripMargin
+
+    val sink = new TestingUpsertTableSink(Array(1))
+    tEnv.sqlQuery(sql).writeToSink(sink)
+
+    // TODO: support FirstRow on rowtime in the future
+    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
+    tEnv.execute()
+  }
 
   @Test
   def testLastRowOnRowtime(): Unit = {
@@ -96,7 +160,7 @@ class LastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     tEnv.sqlQuery(sql).writeToSink(sink)
 
     // TODO: support LastRow on rowtime in the future
-    thrown.expectMessage("Currently not support LastRow on rowtime")
+    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
     tEnv.execute()
   }
 }
