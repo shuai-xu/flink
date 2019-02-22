@@ -610,7 +610,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     }
   }
 
-  private def excludeResourceProcessors: Unit = {
+  def excludeResourceProcessors: Unit = {
     val chainedDAGProcessors = new ChainedDAGProcessors
     chainedDAGProcessors.addProcessor(new DeadlockBreakupProcessor)
     chainedDAGProcessors.addProcessor(new BatchRunningUnitBuildProcessor)
