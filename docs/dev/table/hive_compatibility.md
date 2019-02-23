@@ -123,7 +123,7 @@ catalogs:
       type: hive
       connector:
         # Hive metastore thrift uri
-        hive.metastore.uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
+        hive-metastore-uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
 {% endhighlight %}
 
 To have Flink successfully connect to your Hive metastore, make sure the `hive.metastore.uris` config should match the same config in your `hive-site.xml` config file:

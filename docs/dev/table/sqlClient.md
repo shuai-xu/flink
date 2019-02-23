@@ -216,14 +216,14 @@ catalogs:
      catalog:
       type: hive
       connector:
-        hive.metastore.uris: thrift://localhost:9083
+        hive-metastore-uris: thrift://localhost:9083
       is-default: false
       default-database: mydb_1
    - name: MyHive_2
      catalog:
        type: hive
        connector:
-         hive.metastore.uris: thrift://localhost:9084
+         hive-metastore-uris: thrift://localhost:9084
        default-database: mydb_2
 {% endhighlight %}
 
@@ -599,14 +599,14 @@ catalogs:
      catalog:
       type: hive
       connector:
-        hive.metastore.uris: thrift://localhost:9083
+        hive-metastore-uris: thrift://localhost:9083
       is-default: false
       default-database: mydb_1
    - name: MyHive_2
      catalog:
        type: hive
        connector:
-         hive.metastore.uris: thrift://localhost:9084
+         hive-metastore-uris: thrift://localhost:9084
        default-database: mydb_2
 {% endhighlight %}
        

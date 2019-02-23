@@ -234,13 +234,13 @@ catalogs:
       type: hive
       connector:
         # Hive metastore thrift uri
-        Hive.metastore.uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
+        Hive-metastore-uris: thrift://<ip1>:<port1>,thrift://<ip2>:<port2>
    - name: myHive2
      catalog:
       type: hive
       connector:
         # Hive metastore thrift uri
-        Hive.metastore.uris: thrift://<ip>:<port>
+        Hive-metastore-uris: thrift://<ip>:<port>
 ```
 
 To run a few example SQL commands to access a Hive table.
