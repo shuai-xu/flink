@@ -57,10 +57,16 @@ public class HealthMonitorOptions {
 		ConfigOptions.key("parallelism.scale.stable-time.ms").defaultValue(6 * 60 * 1000L);
 
 	/**
-	 * max partition per task.
+	 * parallel source max partition per task.
 	 */
 	public static final ConfigOption<Integer> MAX_PARTITION_PER_TASK =
-			ConfigOptions.key("parallelism.scale.max.partition.per.task").defaultValue(8);
+			ConfigOptions.key("parallelism.scale.parallel-source.max.partition.per.task").defaultValue(8);
+
+	/**
+	 * parallel source reserved parallelism ratio.
+	 */
+	public static final ConfigOption<Double> RESERVED_PARALLELISM_RATIO =
+			ConfigOptions.key("parallelism.scale.parallel-source.reserved.parallelism.ratio").defaultValue(1.2);
 
 	/**
 	 * parallelism scale time out.

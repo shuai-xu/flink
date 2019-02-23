@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -32,7 +33,6 @@ import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.RescaleJobParallelism;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.HighStateSizeDetector;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStuck;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexBackPressure;
@@ -96,6 +96,7 @@ public class ParallelismScaler implements Resolver {
 	private long timeout;
 	private long checkInterval;
 	private int maxPartitionPerTask;
+	private double reservedParallelismRatio;
 	private long stableTime;
 
 	private double maxCpuLimit;
@@ -158,6 +159,7 @@ public class ParallelismScaler implements Resolver {
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.maxPartitionPerTask = monitor.getConfig().getInteger(MAX_PARTITION_PER_TASK);
+		this.reservedParallelismRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESERVED_PARALLELISM_RATIO);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STABLE_TIME);
 
 		inputTpsSubs = new HashMap<>();
@@ -360,7 +362,8 @@ public class ParallelismScaler implements Resolver {
 		return null;
 	}
 
-	private void parseSymptoms(List<Symptom> symptomList) {
+	@VisibleForTesting
+	public void parseSymptoms(List<Symptom> symptomList) {
 		// clear old symptoms
 		jobStableSymptom = null;
 		frequentFullGCSymptom = null;
@@ -420,9 +423,9 @@ public class ParallelismScaler implements Resolver {
 				continue;
 			}
 
-			if (symptom instanceof HighStateSizeDetector) {
-				highDelaySymptom = (JobVertexHighDelay) symptom;
-				LOGGER.debug("High state size detected for vertices {}.", highDelaySymptom.getJobVertexIDs());
+			if (symptom instanceof JobVertexHighStateSize) {
+				highStateSizeSymptom = (JobVertexHighStateSize) symptom;
+				LOGGER.debug("High state size detected for vertices {}.", highStateSizeSymptom.getJobVertexIDs());
 				continue;
 			}
 		}
@@ -592,16 +595,17 @@ public class ParallelismScaler implements Resolver {
 
 			double workload;
 			double partitionLatency = 0;
+			double partitionCount = 0;
 			if (isParallelReader) {
 				// reset task latency.
 				double processLatencyCount = sourceProcessLatencyCountRangeSub.getValue().f1;
 				double processLatencySum = sourceProcessLatencySumRangeSub.getValue().f1;
 				taskLatency = processLatencyCount <= 0.0 ? 0.0 : processLatencySum / processLatencyCount / 1.0e9;
 
-				double partitionCount = sourcePartitionCountSub.getValue().f1;
 				double partitionLatencyCount = sourcePartitionLatencyCountRangeSub.getValue().f1;
 				double partitionLatencySum = sourcePartitionLatencySumRangeSub.getValue().f1;
 				partitionLatency = partitionLatencyCount <= 0.0 ? 0.0 : partitionLatencySum / partitionLatencyCount / 1.0e9;
+				partitionCount = sourcePartitionCountSub.getValue().f1;
 				workload = partitionLatency <= 0.0 ? 0.0 : partitionCount * (taskLatency - waitOutputPerInputRecord) / partitionLatency;
 			} else {
 				workload = (taskLatency - waitOutputPerInputRecord) * inputTps;
@@ -622,7 +626,8 @@ public class ParallelismScaler implements Resolver {
 				waitOutputPerInputRecord,
 				workload,
 				delayIncreasingRate,
-				partitionLatency
+				partitionLatency,
+				partitionCount
 			);
 
 			LOGGER.debug("Metrics for vertex {}.", taskMetrics.toString());
@@ -632,7 +637,8 @@ public class ParallelismScaler implements Resolver {
 		return metrics;
 	}
 
-	private Map<JobVertexID, Double> getSubDagTargetTpsRatio(
+	@VisibleForTesting
+	public Map<JobVertexID, Double> getSubDagTargetTpsRatio(
 			Map<JobVertexID, TaskMetrics> taskMetrics) {
 		Map<JobVertexID, Double> subDagTargetTpsRatio = new HashMap<>();
 
@@ -654,7 +660,21 @@ public class ParallelismScaler implements Resolver {
 				highDelaySymptom.getJobVertexIDs(), delayIncreasingSymptom.getJobVertexIDs());
 			for (JobVertexID vertexId : verticesToUpScale) {
 				subDagRootsToUpScale.add(vertex2SubDagRoot.get(vertexId));
-				double ratio = 1 / (1 - taskMetrics.get(vertexId).delayIncreasingRate);
+
+				TaskMetrics metric = taskMetrics.get(vertexId);
+
+				// init ratio to make sure we can cache up the delay.
+				double ratio = 1 / (1 - metric.delayIncreasingRate);
+
+				if (metric.isParallelSource) {
+					double maxTps = 1.0 / Math.max(metric.partitionLatency, metric.taskLatencyPerRecord - metric.waitOutputPerRecord) * metric.partitionCount;
+					ratio = maxTps / metric.getInputTps();
+					if (ratio < reservedParallelismRatio) {
+						LOGGER.debug("parallel source {} has reach max input tps, should not rescale", vertexId);
+						continue;
+					}
+				}
+
 				if (ratio < upScaleTpsRatio) {
 					ratio = upScaleTpsRatio;
 				}
@@ -718,7 +738,7 @@ public class ParallelismScaler implements Resolver {
 			for (JobVertexID vertexId : subDagRoot2SubDagVertex.get(subDagRoot)) {
 				if (taskMetrics.get(vertexId).getWorkload() > 0) {
 					if (taskMetrics.get(vertexId).isParallelSource) {
-						targetParallelisms.put(vertexId, (int) Math.ceil(taskMetrics.get(vertexId).getWorkload()));
+						targetParallelisms.put(vertexId, (int) Math.ceil(taskMetrics.get(vertexId).getWorkload() * reservedParallelismRatio));
 					} else {
 						targetParallelisms.put(vertexId, (int) Math.ceil(taskMetrics.get(vertexId).getWorkload() * ratio));
 					}
@@ -730,7 +750,7 @@ public class ParallelismScaler implements Resolver {
 			if (!targetParallelisms.containsKey(vertexID)) {
 				if (taskMetrics.get(vertexID).getWorkload() > 0) {
 					if (taskMetrics.get(vertexID).isParallelSource) {
-						targetParallelisms.put(vertexID, (int) Math.ceil(taskMetrics.get(vertexID).getWorkload()));
+						targetParallelisms.put(vertexID, (int) Math.ceil(taskMetrics.get(vertexID).getWorkload() * reservedParallelismRatio));
 					} else {
 						targetParallelisms.put(vertexID, (int) Math.ceil(taskMetrics.get(vertexID).getWorkload() * downScaleTpsRatio));
 					}
@@ -1245,6 +1265,7 @@ public class ParallelismScaler implements Resolver {
 		private final double workload;
 		private final double delayIncreasingRate;
 		private final double partitionLatency;
+		private final double partitionCount;
 
 		public TaskMetrics(
 			JobVertexID jobVertexId,
@@ -1256,7 +1277,8 @@ public class ParallelismScaler implements Resolver {
 			double waitOutputPerRecord,
 			double workload,
 			double delayIncreasingRate,
-			double partitionLatency) {
+			double partitionLatency,
+			double partitionCount) {
 
 			this.jobVertexID = jobVertexId;
 			this.isParallelSource = isParallelSource;
@@ -1268,6 +1290,7 @@ public class ParallelismScaler implements Resolver {
 			this.workload = workload;
 			this.delayIncreasingRate = delayIncreasingRate;
 			this.partitionLatency =  partitionLatency;
+			this.partitionCount = partitionCount;
 		}
 
 		public JobVertexID getJobVertexID() {
@@ -1309,7 +1332,8 @@ public class ParallelismScaler implements Resolver {
 				+ ", waitOutputPerRecord:" + waitOutputPerRecord
 				+ ", workload:" + workload
 				+ ", delayIncreasingRate:" + delayIncreasingRate
-				+ ", partitionLatency:" + partitionLatency + "}";
+				+ ", partitionLatency:" + partitionLatency
+				+ ", partitionCount:" + partitionCount + "}";
 		}
 
 		public double getDelayIncreasingRate() {
