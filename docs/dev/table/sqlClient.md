@@ -225,6 +225,11 @@ catalogs:
        connector:
          hive-metastore-uris: thrift://localhost:9084
        default-database: mydb_2
+   - name: mycustom
+       catalog:
+         type: custom
+         factory-class: <fully qualified factory class name>
+
 {% endhighlight %}
 
 This configuration:
@@ -233,7 +238,7 @@ This configuration:
 - specifies a parallelism of 1 for queries executed in this environment,
 - specifies an even-time characteristic, and
 - runs queries in the `table` result mode.
-- creates two `HiveCatalog` (type: hive) named with their own default databases
+- creates two `HiveCatalog` (type: hive) named with their own default databases and a custom catalog from its catalog factory
 
 Depending on the use case, a configuration can be split into multiple files. Therefore, environment files can be created for general purposes (*defaults environment file* using `--defaults`) as well as on a per-session basis (*session environment file* using `--environment`). Every CLI session is initialized with the default properties followed by the session properties. For example, the defaults environment file could specify all table sources that should be available for querying in every session whereas the session environment file only declares a specific state retention time and parallelism. Both default and session environment files can be passed when starting the CLI application. If no default environment file has been specified, the SQL Client searches for `./conf/sql-client-defaults.yaml` in Flink's configuration directory.
 

@@ -18,7 +18,8 @@
 
 package org.apache.flink.table.client.gateway.local;
 
-import org.apache.flink.table.client.catalog.CatalogType;
+import org.apache.flink.table.catalog.CatalogType;
+import org.apache.flink.table.client.catalog.TestCatalogFactory;
 import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.table.client.config.entries.CatalogEntry;
 import org.apache.flink.table.client.gateway.utils.EnvironmentFileUtil;
@@ -54,7 +55,7 @@ public class EnvironmentTest {
 			CATALOG_ENVIRONMENT_FILE,
 			replaceVars);
 
-		assertEquals(new HashSet<>(Arrays.asList("myhive", "myinmemory")), env.getCatalogs().keySet());
+		assertEquals(new HashSet<>(Arrays.asList("myhive", "mycustom", "myinmemory")), env.getCatalogs().keySet());
 
 		CatalogEntry hive = env.getCatalogs().get("myhive");
 		assertEquals(
@@ -69,6 +70,13 @@ public class EnvironmentTest {
 
 		assertTrue(hive.isDefaultCatalog());
 		assertEquals("mydb", hive.getDefaultDatabase().get());
+
+		assertEquals(
+			new HashMap<String, String>() {{
+				put(CatalogEntry.CATALOG_TYPE, CatalogType.custom.name());
+				put(CatalogEntry.CATALOG_FACTORY_CLASS, TestCatalogFactory.class.getName());
+			}},
+			env.getCatalogs().get("mycustom").getProperties().asMap());
 
 		assertEquals(
 			new HashMap<String, String>() {{

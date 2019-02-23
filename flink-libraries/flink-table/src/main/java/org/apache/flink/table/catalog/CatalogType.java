@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.client.catalog;
+package org.apache.flink.table.catalog;
 
 /**
  * Catalog types support in SQL Client.
  */
 public enum CatalogType {
-	hive, flink_in_memory, generic_hive_metastore
+	hive, flink_in_memory, generic_hive_metastore, custom
 }

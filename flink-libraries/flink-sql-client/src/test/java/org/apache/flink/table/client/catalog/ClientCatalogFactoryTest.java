@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.client.catalog;
 
+import org.apache.flink.table.catalog.CatalogType;
 import org.apache.flink.table.catalog.FlinkInMemoryCatalog;
 import org.apache.flink.table.catalog.ReadableCatalog;
 import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;

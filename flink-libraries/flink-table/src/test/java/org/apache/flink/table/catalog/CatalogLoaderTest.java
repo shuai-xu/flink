@@ -18,11 +18,10 @@
 
 package org.apache.flink.table.catalog;
 
-import org.apache.flink.util.DynamicCodeLoadingException;
-
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.Optional;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -34,15 +33,15 @@ public class CatalogLoaderTest {
 
 	private final ClassLoader cl = getClass().getClassLoader();
 
-	@Test(expected = DynamicCodeLoadingException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testNoCatalogDefined() throws Exception {
-		assertNull(CatalogLoader.loadCatalogFromConfig(cl, "fake", "test", new HashMap<>()));
+		assertNull(CatalogLoader.loadCatalogFromConfig(cl, "fake", Optional.empty(), "test", new HashMap<>()));
 	}
 
 	@Test
 	public void testFlinkInMemoryCatalog() throws Exception {
 		ReadableCatalog catalog =
-			CatalogLoader.loadCatalogFromConfig(cl, CatalogLoader.FLINK_IN_MEMORY_CATALOG_NAME, "test", new HashMap<>());
+			CatalogLoader.loadCatalogFromConfig(cl, CatalogType.flink_in_memory.name(), Optional.empty(), "test", new HashMap<>());
 
 		assertTrue(catalog instanceof FlinkInMemoryCatalog);
 	}
@@ -50,7 +49,8 @@ public class CatalogLoaderTest {
 	@Test
 	public void testDynamicLoadingCatalog() throws Exception {
 		ReadableCatalog catalog =
-			CatalogLoader.loadCatalogFromConfig(cl, "org.apache.flink.table.catalog.FlinkInMemoryCatalogFactory", "test", new HashMap<>());
+			CatalogLoader.loadCatalogFromConfig(
+				cl, CatalogType.custom.name(), Optional.of("org.apache.flink.table.catalog.FlinkInMemoryCatalogFactory"), "test", new HashMap<>());
 
 		assertTrue(catalog instanceof FlinkInMemoryCatalog);
 	}

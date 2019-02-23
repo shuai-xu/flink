@@ -20,7 +20,11 @@ package org.apache.flink.table.catalog;
 import org.apache.flink.util.DynamicCodeLoadingException;
 import org.apache.flink.util.StringUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
+import java.util.Optional;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -30,17 +34,15 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class CatalogLoader {
 
-	// ------------------------------------------------------------------------
-	//  Configuration shortcut names
-	// ------------------------------------------------------------------------
+	private static final Logger LOG = LoggerFactory.getLogger(CatalogLoader.class);
 
-	// The shortcut configuration name for FlinkInMemoryCatalog
-	public static final String FLINK_IN_MEMORY_CATALOG_NAME = "inmemory";
-
-	// The shortcut configuration name for HiveCatalog
-	public static final String HIVE_CATALOG_NAME = "hive";
+	// ------------------------------------------------------------------------
+	//  Catalog Factory Classes
+	// ------------------------------------------------------------------------
 
 	private static final String HIVE_CATALOG_FACTORY_CLASS_NAME = "org.apache.flink.table.catalog.hive.HiveCatalogFactory";
+
+	private static final String GENERIC_HIVE_METASTORE_FACTORY_CLASS_NAME = "org.apache.flink.table.catalog.hive.GenericHiveMetastoreCatalogFactory";
 
 	// ------------------------------------------------------------------------
 	//  Loading the state backend from a configuration
@@ -49,6 +51,7 @@ public class CatalogLoader {
 	public static ReadableCatalog loadCatalogFromConfig(
 		ClassLoader cl,
 		String catalogType,
+		Optional<String> catalogFactoryClass,
 		String catalogName,
 		Map<String, String> properties) throws DynamicCodeLoadingException {
 
@@ -57,38 +60,44 @@ public class CatalogLoader {
 		checkArgument(!StringUtils.isNullOrWhitespaceOnly(catalogName), "catalogName cannot be null or empty");
 		checkNotNull(properties, "properties cannot be null or empty");
 
-		switch (catalogType.toLowerCase()) {
-			case FLINK_IN_MEMORY_CATALOG_NAME:
+		CatalogType type = CatalogType.valueOf(catalogType);
+
+		switch (type) {
+			case flink_in_memory:
 				return new FlinkInMemoryCatalogFactory().createCatalog(catalogName, properties);
-			case HIVE_CATALOG_NAME:
-				return loadCatalog(
-					HIVE_CATALOG_FACTORY_CLASS_NAME, cl, catalogType, catalogName, properties);
+			case hive:
+				return loadCatalog(cl, HIVE_CATALOG_FACTORY_CLASS_NAME, catalogName, properties);
+			case generic_hive_metastore:
+				return loadCatalog(cl, GENERIC_HIVE_METASTORE_FACTORY_CLASS_NAME, catalogName, properties);
+			case custom:
+				LOG.info("Loading cutom catalog with factory class %s with class loader", catalogType);
+
+				return loadCatalog(cl, catalogFactoryClass.get(), catalogName, properties);
 			default:
-				// To use self-defined catalog, user have to put the catalog's full class name as catalog type in config file
-				return loadCatalog(catalogType, cl, catalogType, catalogName, properties);
+				// Never reach here
+				throw new IllegalStateException("Should never reach here");
 		}
 	}
 
 	private static ReadableCatalog loadCatalog(
-		String factoryClassName,
 		ClassLoader cl,
-		String catalogType,
+		String catalogFactoryClass,
 		String catalogName,
 		Map<String, String> properties) throws DynamicCodeLoadingException {
 
 		CatalogFactory<?> factory;
 
 		try {
-			Class<? extends CatalogFactory> clazz = Class.forName(factoryClassName, false, cl)
+			Class<? extends CatalogFactory> clazz = Class.forName(catalogFactoryClass, false, cl)
 				.asSubclass(CatalogFactory.class);
 			factory = clazz.newInstance();
 		} catch (ClassNotFoundException e) {
 			throw new DynamicCodeLoadingException(
-				String.format("Cannot find configured catalog factory class: %s", catalogType), e);
+				String.format("Cannot find configured catalog factory class: %s", catalogFactoryClass), e);
 		} catch (ClassCastException | InstantiationException | IllegalAccessException e) {
 			throw new DynamicCodeLoadingException(
 				String.format(
-					"The class configured for catalog does not have a valid catalog factory (%s)", catalogType), e);
+					"The class configured for catalog does not have a valid catalog factory (%s)", catalogFactoryClass), e);
 		}
 
 		return factory.createCatalog(catalogName, properties);

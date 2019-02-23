@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.client.config;
 
+import org.apache.flink.table.catalog.CatalogType;
 import org.apache.flink.table.client.SqlClientException;
-import org.apache.flink.table.client.catalog.CatalogType;
 import org.apache.flink.table.client.config.entries.CatalogEntry;
 import org.apache.flink.table.client.config.entries.DeploymentEntry;
 import org.apache.flink.table.client.config.entries.ExecutionEntry;

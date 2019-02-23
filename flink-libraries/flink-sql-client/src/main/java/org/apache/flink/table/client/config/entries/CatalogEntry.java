@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.client.config.entries;
 
+import org.apache.flink.table.catalog.CatalogType;
 import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.config.ConfigUtil;
@@ -35,8 +36,10 @@ public class CatalogEntry extends ConfigEntry {
 	private static final String CATALOG_NAME = "name";
 	public static final String CATALOG_CONNECTOR_PREFIX = "catalog.connector";
 	public static final String CATALOG_TYPE = "catalog.type";
+	public static final String CATALOG_FACTORY_CLASS = "catalog.factory-class";
 	public static final String CATALOG_IS_DEFAULT = "catalog.is-default";
 	public static final String CATALOG_DEFAULT_DB = "catalog.default-database";
+
 	// Hive-specific
 	public static final String CATALOG_CONNECTOR_HIVE_METASTORE_URIS =
 		CATALOG_CONNECTOR_PREFIX + "." + HiveMetastoreConfig.HIVE_METASTORE_URIS;
@@ -104,5 +107,9 @@ public class CatalogEntry extends ConfigEntry {
 	@Override
 	protected void validate(DescriptorProperties properties) {
 		properties.validateString(CATALOG_TYPE, false, 1);
+
+		if (properties.containsKey(CATALOG_FACTORY_CLASS)) {
+			properties.validateValue(CATALOG_TYPE, CatalogType.custom.toString(), false);
+		}
 	}
 }

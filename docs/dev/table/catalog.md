@@ -69,6 +69,8 @@ Catalog Types
 
 This class implements `ReadableWritableCatalog` and will be provided by Flink to host meta-objects defined in Flink using memory as storage.
 
+Its config entry value in SQL CLI yaml file is "flink_in_memory".
+
 ## HiveCatalog
 
 `HiveCatalog` integrates Flink with Hive at metadata level.
@@ -84,6 +86,18 @@ To query Hive data with `HiveCatalog`, users have to use Flink's `batch` mode by
 Note that currently `HiveCatalog` only offers capabilities of reading Hive metastore metadata, including databases, tables, table partitions, simple data types, and table and column stats. Other meta-objects read and write capabilities are under either experiment or active development.
 
 Also note that currently only registering `HiveCatalog` through Table APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within their environment.
+
+Its config entry value in SQL CLI yaml file is "hive".
+
+## GenericHiveMetastoreCatalog
+
+// TODO: [BLINK-19044450] Add doc for GenericHiveMetastoreCatalog
+
+## User-configured Catalog
+
+Catalogs are pluggable, and users can use catalogs they developed on their own by implementing either `ReadableCatalog` or `ReadableWritableCatalog` APIs.
+
+To use self-developed catalog in SQL CLI, users should set the catalog type as `custom` and specify the `factory-class`  with the fully qualified class name of the catalog factory class that implements `CatalogFactory` interface, such as `org.apache.flink.table.catalog.hive.HiveCatalogFactory`.
 
 
 ### Data Type Mapping between Flink and Hive via HiveCatalog

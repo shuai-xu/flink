@@ -19,14 +19,13 @@
 package org.apache.flink.table.client.catalog;
 
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.table.catalog.FlinkInMemoryCatalogFactory;
+import org.apache.flink.table.catalog.CatalogLoader;
 import org.apache.flink.table.catalog.ReadableCatalog;
-import org.apache.flink.table.catalog.hive.GenericHiveMetastoreCatalogFactory;
-import org.apache.flink.table.catalog.hive.HiveCatalogFactory;
 import org.apache.flink.table.client.config.entries.CatalogEntry;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * The factory used to create ReadableCatalog from the given configuration CatalogEntry.
@@ -34,21 +33,21 @@ import java.util.Map;
 public class ClientCatalogFactory {
 	private static final String PREFIXES_TO_CLEAN = CatalogEntry.CATALOG_CONNECTOR_PREFIX + ".";
 
-	public static ReadableCatalog createCatalog(CatalogEntry catalog) {
-		// TODO: convert to service discovery style
+	public static ReadableCatalog createCatalog(CatalogEntry catalogEntry) {
 
-		CatalogType type = CatalogType.valueOf(catalog.getProperties().getString(CatalogEntry.CATALOG_TYPE));
-		Map<String, String> cleaned = cleanProperties(catalog.getProperties().asMap());
+		String catalogType = catalogEntry.getProperties().getString(CatalogEntry.CATALOG_TYPE);
+		Map<String, String> cleaned = cleanProperties(catalogEntry.getProperties().asMap());
 
-		switch (type) {
-			case hive:
-				return new HiveCatalogFactory().createCatalog(catalog.getName(), cleaned);
-			case flink_in_memory:
-				return new FlinkInMemoryCatalogFactory().createCatalog(catalog.getName(), cleaned);
-			case generic_hive_metastore:
-				return new GenericHiveMetastoreCatalogFactory().createCatalog(catalog.getName(), cleaned);
-			default:
-				throw new IllegalArgumentException("Doesn't support catalog type " + type + " yet.");
+		try {
+			return CatalogLoader.loadCatalogFromConfig(
+				Thread.currentThread().getContextClassLoader(),
+				catalogType,
+				Optional.ofNullable(cleaned.get(CatalogEntry.CATALOG_FACTORY_CLASS)),
+				catalogEntry.getName(),
+				cleaned
+			);
+		} catch (Exception e) {
+			throw new IllegalArgumentException(String.format("Cannot create catalog for type %s", catalogType), e);
 		}
 	}
 
