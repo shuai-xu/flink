@@ -32,7 +32,6 @@ import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.exec.{BaseBatchExecNode, RowBatchExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
-import org.apache.flink.table.plan.util.SinkUtil
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, DataStreamTableSink, TableSink}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.NodeResourceUtil
@@ -158,11 +157,10 @@ class BatchExecSink[T](
       // Sink's input must be RowBatchExecNode now.
       case node: RowBatchExecNode =>
         val plan = node.translateToPlan(tableEnv)
-        val parTransformation = SinkUtil.createPartitionTransformation(sink, plan)
         val convertTransformation =
           getConversionMapper[BaseRow, T](
-            parTransformation,
-            parTransformation.getOutputType.asInstanceOf[BaseRowTypeInfo],
+            plan,
+            plan.getOutputType.asInstanceOf[BaseRowTypeInfo],
             inputNode.getFlinkPhysicalRel.getRowType,
             "BoundedStreamSinkConversion",
             withChangeFlag,

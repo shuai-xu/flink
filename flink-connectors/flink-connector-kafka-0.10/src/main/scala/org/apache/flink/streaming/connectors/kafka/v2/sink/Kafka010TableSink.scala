@@ -76,7 +76,7 @@ class Kafka010TableSink(
   def setShuffleEmptyKey(shuffleEmptyKey: Boolean): Unit = {
     this._shuffleEmptyKey = shuffleEmptyKey
   }
-  override def getPartitionField() = partitionedField
+  override def getPartitionFields(): Array[String] = Array(partitionedField)
 
   override def shuffleEmptyKey() = _shuffleEmptyKey
 }

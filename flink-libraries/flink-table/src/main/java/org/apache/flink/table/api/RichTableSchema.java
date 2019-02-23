@@ -47,6 +47,8 @@ public class RichTableSchema implements Serializable {
 	// TODO should introduce table constraints later.
 	private final List<String> primaryKeys = new ArrayList<>();
 	private final List<List<String>> uniqueKeys = new ArrayList<>();
+	// Partition columns of this table.
+	private final List<String> partitionColumns = new ArrayList<>();
 
 	// index info, may include unique index or non-unique index or both.
 	private final List<Index> indexes = new ArrayList<>();
@@ -137,6 +139,22 @@ public class RichTableSchema implements Serializable {
 	}
 
 	/**
+	 * Set the partition column names.
+	 *
+	 * @param cols partition column names
+	 */
+	public void setPartitionColumns(String[] cols) {
+		checkArgument(partitionColumns.size() == 0, "Partition columns have been set");
+		Set<String> columnNames = new HashSet<>(Arrays.asList(getColumnNames()));
+		for (String colName : cols) {
+			if (!columnNames.contains(colName)) {
+				throw new IllegalArgumentException("The partition column '" + colName + "' is not in the table schema");
+			}
+			partitionColumns.add(colName);
+		}
+	}
+
+	/**
 	 * Set the indexes.
 	 */
 	public void setIndexes(List<Index> keys) {
@@ -176,6 +194,30 @@ public class RichTableSchema implements Serializable {
 
 	public List<List<String>> getUniqueKeys() {
 		return uniqueKeys;
+	}
+
+	/**
+	 * Returns partition columns of this table.
+	 */
+	public List<String> getPartitionColumns() {
+		return partitionColumns;
+	}
+
+	/**
+	 * Returns partition column data type.
+	 */
+	public List<InternalType> getPartitionDataTypes() {
+		List<InternalType> ret = new ArrayList<>(partitionColumns.size());
+		for (String partitionColumnName : partitionColumns) {
+			for (int i = 0; i < columnNames.length; i++) {
+				if (columnNames[i].equals(partitionColumnName)) {
+					ret.add(columnTypes[i]);
+					break;
+				}
+			}
+		}
+		assert (ret.size() == partitionColumns.size());
+		return ret;
 	}
 
 	/**

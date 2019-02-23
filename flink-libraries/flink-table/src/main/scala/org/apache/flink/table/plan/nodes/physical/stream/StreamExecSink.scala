@@ -19,30 +19,29 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.api.common.operators.ResourceSpec
-import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
-import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, Table, TableException}
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.CodeGeneratorContext
-import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
-import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.calcite.Sink
-import org.apache.flink.table.plan.nodes.exec.{BaseStreamExecNode, RowStreamExecNode}
-import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
-import org.apache.flink.table.plan.util.{SinkUtil, UpdatingPlanChecker}
+import org.apache.flink.table.plan.util.UpdatingPlanChecker
+import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
+import org.apache.flink.table.codegen.CodeGeneratorContext
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.NodeResourceUtil
-
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
-
 import java.util
+
+import org.apache.flink.table.plan.nodes.exec.{BaseStreamExecNode, RowStreamExecNode}
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 
 import scala.collection.JavaConversions._
 
@@ -157,11 +156,7 @@ class StreamExecSink[T](
         throw new TableException("Cannot generate DataStream due to an invalid logical plan. " +
                                    "This is a bug and should not happen. Please file an issue.")
     }
-    val parTransformation = if (isDataStreamTableSink) {
-      translateStream
-    } else {
-      SinkUtil.createPartitionTransformation(sink, translateStream)
-    }
+    val parTransformation = translateStream
     val logicalType = inputNode.getRowType
     val rowtimeFields = logicalType.getFieldList
                         .filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))

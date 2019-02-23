@@ -35,7 +35,7 @@ import java.util.List;
 import static org.junit.Assert.assertTrue;
 
 /**
- *
+ *	SQL validator test.
  */
 public class SqlValidatorTest extends ParserTestBase {
 
@@ -57,6 +57,21 @@ public class SqlValidatorTest extends ParserTestBase {
 				"  b,\n" +
 				"  SUM(a)\n" +
 				"FROM sls_stream1");
+		assertTrue(nodes.stream().anyMatch(node -> node.getSqlNode() instanceof SqlInsert));
+	}
+
+	@Test(expected = SqlParseException.class) // partition columns c, d do not exist in column names.
+	public void testCreateInvalidPartitionedTable() throws SqlParseException {
+		List<SqlNodeInfo> nodes = validateSqlContext(
+			"create table sls_stream1(\n" +
+				"  a bigint,\n" +
+				"  b VARCHAR,\n" +
+				"  PRIMARY KEY(a, b),\n" +
+				"  WATERMARK wk FOR a AS withd(b, 1000)\n" +
+				") PARTITIONED BY (\n" +
+				"  c,\n" +
+				"  d\n" +
+				") with ( x = 'y', asd = 'dada');\n");
 		assertTrue(nodes.stream().anyMatch(node -> node.getSqlNode() instanceof SqlInsert));
 	}
 

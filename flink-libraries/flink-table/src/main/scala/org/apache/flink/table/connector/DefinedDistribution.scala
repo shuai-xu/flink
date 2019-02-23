@@ -24,12 +24,26 @@ package org.apache.flink.table.connector
   */
 trait DefinedDistribution {
 
-  def getPartitionField(): String
+  def getPartitionFields(): Array[String]
+
+  /**
+    * If true, all records would be sort with partition fields before output, for some sinks, this
+    * can be used to reduce the partition writers, that means the sink will accept data
+    * one partition at a time
+    *
+    * <p>A sink should consider whether to override this especially when it needs buffer
+    * data before writing.
+    *
+    * Notes:
+    * 1. If returns true, the output data will be sorted [locally] after partitioning.
+    * 2. Only work if [[getPartitionFields]] return value is non-empty, default to be true.
+    */
+  def sortLocalPartition(): Boolean = getPartitionFields() != null && getPartitionFields().nonEmpty
 
   /**
     * If false, all records with empty key will be distributed to single channel.
     * Empty includes all `null` value and empty string.
     */
-  def shuffleEmptyKey(): Boolean
+  def shuffleEmptyKey(): Boolean = false
 
 }

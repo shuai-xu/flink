@@ -50,7 +50,8 @@
     "COLUMNS",
     "INDEX",
     "EXTENDED",
-    "FORMATTED"
+    "FORMATTED",
+    "PARTITIONED"
   ]
 
   # List of keywords from "keywords" section that are not reserved.
@@ -65,7 +66,8 @@
     "COLUMNS",
     "INDEX",
     "EXTENDED",
-    "FORMATTED"
+    "FORMATTED",
+    "PARTITIONED"
   ]
 
   # List of methods for parsing custom SQL statements.

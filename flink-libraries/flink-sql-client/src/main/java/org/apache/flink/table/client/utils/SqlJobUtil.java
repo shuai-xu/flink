@@ -422,6 +422,15 @@ public class SqlJobUtil {
 			}
 			schema.setIndexes(indexes);
 		}
+		// set partition key
+		SqlNodeList partitionKey = sqlCreateTable.getPartitionKeysList();
+		if (partitionKey != null) {
+			schema.setPartitionColumns(partitionKey
+				.getList()
+				.stream()
+				.map(p -> ((SqlIdentifier) p).getSimple())
+				.toArray(String[]::new));
+		}
 		return schema;
 	}
 

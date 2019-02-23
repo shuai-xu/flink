@@ -64,6 +64,8 @@ public class SqlCreateTable extends SqlCall {
 
 	private SqlWatermark watermark;
 
+	private SqlNodeList partitionKeysList;
+
 	private SqlCharStringLiteral comment;
 
 	public SqlCreateTable(
@@ -76,6 +78,7 @@ public class SqlCreateTable extends SqlCall {
 		List<IndexWrapper> indexKeysList,
 		SqlWatermark watermark,
 		SqlNodeList propertyList,
+		SqlNodeList partitionKeysList,
 		SqlCharStringLiteral comment) {
 		super(pos);
 		this.tableType = tableType;
@@ -86,6 +89,7 @@ public class SqlCreateTable extends SqlCall {
 		this.indexKeysList = indexKeysList;
 		this.watermark = watermark;
 		this.propertyList = propertyList;
+		this.partitionKeysList = partitionKeysList;
 		this.comment = comment;
 	}
 
@@ -121,6 +125,14 @@ public class SqlCreateTable extends SqlCall {
 
 	public void setPropertyList(SqlNodeList propertyList) {
 		this.propertyList = propertyList;
+	}
+
+	public SqlNodeList getPartitionKeysList() {
+		return partitionKeysList;
+	}
+
+	public void setPartitionKeysList(SqlNodeList partitionKeysList) {
+		this.partitionKeysList = partitionKeysList;
 	}
 
 	public SqlNodeList getPrimaryKeyList() {
@@ -229,6 +241,18 @@ public class SqlCreateTable extends SqlCall {
 			}
 		}
 
+		if (this.partitionKeysList != null) {
+			for (SqlNode partitionKeyNode : this.partitionKeysList.getList()) {
+				String partitionKey = ((SqlIdentifier) partitionKeyNode).getSimple();
+				if (!columnNames.contains(partitionKey)) {
+					throw new SqlParseException(
+						partitionKeyNode.getParserPosition(),
+						"Partition column [" + partitionKey + "] not defined in columns, at "
+							+ partitionKeyNode.getParserPosition());
+				}
+			}
+		}
+
 	}
 
 	public boolean containsComputedColumn() {
@@ -313,6 +337,15 @@ public class SqlCreateTable extends SqlCall {
 		}
 		writer.newlineAndIndent();
 		writer.endList(frame);
+
+		if (this.partitionKeysList != null) {
+			writer.newlineAndIndent();
+			writer.keyword("PARTITIONED BY");
+			SqlWriter.Frame withFrame = writer.startList("(", ")");
+			this.partitionKeysList.unparse(writer, leftPrec, rightPrec);
+			writer.endList(withFrame);
+			writer.newlineAndIndent();
+		}
 
 		if (comment != null) {
 			writer.keyword("COMMENT");

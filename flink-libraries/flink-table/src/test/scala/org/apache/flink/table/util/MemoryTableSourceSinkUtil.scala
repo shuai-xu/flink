@@ -127,9 +127,13 @@ object MemoryTableSourceSinkUtil {
       this.pk = pk
     }
 
-    override def getPartitionField(): String = pk
-
-    override def shuffleEmptyKey(): Boolean = false
+    override def getPartitionFields(): Array[String] = {
+      if (pk == null) {
+        Array[String]()
+      } else {
+        Array[String](pk)
+      }
+    }
 
     /** Emits the BoundedStream. */
     override def emitBoundedStream(

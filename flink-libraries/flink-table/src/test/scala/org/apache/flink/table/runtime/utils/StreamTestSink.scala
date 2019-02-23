@@ -502,9 +502,13 @@ final class TestingRetractTableSink extends RetractStreamTableSink[Row]
     pk = p
   }
 
-  override def getPartitionField(): String = pk
-
-  override def shuffleEmptyKey(): Boolean = false
+  override def getPartitionFields(): Array[String] = {
+    if (pk == null) {
+      null
+    } else {
+      Array[String](pk)
+    }
+  }
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBoolean, Row]]) = {
     dataStream.map(new MapFunction[JTuple2[JBoolean, Row], (Boolean, Row)] {

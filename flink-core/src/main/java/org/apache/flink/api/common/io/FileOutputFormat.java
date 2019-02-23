@@ -48,6 +48,9 @@ public abstract class FileOutputFormat<IT> extends RichOutputFormat<IT> implemen
 	 * Behavior for creating output directories. 
 	 */
 	public static enum OutputDirectoryMode {
+		/** Never create a directory, regardless of number of write tasks. This means the passed in
+		 * path must not be a directory. */
+		NEVER,
 		
 		/** A directory is always created, regardless of number of write tasks. */
 		ALWAYS,	
@@ -220,7 +223,8 @@ public abstract class FileOutputFormat<IT> extends RichOutputFormat<IT> implemen
 		// if this is a local file system, we need to initialize the local output directory here
 		if (!fs.isDistributedFS()) {
 			
-			if (numTasks == 1 && outputDirectoryMode == OutputDirectoryMode.PARONLY) {
+			if (numTasks == 1 && outputDirectoryMode == OutputDirectoryMode.PARONLY
+				|| outputDirectoryMode == OutputDirectoryMode.NEVER) {
 				// output should go to a single file
 				
 				// prepare local output path. checks for write mode and removes existing files in case of OVERWRITE mode
@@ -242,13 +246,23 @@ public abstract class FileOutputFormat<IT> extends RichOutputFormat<IT> implemen
 
 
 		// Suffix the path with the parallel instance index, if needed
-		this.actualFilePath = (numTasks > 1 || outputDirectoryMode == OutputDirectoryMode.ALWAYS) ? p.suffix("/" + getDirectoryFileName(taskNumber)) : p;
+		this.actualFilePath =  shouldSuffixPath(numTasks) ? p.suffix("/" + getDirectoryFileName(taskNumber)) : p;
 
 		// create output file
 		this.stream = fs.create(this.actualFilePath, writeMode);
 		
 		// at this point, the file creation must have succeeded, or an exception has been thrown
 		this.fileCreated = true;
+	}
+
+	/**
+	 * Decide whether to suffix the outputPath to resolve file name conflict.
+	 *
+	 * @return true if needed.
+	 */
+	private boolean shouldSuffixPath(int numTasks) {
+		return (numTasks > 1 || outputDirectoryMode == OutputDirectoryMode.ALWAYS)
+			&& outputDirectoryMode != OutputDirectoryMode.NEVER;
 	}
 
 	protected String getDirectoryFileName(int taskNumber) {

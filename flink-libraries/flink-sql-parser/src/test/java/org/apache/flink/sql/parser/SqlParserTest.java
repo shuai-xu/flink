@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
- *
+ * SQL parser tests.
  */
 public class SqlParserTest extends ParserTestBase {
 
@@ -45,6 +45,8 @@ public class SqlParserTest extends ParserTestBase {
 				"  proc as PROCTIME(), \n" +
 				"  PRIMARY KEY (a, b), \n" +
 				"  WATERMARK wk FOR a AS withOffset(b, 1000)\n" +
+				") PARTITIONED BY (\n" +
+				"  a, h" +
 				") with (\n" +
 				"  x = 'y', \n" +
 				"  asd = 'data'\n" +
@@ -58,7 +60,9 @@ public class SqlParserTest extends ParserTestBase {
 				"  `proc` AS `PROCTIME`(),\n" +
 				"  PRIMARY KEY (`a`, `b`),\n" +
 				"  WATERMARK `wk` FOR `a` AS `withOffset`(`b`, 1000)\n" +
-				") WITH (\n" +
+				")\n" +
+				"PARTITIONED BY (`a`, `h`)\n" +
+				"WITH (\n" +
 				"  `x` = 'y',\n" +
 				"  `asd` = 'data'\n" +
 				")");

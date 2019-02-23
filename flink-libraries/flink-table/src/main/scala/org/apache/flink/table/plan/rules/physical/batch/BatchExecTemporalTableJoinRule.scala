@@ -80,7 +80,8 @@ object BatchExecTemporalTableJoinRule {
 
     // if partitioning enabled, use the join key as partition key
     tableSource match {
-      case ps: DefinedDistribution if ps.getPartitionField() != null && !joinInfo.pairs().isEmpty =>
+      case ps: DefinedDistribution if ps.getPartitionFields() != null &&
+        !joinInfo.pairs().isEmpty =>
         requiredTrait = requiredTrait.plus(FlinkRelDistribution.hash(joinInfo.leftKeys))
       case _ =>
     }

@@ -230,6 +230,7 @@ SqlNode SqlCreateTable() :
 	SqlCharStringLiteral comment = null;
 
     SqlNodeList propertyList = null;
+    SqlNodeList partitionColumns = null;
 
     SqlParserPos pos;
 }
@@ -261,6 +262,32 @@ SqlNode SqlCreateTable() :
         comment = SqlLiteral.createCharString(p, getPos());
     }]
     [
+        <PARTITIONED> <BY>
+            {
+                SqlNode column;
+                List<SqlNode> partitionKey = new ArrayList<SqlNode>();
+                pos = getPos();
+
+            }
+            <LPAREN>
+            [
+                column = SimpleIdentifier()
+                {
+                    partitionKey.add(column);
+                }
+                (
+                    <COMMA> column = SimpleIdentifier()
+                        {
+                            partitionKey.add(column);
+                        }
+                )*
+            ]
+            <RPAREN>
+            {
+                partitionColumns = new SqlNodeList(partitionKey, pos.plus(getPos()));
+            }
+    ]
+    [
         <WITH>
             {
                 SqlNode property;
@@ -285,7 +312,17 @@ SqlNode SqlCreateTable() :
     ]
 
     {
-        return new SqlCreateTable(startPos.plus(getPos()), tableType, tableName, columnList, primaryKeyList, uniqueKeysList, indexesList, watermark, propertyList, comment);
+        return new SqlCreateTable(startPos.plus(getPos()),
+                tableType,
+                tableName,
+                columnList,
+                primaryKeyList,
+                uniqueKeysList,
+                indexesList,
+                watermark,
+                propertyList,
+                partitionColumns,
+                comment);
     }
 }
 
