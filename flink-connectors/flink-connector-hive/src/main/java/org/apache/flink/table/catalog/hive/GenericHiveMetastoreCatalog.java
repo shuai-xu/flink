@@ -33,11 +33,17 @@ import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.FlinkInMemoryCatalog;
+import org.apache.flink.table.catalog.FlinkTempFunction;
 import org.apache.flink.table.catalog.FlinkTempTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.plan.stats.TableStats;
 
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
+import org.apache.hadoop.hive.metastore.api.Function;
+import org.apache.hadoop.hive.metastore.api.FunctionType;
+import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
+import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -204,6 +210,11 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 		super.dropDatabase(dbName, ignoreIfNotExists);
 	}
 
+	@Override
+	public boolean dbExists(String dbName) {
+		return inMemoryCatalog.dbExists(dbName) && super.dbExists(dbName);
+	}
+
 	// ------ table and column stats ------
 
 	@Override
@@ -256,33 +267,107 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 	// ------ functions ------
 
 	@Override
-	public void createFunction(ObjectPath functionPath, CatalogFunction function, boolean ignoreIfExists)
-		throws FunctionAlreadyExistException, DatabaseNotExistException {
-		throw new UnsupportedOperationException();
+	public void createFunction(ObjectPath functionPath, CatalogFunction function, boolean ignoreIfExists) throws FunctionAlreadyExistException, DatabaseNotExistException {
+		if (!dbExists(functionPath.getDbName())) {
+			throw new DatabaseNotExistException(catalogName, functionPath.getDbName());
+		} else {
+			if (function instanceof FlinkTempFunction) {
+				inMemoryCatalog.createFunction(functionPath, function, ignoreIfExists);
+			} else {
+				try {
+					client.createFunction(createHiveFunction(functionPath, function));
+				} catch (AlreadyExistsException e) {
+					if (!ignoreIfExists) {
+						throw new FunctionAlreadyExistException(catalogName, functionPath.getFullName());
+					}
+				} catch (TException e) {
+					throw new FlinkHiveException(String.format("Failed to create function %s", functionPath.getFullName()), e);
+				}
+			}
+		}
 	}
 
 	@Override
-	public void alterFunction(ObjectPath functionPath, CatalogFunction newFunction, boolean ignoreIfNotExists) throws FunctionNotExistException {
-		throw new UnsupportedOperationException();
+	public void alterFunction(ObjectPath path, CatalogFunction newFunction, boolean ignoreIfNotExists) throws FunctionNotExistException {
+		// Needs explicit check since alterFunction() does not throw UnknownDBException when the database does not exist
+		// Check database and function together to simplify logic
+		if (functionExists(path)) {
+			if (inMemoryCatalog.functionExists(path)) {
+				if (newFunction instanceof FlinkTempFunction) {
+					inMemoryCatalog.alterFunction(path, newFunction, ignoreIfNotExists);
+				} else {
+					// inMemoryCatalog can only store FlinkTempFunction
+					throw new IllegalArgumentException(
+						String.format("Function %s is a FlinkTempFunction, newFunction is a CatalogFunction", path.getFullName()));
+				}
+			} else {
+				if (!(newFunction instanceof FlinkTempFunction)) {
+					try {
+						client.alterFunction(path.getDbName(), path.getObjectName(), createHiveFunction(path, newFunction));
+					} catch (TException e) {
+						throw new FlinkHiveException(String.format("Failed to alter function %s", path.getFullName()), e);
+					}
+				} else {
+					// HMS can only store non FlinkTempFunction
+					throw new IllegalArgumentException(
+						String.format("Function %s is a CatalogFunction, newFunction is a FlinkTempFunction", path.getFullName()));
+				}
+			}
+		} else if (!ignoreIfNotExists) {
+			throw new FunctionNotExistException(catalogName, path.getFullName());
+		}
 	}
 
 	@Override
 	public void dropFunction(ObjectPath functionPath, boolean ignoreIfNotExists) throws FunctionNotExistException {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public List<ObjectPath> listFunctions(String dbName) throws DatabaseNotExistException {
-		throw new UnsupportedOperationException();
+		if (inMemoryCatalog.functionExists(functionPath)) {
+			inMemoryCatalog.dropFunction(functionPath, ignoreIfNotExists);
+		} else {
+			try {
+				client.dropFunction(functionPath.getDbName(), functionPath.getObjectName());
+			} catch (NoSuchObjectException e) {
+				if (!ignoreIfNotExists) {
+					throw new FunctionNotExistException(catalogName, functionPath.getFullName());
+				}
+			} catch (TException e) {
+				throw new FlinkHiveException(String.format("Failed to drop function %s", functionPath.getFullName()), e);
+			}
+		}
 	}
 
 	@Override
 	public CatalogFunction getFunction(ObjectPath functionPath) throws FunctionNotExistException {
-		throw new UnsupportedOperationException();
+		if (inMemoryCatalog.functionExists(functionPath)) {
+			return inMemoryCatalog.getFunction(functionPath);
+		} else {
+			return super.getFunction(functionPath);
+		}
+	}
+
+	@Override
+	public List<ObjectPath> listFunctions(String dbName) throws DatabaseNotExistException {
+		List<ObjectPath> functions = new ArrayList<>();
+		functions.addAll(inMemoryCatalog.listFunctions(dbName));
+		functions.addAll(super.listFunctions(dbName));
+
+		return functions;
 	}
 
 	@Override
 	public boolean functionExists(ObjectPath functionPath) {
-		throw new UnsupportedOperationException();
+		return inMemoryCatalog.functionExists(functionPath) || super.functionExists(functionPath);
+	}
+
+	private static Function createHiveFunction(ObjectPath functionPath, CatalogFunction function) {
+		// TODO: extract more properties from CatalogFunction and add to Hive Function
+		return new Function(
+			functionPath.getObjectName(),
+			functionPath.getDbName(),
+			function.getClazzName(),
+			null,
+			PrincipalType.GROUP, // Temporarily set to GROUP type because it's required by Hive. May change later
+			0,
+			FunctionType.JAVA,
+			new ArrayList<>());
 	}
 }

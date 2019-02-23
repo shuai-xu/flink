@@ -21,7 +21,9 @@ package org.apache.flink.table.catalog.hive;
 import org.apache.flink.table.catalog.CatalogTestBase;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 
+import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -38,6 +40,16 @@ public class HiveCatalogTest extends CatalogTestBase {
 	}
 
 	@Override
+	@After
+	public void close() {
+		catalog.dropTable(path1, true);
+		catalog.dropTable(path2, true);
+		catalog.dropTable(path3, true);
+		catalog.dropDatabase(db1, true);
+		catalog.dropDatabase(db2, true);
+	}
+
+	@Override
 	public String getTableType() {
 		return "hive";
 	}
@@ -49,5 +61,72 @@ public class HiveCatalogTest extends CatalogTestBase {
 		properties.put(HiveTableConfig.HIVE_TABLE_LOCATION, HiveTestUtils.warehouseDir + "/tmp");
 
 		return properties;
+	}
+
+	// ------------------------------------------------
+	// Override the following tests in CatalogTestBase since HiveCatalog doesn't support create/alter/drop functions.
+	// Tests annotated with only @Override will be ignored.
+	// ------------------------------------------------
+
+	@Override
+	@Test
+	public void testCreateFunction() {
+		exception.expect(UnsupportedOperationException.class);
+		catalog.createFunction(path1, createFunction(), false);
+	}
+
+	@Override
+	public void testCreateFunction_DatabaseNotExistException() {
+		// Ignore
+	}
+
+	@Override
+	public void testCreateFunction_FunctionAlreadyExistException() {
+		// Ignore
+	}
+
+	@Override
+	public void testCreateFunction_FunctionAlreadyExist_ignored() {
+		// Ignore
+	}
+
+	@Override
+	@Test
+	public void testAlterFunction() {
+		exception.expect(UnsupportedOperationException.class);
+		catalog.alterFunction(path1, createFunction(), false);
+	}
+
+	@Override
+	public void testAlterFunction_FunctionNotExistException() {
+		// Ignore
+	}
+
+	@Override
+	public void testAlterFunction_FunctionNotExist_ignored() {
+		// Ignore
+	}
+
+	@Override
+	@Test
+	public void testListFunctions() {
+		// TODO: test listFunctions() return both UDFs and built-in functions
+	}
+
+	@Override
+	@Test
+	public void testDropFunction() {
+		exception.expect(UnsupportedOperationException.class);
+		catalog.dropFunction(path1, false);
+	}
+
+	@Override
+	public void testDropFunction_FunctionNotExistException() {
+		// Ignore
+	}
+
+	@Override
+	public void testDropFunction_FunctionNotExist_ignored() {
+		// Ignore
 	}
 }

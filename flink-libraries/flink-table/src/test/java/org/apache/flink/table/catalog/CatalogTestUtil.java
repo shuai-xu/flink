@@ -170,4 +170,8 @@ public class CatalogTestUtil {
 		assertEquals(f1.getClazzName(), f2.getClazzName());
 		assertEquals(f1.getProperties(), f2.getProperties());
 	}
+
+	public static void compare(FlinkTempFunction f1, FlinkTempFunction f2) {
+		assertEquals(f1.getUdf(), f2.getUdf());
+	}
 }

@@ -18,20 +18,27 @@
 
 package org.apache.flink.table.catalog;
 
-import org.junit.Before;
+import org.apache.flink.table.api.functions.UserDefinedFunction;
+
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Tests for FlinkInMemoryCatalog.
+ * Represents a function object in catalog that cannot currently be ser/deserialized to persistent storage.
  */
-public class FlinkInMemoryCatalogTest extends CatalogTestBase {
+public class FlinkTempFunction extends CatalogFunction {
+	private final UserDefinedFunction udf;
 
-	@Override
-	public String getTableType() {
-		return "csv";
+	public FlinkTempFunction(UserDefinedFunction udf) {
+		super(null);
+		this.udf = checkNotNull(udf, "udf cannot be null");
 	}
 
-	@Before
-	public void setUp() {
-		catalog = new FlinkInMemoryCatalog(db1);
+	public UserDefinedFunction getUdf() {
+		return udf;
+	}
+
+	@Override
+	public FlinkTempFunction deepCopy() {
+		return new FlinkTempFunction(udf);
 	}
 }

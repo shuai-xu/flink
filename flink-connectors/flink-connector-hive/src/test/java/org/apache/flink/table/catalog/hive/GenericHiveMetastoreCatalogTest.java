@@ -18,11 +18,26 @@
 
 package org.apache.flink.table.catalog.hive;
 
+import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.FunctionAlreadyExistException;
+import org.apache.flink.table.api.FunctionNotExistException;
+import org.apache.flink.table.api.functions.ScalarFunction;
+import org.apache.flink.table.catalog.CatalogFunction;
 import org.apache.flink.table.catalog.CatalogTestBase;
+import org.apache.flink.table.catalog.FlinkTempFunction;
 
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+
+import static org.apache.flink.table.catalog.CatalogTestUtil.compare;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test for GenericHiveMetastoreCatalog.
@@ -41,6 +56,130 @@ public class GenericHiveMetastoreCatalogTest extends CatalogTestBase {
 
 	public String getTableType() {
 		return "generic_hive_metastore";
+	}
+
+	// ------ functions ------
+
+	@Test
+	public void testCreateFunction_FlinkTempFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		assertFalse(catalog.functionExists(path1));
+
+		catalog.createFunction(path1, createTempFunction(), false);
+
+		assertTrue(catalog.functionExists(path1));
+	}
+
+	@Test
+	public void testCreateFunction_DatabaseNotExistException_FlinkTempFunction() {
+		assertFalse(catalog.dbExists(db1));
+
+		exception.expect(DatabaseNotExistException.class);
+		catalog.createFunction(path1, createTempFunction(), false);
+	}
+
+	@Test
+	public void testCreateFunction_FunctionAlreadyExistException_FlinkTempFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createFunction(path1, createTempFunction(), false);
+
+		exception.expect(FunctionAlreadyExistException.class);
+		catalog.createFunction(path1, createTempFunction(), false);
+	}
+
+	@Test
+	public void testCreateFunction_FunctionAlreadyExist_ignored_FlinkTempFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		FlinkTempFunction func = createTempFunction();
+		catalog.createFunction(path1, func, false);
+
+		compare(func, (FlinkTempFunction) catalog.getFunction(path1));
+
+		catalog.createFunction(path1, createAnotherTempFunction(), true);
+
+		compare(func, (FlinkTempFunction) catalog.getFunction(path1));
+	}
+
+	@Test
+	public void testAlterFunction_FlinkTempFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		FlinkTempFunction func = createTempFunction();
+		catalog.createFunction(path1, func, false);
+
+		compare(func, (FlinkTempFunction) catalog.getFunction(path1));
+
+		FlinkTempFunction newFunc = createAnotherTempFunction();
+		catalog.alterFunction(path1, newFunc, false);
+
+		assertNotEquals(func, catalog.getFunction(path1));
+		compare(newFunc, (FlinkTempFunction) catalog.getFunction(path1));
+	}
+
+	@Test
+	public void testAlterFunction_FunctionNotExistException_FlinkTempFunction() {
+		exception.expect(FunctionNotExistException.class);
+		catalog.alterFunction(nonExistObjectPath, createTempFunction(), false);
+	}
+
+	@Test
+	public void testAlterFunction_FunctionNotExist_ignored_FlinkTempFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.alterFunction(nonExistObjectPath, createTempFunction(), true);
+
+		assertFalse(catalog.functionExists(nonExistObjectPath));
+	}
+
+	@Test
+	public void testListFunctions_FlinkTempFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+
+		CatalogFunction func1 = createFunction();
+		CatalogFunction func2 = createTempFunction();
+		catalog.createFunction(path1, func1, false);
+		catalog.createFunction(path3, func2, false);
+
+		assertEquals(new HashSet<>(Arrays.asList(path1, path3)), new HashSet<>(catalog.listFunctions(db1)));
+	}
+
+	@Test
+	public void testDropFunction_FlinkTempFunction() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createFunction(path1, createTempFunction(), false);
+
+		assertTrue(catalog.functionExists(path1));
+
+		catalog.dropFunction(path1, false);
+
+		assertFalse(catalog.functionExists(path1));
+	}
+
+	protected FlinkTempFunction createTempFunction() {
+		return new FlinkTempFunction(new MyScalarFunction());
+	}
+
+	protected FlinkTempFunction createAnotherTempFunction() {
+		return new FlinkTempFunction(new MyOtherScalarFunction());
+	}
+
+	/**
+	 * Test UDF.
+	 */
+	public static class MyScalarFunction extends ScalarFunction {
+		public Integer eval(Integer i) {
+			return i + 1;
+		}
+	}
+
+	/**
+	 * Test UDF.
+	 */
+	public static class MyOtherScalarFunction extends ScalarFunction {
+		public String eval(Integer i) {
+			return String.valueOf(i);
+		}
 	}
 
 	// =====================

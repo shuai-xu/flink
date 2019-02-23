@@ -369,33 +369,23 @@ public class HiveCatalog extends HiveCatalogBase {
 	// ------ functions ------
 
 	@Override
-	public void createFunction(ObjectPath functionPath, CatalogFunction function, boolean ignoreIfExists)
-		throws FunctionAlreadyExistException, DatabaseNotExistException {
-		throw new UnsupportedOperationException();
+	public void createFunction(ObjectPath functionPath, CatalogFunction function, boolean ignoreIfExists) throws FunctionAlreadyExistException, DatabaseNotExistException {
+		throw new UnsupportedOperationException("HiveCatalog does not support creating functions");
 	}
 
 	@Override
 	public void alterFunction(ObjectPath functionPath, CatalogFunction newFunction, boolean ignoreIfNotExists) throws FunctionNotExistException {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("HiveCatalog does not support altering functions");
 	}
 
 	@Override
 	public void dropFunction(ObjectPath functionPath, boolean ignoreIfNotExists) throws FunctionNotExistException {
-		throw new UnsupportedOperationException();
+		throw new UnsupportedOperationException("HiveCatalog does not support dropping functions");
 	}
 
 	@Override
 	public List<ObjectPath> listFunctions(String dbName) throws DatabaseNotExistException {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public CatalogFunction getFunction(ObjectPath functionPath) throws FunctionNotExistException {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean functionExists(ObjectPath functionPath) {
-		throw new UnsupportedOperationException();
+		// TODO: [BLINK-19013930] HiveCatalog.listFunctions() should also return Hive's built in functions
+		return super.listFunctions(dbName);
 	}
 }

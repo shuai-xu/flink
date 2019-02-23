@@ -20,9 +20,11 @@ package org.apache.flink.table.catalog.hive;
 
 import org.apache.flink.table.api.DatabaseAlreadyExistException;
 import org.apache.flink.table.api.DatabaseNotExistException;
+import org.apache.flink.table.api.FunctionNotExistException;
 import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.catalog.CatalogDatabase;
+import org.apache.flink.table.catalog.CatalogFunction;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
 import org.apache.flink.table.catalog.config.CatalogDatabaseConfig;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
+import org.apache.hadoop.hive.metastore.api.Function;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
@@ -334,5 +337,59 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		props.put(HiveDatabaseConfig.HIVE_DB_LOCATION_URI, hiveDb.getLocationUri());
 
 		return new CatalogDatabase(props);
+	}
+
+	// ------ functions ------
+
+	@Override
+	public List<ObjectPath> listFunctions(String dbName) throws DatabaseNotExistException {
+		// Need to explicitly check if database exists, since getFunctions() doesn't throw UnknownDbException
+		if (dbExists(dbName)) {
+			try {
+				return client.getFunctions(dbName, null)
+					.stream()
+					.map(f -> new ObjectPath(dbName, f))
+					.collect(Collectors.toList());
+			} catch (TException e) {
+				throw new FlinkHiveException(
+					String.format("Failed to list functions in database %s", dbName), e);
+			}
+		} else {
+			throw new DatabaseNotExistException(catalogName, dbName);
+		}
+	}
+
+	@Override
+	public CatalogFunction getFunction(ObjectPath functionPath) throws FunctionNotExistException {
+		return createCatalogFunction(getHiveFunction(functionPath));
+	}
+
+	@Override
+	public boolean functionExists(ObjectPath functionPath) {
+		try {
+			client.getFunction(functionPath.getDbName(), functionPath.getObjectName());
+			return true;
+		} catch (NoSuchObjectException e) {
+			return false;
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed to check whether function %s exists or not", functionPath.getFullName()), e);
+		}
+	}
+
+	private Function getHiveFunction(ObjectPath functionPath) {
+		try {
+			return client.getFunction(functionPath.getDbName(), functionPath.getObjectName());
+		} catch (NoSuchObjectException e) {
+			throw new FunctionNotExistException(catalogName, functionPath.getFullName());
+		} catch (TException e) {
+			throw new FlinkHiveException(
+				String.format("Failed to get function %s", functionPath.getFullName()), e);
+		}
+	}
+
+	protected static CatalogFunction createCatalogFunction(Function hiveFunction) {
+		// TODO: extract more properties from hiveFunction and add to CatalogFunction
+		return new CatalogFunction(hiveFunction.getClassName());
 	}
 }
