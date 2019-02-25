@@ -25,12 +25,12 @@ import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
+import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
-import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -48,83 +48,82 @@ public class JobStableDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(JobStableDetector.class);
 
-	public static final ConfigOption<Boolean> INPUT_REQUIRED =
-		ConfigOptions.key("healthmonitor.job-stable-detector.input-required").defaultValue(true);
+	public static final ConfigOption<Long> INTERVAL =
+		ConfigOptions.key("healthmonitor.job-stable-detector.interval.ms").defaultValue(30_000L);
 
 	private HealthMonitor monitor;
+	private MetricProvider metricProvider;
 
 	private long interval;
 
-	private Map<JobVertexID, TaskMetricSubscription> inputCountSubs;
-
 	private long lastStableTime = 0;
 
-	private boolean inputRequired;
+	private Map<JobVertexID, TaskMetricSubscription> initTimeSubs;
 
 	@Override
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
+		this.metricProvider = monitor.getMetricProvider();
 
-		inputCountSubs = new HashMap<>();
+		initTimeSubs = new HashMap<>();
 
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 
-		interval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
+		interval = monitor.getConfig().getLong(INTERVAL);
 
-		inputRequired = monitor.getConfig().getBoolean(INPUT_REQUIRED);
-
-		if (inputRequired) {
-			for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
-				inputCountSubs.put(vertexId,
-					monitor.getMetricProvider().subscribeTaskMetric(
-						monitor.getJobID(),
-						vertexId,
-						MetricNames.TASK_INPUT_COUNT,
-						MetricAggType.MIN,
-						interval,
-						TimelineAggType.EARLIEST));
-			}
+		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
+			initTimeSubs.put(vertexId,
+				metricProvider.subscribeTaskMetric(
+					monitor.getJobID(),
+					vertexId,
+					MetricNames.TASK_INIT_TIME,
+					MetricAggType.MIN,
+					interval,
+					TimelineAggType.LATEST));
 		}
 	}
 
 	@Override
 	public void close() {
-
+		if (metricProvider != null && initTimeSubs != null) {
+			for (TaskMetricSubscription sub : initTimeSubs.values()) {
+				if (sub != null) {
+					metricProvider.unsubscribe(sub);
+				}
+			}
+		}
 	}
 
 	@Override
 	public Symptom detect() throws Exception {
 
 		RestServerClient.JobStatus status = this.monitor.getRestServerClient().getJobStatus(this.monitor.getJobID());
-		long startRunningTime = Long.MIN_VALUE;
+		long allTaskRunningTime = Long.MIN_VALUE;
 		for (Tuple2<Long, ExecutionState> state: status.getTaskStatus().values()) {
 			if (!state.f1.equals(ExecutionState.RUNNING)) {
 				LOGGER.debug("Some task not running yet!");
 				return JobStable.UNSTABLE;
 			}
-			if (startRunningTime < state.f0) {
-				startRunningTime = state.f0;
+			if (allTaskRunningTime < state.f0) {
+				allTaskRunningTime = state.f0;
 			}
 		}
 
-		if (inputRequired && this.monitor.getJobStartExecutionTime() > lastStableTime) {
-			long startInputTime = Long.MIN_VALUE;
-			for (JobVertexID vertexID : inputCountSubs.keySet()) {
-				Tuple2<Long, Double> currentInputCount = inputCountSubs.get(vertexID).getValue();
-				if (!MetricUtils.validateTaskMetric(monitor, interval * 2, inputCountSubs.get(vertexID))
-						|| currentInputCount.f1 == 0) {
-					LOGGER.debug("Some task has no input yet!");
+		if (lastStableTime < allTaskRunningTime) {
+			long allTaskInitializedTime = Long.MIN_VALUE;
+			for (JobVertexID vertexID : initTimeSubs.keySet()) {
+				TaskMetricSubscription sub = initTimeSubs.get(vertexID);
+				if (!MetricUtils.validateTaskMetric(monitor, interval * 2, sub) ||
+					sub.getValue().f0 < allTaskRunningTime ||
+					sub.getValue().f1 < 0.0) {
+					LOGGER.debug("Some task has not initialized yet!");
 					return JobStable.UNSTABLE;
 				}
-				if (startInputTime < currentInputCount.f0) {
-					startInputTime = currentInputCount.f0;
+				if (allTaskInitializedTime < sub.getValue().f0) {
+					allTaskInitializedTime = sub.getValue().f0;
 				}
 			}
-			lastStableTime = startInputTime;
-		}
-
-		if (lastStableTime < startRunningTime) {
-			lastStableTime = startRunningTime;
+			lastStableTime = allTaskInitializedTime;
 		}
 
 		long stableTime = System.currentTimeMillis() - lastStableTime;
