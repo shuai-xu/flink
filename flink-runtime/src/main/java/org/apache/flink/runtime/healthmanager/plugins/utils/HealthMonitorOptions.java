@@ -74,6 +74,8 @@ public class HealthMonitorOptions {
 	public static final ConfigOption<Long> PARALLELISM_SCALE_TIME_OUT =
 			ConfigOptions.key("parallelism.scale.timeout.ms").defaultValue(180000L);
 
+	public static final ConfigOption<Long> PARALLELISM_SCALE_STATE_SIZE_THRESHOLD =
+			ConfigOptions.key("parallelism.scale.state.size.threshold").defaultValue(10L * 1024 * 1024 * 1024);
 	/**
 	 * resource scale ratio.
 	 */

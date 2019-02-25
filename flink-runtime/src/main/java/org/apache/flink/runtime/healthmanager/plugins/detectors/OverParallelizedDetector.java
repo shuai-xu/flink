@@ -114,10 +114,10 @@ public class OverParallelizedDetector implements Detector {
 						jobID, vertexId, SOURCE_PARTITION_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
 				sourcePartitionLatencyCountRangeSubs.put(vertexId,
 					metricProvider.subscribeTaskMetric(
-						jobID, vertexId, SOURCE_PARTITION_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
+						jobID, vertexId, SOURCE_PARTITION_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
 				sourcePartitionLatencySumRangeSubs.put(vertexId,
 					metricProvider.subscribeTaskMetric(
-						jobID, vertexId, SOURCE_PARTITION_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
+						jobID, vertexId, SOURCE_PARTITION_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
 				sourceProcessLatencyCountRangeSubs.put(vertexId,
 						metricProvider.subscribeTaskMetric(
 								jobID, vertexId, SOURCE_PROCESS_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
@@ -176,7 +176,6 @@ public class OverParallelizedDetector implements Detector {
 	@Override
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
-		long now = System.currentTimeMillis();
 
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		if (jobConfig == null) {
@@ -215,10 +214,6 @@ public class OverParallelizedDetector implements Detector {
 			}
 
 			int parallelism = jobConfig.getVertexConfigs().get(vertexId).getParallelism();
-			double taskLatencyCount = latencyCountRangeSub.getValue().f1;
-			double taskLatencySum = latencySumRangeSub.getValue().f1;
-			double taskLatency = taskLatencyCount <= 0.0 ? 0.0 : taskLatencySum / taskLatencyCount / 1.0e9;
-			double inputTps = inputTpsSub.getValue().f1;
 
 			double workload;
 			double minParallelism = 1;
@@ -226,24 +221,28 @@ public class OverParallelizedDetector implements Detector {
 				// reset task latency.
 				double processLatencyCount = sourceProcessLatencyCountRangeSub.getValue().f1;
 				double processLatencySum = sourceProcessLatencySumRangeSub.getValue().f1;
-				taskLatency = processLatencyCount <= 0.0 ? 0.0 : processLatencySum / processLatencyCount / 1.0e9;
+				double taskLatency = processLatencyCount <= 0.0 ? 0.0 : processLatencySum / processLatencyCount / 1.0e9;
 
 				double partitionCount = sourcePartitionCountSub.getValue().f1;
 				double partitionLatencyCount = sourcePartitionLatencyCountRangeSub.getValue().f1;
 				double partitionLatencySum = sourcePartitionLatencySumRangeSub.getValue().f1;
-				double partitionLatency = partitionLatencyCount <= 0.0 ? 0.0 : partitionLatencySum / partitionCount / 1.0e9;
+				double partitionLatency = partitionLatencyCount <= 0.0 ? 0.0 : partitionLatencySum / partitionLatencyCount / 1.0e9;
 				workload = partitionLatency <= 0.0 ? 0.0 : partitionCount * taskLatency / partitionLatency;
 
 				minParallelism = Math.ceil(partitionCount / maxPartitionPerTask);
+				LOGGER.debug("vertex {} partitionCount {} latency {} partitionLatency {} workload {}", vertexId, partitionCount, taskLatency, partitionLatency, workload);
 			} else {
+				double taskLatencyCount = latencyCountRangeSub.getValue().f1;
+				double taskLatencySum = latencySumRangeSub.getValue().f1;
+				double taskLatency = taskLatencyCount <= 0.0 ? 0.0 : taskLatencySum / taskLatencyCount / 1.0e9;
+				double inputTps = inputTpsSub.getValue().f1;
 				workload = taskLatency * inputTps;
+				LOGGER.debug("vertex {} input tps {} latency {} workload {}", vertexId, inputTps, taskLatency, workload);
 			}
-
-			LOGGER.debug("vertex {} input tps {} parallelism {} latency {} workload {}", vertexId, inputTps, parallelism, taskLatency, workload);
 
 			if (parallelism > workload * ratio && parallelism > minParallelism) {
 				jobVertexIDs.add(vertexId);
-				LOGGER.info("Over parallelized detected for vertex {}, tps:{} latency:{} workload:{}.", vertexId, inputTps, taskLatency, workload);
+				LOGGER.info("Over parallelized detected for vertex {}, parallelism:{} workload:{}.", vertexId, parallelism, workload);
 			}
 		}
 

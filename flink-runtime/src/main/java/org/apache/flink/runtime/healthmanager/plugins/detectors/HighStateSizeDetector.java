@@ -18,12 +18,12 @@
 
 package org.apache.flink.runtime.healthmanager.plugins.detectors;
 
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
+import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighStateSize;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 
@@ -41,9 +41,6 @@ public class HighStateSizeDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(HighStateSizeDetector.class);
 
-	public static final ConfigOption<Long> STATE_SIZE_THRESHOLD =
-			ConfigOptions.key("healthmonitor.state.size.threshold").defaultValue(10L * 1024 * 1024 * 1024);
-
 	private HealthMonitor healthMonitor;
 
 	private long threshold;
@@ -51,7 +48,7 @@ public class HighStateSizeDetector implements Detector {
 	@Override
 	public void open(HealthMonitor monitor) {
 		healthMonitor = monitor;
-		threshold = monitor.getConfig().getLong(STATE_SIZE_THRESHOLD);
+		threshold = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STATE_SIZE_THRESHOLD);
 	}
 
 	@Override
@@ -61,9 +58,10 @@ public class HighStateSizeDetector implements Detector {
 	@Override
 	public Symptom detect() throws Exception {
 		List<JobVertexID> highStateSizeVertices = new LinkedList<>();
+		RestServerClient.JobConfig jobConfig = healthMonitor.getJobConfig();
 		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = healthMonitor.getRestServerClient().getJobVertexCheckPointStates(healthMonitor.getJobID());
 		for (Map.Entry<JobVertexID, TaskCheckpointStatistics> entry: checkpointInfo.entrySet()) {
-			if (entry.getValue().getStateSize() > threshold) {
+			if (entry.getValue().getStateSize() * 1.0 / jobConfig.getVertexConfigs().get(entry.getKey()).getParallelism() > threshold) {
 				LOGGER.debug("vertex {} state size [{}] reach threshold.", entry.getKey(), entry.getValue().getStateSize());
 				highStateSizeVertices.add(entry.getKey());
 			}

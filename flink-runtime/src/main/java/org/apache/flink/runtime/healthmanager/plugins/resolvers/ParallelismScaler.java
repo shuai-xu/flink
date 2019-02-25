@@ -40,12 +40,12 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayInc
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighDelay;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighStateSize;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 import org.apache.flink.util.AbstractID;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -98,6 +98,7 @@ public class ParallelismScaler implements Resolver {
 	private int maxPartitionPerTask;
 	private double reservedParallelismRatio;
 	private long stableTime;
+	private long stateSizeThreshold;
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
@@ -129,14 +130,12 @@ public class ParallelismScaler implements Resolver {
 	private JobVertexFrequentFullGC frequentFullGCSymptom;
 	private JobVertexFailover failoverSymptom;
 	private JobStuck jobStuckSymptom;
-	private JobVertexHighStateSize highStateSizeSymptom;
 
 	// diagnose
 
 	private boolean needScaleUpForDelay;
 	private boolean needScaleUpForBackpressure;
 	private boolean needScaleDown;
-	private Set<JobVertexID> vertexToDownScale = new HashSet<>();
 
 	// topology
 
@@ -161,6 +160,7 @@ public class ParallelismScaler implements Resolver {
 		this.maxPartitionPerTask = monitor.getConfig().getInteger(MAX_PARTITION_PER_TASK);
 		this.reservedParallelismRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESERVED_PARALLELISM_RATIO);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STABLE_TIME);
+		this.stateSizeThreshold = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STATE_SIZE_THRESHOLD);
 
 		inputTpsSubs = new HashMap<>();
 		outputTpsSubs = new HashMap<>();
@@ -208,10 +208,10 @@ public class ParallelismScaler implements Resolver {
 						jobID, vertexId, SOURCE_PARTITION_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
 				sourcePartitionLatencyCountRangeSubs.put(vertexId,
 					metricProvider.subscribeTaskMetric(
-						jobID, vertexId, SOURCE_PARTITION_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
+						jobID, vertexId, SOURCE_PARTITION_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
 				sourcePartitionLatencySumRangeSubs.put(vertexId,
 					metricProvider.subscribeTaskMetric(
-						jobID, vertexId, SOURCE_PARTITION_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
+						jobID, vertexId, SOURCE_PARTITION_LATENCY_SUM, MetricAggType.SUM, checkInterval, TimelineAggType.RANGE));
 				sourceProcessLatencyCountRangeSubs.put(vertexId,
 						metricProvider.subscribeTaskMetric(
 								jobID, vertexId, SOURCE_PROCESS_LATENCY_COUNT, MetricAggType.SUM, checkInterval, TimelineAggType.LATEST));
@@ -337,21 +337,31 @@ public class ParallelismScaler implements Resolver {
 			return null;
 		}
 
-		// Step-4. calculate tpsRatio for sub dags
+		// Step-4. calculate sub dags to scale up.
 
-		Map<JobVertexID, Double> subDagTargetTpsRatio = getSubDagTargetTpsRatio(taskMetrics);
+		Map<JobVertexID, Double> subDagScaleUpRatio = getSubDagScaleUpRatio(taskMetrics);
+
+		// Step-4.2.  get scale down vertex.
+		Set<JobVertexID> vertexToDownScale = getVertexToScaleDown();
 
         // Step-5. set parallelisms
 
-		Map<JobVertexID, Integer> targetParallelisms = getVertexTargetParallelisms(subDagTargetTpsRatio, taskMetrics);
+		Map<JobVertexID, Integer> targetParallelisms = getVertexTargetParallelisms(subDagScaleUpRatio, vertexToDownScale, taskMetrics);
 		LOGGER.debug("Target parallelism for vertices before applying constraints: {}.", targetParallelisms);
 
-		updateTargetParallelismsSubjectToConstraints(targetParallelisms, monitor.getJobConfig());
+		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = null;
+		try {
+			checkpointInfo = monitor.getRestServerClient().getJobVertexCheckPointStates(monitor.getJobID());
+		} catch (Exception e) {
+			// fail to get checkpoint info.
+		}
+		Map<JobVertexID, Integer> minParallelisms = getVertexMinParallelisms(monitor.getJobConfig(), checkpointInfo);
+		LOGGER.debug("Min parallelism for vertices: {}", minParallelisms);
+
+		updateTargetParallelismsSubjectToConstraints(targetParallelisms, minParallelisms, monitor.getJobConfig());
 		LOGGER.debug("Target parallelism for vertices after applying constraints: {}.", targetParallelisms);
 
 		// Step-6. generate parallelism rescale action
-
-		Map<JobVertexID, Integer> minParallelisms = getVertexMinParallelisms(monitor.getJobConfig());
 		RescaleJobParallelism rescaleJobParallelism = generateRescaleParallelismAction(targetParallelisms, minParallelisms, monitor.getJobConfig());
 
 		if (rescaleJobParallelism != null && !rescaleJobParallelism.isEmpty()) {
@@ -360,6 +370,22 @@ public class ParallelismScaler implements Resolver {
 		}
 
 		return null;
+	}
+
+	private Set<JobVertexID> getVertexToScaleDown() {
+
+		Set<JobVertexID> vertexToDownScale = new HashSet<>();
+		// find sub dags to downscale
+		vertexToDownScale.clear();
+		if (needScaleDown) {
+			Set<JobVertexID> verticesToDownScale = new HashSet<>(overParallelizedSymptom.getJobVertexIDs());
+			for (JobVertexID vertexId : verticesToDownScale) {
+				vertexToDownScale.add(vertexId);
+			}
+		}
+
+		LOGGER.debug("Roots of sub-dags need to scale down: {}.", vertexToDownScale);
+		return vertexToDownScale;
 	}
 
 	@VisibleForTesting
@@ -373,7 +399,6 @@ public class ParallelismScaler implements Resolver {
 		delayIncreasingSymptom = null;
 		backPressureSymptom = null;
 		overParallelizedSymptom = null;
-		highDelaySymptom = null;
 
 		// read new symptoms
 		for (Symptom symptom : symptomList) {
@@ -422,12 +447,6 @@ public class ParallelismScaler implements Resolver {
 				LOGGER.debug("Over parallelized detected for vertices {}.", overParallelizedSymptom.getJobVertexIDs());
 				continue;
 			}
-
-			if (symptom instanceof JobVertexHighStateSize) {
-				highStateSizeSymptom = (JobVertexHighStateSize) symptom;
-				LOGGER.debug("High state size detected for vertices {}.", highStateSizeSymptom.getJobVertexIDs());
-				continue;
-			}
 		}
 	}
 
@@ -454,7 +473,7 @@ public class ParallelismScaler implements Resolver {
 		return true;
 	}
 
-	private void analyzeJobGraph(RestServerClient.JobConfig jobConfig) {
+	public void analyzeJobGraph(RestServerClient.JobConfig jobConfig) {
 		subDagRoot2SubDagVertex = new HashMap<>();
 		vertex2SubDagRoot = new HashMap<>();
 		subDagRoot2UpstreamVertices = new HashMap<>();
@@ -638,7 +657,7 @@ public class ParallelismScaler implements Resolver {
 	}
 
 	@VisibleForTesting
-	public Map<JobVertexID, Double> getSubDagTargetTpsRatio(
+	public Map<JobVertexID, Double> getSubDagScaleUpRatio(
 			Map<JobVertexID, TaskMetrics> taskMetrics) {
 		Map<JobVertexID, Double> subDagTargetTpsRatio = new HashMap<>();
 
@@ -684,20 +703,6 @@ public class ParallelismScaler implements Resolver {
 
 		LOGGER.debug("Roots of sub-dags need to scale up: {}.", subDagRootsToUpScale);
 
-		// find sub dags to downscale
-
-		vertexToDownScale.clear();
-		if (needScaleDown) {
-			Set<JobVertexID> verticesToDownScale = new HashSet<>(overParallelizedSymptom.getJobVertexIDs());
-			for (JobVertexID vertexId : verticesToDownScale) {
-				vertexToDownScale.add(vertexId);
-			}
-		}
-
-		vertexToDownScale.removeAll(subDagRootsToUpScale);
-
-		LOGGER.debug("Roots of sub-dags need to scale down: {}.", vertexToDownScale);
-
 		// for sub dags that need to rescale, set target scale ratio
 		LOGGER.debug("Target scale up tps ratio for sub-dags before adjusting: {}.", subDagTargetTpsRatio);
 
@@ -730,7 +735,9 @@ public class ParallelismScaler implements Resolver {
 	}
 
 	private Map<JobVertexID, Integer> getVertexTargetParallelisms(
-		Map<JobVertexID, Double> subDagTargetTpsRatio, Map<JobVertexID, TaskMetrics> taskMetrics) {
+			Map<JobVertexID, Double> subDagTargetTpsRatio,
+			Set<JobVertexID> vertexToDownScale,
+			Map<JobVertexID, TaskMetrics> taskMetrics) {
 
 		Map<JobVertexID, Integer> targetParallelisms = new HashMap<>();
 		for (JobVertexID subDagRoot : subDagTargetTpsRatio.keySet()) {
@@ -760,10 +767,12 @@ public class ParallelismScaler implements Resolver {
 		return targetParallelisms;
 	}
 
-	private  Map<JobVertexID, Integer> getVertexMinParallelisms(RestServerClient.JobConfig jobConfig) {
+	@VisibleForTesting
+	public Map<JobVertexID, Integer> getVertexMinParallelisms(
+			RestServerClient.JobConfig jobConfig,
+			Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo) {
 		Map<JobVertexID, Integer> minParallelisms = new HashMap<>();
 		for (JobVertexID vertexId : jobConfig.getVertexConfigs().keySet()) {
-			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexId);
 			minParallelisms.put(vertexId, 1);
 
 			int minParallelism;
@@ -774,17 +783,23 @@ public class ParallelismScaler implements Resolver {
 				if (minParallelism > minParallelisms.get(vertexId)) {
 					minParallelisms.put(vertexId, minParallelism);
 				}
+			}
 
-				if (highStateSizeSymptom != null && highStateSizeSymptom.getJobVertexIDs().contains(vertexId)) {
-					minParallelisms.put(vertexId, vertexConfig.getParallelism());
-				}
+			if (checkpointInfo != null && checkpointInfo.containsKey(vertexId)) {
+				TaskCheckpointStatistics taskCheckpointStatistics = checkpointInfo.get(vertexId);
+				minParallelisms.put(
+						vertexId,
+						Math.max(minParallelisms.get(vertexId), (int) Math.ceil(1.0 * taskCheckpointStatistics.getStateSize() / stateSizeThreshold)));
 			}
 		}
 		return minParallelisms;
 
 	}
 
-	private void updateTargetParallelismsSubjectToConstraints(Map<JobVertexID, Integer> targetParallelisms, RestServerClient.JobConfig jobConfig) {
+	public void updateTargetParallelismsSubjectToConstraints(
+			Map<JobVertexID, Integer> targetParallelisms,
+			Map<JobVertexID, Integer> minParallelisms,
+			RestServerClient.JobConfig jobConfig) {
 
 		// EqualParallelismGroups (EPG)
 
@@ -823,8 +838,8 @@ public class ParallelismScaler implements Resolver {
 			}
 
 			// when vertex has high state size we should not down scale the node.
-			if (highStateSizeSymptom != null && targetParallelism < vertexConfig.getParallelism() && highStateSizeSymptom.getJobVertexIDs().contains(vertexId)) {
-				targetParallelism = vertexConfig.getParallelism();
+			if (minParallelisms != null && minParallelisms.containsKey(vertexId) && targetParallelism < minParallelisms.get(vertexId)) {
+				targetParallelism = minParallelisms.get(vertexId);
 			}
 
 			// parallelism > 0

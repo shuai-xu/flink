@@ -19,7 +19,13 @@
 package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.mock.Whitebox;
+import org.apache.flink.runtime.checkpoint.CheckpointStatsStatus;
+import org.apache.flink.runtime.healthmanager.RestServerClient;
+import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStuck;
@@ -28,11 +34,12 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayInc
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighDelay;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighStateSize;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -79,9 +86,6 @@ public class ParallelismScalerTest {
 		JobVertexOverParallelized overParallelized = mock(JobVertexOverParallelized.class);
 		symptoms.add(overParallelized);
 
-		JobVertexHighStateSize highStateSize = mock(JobVertexHighStateSize.class);
-		symptoms.add(highStateSize);
-
 		scaler.parseSymptoms(symptoms);
 
 		assertEquals(jobStable, Whitebox.getInternalState(scaler, "jobStableSymptom"));
@@ -92,11 +96,21 @@ public class ParallelismScalerTest {
 		assertEquals(delayIncreasing, Whitebox.getInternalState(scaler, "delayIncreasingSymptom"));
 		assertEquals(backPressure, Whitebox.getInternalState(scaler, "backPressureSymptom"));
 		assertEquals(overParallelized, Whitebox.getInternalState(scaler, "overParallelizedSymptom"));
-		assertEquals(highStateSize, Whitebox.getInternalState(scaler, "highStateSizeSymptom"));
+
+		scaler.parseSymptoms(new LinkedList<>());
+		assertEquals(null, Whitebox.getInternalState(scaler, "jobStableSymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "frequentFullGCSymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "failoverSymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "jobStuckSymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "highDelaySymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "delayIncreasingSymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "backPressureSymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "overParallelizedSymptom"));
+
 	}
 
 	@Test
-	public void testGetSubDagTargetTpsRatioOfParallelSource() {
+	public void testGetSubDagTargetTpsRatioForDelay() {
 		JobID jobID = new JobID();
 		JobVertexID vertexID = new JobVertexID();
 		ParallelismScaler scaler = new ParallelismScaler();
@@ -129,7 +143,7 @@ public class ParallelismScalerTest {
 		);
 		allMetrics.put(vertexID, taskMetrics);
 
-		assertTrue(Math.abs(3.2 - scaler.getSubDagTargetTpsRatio(allMetrics).get(vertexID)) < 1e-6);
+		assertTrue(Math.abs(3.2 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
 
 		// not parallel source
 		taskMetrics = new ParallelismScaler.TaskMetrics(
@@ -147,7 +161,128 @@ public class ParallelismScalerTest {
 		);
 		allMetrics.put(vertexID, taskMetrics);
 
-		assertTrue(Math.abs(10 - scaler.getSubDagTargetTpsRatio(allMetrics).get(vertexID)) < 1e-6);
+		assertTrue(Math.abs(10 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
 
+		// not parallel source and target ratio less than ratio.
+		Whitebox.setInternalState(scaler, "upScaleTpsRatio", 11);
+		taskMetrics = new ParallelismScaler.TaskMetrics(
+				vertexID,
+				false,
+				10,
+				0,
+				1.1,
+				0,
+				0.1,
+				0,
+				0.9,
+				0.1,
+				32
+		);
+		allMetrics.put(vertexID, taskMetrics);
+
+		assertTrue(Math.abs(11 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
+	}
+
+	@Test
+	public void testUpdateTargetParallelismSubjectToConstraints() {
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
+		JobVertexID vertex3 = new JobVertexID();
+		JobVertexID vertex4 = new JobVertexID();
+		ParallelismScaler scaler = new ParallelismScaler();
+		Map<JobVertexID, Integer> targetParallelism = new HashMap<>();
+		targetParallelism.put(vertex2, 12);
+		targetParallelism.put(vertex3, 4);
+		targetParallelism.put(vertex4, 7);
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
+		RestServerClient.VertexConfig config1 = new RestServerClient.VertexConfig(32, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config2 = new RestServerClient.VertexConfig(157, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config3 = new RestServerClient.VertexConfig(28, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config4 = new RestServerClient.VertexConfig(97, 1000, ResourceSpec.DEFAULT);
+		vertexConfigs.put(vertex1, config1);
+		vertexConfigs.put(vertex2, config2);
+		vertexConfigs.put(vertex3, config3);
+		vertexConfigs.put(vertex4, config4);
+
+		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputConfigs = new HashMap<>();
+		inputConfigs.put(vertex1, Collections.emptyList());
+		inputConfigs.put(vertex2, Collections.singletonList(Tuple2.of(vertex1, "HASH")));
+		inputConfigs.put(vertex3, Collections.singletonList(Tuple2.of(vertex1, "HASH")));
+		inputConfigs.put(vertex4, Collections.singletonList(Tuple2.of(vertex2, "HASH")));
+		RestServerClient.JobConfig jobConfig = new RestServerClient.JobConfig(new Configuration(), vertexConfigs, inputConfigs);
+		scaler.analyzeJobGraph(jobConfig);
+		scaler.updateTargetParallelismsSubjectToConstraints(targetParallelism, null, jobConfig);
+
+		Map<JobVertexID, Integer> expectParallelism = new HashMap<>();
+		expectParallelism.put(vertex1, 32);
+		expectParallelism.put(vertex2, 12);
+		expectParallelism.put(vertex3, 4);
+		expectParallelism.put(vertex4, 7);
+
+		assertEquals(expectParallelism, targetParallelism);
+
+		targetParallelism = new HashMap<>();
+		targetParallelism.put(vertex2, 12);
+		targetParallelism.put(vertex3, 4);
+		targetParallelism.put(vertex4, 7);
+		Map<JobVertexID, Integer> minParallelisms = new HashMap<>();
+		minParallelisms.put(vertex2, 15);
+		scaler.updateTargetParallelismsSubjectToConstraints(targetParallelism, minParallelisms, jobConfig);
+
+		expectParallelism = new HashMap<>();
+		expectParallelism.put(vertex1, 32);
+		expectParallelism.put(vertex2, 15);
+		expectParallelism.put(vertex3, 4);
+		expectParallelism.put(vertex4, 7);
+
+		assertEquals(expectParallelism, targetParallelism);
+
+	}
+
+	@Test
+	public void testMinParallelism() {
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
+		JobVertexID vertex3 = new JobVertexID();
+		JobVertexID vertex4 = new JobVertexID();
+		ParallelismScaler scaler = new ParallelismScaler();
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
+		RestServerClient.VertexConfig config1 = new RestServerClient.VertexConfig(32, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config2 = new RestServerClient.VertexConfig(157, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config3 = new RestServerClient.VertexConfig(28, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config4 = new RestServerClient.VertexConfig(97, 1000, ResourceSpec.DEFAULT);
+		vertexConfigs.put(vertex1, config1);
+		vertexConfigs.put(vertex2, config2);
+		vertexConfigs.put(vertex3, config3);
+		vertexConfigs.put(vertex4, config4);
+
+		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputConfigs = new HashMap<>();
+		inputConfigs.put(vertex1, Collections.emptyList());
+		inputConfigs.put(vertex2, Collections.singletonList(Tuple2.of(vertex1, "HASH")));
+		inputConfigs.put(vertex3, Collections.singletonList(Tuple2.of(vertex1, "HASH")));
+		inputConfigs.put(vertex4, Collections.singletonList(Tuple2.of(vertex2, "HASH")));
+		RestServerClient.JobConfig jobConfig = new RestServerClient.JobConfig(new Configuration(), vertexConfigs, inputConfigs);
+
+		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = new HashMap<>();
+		TaskCheckpointStatistics statisticsOfVertex2 = new TaskCheckpointStatistics(0, CheckpointStatsStatus.COMPLETED, 0, 8, 0, 0, 0, 0);
+		checkpointInfo.put(vertex2, statisticsOfVertex2);
+
+		Map<JobVertexID, TaskMetricSubscription> partitionCountSubscription = new HashMap<>();
+		TaskMetricSubscription metric1 = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(metric1.getValue()).thenReturn(Tuple2.of(0L, 8.0));
+		partitionCountSubscription.put(vertex1, metric1);
+		Whitebox.setInternalState(scaler, "sourcePartitionCountSubs", partitionCountSubscription);
+		Whitebox.setInternalState(scaler, "maxPartitionPerTask", 2);
+		Whitebox.setInternalState(scaler, "stateSizeThreshold", 4);
+
+		Map<JobVertexID, Integer> expectedMinParallelism = new HashMap<>();
+		expectedMinParallelism.put(vertex1, 4);
+		expectedMinParallelism.put(vertex2, 2);
+		expectedMinParallelism.put(vertex3, 1);
+		expectedMinParallelism.put(vertex4, 1);
+		scaler.analyzeJobGraph(jobConfig);
+		assertEquals(expectedMinParallelism, scaler.getVertexMinParallelisms(jobConfig, checkpointInfo));
 	}
 }
