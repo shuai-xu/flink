@@ -299,4 +299,11 @@ public interface ResourceManagerGateway extends FencedRpcGateway<ResourceManager
 	 * @return
 	 */
 	CompletableFuture<Map<Long, Exception>> requestTotalResourceLimitExceptions(@RpcTimeout Time timeout);
+
+	/**
+	 * Request task manager exceptions.
+	 * @param timeout
+	 * @return
+	 */
+	CompletableFuture<Map<Long, Tuple2<ResourceID, Exception>>> requestTaskManagerExceptions(@RpcTimeout Time timeout);
 }

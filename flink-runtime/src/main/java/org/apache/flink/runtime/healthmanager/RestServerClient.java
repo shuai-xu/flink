@@ -117,6 +117,11 @@ public interface RestServerClient {
 	Map<Long, Exception> getTotalResourceLimitExceptions() throws Exception;
 
 	/**
+	 * get task manager exceptions.
+	 */
+	Map<Long, Tuple2<String, Exception>> getTaskManagerExceptions() throws Exception;
+
+	/**
 	 * get all JobVertex state size.
 	 */
 	Map<JobVertexID, TaskCheckpointStatistics> getJobVertexCheckPointStates(JobID jobId) throws Exception;

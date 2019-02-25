@@ -386,6 +386,11 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
+	public Map<Long, Tuple2<String, Exception>> getTaskManagerExceptions() throws Exception {
+		return null;
+	}
+
+	@Override
 	public Map<JobVertexID, TaskCheckpointStatistics> getJobVertexCheckPointStates(JobID jobId) throws Exception {
 		final CheckpointingStatisticsHeaders header = CheckpointingStatisticsHeaders.getInstance();
 		final JobMessageParameters param = header.getUnresolvedMessageParameters();

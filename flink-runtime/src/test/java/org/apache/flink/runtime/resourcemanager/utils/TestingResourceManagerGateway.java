@@ -390,4 +390,9 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
 	public CompletableFuture<Map<Long, Exception>> requestTotalResourceLimitExceptions(@RpcTimeout Time timeout) {
 		return FutureUtils.completedExceptionally(new UnsupportedOperationException("Not yet implemented"));
 	}
+
+	@Override
+	public CompletableFuture<Map<Long, Tuple2<ResourceID, Exception>>> requestTaskManagerExceptions(@RpcTimeout Time timeout) {
+		return FutureUtils.completedExceptionally(new UnsupportedOperationException("Not yet implemented"));
+	}
 }

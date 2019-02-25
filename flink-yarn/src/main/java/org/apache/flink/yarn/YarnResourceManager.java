@@ -490,7 +490,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 					final ResourceID resourceId = new ResourceID(containerStatus.getContainerId().toString());
 					final YarnWorkerNode yarnWorkerNode = workerNodeMap.remove(resourceId);
 
-					boolean registered = closeTaskManagerConnection(resourceId, new Exception(containerStatus.getDiagnostics()));
+					Exception exception = new Exception(containerStatus.getDiagnostics());
+					taskManagerExceptions.put(System.currentTimeMillis(), new Tuple2<>(resourceId, exception));
+					boolean registered = closeTaskManagerConnection(resourceId, exception);
 					// We only request new container for it when the container has not register to the RM as otherwise
 					// the job master will ask for it when failover.
 					if (!registered && yarnWorkerNode != null) {

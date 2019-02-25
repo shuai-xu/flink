@@ -151,6 +151,7 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 	protected final double maxTotalCpuCore;
 	protected final int maxTotalMemoryMb;
 	protected ConcurrentHashMap<Long, Exception> tryAllocateExceedLimitExceptions;
+	protected ConcurrentHashMap<Long, Tuple2<ResourceID, Exception>> taskManagerExceptions;
 
 	public ResourceManager(
 			RpcService rpcService,
@@ -196,6 +197,7 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 		maxTotalCpuCore = resourceManagerConfiguration.getMaxTotalCpuCore();
 		maxTotalMemoryMb = resourceManagerConfiguration.getMaxTotalMemoryMb();
 		tryAllocateExceedLimitExceptions = new ConcurrentHashMap<>();
+		taskManagerExceptions = new ConcurrentHashMap<>();
 	}
 
 
@@ -687,6 +689,10 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
 		return CompletableFuture.completedFuture(tryAllocateExceedLimitExceptions);
 	}
 
+	@Override
+	public CompletableFuture<Map<Long, Tuple2<ResourceID, Exception>>> requestTaskManagerExceptions(Time timeout) {
+		return CompletableFuture.completedFuture(taskManagerExceptions);
+	}
 	// ------------------------------------------------------------------------
 	//  Internal methods
 	// ------------------------------------------------------------------------
