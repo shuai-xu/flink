@@ -23,7 +23,6 @@ import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Double
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.util.concurrent.atomic.AtomicInteger
-
 import org.apache.calcite.avatica.util.ByteString
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql.SqlOperator
@@ -49,6 +48,9 @@ import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging.CODE_LOG
 import org.apache.flink.types.Row
 import org.apache.flink.util.{Preconditions, StringUtils}
+
+import com.google.common.cache.{CacheBuilder, CacheLoader}
+import com.google.common.util.concurrent.{ExecutionError, UncheckedExecutionException}
 import org.codehaus.commons.compiler.{CompileException, ICookable}
 import org.codehaus.janino.SimpleCompiler
 
@@ -1218,8 +1220,30 @@ object CodeGenUtils {
 
   // ----------------------------------------------------------------------------------------------
 
-  @throws(classOf[CompileException])
-  def compile[T](cl: ClassLoader, name: String, code: String): Class[T] = {
+  /**
+    * Cache of compile, Janino generates a new Class Loader and a new Class file every compile
+    * (guaranteeing that the class name will not be repeated). This leads to multiple tasks of
+    * the same process that generate a large number of duplicate class, resulting in a large
+    * number of Meta zone GC (class unloading), resulting in performance bottlenecks. So we add
+    * a cache to avoid this problem.
+    */
+  private val compileCache = CacheBuilder.newBuilder()
+      .maximumSize(100)
+      .build(
+        new CacheLoader[(ClassLoader, String, String), Class[_]]() {
+          override def load(args: (ClassLoader, String, String)): Class[_] = {
+            doCompile(args._1, args._2, args._3)
+          }
+        })
+
+  def compile[T](cl: ClassLoader, name: String, code: String): Class[T] = try {
+    compileCache.get((cl, name, code)).asInstanceOf[Class[T]]
+  } catch {
+    case e @ (_: UncheckedExecutionException | _: ExecutionError) =>
+      throw e.getCause
+  }
+
+  private def doCompile[T](cl: ClassLoader, name: String, code: String): Class[T] = {
     CODE_LOG.debug(s"Compiling: $name \n\n Code:\n$code")
     require(cl != null, "Classloader must not be null.")
     val compiler = new SimpleCompiler()
