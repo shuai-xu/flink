@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.checkpoint;
 
+import org.apache.flink.runtime.state.IncrementalStateHandle;
 import org.apache.flink.runtime.state.StateObject;
 import org.apache.flink.runtime.state.StateUtil;
 
@@ -141,6 +142,10 @@ public class StateObjectCollection<T extends StateObject> implements Collection<
 		return sumAllSizes(stateObjects);
 	}
 
+	public long getFullStateSize() {
+		return sumAllFullSizes(stateObjects);
+	}
+
 	/**
 	 * Returns true if this contains at least one {@link StateObject}.
 	 */
@@ -201,5 +206,17 @@ public class StateObjectCollection<T extends StateObject> implements Collection<
 
 	private static long getSizeNullSafe(StateObject stateObject) {
 		return stateObject != null ? stateObject.getStateSize() : 0L;
+	}
+
+	private static long sumAllFullSizes(Collection<? extends StateObject> stateObject) {
+		long fullSize = 0L;
+		for (StateObject object : stateObject) {
+			if (object instanceof IncrementalStateHandle) {
+				fullSize += ((IncrementalStateHandle) object).getFullStateSize();
+			} else {
+				fullSize += getSizeNullSafe(object);
+			}
+		}
+		return fullSize;
 	}
 }

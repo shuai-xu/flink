@@ -208,6 +208,7 @@ public class CheckpointStatsDetailsSubtasksHandler extends AbstractExecutionGrap
 				gen.writeNumberField("ack_timestamp", subtask.getAckTimestamp());
 				gen.writeNumberField("end_to_end_duration", subtask.getEndToEndDuration(checkpoint.getTriggerTimestamp()));
 				gen.writeNumberField("state_size", subtask.getStateSize());
+				gen.writeNumberField("full_state_size", subtask.getFullStateSize());
 
 				gen.writeObjectFieldStart("checkpoint");
 				gen.writeNumberField("sync", subtask.getSyncCheckpointDuration());

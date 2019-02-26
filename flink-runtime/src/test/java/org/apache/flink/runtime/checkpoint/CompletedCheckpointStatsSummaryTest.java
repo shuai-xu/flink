@@ -98,6 +98,7 @@ public class CompletedCheckpointStatsSummaryTest {
 			taskStats,
 			1,
 			stateSize,
+			stateSize,
 			alignmentBuffered,
 			latest,
 			null);

@@ -183,7 +183,7 @@ public class RocksDBIncrementalSnapshotOperation {
 						// original from the shared state registry (created from a previous checkpoint)
 						sstFiles.put(
 							stateHandleID,
-							Tuple2.of(tuple2.f0, new PlaceholderStreamStateHandle()));
+							Tuple2.of(tuple2.f0, new PlaceholderStreamStateHandle(tuple2.f1.getStateSize())));
 					} else {
 						StreamStateHandle streamStateHandle = materializeStateData(filePath);
 						// unique id for the materialized stream state handle.

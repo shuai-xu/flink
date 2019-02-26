@@ -81,11 +81,22 @@ public abstract class AbstractCheckpointStats implements Serializable {
 	public abstract int getNumberOfAcknowledgedSubtasks();
 
 	/**
-	 * Returns the total checkpoint state size over all subtasks.
+	 * Returns the actual checkpoint state size over all subtasks.
 	 *
-	 * @return Total checkpoint state size over all subtasks.
+	 * <p>When incremental checkpoint is activated, the state size represents the actual uploaded size.
+	 *
+	 * @return Actual checkpoint state size over all subtasks.
 	 */
 	public abstract long getStateSize();
+
+	/**
+	 * Returns the total full checkpoint state size over all subtasks
+	 *
+	 * <p>When incremental checkpoint is activated, the full state size represents the total not the actual uploaded size.
+	 *
+	 * @return Total full checkpoint state size over all subtasks.
+	 */
+	public abstract long getFullStateSize();
 
 	/**
 	 * Returns the total buffered bytes during alignment over all subtasks.

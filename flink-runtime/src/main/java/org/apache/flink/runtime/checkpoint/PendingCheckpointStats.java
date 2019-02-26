@@ -50,8 +50,11 @@ public class PendingCheckpointStats extends AbstractCheckpointStats {
 	/** The current number of acknowledged subtasks. */
 	private volatile int currentNumAcknowledgedSubtasks;
 
-	/** Current checkpoint state size over all collected subtasks. */
+	/** Current actual checkpoint state size over all collected subtasks. */
 	private volatile long currentStateSize;
+
+	/** Current full checkpoint state size over all collected subtasks. */
+	private volatile long currentFullStateSize;
 
 	/** Current buffered bytes during alignment over all collected subtasks. */
 	private volatile long currentAlignmentBuffered;
@@ -97,6 +100,11 @@ public class PendingCheckpointStats extends AbstractCheckpointStats {
 	}
 
 	@Override
+	public long getFullStateSize() {
+		return currentFullStateSize;
+	}
+
+	@Override
 	public long getAlignmentBuffered() {
 		return currentAlignmentBuffered;
 	}
@@ -125,6 +133,7 @@ public class PendingCheckpointStats extends AbstractCheckpointStats {
 			latestAcknowledgedSubtask = subtask;
 
 			currentStateSize += subtask.getStateSize();
+			currentFullStateSize += subtask.getFullStateSize();
 
 			long alignmentBuffered = subtask.getAlignmentBuffered();
 			if (alignmentBuffered > 0) {
@@ -152,6 +161,7 @@ public class PendingCheckpointStats extends AbstractCheckpointStats {
 			new HashMap<>(taskStats),
 			currentNumAcknowledgedSubtasks,
 			currentStateSize,
+			currentFullStateSize,
 			currentAlignmentBuffered,
 			latestAcknowledgedSubtask,
 				externalPointer);
@@ -176,6 +186,7 @@ public class PendingCheckpointStats extends AbstractCheckpointStats {
 			new HashMap<>(taskStats),
 			currentNumAcknowledgedSubtasks,
 			currentStateSize,
+			currentFullStateSize,
 			currentAlignmentBuffered,
 			failureTimestamp,
 			latestAcknowledgedSubtask,

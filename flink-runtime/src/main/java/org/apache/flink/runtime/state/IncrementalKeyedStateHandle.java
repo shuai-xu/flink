@@ -52,7 +52,7 @@ import java.util.UUID;
  * should not be called from production code. This means this class is also not suited to serve as
  * a key, e.g. in hash maps.
  */
-public class IncrementalKeyedStateHandle implements KeyedStateHandle {
+public class IncrementalKeyedStateHandle implements KeyedStateHandle, IncrementalStateHandle {
 
 	private static final Logger LOG = LoggerFactory.getLogger(IncrementalKeyedStateHandle.class);
 
@@ -207,6 +207,11 @@ public class IncrementalKeyedStateHandle implements KeyedStateHandle {
 		}
 
 		return size;
+	}
+
+	@Override
+	public long getFullStateSize() {
+		return getStateSize();
 	}
 
 	@Override

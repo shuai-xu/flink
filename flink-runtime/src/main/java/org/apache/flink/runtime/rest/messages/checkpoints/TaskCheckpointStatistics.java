@@ -40,6 +40,8 @@ public class TaskCheckpointStatistics implements ResponseBody {
 
 	public static final String FIELD_NAME_STATE_SIZE = "state_size";
 
+	public static final String FIELD_NAME_FULL_STATE_SIZE = "full_state_size";
+
 	public static final String FIELD_NAME_DURATION = "end_to_end_duration";
 
 	public static final String FIELD_NAME_ALIGNMENT_BUFFERED = "alignment_buffered";
@@ -60,6 +62,9 @@ public class TaskCheckpointStatistics implements ResponseBody {
 	@JsonProperty(FIELD_NAME_STATE_SIZE)
 	private final long stateSize;
 
+	@JsonProperty(FIELD_NAME_FULL_STATE_SIZE)
+	private final long fullStateSize;
+
 	@JsonProperty(FIELD_NAME_DURATION)
 	private final long duration;
 
@@ -78,6 +83,7 @@ public class TaskCheckpointStatistics implements ResponseBody {
 			@JsonProperty(FIELD_NAME_CHECKPOINT_STATUS) CheckpointStatsStatus checkpointStatus,
 			@JsonProperty(FIELD_NAME_LATEST_ACK_TIMESTAMP) long latestAckTimestamp,
 			@JsonProperty(FIELD_NAME_STATE_SIZE) long stateSize,
+			@JsonProperty(FIELD_NAME_FULL_STATE_SIZE) long fullStateSize,
 			@JsonProperty(FIELD_NAME_DURATION) long duration,
 			@JsonProperty(FIELD_NAME_ALIGNMENT_BUFFERED) long alignmentBuffered,
 			@JsonProperty(FIELD_NAME_NUM_SUBTASKS) int numSubtasks,
@@ -87,6 +93,7 @@ public class TaskCheckpointStatistics implements ResponseBody {
 		this.checkpointStatus = Preconditions.checkNotNull(checkpointStatus);
 		this.latestAckTimestamp = latestAckTimestamp;
 		this.stateSize = stateSize;
+		this.fullStateSize = fullStateSize;
 		this.duration = duration;
 		this.alignmentBuffered = alignmentBuffered;
 		this.numSubtasks = numSubtasks;
@@ -99,6 +106,10 @@ public class TaskCheckpointStatistics implements ResponseBody {
 
 	public long getStateSize() {
 		return stateSize;
+	}
+
+	public long getFullStateSize() {
+		return fullStateSize;
 	}
 
 	public long getDuration() {
@@ -137,6 +148,7 @@ public class TaskCheckpointStatistics implements ResponseBody {
 		return checkpointId == that.checkpointId &&
 			latestAckTimestamp == that.latestAckTimestamp &&
 			stateSize == that.stateSize &&
+			fullStateSize == that.fullStateSize &&
 			duration == that.duration &&
 			alignmentBuffered == that.alignmentBuffered &&
 			numSubtasks == that.numSubtasks &&
@@ -146,6 +158,6 @@ public class TaskCheckpointStatistics implements ResponseBody {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(checkpointId, checkpointStatus, latestAckTimestamp, stateSize, duration, alignmentBuffered, numSubtasks, numAckSubtasks);
+		return Objects.hash(checkpointId, checkpointStatus, latestAckTimestamp, stateSize, fullStateSize, duration, alignmentBuffered, numSubtasks, numAckSubtasks);
 	}
 }

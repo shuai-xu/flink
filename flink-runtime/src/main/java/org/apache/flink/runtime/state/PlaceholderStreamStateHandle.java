@@ -27,11 +27,17 @@ import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
  * case of {@link ByteStreamStateHandle}. This class is used in the referenced states of
  * {@link IncrementalKeyedStateHandle}.
  */
-public class PlaceholderStreamStateHandle implements StreamStateHandle {
+public class PlaceholderStreamStateHandle implements StreamStateHandle, IncrementalStateHandle {
 
 	private static final long serialVersionUID = 1L;
 
+	private long fullStateSize = 0L;
+
 	public PlaceholderStreamStateHandle() {
+	}
+
+	public PlaceholderStreamStateHandle(long fullStateSize) {
+		this.fullStateSize = fullStateSize;
 	}
 
 	@Override
@@ -48,5 +54,10 @@ public class PlaceholderStreamStateHandle implements StreamStateHandle {
 	@Override
 	public long getStateSize() {
 		return 0L;
+	}
+
+	@Override
+	public long getFullStateSize() {
+		return fullStateSize;
 	}
 }

@@ -62,6 +62,7 @@ public class TaskCheckpointStatisticsWithSubtaskDetailsTest extends RestResponse
 			CheckpointStatsStatus.COMPLETED,
 			4L,
 			1337L,
+			1337L,
 			1L,
 			2L,
 			8,

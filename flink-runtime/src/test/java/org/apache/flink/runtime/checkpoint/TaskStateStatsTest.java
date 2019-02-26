@@ -63,6 +63,7 @@ public class TaskStateStatsTest {
 				rand.nextInt(128),
 				rand.nextInt(128),
 				rand.nextInt(128),
+				rand.nextInt(128),
 				rand.nextInt(128));
 
 			stateSize += subtasks[i].getStateSize();
@@ -78,13 +79,14 @@ public class TaskStateStatsTest {
 			assertEquals(alignmentBuffered, taskStats.getAlignmentBuffered());
 		}
 
-		assertFalse(taskStats.reportSubtaskStats(new SubtaskStateStats(0, 0, 0, 0, 0, 0, 0)));
+		assertFalse(taskStats.reportSubtaskStats(new SubtaskStateStats(0, 0, 0, 0, 0, 0, 0, 0)));
 
 		// Test that all subtasks are taken into the account for the summary.
 		// The correctness of the actual results is checked in the test of the
 		// MinMaxAvgStats.
 		TaskStateStats.TaskStateStatsSummary summary = taskStats.getSummaryStats();
 		assertEquals(subtasks.length, summary.getStateSizeStats().getCount());
+		assertEquals(subtasks.length, summary.getFullStateSizeStats().getCount());
 		assertEquals(subtasks.length, summary.getAckTimestampStats().getCount());
 		assertEquals(subtasks.length, summary.getSyncCheckpointDurationStats().getCount());
 		assertEquals(subtasks.length, summary.getAsyncCheckpointDurationStats().getCount());
@@ -110,6 +112,7 @@ public class TaskStateStatsTest {
 				rand.nextInt(128),
 				rand.nextInt(128),
 				rand.nextInt(128),
+				rand.nextInt(128),
 				rand.nextInt(128));
 
 			stateSize += subtasks[i].getStateSize();
@@ -125,6 +128,7 @@ public class TaskStateStatsTest {
 
 		TaskStateStats.TaskStateStatsSummary summary = copy.getSummaryStats();
 		assertEquals(subtasks.length, summary.getStateSizeStats().getCount());
+		assertEquals(subtasks.length, summary.getFullStateSizeStats().getCount());
 		assertEquals(subtasks.length, summary.getAckTimestampStats().getCount());
 		assertEquals(subtasks.length, summary.getSyncCheckpointDurationStats().getCount());
 		assertEquals(subtasks.length, summary.getAsyncCheckpointDurationStats().getCount());

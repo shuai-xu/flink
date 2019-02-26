@@ -137,12 +137,21 @@ public class TaskStateStats implements Serializable {
 	}
 
 	/**
-	 * Returns the total checkpoint state size over all subtasks.
+	 * Returns the total actual checkpoint state size over all subtasks.
 	 *
-	 * @return Total checkpoint state size over all subtasks.
+	 * @return Total actual checkpoint state size over all subtasks.
 	 */
 	public long getStateSize() {
 		return summaryStats.getStateSizeStats().getSum();
+	}
+
+	/**
+	 * Returns the total full checkpoint state size over all subtasks.
+	 *
+	 * @return Total full checkpoint state size over all subtasks.
+	 */
+	public long getFullStateSize() {
+		return summaryStats.getFullStateSizeStats().getSum();
 	}
 
 	/**
@@ -203,6 +212,7 @@ public class TaskStateStats implements Serializable {
 		private static final long serialVersionUID = 1009476026522091909L;
 
 		private MinMaxAvgStats stateSize = new MinMaxAvgStats();
+		private MinMaxAvgStats fullStateSize = new MinMaxAvgStats();
 		private MinMaxAvgStats ackTimestamp = new MinMaxAvgStats();
 		private MinMaxAvgStats syncCheckpointDuration = new MinMaxAvgStats();
 		private MinMaxAvgStats asyncCheckpointDuration = new MinMaxAvgStats();
@@ -216,6 +226,7 @@ public class TaskStateStats implements Serializable {
 		 */
 		void updateSummary(SubtaskStateStats subtaskStats) {
 			stateSize.add(subtaskStats.getStateSize());
+			fullStateSize.add(subtaskStats.getFullStateSize());
 			ackTimestamp.add(subtaskStats.getAckTimestamp());
 			syncCheckpointDuration.add(subtaskStats.getSyncCheckpointDuration());
 			asyncCheckpointDuration.add(subtaskStats.getAsyncCheckpointDuration());
@@ -224,12 +235,21 @@ public class TaskStateStats implements Serializable {
 		}
 
 		/**
-		 * Returns the summary stats for the state size.
+		 * Returns the summary stats for the actual state size.
 		 *
-		 * @return Summary stats for the state size.
+		 * @return Summary stats for the actual state size.
 		 */
 		public MinMaxAvgStats getStateSizeStats() {
 			return stateSize;
+		}
+
+		/**
+		 * Returns the summary stats for the full state size.
+		 *
+		 * @return Summary stats for the full state size.
+		 */
+		public MinMaxAvgStats getFullStateSizeStats() {
+			return fullStateSize;
 		}
 
 		/**

@@ -38,6 +38,7 @@ public class TaskCheckpointStatisticsTest extends RestResponseMarshallingTestBas
 			CheckpointStatsStatus.FAILED,
 			42L,
 			1L,
+			1L,
 			23L,
 			1337L,
 			9,

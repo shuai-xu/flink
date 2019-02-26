@@ -54,6 +54,7 @@ public class FailedCheckpointStatsTest {
 			0,
 			0,
 			0,
+			0,
 			failureTimestamp,
 			null,
 			null);
@@ -79,6 +80,7 @@ public class FailedCheckpointStatsTest {
 			taskStats,
 			3,
 			190890123,
+			190890123,
 			0,
 			failureTimestamp,
 			null,
@@ -93,6 +95,7 @@ public class FailedCheckpointStatsTest {
 		assertEquals(failed.getNumberOfAcknowledgedSubtasks(), copy.getNumberOfAcknowledgedSubtasks());
 		assertEquals(failed.getEndToEndDuration(), copy.getEndToEndDuration());
 		assertEquals(failed.getStateSize(), copy.getStateSize());
+		assertEquals(failed.getFullStateSize(), copy.getFullStateSize());
 		assertEquals(failed.getLatestAcknowledgedSubtaskStats(), copy.getLatestAcknowledgedSubtaskStats());
 		assertEquals(failed.getStatus(), copy.getStatus());
 		assertEquals(failed.getFailureMessage(), copy.getFailureMessage());

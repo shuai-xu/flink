@@ -72,6 +72,10 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 	/** Default size for the write buffer */
 	public static final int DEFAULT_WRITE_BUFFER_SIZE = 4096;
 
+	public int getFileStateThreshold() {
+		return fileStateThreshold;
+	}
+
 	/** State below this size will be stored as part of the metadata, rather than in files */
 	private final int fileStateThreshold;
 

@@ -107,7 +107,7 @@ public class SharedStateRegistry implements AutoCloseable {
 				// delete if this is a real duplicate
 				if (!Objects.equals(state, entry.stateHandle)) {
 					scheduledStateDeletion = state;
-					LOG.trace("Identified duplicate state registration under key {}. New state {} was determined to " +
+					LOG.info("Identified duplicate state registration under key {}. New state {} was determined to " +
 							"be an unnecessary copy of existing state {} and will be dropped.",
 						registrationKey,
 						state,

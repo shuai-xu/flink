@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 /**
  * An implementation of {@link KeyedStateHandle} which will be used in incremental snapshot/restore.
  */
-public class IncrementalKeyedStateSnapshot implements KeyedStateHandle {
+public class IncrementalKeyedStateSnapshot implements KeyedStateHandle, IncrementalStateHandle {
 
 	private static final Logger LOG = LoggerFactory.getLogger(IncrementalKeyedStateHandle.class);
 
@@ -207,6 +207,25 @@ public class IncrementalKeyedStateSnapshot implements KeyedStateHandle {
 		}
 
 		return size;
+	}
+
+	@Override
+	public long getFullStateSize() {
+		long fullSize = StateUtil.getStateSize(metaStateHandle);
+
+		for (Tuple2<String, StreamStateHandle> sharedStateHandle : sharedState.values()) {
+			if (sharedStateHandle.f1 instanceof IncrementalStateHandle) {
+				fullSize += ((IncrementalStateHandle) sharedStateHandle.f1).getFullStateSize();
+			} else {
+				fullSize += sharedStateHandle.f1.getStateSize();
+			}
+		}
+
+		for (StreamStateHandle privateStateHandle : privateState.values()) {
+			fullSize += privateStateHandle.getStateSize();
+		}
+
+		return fullSize;
 	}
 
 	@Nonnull

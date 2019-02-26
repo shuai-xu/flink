@@ -34,6 +34,7 @@ public class SubtaskStateStatsTest {
 			0,
 			Integer.MAX_VALUE + 1L,
 			Integer.MAX_VALUE + 2L,
+			Integer.MAX_VALUE + 2L,
 			Integer.MAX_VALUE + 3L,
 			Integer.MAX_VALUE + 4L,
 			Integer.MAX_VALUE + 5L,
@@ -42,6 +43,7 @@ public class SubtaskStateStatsTest {
 		assertEquals(0, stats.getSubtaskIndex());
 		assertEquals(Integer.MAX_VALUE + 1L, stats.getAckTimestamp());
 		assertEquals(Integer.MAX_VALUE + 2L, stats.getStateSize());
+		assertEquals(Integer.MAX_VALUE + 2L, stats.getFullStateSize());
 		assertEquals(Integer.MAX_VALUE + 3L, stats.getSyncCheckpointDuration());
 		assertEquals(Integer.MAX_VALUE + 4L, stats.getAsyncCheckpointDuration());
 		assertEquals(Integer.MAX_VALUE + 5L, stats.getAlignmentBuffered());
@@ -65,6 +67,7 @@ public class SubtaskStateStatsTest {
 			0,
 			Integer.MAX_VALUE + 1L,
 			Integer.MAX_VALUE + 2L,
+			Integer.MAX_VALUE + 2L,
 			Integer.MAX_VALUE + 3L,
 			Integer.MAX_VALUE + 4L,
 			Integer.MAX_VALUE + 5L,
@@ -75,6 +78,7 @@ public class SubtaskStateStatsTest {
 		assertEquals(0, copy.getSubtaskIndex());
 		assertEquals(Integer.MAX_VALUE + 1L, copy.getAckTimestamp());
 		assertEquals(Integer.MAX_VALUE + 2L, copy.getStateSize());
+		assertEquals(Integer.MAX_VALUE + 2L, copy.getFullStateSize());
 		assertEquals(Integer.MAX_VALUE + 3L, copy.getSyncCheckpointDuration());
 		assertEquals(Integer.MAX_VALUE + 4L, copy.getAsyncCheckpointDuration());
 		assertEquals(Integer.MAX_VALUE + 5L, copy.getAlignmentBuffered());

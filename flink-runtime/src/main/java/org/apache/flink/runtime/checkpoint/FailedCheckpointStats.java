@@ -37,8 +37,11 @@ public class FailedCheckpointStats extends AbstractCheckpointStats {
 	/** Number of acknowledged tasks. */
 	private final int numAcknowledgedSubtasks;
 
-	/** Total checkpoint state size over all subtasks. */
+	/** Total actual checkpoint state size over all subtasks. */
 	private final long stateSize;
+
+	/** Total full checkpoint state size over all subtasks. */
+	private final long fullStateSize;
 
 	/** Buffered bytes during alignment over all subtasks. */
 	private final long alignmentBuffered;
@@ -66,7 +69,8 @@ public class FailedCheckpointStats extends AbstractCheckpointStats {
 	 * @param totalSubtaskCount Total number of subtasks for the checkpoint.
 	 * @param taskStats Task stats for each involved operator.
 	 * @param numAcknowledgedSubtasks Number of acknowledged subtasks.
-	 * @param stateSize Total checkpoint state size over all subtasks.
+	 * @param stateSize Total actual checkpoint state size over all subtasks.
+	 * @param fullStateSize Total full checkpoint state size over all subtasks.
 	 * @param alignmentBuffered Buffered bytes during alignment over all subtasks.
 	 * @param failureTimestamp Timestamp when this checkpoint failed.
 	 * @param latestAcknowledgedSubtask The latest acknowledged subtask stats or <code>null</code>.
@@ -80,6 +84,7 @@ public class FailedCheckpointStats extends AbstractCheckpointStats {
 			Map<JobVertexID, TaskStateStats> taskStats,
 			int numAcknowledgedSubtasks,
 			long stateSize,
+			long fullStateSize,
 			long alignmentBuffered,
 			long failureTimestamp,
 			@Nullable SubtaskStateStats latestAcknowledgedSubtask,
@@ -90,6 +95,8 @@ public class FailedCheckpointStats extends AbstractCheckpointStats {
 		this.numAcknowledgedSubtasks = numAcknowledgedSubtasks;
 		checkArgument(stateSize >= 0, "Negative state size");
 		this.stateSize = stateSize;
+		checkArgument(fullStateSize >= stateSize, "Illegal full state size: " + fullStateSize + " v.s state size:" + stateSize);
+		this.fullStateSize = fullStateSize;
 		this.alignmentBuffered = alignmentBuffered;
 		this.failureTimestamp = failureTimestamp;
 		this.latestAcknowledgedSubtask = latestAcknowledgedSubtask;
@@ -109,6 +116,11 @@ public class FailedCheckpointStats extends AbstractCheckpointStats {
 	@Override
 	public long getStateSize() {
 		return stateSize;
+	}
+
+	@Override
+	public long getFullStateSize() {
+		return fullStateSize;
 	}
 
 	@Override

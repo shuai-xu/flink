@@ -48,6 +48,9 @@ public class SubtaskStateStats implements Serializable {
 	/** Size of the checkpointed state at this subtask. */
 	private final long stateSize;
 
+	/** Full size of the checkpointed state at this subtask. */
+	private final long fullStateSize;
+
 	/** Checkpoint duration at the operator (sync part) in milliseconds. */
 	private final long syncCheckpointDuration;
 
@@ -66,6 +69,7 @@ public class SubtaskStateStats implements Serializable {
 	 * @param subtaskIndex Index of the subtask.
 	 * @param ackTimestamp Timestamp when the acknowledgement of this subtask was received at the coordinator.
 	 * @param stateSize Size of the checkpointed state at this subtask.
+	 * @param stateSize Full size of the checkpointed state at this subtask, useful for incremental checkpoints.
 	 * @param syncCheckpointDuration Checkpoint duration at the task (synchronous part)
 	 * @param asyncCheckpointDuration  Checkpoint duration at the task (asynchronous part)
 	 * @param alignmentBuffered Bytes buffered during stream alignment (for exactly-once only).
@@ -75,6 +79,7 @@ public class SubtaskStateStats implements Serializable {
 			int subtaskIndex,
 			long ackTimestamp,
 			long stateSize,
+			long fullStateSize,
 			long syncCheckpointDuration,
 			long asyncCheckpointDuration,
 			long alignmentBuffered,
@@ -84,6 +89,7 @@ public class SubtaskStateStats implements Serializable {
 		this.subtaskIndex = subtaskIndex;
 		checkArgument(stateSize >= 0, "Negative state size");
 		this.stateSize = stateSize;
+		this.fullStateSize = fullStateSize;
 		this.ackTimestamp = ackTimestamp;
 		this.syncCheckpointDuration = syncCheckpointDuration;
 		this.asyncCheckpointDuration = asyncCheckpointDuration;
@@ -101,12 +107,21 @@ public class SubtaskStateStats implements Serializable {
 	}
 
 	/**
-	 * Returns the size of the checkpointed state at this subtask.
+	 * Returns the actual size of the checkpointed state at this subtask.
 	 *
-	 * @return Checkpoint state size of the sub task.
+	 * @return Actual checkpoint state size of the sub task.
 	 */
 	public long getStateSize() {
 		return stateSize;
+	}
+
+	/**
+	 * Returns the full size of the checkpointed state at this subtask.
+	 *
+	 * @return Full checkpoint state size of the sub task.
+	 */
+	public long getFullStateSize() {
+		return fullStateSize;
 	}
 
 	/**

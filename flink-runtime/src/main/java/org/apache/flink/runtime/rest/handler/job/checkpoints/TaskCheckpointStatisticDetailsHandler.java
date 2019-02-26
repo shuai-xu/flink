@@ -132,6 +132,7 @@ public class TaskCheckpointStatisticDetailsHandler
 			checkpointStats.getStatus(),
 			taskStatistics.getLatestAckTimestamp(),
 			taskStatistics.getStateSize(),
+			taskStatistics.getFullStateSize(),
 			taskStatistics.getEndToEndDuration(checkpointStats.getTriggerTimestamp()),
 			taskStatistics.getAlignmentBuffered(),
 			taskStatistics.getNumberOfSubtasks(),

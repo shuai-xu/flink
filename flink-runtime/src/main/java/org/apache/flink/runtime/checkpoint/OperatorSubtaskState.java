@@ -88,6 +88,11 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 	private final long stateSize;
 
 	/**
+	 * The full state size for incremental checkpoints. This is also part of the deserialized state handle.
+	 */
+	private final long fullStateSize;
+
+	/**
 	 * Empty state.
 	 */
 	public OperatorSubtaskState() {
@@ -111,9 +116,13 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 
 		long calculateStateSize = managedOperatorState.getStateSize();
 		calculateStateSize += rawOperatorState.getStateSize();
-		calculateStateSize += managedKeyedState.getStateSize();
 		calculateStateSize += rawKeyedState.getStateSize();
+
+		long calculateFullStateSize = calculateStateSize;
+		calculateStateSize += managedKeyedState.getStateSize();
+		calculateFullStateSize += managedKeyedState.getFullStateSize();
 		stateSize = calculateStateSize;
+		fullStateSize = calculateFullStateSize;
 	}
 
 	/**
@@ -209,6 +218,10 @@ public class OperatorSubtaskState implements CompositeStateHandle {
 	@Override
 	public long getStateSize() {
 		return stateSize;
+	}
+
+	public long getFullStateSize() {
+		return fullStateSize;
 	}
 
 	// --------------------------------------------------------------------------------------------

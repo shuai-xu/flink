@@ -330,6 +330,7 @@ public class PendingCheckpoint {
 			long ackTimestamp = System.currentTimeMillis();
 
 			long stateSize = 0L;
+			long fullStateSize = 0L;
 
 			if (operatorSubtaskStates != null) {
 				for (OperatorID operatorID : operatorIDs) {
@@ -354,6 +355,7 @@ public class PendingCheckpoint {
 
 					operatorState.putState(subtaskIndex, operatorSubtaskState);
 					stateSize += operatorSubtaskState.getStateSize();
+					fullStateSize += operatorSubtaskState.getFullStateSize();
 				}
 			}
 
@@ -370,6 +372,7 @@ public class PendingCheckpoint {
 					subtaskIndex,
 					ackTimestamp,
 					stateSize,
+					fullStateSize,
 					metrics.getSyncDurationMillis(),
 					metrics.getAsyncDurationMillis(),
 					metrics.getBytesBufferedInAlignment(),
