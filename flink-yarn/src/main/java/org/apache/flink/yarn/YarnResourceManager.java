@@ -163,6 +163,13 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	private final Map<Integer, Integer> priorityToSpareSlots;
 
 	/**
+	 * Number of startNewWorker calls blocked due to exceeding max resource limit.
+	 */
+	private final Map<Integer, Integer> priorityToBlockedWorkers;
+
+	private final Object spareSlotsAndBlockedWorkerslock = new Object();
+
+	/**
 	 * executor for start yarn container.
 	 */
 	@VisibleForTesting
@@ -217,6 +224,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 		numPendingContainerRequests = new ConcurrentHashMap<>();
 		priorityToSpareSlots = new HashMap<>();
+		priorityToBlockedWorkers = new HashMap<>();
 
 		containerRegisterTimeout = Time.seconds(flinkConfig.getLong(YarnConfigOptions.CONTAINER_REGISTER_TIMEOUT));
 
@@ -380,13 +388,33 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		int priority = generatePriority(tmResource, tags);
 		Resource containerResource = generateContainerResource(tmResource);
 
-		int spareSlots = priorityToSpareSlots.getOrDefault(priority, 0);
-		if (spareSlots > 0) {
-			priorityToSpareSlots.put(priority, spareSlots - 1);
-		} else {
-			if (slotNumber > 1) {
-				priorityToSpareSlots.put(priority, slotNumber - 1);
+		boolean requestNewContainer = false;
+		synchronized (spareSlotsAndBlockedWorkerslock) {
+			int spareSlots = priorityToSpareSlots.getOrDefault(priority, 0);
+			if (spareSlots > 0) {
+				priorityToSpareSlots.put(priority, spareSlots - 1);
+			} else {
+				String errMsg = String.format(
+					"Container trying to request with priority %s exceeds total resource limit, give up requesting.",
+					priority);
+				if (checkAllocateNewResourceExceedTotalResourceLimit(
+					containerResource.getVirtualCores() / yarnVcoreRatio, containerResource.getMemory(), errMsg)) {
+					int num = 1;
+					if (priorityToBlockedWorkers.containsKey(priority)) {
+						num = priorityToBlockedWorkers.get(priority) + 1;
+					}
+					priorityToBlockedWorkers.put(priority, num);
+					return;
+				}
+
+				if (slotNumber > 1) {
+					priorityToSpareSlots.put(priority, slotNumber - 1);
+				}
+				requestNewContainer = true;
 			}
+		}
+
+		if (requestNewContainer) {
 			requestYarnContainer(containerResource, Priority.newInstance(priority),
 				tmResource.getTaskResourceProfile().getResourceConstraints());
 		}
@@ -400,6 +428,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			// Don't use nodeManagerClient.stopContainer in order to make stopping worker faster.
 			resourceManagerClient.releaseAssignedContainer(container.getId());
 			if (workerNodeMap.remove(workerNode.getResourceID()) != null) {
+				tryStartBlockedWorkers();
 				return true;
 			}
 		} else {
@@ -506,6 +535,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 							log.info("Not found resource for priority {}, this is usually due to job master failover.",
 								yarnWorkerNode.getContainer().getPriority().getPriority());
 						}
+					} else if (yarnWorkerNode != null) {
+						tryStartBlockedWorkers();
 					}
 				}
 			}
@@ -649,12 +680,6 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 	//TODO: update abstract request with constraints
 	private void requestYarnContainer(Resource resource, Priority priority, ResourceConstraints constraints) {
-		String errMsg = String.format("Container trying to request with priority %s exceeds total resource limit, give up requesting.", priority);
-		if (checkAllocateNewResourceExceedTotalResourceLimit(
-			resource.getVirtualCores() / yarnVcoreRatio, resource.getMemory(), errMsg)) {
-			return;
-		}
-
 		AtomicInteger pendingNumber = new AtomicInteger(0);
 		AtomicInteger prevPendingNumber = numPendingContainerRequests.putIfAbsent(priority.getPriority(), pendingNumber);
 		if (prevPendingNumber != null) {
@@ -697,10 +722,13 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		}
 
 		if (currentTotalCpu + cpu > maxTotalCpuCore || currentTotalMemory + memory > maxTotalMemoryMb) {
-			errMsg += String.format(" (new resource = <CPU:%s, MEM:%s>, current total resource = <CPU:%s, MEM:%s>, limit = <CPU:%s, MEM:%s>)",
-				cpu, memory, currentTotalCpu, currentTotalMemory, maxTotalCpuCore, maxTotalMemoryMb);
-			log.warn(errMsg);
-			tryAllocateExceedLimitExceptions.put(System.currentTimeMillis(), new ResourceManagerException(errMsg));
+			if (errMsg != null) {
+				errMsg += String.format(
+					" (new resource = <CPU:%s, MEM:%s>, current total resource = <CPU:%s, MEM:%s>, limit = <CPU:%s, MEM:%s>)",
+					cpu, memory, currentTotalCpu, currentTotalMemory, maxTotalCpuCore, maxTotalMemoryMb);
+				log.warn(errMsg);
+				tryAllocateExceedLimitExceptions.put(System.currentTimeMillis(), new ResourceManagerException(errMsg));
+			}
 			return true;
 		}
 		return false;
@@ -915,5 +943,42 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 	private ResourceConstraints getResourceConstraints(int priority) {
 		return getTaskManagerResource(priority).getTaskResourceProfile().getResourceConstraints();
+	}
+
+	private void tryStartBlockedWorkers() {
+		while (!priorityToBlockedWorkers.isEmpty()) {
+			int priority = findFeasibleBlockedWorkerPriority();
+			if (priority < 0) {
+				break;
+			}
+			TaskManagerResource tmResource = priorityToResourceAndTagsMap.get(priority).f0;
+
+			synchronized (spareSlotsAndBlockedWorkerslock) {
+				int blockWorkerNum = priorityToBlockedWorkers.get(priority);
+				if (blockWorkerNum > tmResource.getSlotNum()) {
+					priorityToBlockedWorkers.put(priority, blockWorkerNum - tmResource.getSlotNum());
+				} else {
+					priorityToBlockedWorkers.remove(priority);
+					if (tmResource.getSlotNum() > blockWorkerNum) {
+						priorityToSpareSlots.put(priority, tmResource.getSlotNum() - blockWorkerNum);
+					}
+				}
+			}
+
+			Resource resource = generateContainerResource(tmResource);
+			requestYarnContainer(resource, Priority.newInstance(priority),
+				tmResource.getTaskResourceProfile().getResourceConstraints());
+		}
+	}
+
+	private int findFeasibleBlockedWorkerPriority() {
+		for (Map.Entry<Integer, Integer> entry : priorityToBlockedWorkers.entrySet()) {
+			Resource resource = generateContainerResource(priorityToResourceAndTagsMap.get(entry.getKey()).f0);
+			if (checkAllocateNewResourceExceedTotalResourceLimit(
+				resource.getVirtualCores() / yarnVcoreRatio, resource.getMemory(), null)) {
+				return entry.getKey();
+			}
+		}
+		return -1;
 	}
 }
