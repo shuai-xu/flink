@@ -67,6 +67,8 @@ import org.apache.flink.runtime.rest.messages.job.metrics.JobVertexSubtasksCompo
 import org.apache.flink.runtime.rest.messages.job.metrics.Metric;
 import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsHeaders;
 import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsMessageParameters;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsInfos;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExecutionVertexIdsInfo;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
@@ -371,10 +373,10 @@ public class RestServerClientImpl implements RestServerClient {
 
 	@Override
 	public Map<Long, Exception> getTotalResourceLimitExceptions() throws Exception {
-		final TotalResourceLimitExceptionInfosHeaders headers = TotalResourceLimitExceptionInfosHeaders.getInstance();
-		final EmptyMessageParameters param = headers.getUnresolvedMessageParameters();
+		final TotalResourceLimitExceptionInfosHeaders header = TotalResourceLimitExceptionInfosHeaders.getInstance();
+		final EmptyMessageParameters param = header.getUnresolvedMessageParameters();
 		Map<Long, Exception> result = new HashMap<>();
-		return sendRequest(headers, param, EmptyRequestBody.getInstance()).thenApply(
+		return sendRequest(header, param, EmptyRequestBody.getInstance()).thenApply(
 			(TotalResourceLimitExceptionsInfos totalResourceLimitInfos) -> {
 				Map<Long, Exception> totalResourceLimit = totalResourceLimitInfos.getResourceLimit();
 				if (totalResourceLimit != null && !totalResourceLimit.isEmpty()) {
@@ -387,7 +389,19 @@ public class RestServerClientImpl implements RestServerClient {
 
 	@Override
 	public Map<Long, Tuple2<String, Exception>> getTaskManagerExceptions() throws Exception {
-		return null;
+		final TaskManagerExceptionsHeaders header = TaskManagerExceptionsHeaders.getInstance();
+		final EmptyMessageParameters param = header.getUnresolvedMessageParameters();
+		Map<Long, Tuple2<String, Exception>> result = new HashMap<>();
+		return sendRequest(header, param, EmptyRequestBody.getInstance()).thenApply(
+			(TaskManagerExceptionsInfos taskManagerExceptionsInfos) -> {
+				Map<Long, TaskManagerExceptionsInfos.TaskManagerException> taskmanagerExceptions = taskManagerExceptionsInfos.getTaskmanagerExceptions();
+				for (Map.Entry<Long, TaskManagerExceptionsInfos.TaskManagerException> time2Exception: taskmanagerExceptions.entrySet()) {
+					TaskManagerExceptionsInfos.TaskManagerException te = time2Exception.getValue();
+					result.put(time2Exception.getKey(), new Tuple2<>(te.getResourceId().getResourceIdString(), te.getException()));
+				}
+				return result;
+			}
+		).get();
 	}
 
 	@Override

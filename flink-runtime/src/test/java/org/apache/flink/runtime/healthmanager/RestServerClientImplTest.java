@@ -85,6 +85,8 @@ import org.apache.flink.runtime.rest.messages.job.JobAllSubtaskCurrentAttemptsIn
 import org.apache.flink.runtime.rest.messages.job.JobExceptionsMessageParameters;
 import org.apache.flink.runtime.rest.messages.job.JobSubtaskCurrentAttemptsInfo;
 import org.apache.flink.runtime.rest.messages.job.SubtaskExecutionAttemptInfo;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsInfos;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExecutionVertexIdsInfo;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
@@ -269,6 +271,15 @@ public class RestServerClientImplTest extends TestLogger {
 		}
 	}
 
+	@Test
+	public void testGetTaskManagerExceptions() throws Exception {
+		TestTaskManagerExceptionsHandler testTaskManagerExceptionsHandler = new TestTaskManagerExceptionsHandler();
+		try (TestRestServerEndpoint ignored = createRestServerEndpoint(testTaskManagerExceptionsHandler)) {
+			Map<Long, Tuple2<String, Exception>> exceptions = restServerClientImpl.getTaskManagerExceptions();
+			Assert.assertTrue(exceptions.size() == 1);
+		}
+	}
+
 	private class TestListJobsHandler extends TestHandler<EmptyRequestBody, MultipleJobsDetails, EmptyMessageParameters> {
 
 		private TestListJobsHandler() {
@@ -389,6 +400,23 @@ public class RestServerClientImplTest extends TestLogger {
 			Map<Long, Exception> exceptionMap = new HashMap<>();
 			exceptionMap.put(System.currentTimeMillis(), new Exception("aa"));
 			TotalResourceLimitExceptionsInfos exceptionsInfos = new TotalResourceLimitExceptionsInfos(exceptionMap);
+			return CompletableFuture.completedFuture(exceptionsInfos);
+		}
+
+	}
+
+	private class TestTaskManagerExceptionsHandler extends TestHandler<EmptyRequestBody, TaskManagerExceptionsInfos, EmptyMessageParameters> {
+		private TestTaskManagerExceptionsHandler() {
+			super(TaskManagerExceptionsHeaders.getInstance());
+		}
+
+		@Override
+		protected CompletableFuture<TaskManagerExceptionsInfos> handleRequest(@Nonnull HandlerRequest<EmptyRequestBody, EmptyMessageParameters> request, @Nonnull DispatcherGateway gateway) throws RestHandlerException {
+			Map<Long, TaskManagerExceptionsInfos.TaskManagerException> exceptionMap = new HashMap<>();
+			ResourceID resourceID = ResourceID.generate();
+			TaskManagerExceptionsInfos.TaskManagerException te = new TaskManagerExceptionsInfos.TaskManagerException(resourceID, new Exception("test"));
+			exceptionMap.put(System.currentTimeMillis(), te);
+			TaskManagerExceptionsInfos exceptionsInfos = new TaskManagerExceptionsInfos(exceptionMap);
 			return CompletableFuture.completedFuture(exceptionsInfos);
 		}
 
