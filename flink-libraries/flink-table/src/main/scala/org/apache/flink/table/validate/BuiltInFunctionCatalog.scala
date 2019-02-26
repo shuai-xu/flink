@@ -24,7 +24,6 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.util.{ChainedSqlOperatorTable, ListSqlOperatorTable, ReflectiveSqlOperatorTable}
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
-import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
@@ -329,11 +328,7 @@ object BuiltInFunctionCatalog {
         createTableSqlFunction(
           regName,
           regName,
-          tableFunction,
-          // TODO correct args for builtInTableFunctions.
-          tableFunction.getResultType(Array[AnyRef](), Array[Class[_]]()),
-          // TODO different with typeFactory in TableEnvironment may cause some problems.
-          new FlinkTypeFactory(new FlinkTypeSystem())))
+          tableFunction))
     }
   }
 

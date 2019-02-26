@@ -158,7 +158,9 @@ class TemporalTableJoinTest extends TableTestBase with Serializable {
     expectExceptionThrown(
       "SELECT * FROM T AS T JOIN LATERAL temporalTable8 " +
         "FOR SYSTEM_TIME AS OF T.proc AS D ON T.a = D.id AND T.b = D.name AND T.ts = D.ts",
-      "Expected: eval(org.apache.flink.streaming.api.functions.async.ResultFuture, " +
+      "Given parameter types of the lookup TableFunction of TableSource " +
+        "'TestInvalidTemporalTable(id, name, age, ts)' do not match the expected signature.\n" +
+        "Expected: eval(org.apache.flink.streaming.api.functions.async.ResultFuture, " +
         "java.lang.Integer, org.apache.flink.table.dataformat.BinaryString, java.lang.Long) \n" +
         "Actual: eval(org.apache.flink.streaming.api.functions.async.ResultFuture, " +
         "java.lang.Integer, java.lang.String, java.sql.Timestamp)",

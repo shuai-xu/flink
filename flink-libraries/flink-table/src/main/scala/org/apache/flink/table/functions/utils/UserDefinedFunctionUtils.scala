@@ -19,10 +19,6 @@
 
 package org.apache.flink.table.functions.utils
 
-import java.lang.reflect.{Method, Modifier}
-import java.lang.{Integer => JInt, Long => JLong}
-import java.sql.{Date, Time, Timestamp}
-
 import com.google.common.primitives.Primitives
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.rex.{RexLiteral, RexNode}
@@ -35,7 +31,7 @@ import org.apache.flink.api.java.typeutils._
 import org.apache.flink.table.api.functions._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
-import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.DeferredTypeFlinkTableFunction
@@ -43,12 +39,15 @@ import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.hive.functions._
 import org.apache.flink.table.api.types._
-import org.apache.flink.table.catalog.CatalogPartition.PartitionSpec
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
 import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
 import org.apache.hadoop.hive.ql.udf.generic.{GenericUDAFResolver2, GenericUDF, GenericUDTF}
+
+import java.lang.reflect.{Method, Modifier}
+import java.lang.{Integer => JInt, Long => JLong}
+import java.sql.{Date, Time, Timestamp}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -102,7 +101,7 @@ object UserDefinedFunctionUtils {
           s"Expected: ${signaturesToString(func, "eval")}")
   }
 
-  private def getParamClassesConsiderVarArgs(
+  private[table] def getParamClassesConsiderVarArgs(
       isVarArgs: Boolean,
       matchingSignature: Array[Class[_]],
       expectedLength: Int): Array[Class[_]] = {
@@ -183,7 +182,7 @@ object UserDefinedFunctionUtils {
   def getEvalUserDefinedMethod(
       function: CustomTypeDefinedFunction,
       expectedTypes: Seq[InternalType])
-      : Option[Method] = {
+    : Option[Method] = {
     getUserDefinedMethod(
       function,
       "eval",
@@ -227,18 +226,31 @@ object UserDefinedFunctionUtils {
   /**
     * Returns user defined method matching the given name and signature.
     *
-    * @param function        function instance
-    * @param methodName      method name
-    * @param methodSignature an array of raw Java classes. We compare the raw Java classes not the
-    *                        DateType. DateType does not matter during runtime (e.g.
-    *                        within a MapFunction)
+    * @param function                function instance
+    * @param methodName              method name
+    * @param methodSignature         an array of raw Java classes. We compare the raw Java classes
+    *                                not the DateType. DateType does not matter during runtime (e.g.
+    *                                within a MapFunction)
+    * @param internalTypes           internal data types of methodSignature
+    * @param parameterTypes          user provided parameter data types, usually comes from invoking
+    *                                CustomTypeDefinedFunction#getParameterTypes
+    * @param parameterClassEquals    function ((expect, reflected) -> Boolean) to decide if the
+    *                                provided expect parameter class is equals to reflection method
+    *                                signature class. The expect class comes from param
+    *                                [methodSignature].
+    *
+    * @param parameterDataTypeEquals function ((expect, dataType) -> Boolean) to decide if the
+    *                                provided expect parameter data type is equals to type in
+    *                                [parameterTypes].
     */
   def getUserDefinedMethod(
       function: UserDefinedFunction,
       methodName: String,
       methodSignature: Array[Class[_]],
       internalTypes: Array[InternalType],
-      parameterTypes: (Array[Class[_]] => Array[DataType]))
+      parameterTypes: Array[Class[_]] => Array[DataType],
+      parameterClassEquals: (Class[_], Class[_]) => Boolean = parameterClassEquals,
+      parameterDataTypeEquals: (InternalType, DataType) => Boolean = parameterDataTypeEquals)
     : Option[Method] = {
 
     val methods = checkAndExtractMethods(function, methodName)
@@ -261,7 +273,7 @@ object UserDefinedFunctionUtils {
                 // So here we choose any method is correct.
                 applyCnt += 1
               }
-              parameterTypeEquals(methodSignature(i), clazz) ||
+              parameterClassEquals(methodSignature(i), clazz) ||
                   parameterDataTypeEquals(internalTypes(i), dataTypes(i))
             }
           }
@@ -271,11 +283,11 @@ object UserDefinedFunctionUtils {
           methodSignature.zipWithIndex.forall {
             // non-varargs
             case (clazz, i) if i < signatures.length - 1  =>
-              parameterTypeEquals(clazz, signatures(i)) ||
+              parameterClassEquals(clazz, signatures(i)) ||
                   parameterDataTypeEquals(internalTypes(i), dataTypes(i))
             // varargs
             case (clazz, i) if i >= signatures.length - 1 =>
-              parameterTypeEquals(clazz, signatures.last.getComponentType) ||
+              parameterClassEquals(clazz, signatures.last.getComponentType) ||
                   parameterDataTypeEquals(internalTypes(i), dataTypes(i))
           } || (methodSignature.isEmpty && signatures.length == 1) // empty varargs
     }
@@ -302,7 +314,7 @@ object UserDefinedFunctionUtils {
         } else {
           signatures.zipWithIndex.forall {
             case (clazz, i) if i < signatures.length - 1 =>
-              parameterTypeEquals(methodSignature(i), clazz) ||
+              parameterClassEquals(methodSignature(i), clazz) ||
                 parameterDataTypeEquals(internalTypes(i), dataTypes(i))
             case (clazz, i) if i == signatures.length - 1 =>
               clazz.getName.equals("scala.collection.Seq")
@@ -392,7 +404,47 @@ object UserDefinedFunctionUtils {
   }
 
   /**
-    * Create [[SqlFunction]] for a [[TableFunction]]
+    * Create [[SqlFunction]] instance for a [[TableFunction]].
+    *
+    * There are 2 cases that we should invoke this function to create TableFunction instance:
+    * case 1: The function instance is initiated from a full class name, e.g. from a persisted
+    * catalog.
+    * case 2: Some builtin table functions registered in BuiltInFunctionCatalog.
+    *
+    * In total, the implicitResultType will only affect TableAPI result type inference when
+    * we do expression validation, which would be used as a fallback type of
+    * CustomTypeDefinedFunction#getResultType. See [[getResultTypeOfCTDFunction]] for details.
+    *
+    * @param name function name
+    * @param tableFunction table function instance
+    * @param typeFactory type factory, default to be [new FlinkTypeFactory(new FlinkTypeSystem())]
+    * @return [[TableSqlFunction]] instance of the [[TableFunction]]
+    */
+  def createTableSqlFunction(
+      name: String,
+      displayName: String,
+      tableFunction: TableFunction[_],
+      typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem()))
+    : TableSqlFunction = {
+    val implicitResultType = extractResultTypeFromTableFunction(tableFunction)
+    createTableSqlFunction(name, displayName, tableFunction, implicitResultType, typeFactory)
+  }
+
+  /**
+    * Create [[SqlFunction]] for a [[TableFunction]].
+    *
+    * Caution that the implicitResultType is only expect to be passed explicitly by Scala implicit
+    * type inference.
+    *
+    * The entrance in BatchTableEnvironment.scala and StreamTableEnvironment.scala
+    * {{{
+    *   def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T])
+    * }}}
+    *
+    * The implicitResultType would be inferred from type `T`.
+    *
+    * For all the other cases, please use
+    * createTableSqlFunction (String, String, TableFunction, FlinkTypeFactory) instead.
     *
     * @param name function name
     * @param tableFunction table function
@@ -649,7 +701,7 @@ object UserDefinedFunctionUtils {
     * Compares parameter candidate classes with expected classes. If true, the parameters match.
     * Candidate can be null (acts as a wildcard).
     */
-  private def parameterTypeEquals(candidate: Class[_], expected: Class[_]): Boolean =
+  private def parameterClassEquals(candidate: Class[_], expected: Class[_]): Boolean =
   candidate == null ||
     candidate == expected ||
     expected == classOf[Object] ||
@@ -669,9 +721,10 @@ object UserDefinedFunctionUtils {
       candidate.getComponentType.isInstanceOf[Object] &&
       expected.getComponentType == classOf[Object])
 
-  private def parameterDataTypeEquals(internal: InternalType, parameterType: DataType): Boolean =
+  private def parameterDataTypeEquals(internal: InternalType, parameterType: DataType): Boolean = {
     // There is a special equal to GenericType. We need rewrite type extract to BaseRow etc...
     parameterType.toInternalType == internal || internal.getTypeClass == parameterType.getTypeClass
+  }
 
   @throws[Exception]
   def serialize(function: UserDefinedFunction): String = {
@@ -886,24 +939,16 @@ object UserDefinedFunctionUtils {
     func
   }
 
-  def getImplicitResultType[T](tf: TableFunction[T]) = {
-    val implicitResultType = try {
-      TypeExtractor.createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
-    } catch {
-      case e: InvalidTypesException =>
-        // may be we should get type from getResultType
-        new GenericType(classOf[AnyRef])
-    }
-    implicitResultType
-  }
-
   /**
-    * Get implicit type from table function through reflection, We will consider getResultType first
-    * then this, see [[getResultTypeIgnoreException]] for details.
+    * Extract implicit type from table function through reflection,
+    *
+    * Broadly, We would consider CustomTypeDefinedFunction#getResultType first, this function
+    * should always be considered as a fallback.
+    *
     * @return Inferred implicit [[TypeInformation]], if [[InvalidTypesException]] throws, return
     *         GenericTypeInfo(classOf[AnyRef]) as fallback
     */
-  def getImplicitResultTypeInfo[T](tf: TableFunction[T]): TypeInformation[T] = {
+  def extractResultTypeFromTableFunction[T](tf: TableFunction[T]): TypeInformation[T] = {
     val implicitResultType = try {
       TypeExtractor.createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
     } catch {
@@ -911,21 +956,6 @@ object UserDefinedFunctionUtils {
         new GenericTypeInfo(classOf[AnyRef])
     }
     implicitResultType.asInstanceOf[TypeInformation[T]]
-  }
-
-  /**
-    * Get result type from [[TableFunction]] while sans any exception.
-    * @return null if any exception throws
-    */
-  def getResultTypeIgnoreException[T](tf: TableFunction[T],
-    arguments: Array[AnyRef] = null,
-    argTypes: Array[Class[_]] = null): DataType = {
-    try {
-      tf.getResultType(arguments, argTypes)
-    } catch {
-      case _: Exception =>
-        null
-    }
   }
 
   private def hexString2String(str: String): String = {

@@ -25,14 +25,13 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.async.ResultFuture
-import org.apache.flink.table.api.functions.{AsyncTableFunction, FunctionContext, TableFunction}
+import org.apache.flink.table.api.functions.{AsyncTableFunction, CustomTypeDefinedFunction, FunctionContext, TableFunction}
 import org.apache.flink.table.api.types.{DataType, TypeConverters}
 import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow}
 import org.apache.flink.table.sources._
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableSchemaUtil
-
 import org.junit.Assert
 
 object TemporalTableUtils {
@@ -130,6 +129,16 @@ object TemporalTableUtils {
       }
     }
 
+    def validateTableFunctionResultType(
+        arguments: Array[AnyRef],
+        argTypes: Array[Class[_]]): Unit = {
+      if (async) {
+        asyncFetcher.validateResultType(arguments, argTypes)
+      } else {
+        fetcher.validateResultType(arguments, argTypes)
+      }
+    }
+
     /** Returns the table schema of the table source */
     override def getTableSchema: TableSchema = {
       TableSchemaUtil
@@ -147,6 +156,32 @@ object TemporalTableUtils {
     }
   }
 
+  trait TableFunctionWithValidatedResultType extends CustomTypeDefinedFunction {
+    private var arguments: Array[AnyRef] = Array()
+    private var argTypes: Array[Class[_]] = Array()
+
+    override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType = {
+      this.arguments = arguments
+      this.argTypes = argTypes
+      super.getResultType(arguments, argTypes)
+    }
+
+    def validateResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): Unit = {
+      assert(this.arguments.length == arguments.length, s"TableFunction getResultType arguments " +
+        s"size expect to be ${arguments.length}, while we got size ${this.arguments.length}.")
+      assert(this.argTypes.length == argTypes.length, s"TableFunction getResultType argTypes " +
+        s"size expect to be ${argTypes.length}, while we got size ${this.argTypes.length}.")
+      (this.arguments zip arguments).zipWithIndex foreach { trp =>
+        assert(trp._1._1 == trp._1._2, s"TableFunction getResultType arg[${trp._2}] expect to be " +
+          s"${trp._1._2} while actually is ${trp._1._1}.")
+      }
+      (this.argTypes zip argTypes).zipWithIndex foreach { trp =>
+        assert(trp._1._1 == trp._1._2, s"TableFunction getResultType arg[${trp._2}] expect to be " +
+          s" type ${trp._1._2} while actually is type ${trp._1._1}.")
+      }
+    }
+  }
+
   // lookup data table using id index
   class TestingSingleKeyFetcher(idIndex: Int) extends TestingDoubleKeyFetcher(idIndex, 1) {
     def eval(id: JLong): Unit = {
@@ -159,7 +194,9 @@ object TemporalTableUtils {
     }
   }
 
-  class TestingDoubleKeyFetcher(idIndex: Int, nameIndex: Int) extends TableFunction[BaseRow] {
+  class TestingDoubleKeyFetcher(idIndex: Int, nameIndex: Int)
+      extends TableFunction[BaseRow]
+      with TableFunctionWithValidatedResultType {
     var resourceCounter: Int = 0
     var reuse: GenericRow = _
 
@@ -238,7 +275,8 @@ object TemporalTableUtils {
   }
 
   class TestingAsyncDoubleKeyFetcher(leftKeyIdx: Int, nameKeyIdx: Int)
-    extends AsyncTableFunction[BaseRow] {
+    extends AsyncTableFunction[BaseRow]
+    with TableFunctionWithValidatedResultType {
 
     var resourceCounter: Int = 0
     if (leftKeyIdx < 0 || nameKeyIdx < 0) {

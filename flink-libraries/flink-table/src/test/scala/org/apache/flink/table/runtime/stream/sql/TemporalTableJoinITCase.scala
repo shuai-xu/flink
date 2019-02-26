@@ -18,15 +18,16 @@
 package org.apache.flink.table.runtime.stream.sql
 
 import java.lang.{Integer => JInt}
-
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.utils.TemporalTableUtils._
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink, TestingRetractSink}
+import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -68,6 +69,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "3,15,Fabian,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
   @Test
@@ -91,6 +94,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "8,11,Hello world,Julian", "9,12,Hello world!,Julian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(1.asInstanceOf[Object]),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
   @Test
@@ -118,6 +123,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
     val expected = Seq("3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
   @Test
@@ -141,6 +148,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "3,15,Fabian,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
   @Test
@@ -164,6 +173,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "3,15,Fabian,Fabian,33")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
   @Test
@@ -187,6 +198,9 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    // Only column id unique, so the id column arg and type are passed in.
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
   @Test
@@ -210,6 +224,9 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null, null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG),
+        TypeUtils.getInternalClassForType(DataTypes.STRING)))
   }
 
   @Test
@@ -236,6 +253,9 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null, null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG),
+        TypeUtils.getInternalClassForType(DataTypes.STRING)))
   }
 
   @Test
@@ -257,6 +277,9 @@ class TemporalTableJoinITCase extends StreamingTestBase {
     val expected = Seq("3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(3.asInstanceOf[Object], null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG),
+        TypeUtils.getInternalClassForType(DataTypes.STRING)))
   }
 
   @Test
@@ -278,6 +301,9 @@ class TemporalTableJoinITCase extends StreamingTestBase {
     val expected = Seq("3,15,Fabian")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null, "Fabian"),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG),
+        TypeUtils.getInternalClassForType(DataTypes.STRING)))
   }
 
   @Test
@@ -305,6 +331,9 @@ class TemporalTableJoinITCase extends StreamingTestBase {
     )
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(3.asInstanceOf[Object], "Fabian"),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG),
+        TypeUtils.getInternalClassForType(DataTypes.STRING)))
   }
 
   @Test
@@ -331,6 +360,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "9,12,null,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
   @Test
@@ -361,6 +392,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "9,12,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
   @Test
   def testLeftJoinTemporalTableOnMultKeyFields(): Unit = {
@@ -386,6 +419,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "9,12,null,null")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
     assertEquals(0, temporalTable.getFetcherResourceCount)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
 
@@ -437,6 +472,8 @@ class TemporalTableJoinITCase extends StreamingTestBase {
       "4,3,{CompositeObj(3,Fabian,33,45.2136)=1}",
       "5,3,{CompositeObj(3,Fabian,33,42.6)=1}")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
+    temporalTable.validateTableFunctionResultType(Array(null),
+      Array(TypeUtils.getInternalClassForType(DataTypes.LONG)))
   }
 
 }

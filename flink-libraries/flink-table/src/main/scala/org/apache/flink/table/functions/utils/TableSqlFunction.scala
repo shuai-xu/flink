@@ -44,6 +44,7 @@ import scala.collection.JavaConverters._
 /**
   * Calcite wrapper for user-defined table functions.
   *
+  *
   * @param name function name (used by SQL parser)
   * @param udtf user-defined table function to be called
   * @param implicitResultType Implicit result type information
@@ -94,9 +95,9 @@ class TableSqlFunction(
     }
 
     val arguments = parameters.zip(operandList.asScala).map {
-      case (parameter, relType) =>
+      case (parameter, operand) =>
         try {
-          val o = SqlUserDefinedTableMacro.getValue(relType)
+          val o = SqlUserDefinedTableMacro.getValue(operand)
           // TODO Type should convert to internal
           val t = parameter.getType(typeFactory)
           if (o != null && o.isInstanceOf[NlsString] &&

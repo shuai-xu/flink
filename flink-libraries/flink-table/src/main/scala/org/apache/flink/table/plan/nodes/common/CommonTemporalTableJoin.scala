@@ -17,9 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.common
 
-import java.lang.reflect.{Method, Modifier}
-import java.util
-import java.util.Collections
 import com.google.common.primitives.Primitives
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
@@ -39,16 +36,16 @@ import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.streaming.api.operators.ProcessOperator
 import org.apache.flink.streaming.api.operators.async.AsyncWaitOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction, UserDefinedFunction}
+import org.apache.flink.table.api.functions.{AsyncTableFunction, CustomTypeDefinedFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters}
-import org.apache.flink.table.api.{TableConfig, TableException, ValidationException}
+import org.apache.flink.table.api.types.{DataType, GenericType, InternalType, TypeConverters}
+import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.TemporalJoinCodeGenerator._
 import org.apache.flink.table.codegen.{CodeGeneratorContext, TemporalJoinCodeGenerator}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, GenericRow, JoinedRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{checkAndExtractMethods, signatureToString, signaturesToString}
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getParamClassesConsiderVarArgs, getUserDefinedMethod, signatureToString, signaturesToString}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.schema.{BaseRowSchema, IndexKey, TimeIndicatorRelDataType}
 import org.apache.flink.table.plan.util.TemporalJoinUtil._
@@ -58,6 +55,9 @@ import org.apache.flink.table.sources.{LookupConfig, LookupableTableSource, Tabl
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.TableConnectorUtil
 import org.apache.flink.types.Row
+
+import java.util
+import java.util.Collections
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -200,21 +200,18 @@ abstract class CommonTemporalTableJoin(
       val asyncOutputMode = lookupConfig.getAsyncOutputMode
 
       val asyncTableFunction = lookupableTableSource.getAsyncLookupFunction(checkedIndexInOrder)
-      val parameters = Array(classOf[ResultFuture[_]]) ++
-        indexFieldTypes.map(TypeUtils.getInternalClassForType(_))
-      val method = getSignatureMatchedEvalMethod(
-        asyncTableFunction,
+      val parameters = Array(new GenericType(classOf[ResultFuture[_]])) ++ indexFieldTypes
+      val parameterClasses = getEvalMethodSignature(asyncTableFunction,
         parameters)
-      // eval method valid check
-      if (method.isEmpty) {
-        val msg = s"Given parameter types of the async lookup TableFunction of TableSource " +
-          s"'${tableSource.explainSource()}' do not match the expected signature.\n" +
-          s"Expected: eval${signatureToString(parameters)} \n" +
-          s"Actual: eval${signaturesToString(asyncTableFunction, "eval")}"
-        throw new TableException(msg)
+      val arguments = checkedIndexInOrder map { idx =>
+        if (constantLookupKeys.containsKey(idx)) {
+          constantLookupKeys.get(idx)._2
+        } else {
+          null
+        }
       }
       // return type valid check
-      val udtfResultType = asyncTableFunction.getResultType(Array(), Array())
+      val udtfResultType = asyncTableFunction.getResultType(arguments, parameterClasses)
       val extractedResultTypeInfo = TypeExtractor.createTypeInfo(
         asyncTableFunction,
         classOf[AsyncTableFunction[_]],
@@ -286,20 +283,17 @@ abstract class CommonTemporalTableJoin(
     } else {
       // sync join
       val lookupFunction = lookupableTableSource.getLookupFunction(checkedIndexInOrder)
-      val parameters = indexFieldTypes.map(TypeUtils.getInternalClassForType(_))
-      val method = getSignatureMatchedEvalMethod(
-        lookupFunction,
-        parameters)
-      // valid check
-      if (method.isEmpty) {
-        val msg = s"Given parameter types of the lookup TableFunction of TableSource " +
-          s"'${tableSource.explainSource()}' do not match the expected signature.\n" +
-          s"Expected: eval${signatureToString(parameters)} \n" +
-          s"Actual: eval${signaturesToString(lookupFunction, "eval")}"
-        throw new TableException(msg)
+      val parameterClasses = getEvalMethodSignature(lookupFunction,
+        indexFieldTypes)
+      val arguments = checkedIndexInOrder map { idx =>
+        if (constantLookupKeys.containsKey(idx)) {
+          constantLookupKeys.get(idx)._2
+        } else {
+          null
+        }
       }
       // return type valid check
-      val udtfResultType = lookupFunction.getResultType(Array(), Array())
+      val udtfResultType = lookupFunction.getResultType(arguments, parameterClasses)
       val extractedResultTypeInfo = TypeExtractor.createTypeInfo(
         lookupFunction,
         classOf[TableFunction[_]],
@@ -396,66 +390,29 @@ abstract class CommonTemporalTableJoin(
         TypeUtils.getInternalClassForType(expected) == TypeUtils.getInternalClassForType(actual)
   }
 
-  private def getSignatureMatchedEvalMethod(
-    function: UserDefinedFunction,
-    methodSignature: Array[Class[_]]): Option[Method] = {
-
-    val methods = checkAndExtractMethods(function, "eval")
-
-    var applyCnt = 0
-    val filtered = methods
-     // go over all the methods and filter out matching methods
-     .filter {
-       case cur if !cur.isVarArgs =>
-         val signatures = cur.getParameterTypes
-         // match parameters of signature to actual parameters
-         methodSignature.length == signatures.length &&
-           signatures.zipWithIndex.forall { case (clazz, i) =>
-             if (methodSignature(i) == classOf[Object]) {
-               // The element of the method signature comes from the Table API's
-               // apply().
-               // We can not decide the type here. It is an Unresolved Expression.
-               // Actually, we do not have to decide the type here, any method of
-               // the overrides
-               // which matches the arguments count will do the job.
-               // So here we choose any method is correct.
-               applyCnt += 1
-             }
-             parameterTypeEquals(methodSignature(i), clazz)
-           }
-       case cur if cur.isVarArgs =>
-         val signatures = cur.getParameterTypes
-         methodSignature.zipWithIndex.forall {
-           // non-varargs
-           case (clazz, i) if i < signatures.length - 1 =>
-             parameterTypeEquals(clazz, signatures(i))
-           // varargs
-           case (clazz, i) if i >= signatures.length - 1 =>
-             parameterTypeEquals(clazz, signatures.last.getComponentType)
-         } || (methodSignature.isEmpty && signatures.length == 1) // empty varargs
-     }
-
-    // if there is a fixed method, compiler will call this method preferentially
-    val fixedMethodsCount = filtered.count(!_.isVarArgs)
-    val found = filtered.filter { cur =>
-      fixedMethodsCount > 0 && !cur.isVarArgs ||
-        fixedMethodsCount == 0 && cur.isVarArgs
-    }.filter { cur =>
-      // filter abstract methods
-      !Modifier.isVolatile(cur.getModifiers)
+  def getEvalMethodSignature(
+      func: CustomTypeDefinedFunction,
+      expectedTypes: Array[InternalType])
+    : Array[Class[_]] = {
+    val expectedTypeClasses = expectedTypes.map(TypeUtils.getInternalClassForType)
+    val method = getUserDefinedMethod(
+      func,
+      "eval",
+      expectedTypeClasses,
+      expectedTypes,
+      _ => expectedTypes.indices.map(_ => null),
+      parameterTypeEquals,
+      (_, _) => false).getOrElse {
+      val msg = s"Given parameter types of the lookup TableFunction of TableSource " +
+        s"'${tableSource.explainSource()}' do not match the expected signature.\n" +
+        s"Expected: eval${signatureToString(expectedTypeClasses)} \n" +
+        s"Actual: eval${signaturesToString(func, "eval")}"
+      throw new TableException(msg)
     }
-
-    if (found.length > 1) {
-      if (applyCnt > 0) {
-        // As we can not decide type while apply() exists, so choose any one is correct
-        return found.headOption
-      }
-      throw new ValidationException(
-        s"Found multiple 'eval' methods which match the signature.")
-    }
-    found.headOption
+    getParamClassesConsiderVarArgs(method.isVarArgs,
+      method.getParameterTypes, expectedTypes.length)
   }
-  
+
   private def parameterTypeEquals(candidate: Class[_], expected: Class[_]): Boolean = {
     candidate == null ||
       candidate == expected ||

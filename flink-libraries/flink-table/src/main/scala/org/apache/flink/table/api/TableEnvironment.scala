@@ -554,7 +554,7 @@ abstract class TableEnvironment(
    */
   def registerFunction[T](name: String, tf: TableFunction[T]): Unit = {
     implicit val typeInfo: TypeInformation[T] =
-      UserDefinedFunctionUtils.getImplicitResultTypeInfo(tf)
+      UserDefinedFunctionUtils.extractResultTypeFromTableFunction(tf)
     registerTableFunctionInternal(name, tf)
   }
 
@@ -568,13 +568,7 @@ abstract class TableEnvironment(
     checkNotSingleton(function.getClass)
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
-    val implicitResultType: DataType =
-      // we may use arguments types to infer later on.
-      if (UserDefinedFunctionUtils.getResultTypeIgnoreException(function) != null) {
-      function.getResultType(null, null)
-    } else {
-      implicitly[TypeInformation[T]]
-    }
+    val implicitResultType: DataType = implicitly[TypeInformation[T]]
 
     // register in Table API
     builtInFunctionCatalog.registerFunction(name, function.getClass)
@@ -823,7 +817,6 @@ abstract class TableEnvironment(
       throw new TableException(s"Table '${tablePath.mkString(".")}' was not found.")
     }
     val table = tableOpt.get
-    val tableName = tablePath.last
     val stats = if (tablePath.length == 1) {
       table match {
         case t: FlinkTable =>

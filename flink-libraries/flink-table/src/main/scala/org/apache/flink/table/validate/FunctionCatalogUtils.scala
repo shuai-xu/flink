@@ -60,8 +60,6 @@ object FunctionCatalogUtils {
             name,
             name,
             f,
-            // Conform to how built-in TableFunctions are registered in BuiltInFunctionCatalog
-            f.getResultType(Array[AnyRef](), Array[Class[_]]()),
             typeFactory
           )
 
