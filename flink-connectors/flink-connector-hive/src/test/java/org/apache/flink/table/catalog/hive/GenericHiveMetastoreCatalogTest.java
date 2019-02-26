@@ -204,35 +204,6 @@ public class GenericHiveMetastoreCatalogTest extends CatalogTestBase {
 	@Override
 	public void testAlterTableStats_TableNotExistException_ignore() { }
 
-	// ------ views ------
-
-	@Override
-	public void testCreateView() { }
-
-	@Override
-	public void testCreateView_DatabaseNotExistException() { }
-
-	@Override
-	public void testCreateView_TableAlreadyExistException() { }
-
-	@Override
-	public void testCreateView_TableAlreadyExist_ignored() { }
-
-	@Override
-	public void testDropView() { }
-
-	@Override
-	public void testAlterView() { }
-
-	@Override
-	public void testAlterView_TableNotExistException() { }
-
-	@Override
-	public void testAlterView_TableNotExist_ignored() { }
-
-	@Override
-	public void testListView() { }
-
 	// ------ partitions ------
 
 	@Override

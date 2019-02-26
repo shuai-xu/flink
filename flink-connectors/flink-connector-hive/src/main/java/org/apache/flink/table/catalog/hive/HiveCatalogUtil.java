@@ -116,7 +116,7 @@ public class HiveCatalogUtil {
 	private static final String DECIMAL_TYPE_NAME_FORMAT = "decimal(%d,%d)";
 
 	/**
-	 * Create a Hive table from CatalogTable.
+	 * Create a Hive table from CatalogTable or CatalogView.
 	 */
 	static Table createHiveTable(ObjectPath tablePath, CatalogTable table) {
 		Properties prop = new Properties();
@@ -219,7 +219,6 @@ public class HiveCatalogUtil {
 	 * Create an CatalogTable from Hive table.
 	 */
 	static CatalogTable createCatalogTable(Table hiveTable, TableSchema tableSchema, TableStats tableStats) {
-		TableType tableType = TableType.valueOf(hiveTable.getTableType());
 
 		// Properties
 		Map<String, String> properties = getPropertiesFromHiveTable(hiveTable);
@@ -242,7 +241,7 @@ public class HiveCatalogUtil {
 			(long) hiveTable.getCreateTime(),
 			(long) hiveTable.getLastAccessTime());
 
-		if (tableType == TableType.VIRTUAL_VIEW) {
+		if (TableType.valueOf(hiveTable.getTableType()) == TableType.VIRTUAL_VIEW) {
 			return CatalogView.createCatalogView(table, hiveTable.getViewOriginalText(), hiveTable.getViewExpandedText());
 		} else {
 			return table;

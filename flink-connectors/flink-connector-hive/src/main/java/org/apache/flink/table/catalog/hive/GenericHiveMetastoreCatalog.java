@@ -182,12 +182,12 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 
 	@Override
 	public void createView(ObjectPath viewPath, CatalogView view, boolean ignoreIfExists) {
-		throw new UnsupportedOperationException();
+		createTable(viewPath, view, ignoreIfExists);
 	}
 
 	@Override
 	public void alterView(ObjectPath viewPath, CatalogView newView, boolean ignoreIfNotExists) {
-		throw new UnsupportedOperationException();
+		alterTable(viewPath, newView, ignoreIfNotExists);
 	}
 
 	// ------ databases ------

@@ -21,6 +21,7 @@ package org.apache.flink.table.catalog.hive;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.descriptors.DescriptorProperties;
@@ -55,7 +56,7 @@ public class GenericHiveMetastoreCatalogUtil {
 	}};
 
 	/**
-	 * Create a Hive external table from CatalogTable.
+	 * Create a Hive external table from CatalogTable or CatalogView.
 	 * Note that create Hive table doesn't include TableStats
 	 */
 	static Table createHiveTable(ObjectPath path, CatalogTable table) {
@@ -87,12 +88,20 @@ public class GenericHiveMetastoreCatalogUtil {
 		hiveTable.setSd(sd);
 		hiveTable.setDbName(path.getDbName());
 		hiveTable.setTableName(path.getObjectName());
-		hiveTable.setTableType(TableType.EXTERNAL_TABLE.name());
 		hiveTable.setCreateTime((int) (System.currentTimeMillis() / 1000));
 		hiveTable.setPartitionKeys(new ArrayList<>());
-
 		hiveTable.setParameters(properties);
 		hiveTable.getParameters().putAll(EXTERNAL_TABLE_PROPERTY);
+
+		// Distinguish Table v.s. Virtual View
+		if (table instanceof CatalogView) {
+			CatalogView view = (CatalogView) table;
+			hiveTable.setViewOriginalText(view.getOriginalQuery());
+			hiveTable.setViewExpandedText(view.getExpandedQuery());
+			hiveTable.setTableType(TableType.VIRTUAL_VIEW.name());
+		} else {
+			hiveTable.setTableType(TableType.EXTERNAL_TABLE.name());
+		}
 
 		return hiveTable;
 	}
@@ -101,15 +110,15 @@ public class GenericHiveMetastoreCatalogUtil {
 	 * Create a CatalogTable from Hive table.
 	 * Note that create Hive table doesn't include TableStats
 	 */
-	static CatalogTable createCatalogTable(Table table) {
+	static CatalogTable createCatalogTable(Table hiveTable) {
 		DescriptorProperties descProp = new DescriptorProperties();
-		descProp.putProperties(getPropertiesWithStartingKey(table.getParameters(), SchemaValidator.SCHEMA()));
+		descProp.putProperties(getPropertiesWithStartingKey(hiveTable.getParameters(), SchemaValidator.SCHEMA()));
 
 		// TableSchema
 		TableSchema tableSchema = descProp.getTableSchema(SchemaValidator.SCHEMA());
 
 		// Properties
-		Map<String, String> properties = getPropertiesWithoutStartingKeys(table.getParameters(), new HashSet<String>() {{
+		Map<String, String> properties = getPropertiesWithoutStartingKeys(hiveTable.getParameters(), new HashSet<String>() {{
 			add(SchemaValidator.SCHEMA());
 		}});
 
@@ -119,11 +128,11 @@ public class GenericHiveMetastoreCatalogUtil {
 		// Partition keys
 		LinkedHashSet<String> partitionKeys = new LinkedHashSet<>();
 
-		if (table.getParameters().containsKey(PARTITION_KEYS)) {
-			partitionKeys = Arrays.stream(table.getParameters().get(PARTITION_KEYS).split(PARTITION_KEYS_DELIMITER))
+		if (hiveTable.getParameters().containsKey(PARTITION_KEYS)) {
+			partitionKeys = Arrays.stream(hiveTable.getParameters().get(PARTITION_KEYS).split(PARTITION_KEYS_DELIMITER))
 				.collect(Collectors.toCollection(LinkedHashSet::new));
 		}
-		TableStats tableStats = null;
+		TableStats tableStats;
 		if (partitionKeys.isEmpty()) {
 			// rowCnt is 0 for new created hive table
 			tableStats = TableStats.builder().rowCount(0L).build();
@@ -131,8 +140,9 @@ public class GenericHiveMetastoreCatalogUtil {
 			// TableStats of partitioned table is unknown, the behavior is same as HIVE
 			tableStats = TableStats.UNKNOWN();
 		}
-		return new CatalogTable(
-			table.getParameters().get(TABLE_TYPE),
+
+		CatalogTable table = new CatalogTable(
+			hiveTable.getParameters().get(TABLE_TYPE),
 			tableSchema,
 			properties,
 			new RichTableSchema(tableSchema.getFieldNames(), tableSchema.getFieldTypes()),
@@ -143,9 +153,15 @@ public class GenericHiveMetastoreCatalogUtil {
 			null,
 			null,
 			-1L,
-			(long) table.getCreateTime(),
-			(long) table.getLastAccessTime()
+			(long) hiveTable.getCreateTime(),
+			(long) hiveTable.getLastAccessTime()
 		);
+
+		if (TableType.valueOf(hiveTable.getTableType()) == TableType.VIRTUAL_VIEW) {
+			return CatalogView.createCatalogView(table, hiveTable.getViewOriginalText(), hiveTable.getViewExpandedText());
+		} else {
+			return table;
+		}
 	}
 
 	private static Map<String, String> getPropertiesWithStartingKey(Map<String, String> prop, String prefix) {
