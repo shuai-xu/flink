@@ -337,7 +337,8 @@ object FlinkStreamExecRuleSets {
     StreamExecMatchRule.INSTANCE,
     StreamExecRankRules.SORT_INSTANCE,
     StreamExecRankRules.RANK_INSTANCE,
-    StreamExecFirstLastRowRule.INSTANCE,
+    StreamExecFirstLastRowRules.SORT_INSTANCE,
+    StreamExecFirstLastRowRules.RANK_INSTANCE,
     StreamExecWatermarkAssignerRule.INSTANCE,
     StreamExecExpandRule.INSTANCE,
     // sink

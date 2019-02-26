@@ -15,45 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.flink.table.plan.rules.physical.stream
 
-import org.apache.flink.table.api.TableException
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.`trait`.FlinkRelDistribution
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalRank, FlinkLogicalSort}
-import org.apache.flink.table.plan.nodes.physical.stream.StreamExecRank
-import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.ConstantRankRange
+import org.apache.flink.table.plan.nodes.physical.stream.StreamExecFirstLastRow
 
-import org.apache.calcite.plan.volcano.RelSubset
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.calcite.rex.RexLiteral
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
 
-object StreamExecRankRules {
-  val SORT_INSTANCE: RelOptRule = new StreamExecRankFromSortRule
-  val RANK_INSTANCE: RelOptRule = new StreamExecRankFromRankRule
+object StreamExecFirstLastRowRules {
 
-  class StreamExecRankFromSortRule
+  val SORT_INSTANCE = new StreamExecFirstLastRowFromSortRule
+  val RANK_INSTANCE = new StreamExecFirstLastRowFromRankRule
+
+  class StreamExecFirstLastRowFromSortRule
     extends ConverterRule(
       classOf[FlinkLogicalSort],
       FlinkConventions.LOGICAL,
       FlinkConventions.STREAM_PHYSICAL,
-      "StreamExecRankFromSortRule")
+      "StreamExecFirstLastRowFromSortRule")
     with BaseStreamExecRankRule {
 
     override def matches(call: RelOptRuleCall): Boolean = {
       val sort: FlinkLogicalSort = call.rel(0)
-      val sortCollation = sort.collation
-
-      val canConvertToRank = if (sortCollation.getFieldCollations.isEmpty) {
-        true
-      } else {
-        sort.fetch != null
-      }
-      canConvertToRank && !canSimplifyToFirstLastRow(sort)
+      canSimplifyToFirstLastRow(sort)
     }
 
     override def convert(rel: RelNode): RelNode = {
@@ -62,80 +52,64 @@ object StreamExecRankRules {
       val requiredDistribution = FlinkRelDistribution.SINGLETON
 
       val requiredTraitSet = sort.getInput.getTraitSet
-        .replace(FlinkConventions.STREAM_PHYSICAL)
-        .replace(requiredDistribution)
+                             .replace(FlinkConventions.STREAM_PHYSICAL)
+                             .replace(requiredDistribution)
 
       val convInput: RelNode = RelOptRule.convert(sort.getInput, requiredTraitSet)
 
-      val rankStart = if (sort.offset != null) {
-        RexLiteral.intValue(sort.offset) + 1
-      } else {
-        1
-      }
-
-      val rankEnd = if (sort.fetch != null) {
-        rankStart + RexLiteral.intValue(sort.fetch) - 1
-      } else {
-        // we have checked in matches method that fetch is not null
-        throw new TableException("This should never happen, please file an issue.")
-      }
-
+      val fieldCollation = sort.collation.getFieldCollations.get(0)
+      val fieldType = sort.getRowType.getFieldList.get(fieldCollation.getFieldIndex).getType
+      val isRowtime = FlinkTypeFactory.isRowtimeIndicatorType(fieldType)
       val providedTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
-
-      new StreamExecRank(
+      // order by timeIndicator desc ==> lastRow, otherwise is firstRow
+      val isLastRow = fieldCollation.direction.isDescending
+      new StreamExecFirstLastRow(
         rel.getCluster,
         providedTraitSet,
         convInput,
-        new BaseRowSchema(rel.getRowType),
-        new BaseRowSchema(rel.getRowType),
-        SqlStdOperatorTable.ROW_NUMBER,
         Array(),
-        sort.collation,
-        ConstantRankRange(rankStart, rankEnd),
-        outputRankFunColumn = false)
+        isRowtime,
+        isLastRow,
+        description)
     }
   }
 
-  class StreamExecRankFromRankRule
+  class StreamExecFirstLastRowFromRankRule
     extends ConverterRule(
       classOf[FlinkLogicalRank],
       FlinkConventions.LOGICAL,
       FlinkConventions.STREAM_PHYSICAL,
-      "StreamExecRankFromRankRule")
+      "StreamExecFirstLastRowRule")
     with BaseStreamExecRankRule {
-
 
     override def matches(call: RelOptRuleCall): Boolean = {
       val rank: FlinkLogicalRank = call.rel(0)
-      !canSimplifyToFirstLastRow(rank)
+      canSimplifyToFirstLastRow(rank)
     }
 
     override def convert(rel: RelNode): RelNode = {
       val rank = rel.asInstanceOf[FlinkLogicalRank]
+      val fieldCollation = rank.sortCollation.getFieldCollations.get(0)
+      val fieldType = rank.getInput.getRowType.getFieldList.get(fieldCollation.getFieldIndex)
+                      .getType
+      val isRowtime = FlinkTypeFactory.isRowtimeIndicatorType(fieldType)
 
-      val requiredDistribution = if (!rank.partitionKey.isEmpty) {
-        FlinkRelDistribution.hash(rank.partitionKey.asList())
-      } else {
-        FlinkRelDistribution.SINGLETON
-      }
-      val requiredTraitSet = rank.getInput.getTraitSet
-        .replace(FlinkConventions.STREAM_PHYSICAL)
-        .replace(requiredDistribution)
-      val providedTraitSet = rank.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
+      val requiredDistribution = FlinkRelDistribution.hash(rank.partitionKey.toList)
+      val requiredTraitSet = rel.getCluster.getPlanner.emptyTraitSet()
+                             .replace(FlinkConventions.STREAM_PHYSICAL)
+                             .replace(requiredDistribution)
       val convInput: RelNode = RelOptRule.convert(rank.getInput, requiredTraitSet)
-      val inputRowType = convInput.asInstanceOf[RelSubset].getOriginal.getRowType
 
-      new StreamExecRank(
-        rank.getCluster,
-        providedTraitSet,
+      // order by timeIndicator desc ==> lastRow, otherwise is firstRow
+      val isLastRow = fieldCollation.direction.isDescending
+      new StreamExecFirstLastRow(
+        rel.getCluster,
+        rank.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL),
         convInput,
-        new BaseRowSchema(inputRowType),
-        new BaseRowSchema(rank.getRowType),
-        rank.rankFunction,
         rank.partitionKey.toArray,
-        rank.sortCollation,
-        rank.rankRange,
-        rank.outputRankFunColumn)
+        isRowtime,
+        isLastRow,
+        description)
     }
   }
 

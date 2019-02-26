@@ -46,16 +46,6 @@ StreamExecCalc(select=[c, PROCTIME(proctime) AS desc])
 ]]>
     </Resource>
   </TestCase>
-  <TestCase name="testSortProcessingTimeWithLimit">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[a])
-+- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-   +- StreamExecExchange(distribution=[single])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testLimitWithProcessingTimeSecond">
     <Resource name="plan">
       <![CDATA[
@@ -115,6 +105,36 @@ StreamExecCalc(select=[a])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSortProcessingTimeAscWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[PROCTIME], mode=[FirstRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeAscWithOffSet0AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[PROCTIME], mode=[FirstRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeAscWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSortProcessingTimeDesc">
     <Resource name="plan">
       <![CDATA[
@@ -134,12 +154,82 @@ StreamExecCalc(select=[a])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSortProcessingTimeDescWithOffSet0AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[PROCTIME], mode=[LastRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeDescWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime DESC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeFirstAscWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c ASC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeFirstAscWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c ASC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeFirstDescWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[PROCTIME], mode=[LastRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeFirstDescWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c DESC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSortProcessingTimeSecond">
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
 +- StreamExecSort(orderBy=[c ASC, proctime ASC])
    +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeSecondAscWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime ASC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -162,11 +252,31 @@ StreamExecCalc(select=[a])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSortProcessingTimeSecondDescWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime DESC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSortProcessingTimeSecondWithLimit">
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, proctime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortProcessingTimeWithLimit">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[proctime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[single])
       +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
@@ -178,6 +288,46 @@ StreamExecCalc(select=[a])
 StreamExecCalc(select=[a])
 +- StreamExecTemporalSort(orderBy=[rowtime ASC, c ASC])
    +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeFirstDescWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[LastRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeAscWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[FirstRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeAscWithOffSet0AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[FirstRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeAscWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -210,6 +360,56 @@ StreamExecCalc(select=[a])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSortRowTimeDescWithOffSet0AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[LastRow])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeDescWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime DESC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeFirstAscWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC, c ASC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeFirstAscWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC, c ASC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeFirstDescWithOffSet1AndLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC, c DESC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSortRowTimeSecond">
     <Resource name="plan">
       <![CDATA[
@@ -219,22 +419,22 @@ StreamExecCalc(select=[a])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSortRowTimeSecondAscWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime ASC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSortRowTimeSecondDesc">
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
 +- StreamExecSort(orderBy=[c ASC, rowtime DESC])
    +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
-  <TestCase name="testSortRowTimeSecondWithLimit">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecCalc(select=[a])
-+- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
-   +- StreamExecExchange(distribution=[single])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -248,11 +448,31 @@ StreamExecCalc(select=[a])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSortRowTimeSecondDescWithLimit1">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime DESC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testSortRowTimeWithLimit">
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[rowtime ASC, c ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[single])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testSortRowTimeSecondWithLimit">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecRank(rankFunction=[ROW_NUMBER], orderBy=[c ASC, rowtime ASC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[single])
       +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>

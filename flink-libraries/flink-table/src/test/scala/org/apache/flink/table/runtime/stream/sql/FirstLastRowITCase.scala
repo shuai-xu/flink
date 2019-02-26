@@ -25,6 +25,7 @@ import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBack
 import org.apache.flink.table.runtime.utils.TimeTestUtil.TimestampAndWatermarkWithOffset
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.types.Row
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,13 +52,13 @@ class FirstLastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
         |WHERE rowNum = 1
       """.stripMargin
 
-    val sink = new TestingRetractSink
-    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
     env.execute()
 
     val expected = List("1,1,Hi", "2,2,Hello", "4,3,Hello world, how are you?",
                         "7,4,Comment#1", "11,5,Comment#5", "16,6,Comment#10")
-    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
   @Test
@@ -163,4 +164,96 @@ class FirstLastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     thrown.expectMessage("Currently not support FirstLastRow on rowtime")
     tEnv.execute()
   }
+
+
+  @Test
+  def testFirstRowFromSortOnProctime(): Unit = {
+    val t = failingDataSource(StreamTestData.get3TupleData)
+            .toTable(tEnv, 'a, 'b, 'c, 'proc.proctime)
+    tEnv.registerTable("T", t)
+
+    val sql = "SELECT a,b,c FROM T ORDER BY proc LIMIT 1"
+    val sink = new TestingAppendSink
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("1,1,Hi")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testLastRowFromSortOnProctime(): Unit = {
+    val t = failingDataSource(StreamTestData.get3TupleData)
+            .toTable(tEnv, 'a, 'b, 'c, 'proc.proctime)
+    tEnv.registerTable("T", t)
+
+    val sql = "SELECT a,b,c FROM T ORDER BY proc DESC LIMIT 1"
+    val sink = new TestingRetractSink
+    tEnv.sqlQuery(sql).toRetractStream[Row].addSink(sink)
+    env.execute()
+
+    val expected = List("21,6,Comment#15")
+    assertEquals(expected.sorted, sink.getRetractResults.sorted)
+  }
+
+  @Test
+  def testFirstRowFromSortOnRowtime(): Unit = {
+    val data = List(
+      (3L, 2L, "Hello world", 3),
+      (2L, 2L, "Hello", 2),
+      (6L, 3L, "Luke Skywalker", 6),
+      (5L, 3L, "I am fine.", 5),
+      (7L, 4L, "Comment#1", 7),
+      (9L, 4L, "Comment#3", 9),
+      (10L, 4L, "Comment#4", 10),
+      (8L, 4L, "Comment#2", 8),
+      (1L, 1L, "Hi", 1),
+      (4L, 3L, "Helloworld, how are you?", 4))
+
+    val t = failingDataSource(data)
+            .assignTimestampsAndWatermarks(
+              new TimestampAndWatermarkWithOffset[(Long, Long, String, Int)](10L))
+            .toTable(tEnv, 'ts.rowtime, 'key, 'str, 'int)
+    tEnv.registerTable("T", t)
+
+    val sql = "SELECT key, str, `int` FROM T ORDER BY ts LIMIT 1"
+
+    val sink = new TestingUpsertTableSink(Array(1))
+    tEnv.sqlQuery(sql).writeToSink(sink)
+
+    // TODO: support LastRow on rowtime in the future
+    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
+    tEnv.execute()
+  }
+
+  @Test
+  def testLastRowFromSortOnRowtime(): Unit = {
+    val data = List(
+      (3L, 2L, "Hello world", 3),
+      (2L, 2L, "Hello", 2),
+      (6L, 3L, "Luke Skywalker", 6),
+      (5L, 3L, "I am fine.", 5),
+      (7L, 4L, "Comment#1", 7),
+      (9L, 4L, "Comment#3", 9),
+      (10L, 4L, "Comment#4", 10),
+      (8L, 4L, "Comment#2", 8),
+      (1L, 1L, "Hi", 1),
+      (4L, 3L, "Helloworld, how are you?", 4))
+
+    val t = failingDataSource(data)
+            .assignTimestampsAndWatermarks(
+              new TimestampAndWatermarkWithOffset[(Long, Long, String, Int)](10L))
+            .toTable(tEnv, 'ts.rowtime, 'key, 'str, 'int)
+    tEnv.registerTable("T", t)
+
+    val sql = "SELECT key, str, `int` FROM T ORDER BY ts DESC LIMIT 1"
+
+    val sink = new TestingUpsertTableSink(Array(1))
+    tEnv.sqlQuery(sql).writeToSink(sink)
+
+    // TODO: support LastRow on rowtime in the future
+    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
+    tEnv.execute()
+  }
+
 }
