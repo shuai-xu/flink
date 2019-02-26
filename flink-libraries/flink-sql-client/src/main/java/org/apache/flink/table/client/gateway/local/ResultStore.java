@@ -83,7 +83,7 @@ public class ResultStore {
 			if (!env.getExecution().isTableMode()) {
 				throw new SqlExecutionException("Results of batch queries can only be served in table mode.");
 			}
-			return new MaterializedCollectBatchResult<>(outputType, config);
+			return new MaterializedCollectBatchResult<>(outputType, config, env.getExecution().getMaxTableResultRows());
 		}
 	}
 

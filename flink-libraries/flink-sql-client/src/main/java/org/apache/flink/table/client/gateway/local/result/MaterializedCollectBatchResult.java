@@ -47,6 +47,12 @@ public class MaterializedCollectBatchResult<C> extends BasicResult<C> implements
 	private final Object resultLock;
 	private final Thread retrievalThread;
 
+	/**
+	 * Maximum number of materialized rows to be stored. After the count is reached, oldest
+	 * rows are dropped.
+	 */
+	private final int maxRowCount;
+
 	private ProgramDeployer<C> deployer;
 	private int pageSize;
 	private int pageCount;
@@ -55,7 +61,7 @@ public class MaterializedCollectBatchResult<C> extends BasicResult<C> implements
 
 	private volatile boolean snapshotted = false;
 
-	public MaterializedCollectBatchResult(DataType outputType, ExecutionConfig config) {
+	public MaterializedCollectBatchResult(DataType outputType, ExecutionConfig config, int maxRowCount) {
 		this.outputType = outputType;
 
 		accumulatorName = new AbstractID().toString();
@@ -66,6 +72,8 @@ public class MaterializedCollectBatchResult<C> extends BasicResult<C> implements
 		retrievalThread = new ResultRetrievalThread();
 
 		pageCount = 0;
+
+		this.maxRowCount = maxRowCount;
 	}
 
 	@Override
@@ -143,8 +151,9 @@ public class MaterializedCollectBatchResult<C> extends BasicResult<C> implements
 				}
 				final List<Row> resultTable = SerializedListAccumulator.deserializeList(accResult, tableSink.getSerializer());
 				// sets the result table all at once
+				int beginIndex = resultTable.size() <= maxRowCount ? 0 : (resultTable.size() - maxRowCount);
 				synchronized (resultLock) {
-					MaterializedCollectBatchResult.this.resultTable = resultTable;
+					MaterializedCollectBatchResult.this.resultTable = resultTable.subList(beginIndex, resultTable.size());
 				}
 			} catch (ClassNotFoundException | IOException e) {
 				executionException = new SqlExecutionException("Serialization error while deserializing collected data.", e);

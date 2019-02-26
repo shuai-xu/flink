@@ -45,7 +45,7 @@ public abstract class CliResultView<O extends Enum<O>> extends CliView<O, Void> 
 		REFRESH_INTERVALS = new ArrayList<>();
 		REFRESH_INTERVALS.add(Tuple2.of("Fastest", 0L));
 		REFRESH_INTERVALS.add(Tuple2.of("100 ms", 100L));
-		REFRESH_INTERVALS.add(Tuple2.of("500 ms", 100L));
+		REFRESH_INTERVALS.add(Tuple2.of("500 ms", 500L));
 		REFRESH_INTERVALS.add(Tuple2.of("1 s", 1_000L));
 		REFRESH_INTERVALS.add(Tuple2.of("5 s", 5_000L));
 		REFRESH_INTERVALS.add(Tuple2.of("10 s", 10_000L));
@@ -220,6 +220,18 @@ public abstract class CliResultView<O extends Enum<O>> extends CliView<O, Void> 
 		stopRetrieval();
 	}
 
+	@Override
+	protected void close() {
+		super.close();
+
+		// cancel table program
+		try {
+			client.getExecutor().cancelQuery(client.getContext(), resultDescriptor.getResultId());
+		} catch (SqlExecutionException e) {
+			// ignore further exceptions
+		}
+	}
+
 	// --------------------------------------------------------------------------------------------
 
 	private class RefreshThread extends Thread {
@@ -276,15 +288,6 @@ public abstract class CliResultView<O extends Enum<O>> extends CliView<O, Void> 
 				if (CliResultView.this.isRunning()) {
 					display();
 				}
-			}
-
-			// cancel table program
-			try {
-				// the cancellation happens in the refresh thread in order to keep the main thread
-				// responsive at all times; esp. if the cluster is not available
-				client.getExecutor().cancelQuery(client.getContext(), resultDescriptor.getResultId());
-			} catch (SqlExecutionException e) {
-				// ignore further exceptions
 			}
 		}
 	}
