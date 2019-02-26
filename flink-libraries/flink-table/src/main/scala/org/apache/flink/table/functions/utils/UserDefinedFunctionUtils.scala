@@ -203,7 +203,7 @@ object UserDefinedFunctionUtils {
       function,
       methodName,
       typesToClasses(input),
-      input.map(_.toInternalType).toArray,
+      input.map{ t => if (t == null) null else t.toInternalType}.toArray,
       (cls) => Array(accType) ++
           function.getUserDefinedInputTypes(cls.drop(1)))
   }
@@ -220,7 +220,7 @@ object UserDefinedFunctionUtils {
       function,
       methodName,
       typesToClasses(signature),
-      signature.map(_.toInternalType).toArray,
+      signature.map{ t => if (t == null) null else t.toInternalType}.toArray,
       (cls) => cls.indices.map((_) => null).toArray)
   }
 
