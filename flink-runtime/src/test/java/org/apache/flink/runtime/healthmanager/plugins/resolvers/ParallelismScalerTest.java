@@ -266,7 +266,7 @@ public class ParallelismScalerTest {
 		RestServerClient.JobConfig jobConfig = new RestServerClient.JobConfig(new Configuration(), vertexConfigs, inputConfigs);
 
 		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = new HashMap<>();
-		TaskCheckpointStatistics statisticsOfVertex2 = new TaskCheckpointStatistics(0, CheckpointStatsStatus.COMPLETED, 0, 8, 0, 0, 0, 0);
+		TaskCheckpointStatistics statisticsOfVertex2 = new TaskCheckpointStatistics(0, CheckpointStatsStatus.COMPLETED, 0, 8, 8, 0, 0, 0, 0);
 		checkpointInfo.put(vertex2, statisticsOfVertex2);
 
 		Map<JobVertexID, TaskMetricSubscription> partitionCountSubscription = new HashMap<>();

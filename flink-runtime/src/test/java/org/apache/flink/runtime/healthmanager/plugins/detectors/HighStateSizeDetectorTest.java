@@ -64,9 +64,9 @@ public class HighStateSizeDetectorTest extends DetectorTestBase {
 
 		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = new HashMap<>();
 		checkpointInfo.put(vertex1,
-				new TaskCheckpointStatistics(1, CheckpointStatsStatus.COMPLETED, 0,  200, 0, 0, 0, 0));
+				new TaskCheckpointStatistics(1, CheckpointStatsStatus.COMPLETED, 0,  200, 200, 0, 0, 0, 0));
 		checkpointInfo.put(vertex2,
-				new TaskCheckpointStatistics(1, CheckpointStatsStatus.COMPLETED, 0,  201, 0, 0, 0, 0));
+				new TaskCheckpointStatistics(1, CheckpointStatsStatus.COMPLETED, 0,  201, 200, 0, 0, 0, 0));
 		Mockito.when(restClient.getJobVertexCheckPointStates(eq(jobID))).thenReturn(checkpointInfo);
 
 		HighStateSizeDetector detector = new HighStateSizeDetector();
