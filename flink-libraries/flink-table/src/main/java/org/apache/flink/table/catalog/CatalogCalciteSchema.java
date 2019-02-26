@@ -19,8 +19,6 @@
 package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.CatalogAlreadyExistException;
-import org.apache.flink.table.api.DatabaseNotExistException;
-import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.plan.schema.CatalogCalciteTable;
 
 import org.apache.calcite.linq4j.tree.Expression;
@@ -66,9 +64,10 @@ public class CatalogCalciteSchema implements Schema {
 	 */
 	@Override
 	public Schema getSubSchema(String schemaName) {
-		try {
+
+		if (catalog.dbExists(schemaName)) {
 			return new DatabaseCalciteSchema(schemaName, catalog);
-		} catch (DatabaseNotExistException e) {
+		} else {
 			LOGGER.warn(String.format("Schema %s does not exist in catalog %s", schemaName, catalogName));
 			return null;
 		}
@@ -130,9 +129,9 @@ public class CatalogCalciteSchema implements Schema {
 	}
 
 	public static void registerCatalog(
-		SchemaPlus parentSchema,
-		String catalogName,
-		ReadableCatalog catalog) {
+			SchemaPlus parentSchema,
+			String catalogName,
+			ReadableCatalog catalog) {
 
 		LOGGER.info("Register catalog '{}' to Calcite", catalogName);
 		SchemaPlus catalogSchema = parentSchema.getSubSchema(catalogName);
@@ -141,14 +140,7 @@ public class CatalogCalciteSchema implements Schema {
 			throw new CatalogAlreadyExistException(catalogName);
 		} else {
 			CatalogCalciteSchema newCatalog = new CatalogCalciteSchema(catalogName, catalog);
-			SchemaPlus schemaPlusOfNewCatalog = parentSchema.add(catalogName, newCatalog);
-			newCatalog.registerSubSchemas(schemaPlusOfNewCatalog);
-		}
-	}
-
-	public void registerSubSchemas(SchemaPlus schemaPlus) {
-		for (String schemaName: catalog.listDatabases()) {
-			schemaPlus.add(schemaName, getSubSchema(schemaName));
+			parentSchema.add(catalogName, newCatalog);
 		}
 	}
 
@@ -168,9 +160,12 @@ public class CatalogCalciteSchema implements Schema {
 
 		@Override
 		public Table getTable(String tableName) {
-			try {
-				LOGGER.info("Getting table '{}' from catalog '{}'", tableName, catalogName);
-				CatalogTable table = catalog.getTable(new ObjectPath(dbName, tableName));
+			LOGGER.info("Getting table '{}' from catalog '{}'", tableName, catalogName);
+
+			ObjectPath tablePath = new ObjectPath(dbName, tableName);
+
+			if (catalog.tableExists(tablePath)) {
+				CatalogTable table = catalog.getTable(tablePath);
 
 				LOGGER.info("Successfully got table '{}' from catalog '{}'", tableName, catalogName);
 
@@ -179,9 +174,8 @@ public class CatalogCalciteSchema implements Schema {
 				} else {
 					return new CatalogCalciteTable(tableName, table);
 				}
-			} catch (TableNotExistException e) {
-				LOGGER.warn(
-					String.format("Table %s.%s does not exist in catalog %s", dbName, tableName, catalogName));
+			} else {
+				LOGGER.warn(String.format("Table %s.%s does not exist in catalog %s", dbName, tableName, catalogName));
 				return null;
 			}
 		}

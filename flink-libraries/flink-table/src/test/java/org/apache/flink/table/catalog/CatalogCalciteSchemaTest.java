@@ -34,10 +34,11 @@ import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.validate.SqlMoniker;
 import org.apache.calcite.sql.validate.SqlMonikerType;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -64,18 +65,19 @@ public class CatalogCalciteSchemaTest {
 	private final String table2 = "tb2";
 	private final String builtindb = FlinkInMemoryCatalog.DEFAULT_DB;
 
-	private SchemaPlus catalogSchema;
+	private ReadableCatalog catalog;
 	private CalciteCatalogReader calciteCatalogReader;
-
 	private SchemaPlus rootSchemaPlus;
+
+	@Rule
+	public ExpectedException exception = ExpectedException.none();
 
 	@Before
 	public void setup() {
 		rootSchemaPlus = CalciteSchema.createRootSchema(true, false).plus();
-		final ReadableCatalog catalog = CommonTestData.getTestFlinkInMemoryCatalog(false);
+		catalog = CommonTestData.getTestFlinkInMemoryCatalog(false);
 
 		CatalogCalciteSchema.registerCatalog(rootSchemaPlus, catalogName, catalog);
-		catalogSchema = rootSchemaPlus.getSubSchema("test");
 
 		FlinkTypeFactory typeFactory = new FlinkTypeFactory(new FlinkTypeSystem());
 		Properties prop = new Properties();
@@ -123,10 +125,8 @@ public class CatalogCalciteSchemaTest {
 	}
 
 	@Test
-	public void testGetSubSchema() {
-		List<SqlMoniker> allSchemaObjectNames = calciteCatalogReader.getAllSchemaObjectNames(Arrays.asList(catalogName));
-
-		Set<List<String>> subSchemas = allSchemaObjectNames.stream()
+	public void testGetAndDropSubSchema() {
+		Set<List<String>> subSchemas = calciteCatalogReader.getAllSchemaObjectNames(Arrays.asList(catalogName)).stream()
 			.filter(s -> s.getType().equals(SqlMonikerType.SCHEMA))
 			.map(s -> s.getFullyQualifiedNames())
 			.collect(Collectors.toSet());
@@ -134,16 +134,35 @@ public class CatalogCalciteSchemaTest {
 		assertEquals(
 			new HashSet<List<String>>() {{
 				add(Arrays.asList(catalogName));
-				add(Arrays.asList(catalogName, "db1"));
-				add(Arrays.asList(catalogName, "db2"));
+				add(Arrays.asList(catalogName, db1));
+				add(Arrays.asList(catalogName, db2));
 				add(Arrays.asList(catalogName, builtindb));
 			}},
 			subSchemas
 		);
+
+		// Test databases (sub-schemas) dropped won't show up
+		((ReadableWritableCatalog) catalog).dropDatabase(db1, false);
+
+		subSchemas = calciteCatalogReader.getAllSchemaObjectNames(Arrays.asList(catalogName)).stream()
+			.filter(s -> s.getType().equals(SqlMonikerType.SCHEMA))
+			.map(s -> s.getFullyQualifiedNames())
+			.collect(Collectors.toSet());
+
+		assertEquals(
+			new HashSet<List<String>>() {{
+				add(Arrays.asList(catalogName));
+				add(Arrays.asList(catalogName, db2));
+				add(Arrays.asList(catalogName, builtindb));
+			}},
+			subSchemas
+		);
+
+		assertNull(rootSchemaPlus.getSubSchema(catalogName).getSubSchema(db1));
 	}
 
 	@Test
-	public void testGetTable() {
+	public void testGetAndDropTable() {
 		RelOptTable relOptTable = calciteCatalogReader.getTable(Arrays.asList(catalogName, db1, table1));
 
 		assertNotNull(relOptTable);
@@ -155,6 +174,11 @@ public class CatalogCalciteSchemaTest {
 		TableSource tableSource = table.batchTableSource();
 
 		assertTrue(tableSource instanceof CsvTableSource);
+
+		// Test tables dropped won't show up
+		((ReadableWritableCatalog) catalog).dropTable(new ObjectPath(db1, table1), false);
+
+		assertNull(calciteCatalogReader.getTable(Arrays.asList(catalogName, db1, table1)));
 	}
 
 	@Test
