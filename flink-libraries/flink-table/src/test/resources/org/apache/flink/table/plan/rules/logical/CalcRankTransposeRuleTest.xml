@@ -1,0 +1,130 @@
+<?xml version="1.0" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<Root>
+  <TestCase name="testLastRowOnRowtime">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecFirstLastRow(key=[a], select=[a, rowtime], order=[ROWTIME], mode=[LastRow])
++- StreamExecExchange(distribution=[hash[a]])
+   +- StreamExecCalc(select=[a, rowtime])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testNotTranspose">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[category, max_price, w0$o0])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_price ASC], rankRange=[rankStart=1, rankEnd=3], strategy=[UnaryUpdateRank[0,1]], select=[*, rowNum])
+   +- StreamExecExchange(distribution=[hash[category]])
+      +- StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, MAX(price) AS max_price])
+         +- StreamExecExchange(distribution=[hash[category, shopId]])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testProjectRankFunc">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[rk AS rank_num, rowtime, a, rk AS rank_num0, a AS a0, rk AS rank_num1])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*, rowNum])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecCalc(select=[a, rowtime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testPruneOrderKeys">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[a])
++- StreamExecFirstLastRow(key=[a], select=[a, rowtime], order=[ROWTIME], mode=[LastRow])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecCalc(select=[a, rowtime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testPrunePartitionKeys">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[rowtime])
++- StreamExecFirstLastRow(key=[a], select=[a, rowtime], order=[ROWTIME], mode=[LastRow])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecCalc(select=[a, rowtime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testPushCalcWithConditionIntoRank">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[rowtime, c], where=[>(a, 10)])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
+   +- StreamExecExchange(distribution=[hash[a]])
+      +- StreamExecCalc(select=[a, c, rowtime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testPruneRankFunc">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*])
++- StreamExecExchange(distribution=[hash[a]])
+   +- StreamExecCalc(select=[a, rowtime])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testPruneUniqueKeys">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecCalc(select=[category, max_price, rk AS w0$o0], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_price ASC], rankRange=[rankStart=1, rankEnd=3], strategy=[UnaryUpdateRank[0,1]], select=[*, rowNum], updateAsRetraction=[false], accMode=[Acc])
+   +- StreamExecExchange(distribution=[hash[category]], updateAsRetraction=[false], accMode=[Acc])
+      +- StreamExecCalc(select=[category, shopId, max_price], updateAsRetraction=[false], accMode=[Acc])
+         +- StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, MAX(price) AS max_price, MIN(price) AS min_price], updateAsRetraction=[false], accMode=[Acc])
+            +- StreamExecExchange(distribution=[hash[category, shopId]], updateAsRetraction=[true], accMode=[Acc])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], updateAsRetraction=[true], accMode=[Acc])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testPruneUnusedProject">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[category], orderBy=[max_price ASC], rankRange=[rankStart=1, rankEnd=3], strategy=[UnaryUpdateRank[0,1]], select=[*, rowNum])
++- StreamExecExchange(distribution=[hash[category]])
+   +- StreamExecCalc(select=[category, shopId, max_price])
+      +- StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, MAX(price) AS max_price, MIN(price) AS min_price])
+         +- StreamExecExchange(distribution=[hash[category, shopId]])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testTrivialCalcIsRemoved">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime DESC], rankRange=[rankStart=1, rankEnd=2], strategy=[AppendFastRank], select=[*, rowNum])
++- StreamExecExchange(distribution=[hash[a]])
+   +- StreamExecCalc(select=[a, rowtime])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+</Root>

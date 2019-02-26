@@ -37,7 +37,7 @@ object RexNodeRewriter {
       exps: JList[RexNode],
       usedFields: Array[Int]): JList[RexNode] = {
     // rewrite input field in expressions
-    val inputRewriter = new InputRewriter(usedFields)
+    val inputRewriter = new InputRewriter(usedFields.zipWithIndex.toMap)
     exps.map(_.accept(inputRewriter)).toList.asJava
   }
 }
@@ -45,13 +45,9 @@ object RexNodeRewriter {
 /**
   * A RexShuttle to rewrite field accesses of RexNode.
   *
-  * @param fields used input fields
+  * @param fieldMap old input fields ref index -> new input fields ref index mappings
   */
-class InputRewriter(fields: Array[Int]) extends RexShuttle {
-
-  /** old input fields ref index -> new input fields ref index mappings */
-  private val fieldMap: Map[Int, Int] =
-    fields.zipWithIndex.toMap
+class InputRewriter(fieldMap: Map[Int, Int]) extends RexShuttle {
 
   override def visitInputRef(inputRef: RexInputRef): RexNode =
     new RexInputRef(refNewIndex(inputRef), inputRef.getType)

@@ -302,6 +302,10 @@ object FlinkStreamExecRuleSets {
   val LOGICAL_REWRITE: RuleSet = RuleSets.ofList(
     // transform over window to topn node
     FlinkLogicalRankRule.INSTANCE,
+    // transpose calc past rank to reduce state size
+    CalcRankTransposeRule.INSTANCE,
+    // merge calc and rank
+    CalcRankMergeRule.INSTANCE,
     // remove output of rank function when rank number is constant
     RankFunctionColumnRemoveRule.INSTANCE,
     // split distinct aggregate to reduce data skew
