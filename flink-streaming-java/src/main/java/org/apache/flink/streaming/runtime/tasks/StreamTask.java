@@ -281,7 +281,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 			final long invokeStartTime = System.currentTimeMillis();
 			this.initTime = -1L;
-			getEnvironment().getMetricGroup().gauge("taskInitTime.ms", () -> this.initTime);
+			getEnvironment().getMetricGroup().gauge("taskInitTimeMs", () -> this.initTime);
 
 			asyncOperationsThreadPool = Executors.newCachedThreadPool();
 
