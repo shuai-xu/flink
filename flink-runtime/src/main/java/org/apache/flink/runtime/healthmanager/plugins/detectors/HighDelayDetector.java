@@ -77,7 +77,7 @@ public class HighDelayDetector implements Detector {
 		for (JobVertexID vertexId : monitor.getJobConfig().getVertexConfigs().keySet()) {
 			if (monitor.getJobConfig().getInputNodes().get(vertexId).size() == 0) {
 				TaskMetricSubscription delaySub = metricProvider.subscribeTaskMetric(
-						jobID, vertexId, SOURCE_DELAY, MetricAggType.MAX, highDelayCheckInterval, TimelineAggType.AVG);
+						jobID, vertexId, SOURCE_DELAY, MetricAggType.MAX, highDelayCheckInterval, TimelineAggType.LATEST);
 				delaySubs.put(vertexId, delaySub);
 			}
 		}
@@ -97,8 +97,6 @@ public class HighDelayDetector implements Detector {
 	@Override
 	public Symptom detect() throws Exception {
 		LOGGER.debug("Start detecting.");
-
-		long now = System.currentTimeMillis();
 
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
 		for (JobVertexID vertexId : delaySubs.keySet()) {

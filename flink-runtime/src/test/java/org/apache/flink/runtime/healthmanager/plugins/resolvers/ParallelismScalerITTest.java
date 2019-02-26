@@ -418,7 +418,7 @@ public class ParallelismScalerITTest {
 						return v1WaitOutputSumRange;
 					}
 				} else if (metricName.equals(MetricNames.SOURCE_DELAY)) {
-					if (aggType.equals(TimelineAggType.AVG)) {
+					if (aggType.equals(TimelineAggType.LATEST)) {
 						return v1Delay;
 					} else if (aggType.equals(TimelineAggType.RATE)) {
 						return v1DelayRate;
