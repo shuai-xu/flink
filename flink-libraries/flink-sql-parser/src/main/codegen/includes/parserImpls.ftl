@@ -326,6 +326,24 @@ SqlNode SqlCreateTable() :
     }
 }
 
+SqlNode SqlDropTable() :
+{
+    SqlNode tableName = null;
+    SqlParserPos pos;
+
+}
+{
+    <DROP> { pos = getPos(); }
+
+    <TABLE>
+
+    tableName = CompoundIdentifier()
+
+    {
+         return new SqlDropTable(pos, tableName);
+    }
+}
+
 SqlNode SqlCreateFunction() :
 {
     SqlNode functionName = null;
@@ -349,6 +367,23 @@ SqlNode SqlCreateFunction() :
     }
 }
 
+SqlNode SqlDropFunction() :
+{
+    SqlNode functionName = null;
+    SqlParserPos pos;
+
+}
+{
+    <DROP> { pos = getPos(); }
+
+    <FUNCTION>
+
+    functionName = CompoundIdentifier()
+
+    {
+         return new SqlDropFunction(pos, functionName);
+    }
+}
 
 
 /** Parses an optional field list and makes sure no field is a "*". */
@@ -408,5 +443,23 @@ SqlNode SqlCreateOrReplaceView() :
     query = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     {
         return new SqlCreateView(pos, viewName, fieldList, query, replaceView);
+    }
+}
+
+SqlNode SqlDropView() :
+{
+    SqlNode viewName = null;
+    SqlParserPos pos;
+
+}
+{
+    <DROP> { pos = getPos(); }
+
+    <VIEW>
+
+    viewName = CompoundIdentifier()
+
+    {
+         return new SqlDropView(pos, viewName);
     }
 }

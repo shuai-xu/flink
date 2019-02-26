@@ -559,6 +559,15 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Drop a function with the given function name.
+    * @param name the name of the function to be dropped.
+    */
+  def dropFunction(name: String): Unit = {
+    // TODO: This needs to adapt to the new function catalog design.
+    builtInFunctionCatalog.dropFunction(name);
+  }
+
+  /**
     * Registers a [[TableFunction]] under a unique name. Replaces already existing
     * user-defined functions under this name.
     */
@@ -642,14 +651,15 @@ abstract class TableEnvironment(
   }
 
   /**
-    * Drops a [[Table]], [[CatalogTable]], or [[CatalogView]]
+    * Drop a Table (or view) with the given name.
     * from the TableEnvironment's default catalog.
     * Dropped tables can not be referenced in SQL queries.
     */
   def dropTable(name: String): Unit = {
-    val catalog = getDefaultCatalog()
+    val catalog = getDefaultCatalog().asInstanceOf[ReadableWritableCatalog]
     val path = new ObjectPath(getDefaultDatabaseName(), name)
-    catalog.asInstanceOf[ReadableWritableCatalog].dropTable(path, false)
+
+    catalog.dropTable(path, false)
   }
 
   /**

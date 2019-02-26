@@ -131,6 +131,10 @@ public final class SqlCommandParser {
 			"(CREATE\\s+TABLE.*)",
 			SINGLE_OPERAND),
 
+		DROP_TABLE(
+			"(DROP\\s+TABLE.*)",
+			SINGLE_OPERAND),
+
 		CREATE_VIEW(
 			"(CREATE\\s+VIEW\\s+(\\S+)\\s+AS\\s+(.*))",
 			(operands) -> {
@@ -141,15 +145,15 @@ public final class SqlCommandParser {
 			}),
 
 		DROP_VIEW(
-			"DROP\\s+VIEW\\s+(.*)",
-			SINGLE_OPERAND),
-
-		DROP_TABLE(
-			"DROP\\s+TABLE\\s+(.*)",
+			"(DROP\\s+VIEW.*)",
 			SINGLE_OPERAND),
 
 		CREATE_FUNCTION(
 			"(CREATE\\s+FUNCTION.*)",
+			SINGLE_OPERAND),
+
+		DROP_FUNCTION(
+			"(DROP\\s+FUNCTION.*)",
 			SINGLE_OPERAND),
 
 		SET(

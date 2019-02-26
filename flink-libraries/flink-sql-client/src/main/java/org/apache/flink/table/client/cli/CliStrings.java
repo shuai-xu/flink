@@ -144,16 +144,20 @@ public final class CliStrings {
 
 	public static final String MESSAGE_TABLE_CREATE = "Table has been created.";
 
-	public static final String MESSAGE_TABLE_DROP = "Table has been removed.";
+	public static final String MESSAGE_TABLE_REMOVED = "Table has been removed.";
+
+	public static final String MESSAGE_TABLE_NOT_REMOVED = "The given table cannot be removed.";
 
 	public static final String MESSAGE_FUNCTION_CREATE = "Function has been created.";
+
+	public static final String MESSAGE_FUNCTION_REMOVED = "Function has been removed.";
 
 	public static final String MESSAGE_VIEW_ALREADY_EXISTS = "A view with this name has already been defined in the current CLI session.";
 
 	public static final String MESSAGE_VIEW_NOT_FOUND = "The given view does not exist in the current CLI session. " +
 		"Only views created with a CREATE VIEW statement can be accessed.";
 
-	public static final String MESSAGE_VIEW_NOT_REMOVED = "The given view cannot be removed without affecting other views.";
+	public static final String MESSAGE_VIEW_NOT_REMOVED = "The given view cannot be removed.";
 
 	// --------------------------------------------------------------------------------------------
 

@@ -249,7 +249,17 @@ public class CliClientTest extends TestLogger {
 		}
 
 		@Override
+		public void dropView(SessionContext session, String ddl) throws SqlExecutionException {
+			// nothing to do
+		}
+
+		@Override
 		public void createFunction(SessionContext session, String ddl) throws SqlExecutionException {
+			// nothing to do
+		}
+
+		@Override
+		public void dropFunction(SessionContext session, String ddl) throws SqlExecutionException {
 			// nothing to do
 		}
 

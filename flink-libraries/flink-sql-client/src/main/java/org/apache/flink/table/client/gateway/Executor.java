@@ -135,9 +135,19 @@ public interface Executor {
 	void createTable(SessionContext session, String ddl) throws SqlExecutionException;
 
 	/**
+	 * Drop a table with a DDL.
+	 */
+	void dropTable(SessionContext session, String ddl) throws SqlExecutionException;
+
+	/**
 	 * Create a view with a DDL.
 	 */
 	void createView(SessionContext session, String ddl) throws SqlExecutionException;
+
+	/**
+	 * Drop a view with a DDL.
+	 */
+	void dropView(SessionContext session, String ddl) throws SqlExecutionException;
 
 	/**
 	 * Create a function with a DDL.
@@ -145,9 +155,9 @@ public interface Executor {
 	void createFunction(SessionContext session, String ddl) throws SqlExecutionException;
 
 	/**
-	 * Drop a table or view.
+	 * Drop a function with a DDL.
 	 */
-	void dropTable(SessionContext session, String tableName) throws SqlExecutionException;
+	void dropFunction(SessionContext session, String ddl) throws SqlExecutionException;
 
 	/**
 	 * Stops the executor.

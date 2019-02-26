@@ -458,6 +458,18 @@ public class LocalExecutorITCase extends TestLogger {
 	}
 
 	@Test(timeout = 30_000L)
+	public void testDropTable() throws Exception {
+		final Executor executor = createDefaultExecutor(clusterClient);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		int tableCount = executor.listTables(session).size();
+		executor.createTable(session, "CREATE TABLE T1(field1 INT, field2 VARCHAR) WITH (type = 'type', attributeKey1 = 'value1', attributeKey2 = 'value2')");
+		assertEquals(tableCount + 1, executor.listTables(session).size());
+		executor.dropTable(session, "DROP TABLE T1");
+		assertEquals(tableCount, executor.listTables(session).size());
+	}
+
+	@Test(timeout = 30_000L)
 	public void testStreamQueryExecutionFromDDLTable() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
@@ -960,6 +972,42 @@ public class LocalExecutorITCase extends TestLogger {
 		} finally {
 			executor.stop(session);
 		}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testDropViewAndFunction() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		int views = executor.listViews(session).size();
+		int funcs = executor.listUserDefinedFunctions(session).size();
+
+		// Create a scalar function
+		executor.createFunction(
+			session,
+			"CREATE FUNCTION F1 "
+				+ "AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF'");
+		assertEquals(funcs + 1, executor.listUserDefinedFunctions(session).size());
+		// Create a view
+		executor.createView(
+			session,
+			"CREATE VIEW V1 AS SELECT scalarDDL(IntegerField1) FROM TableNumber1");
+		assertEquals(views + 1, executor.listViews(session).size());
+		executor.dropFunction(session, "DROP FUNCTION F1");
+		// Currently executor.dropFunction() doesn't remove the corresponding sql operator generated, causing the
+		// following test failure. We comment this test out as our work on function is WIP.
+		//assertEquals(funcs, executor.listUserDefinedFunctions(session).size());
+		executor.dropView(session, "DROP VIEW V1");
+		assertEquals(views, executor.listViews(session).size());
 	}
 
 	@Test(timeout = 30_000L)

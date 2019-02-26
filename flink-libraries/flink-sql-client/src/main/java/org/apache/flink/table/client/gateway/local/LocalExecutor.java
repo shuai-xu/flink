@@ -34,6 +34,9 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlCreateView;
+import org.apache.flink.sql.parser.ddl.SqlDropFunction;
+import org.apache.flink.sql.parser.ddl.SqlDropTable;
+import org.apache.flink.sql.parser.ddl.SqlDropView;
 import org.apache.flink.sql.parser.ddl.SqlNodeInfo;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.Table;
@@ -385,6 +388,27 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
+	public void dropTable(SessionContext session, String ddl) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			sqlNodeList
+				.stream()
+				.filter((node) -> node.getSqlNode() instanceof SqlDropTable)
+				.forEach((node) -> {
+					SqlDropTable sqlDropTable = (SqlDropTable) node.getSqlNode();
+					String funcName = sqlDropTable.getTableName().toString();
+					tEnv.dropTable(funcName);
+				});
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not drop a table from ddl: " + ddl, e);
+		}
+	}
+
+	@Override
 	public void createView(SessionContext session, String ddl) throws SqlExecutionException {
 		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
 		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
@@ -398,6 +422,27 @@ public class LocalExecutor implements Executor {
 				.forEach((node) -> SqlJobUtil.registerExternalView(tEnv, node));
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not create a view from ddl: " + ddl, e);
+		}
+	}
+
+	@Override
+	public void dropView(SessionContext session, String ddl) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			sqlNodeList
+				.stream()
+				.filter((node) -> node.getSqlNode() instanceof SqlDropView)
+				.forEach((node) -> {
+					SqlDropView sqlDropView = (SqlDropView) node.getSqlNode();
+					String viewName = sqlDropView.getViewName().toString();
+					tEnv.dropTable(viewName);
+				});
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not drop a view from ddl: " + ddl, e);
 		}
 	}
 
@@ -439,15 +484,23 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
-	public void dropTable(SessionContext session, String tableName) throws SqlExecutionException {
+	public void dropFunction(SessionContext session, String ddl) throws SqlExecutionException {
 		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
 		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
 		TableEnvironment tEnv = envInst.getTableEnvironment();
 
 		try {
-			tEnv.dropTable(tableName);
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			sqlNodeList
+				.stream()
+				.filter((node) -> node.getSqlNode() instanceof SqlDropFunction)
+				.forEach((node) -> {
+					SqlDropFunction sqlDropFunction = (SqlDropFunction) node.getSqlNode();
+					String funcName = sqlDropFunction.getFunctionName().toString();
+					tEnv.dropFunction(funcName);
+				});
 		} catch (Exception e) {
-			throw new SqlExecutionException("Could not drop a table or view from current catalog.", e);
+			throw new SqlExecutionException("Could not drop a udx from ddl: " + ddl, e);
 		}
 	}
 

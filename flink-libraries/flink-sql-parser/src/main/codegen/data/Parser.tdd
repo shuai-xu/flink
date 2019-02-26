@@ -23,13 +23,16 @@
   # Example. "org.apache.calcite.sql.*", "java.util.List".
   imports: [
     "org.apache.flink.sql.parser.ddl.SqlCreateTable",
+    "org.apache.flink.sql.parser.ddl.SqlDropTable"
     "org.apache.flink.sql.parser.ddl.SqlCreateTable.TableTempWrapper",
     "org.apache.flink.sql.parser.ddl.SqlAnalyzeTable",
     "org.apache.flink.sql.parser.ddl.SqlRichDescribeTable",
     "org.apache.flink.sql.parser.ddl.SqlCreateTable.IndexWrapper",
     "org.apache.flink.sql.parser.ddl.SqlTableColumn",
     "org.apache.flink.sql.parser.ddl.SqlCreateFunction",
+    "org.apache.flink.sql.parser.ddl.SqlDropFunction",
     "org.apache.flink.sql.parser.ddl.SqlCreateView",
+    "org.apache.flink.sql.parser.ddl.SqlDropView",
     "org.apache.flink.sql.parser.ddl.SqlWatermark",
     "org.apache.flink.sql.parser.ddl.SqlHiddenColumn",
     "java.util.List",
@@ -75,7 +78,10 @@
   # Example: SqlShowDatabases(), SqlShowTables().
   statementParserMethods: [
     "SqlCreateTable()",
+    "SqlDropTable()"
     "SqlCreateFunction()",
+    "SqlDropFunction()",
+    "SqlDropView()",
     "SqlCreateOrReplaceView()",
     "SqlAnalyzeTable()",
     "SqlRichDescribe()"

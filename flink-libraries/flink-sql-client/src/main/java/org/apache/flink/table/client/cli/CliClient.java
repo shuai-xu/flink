@@ -21,7 +21,6 @@ package org.apache.flink.table.client.cli;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.cli.SqlCommandParser.SqlCommandCall;
-import org.apache.flink.table.client.config.entries.ViewEntry;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.ProgramTargetDescriptor;
 import org.apache.flink.table.client.gateway.ResultDescriptor;
@@ -279,14 +278,20 @@ public class CliClient {
 			case CREATE_TABLE:
 				callCreateTable(cmdCall);
 				break;
+			case DROP_TABLE:
+				callDropTable(cmdCall);
+				break;
 			case CREATE_VIEW:
 				callCreateView(cmdCall);
+				break;
+			case DROP_VIEW:
+				callDropView(cmdCall);
 				break;
 			case CREATE_FUNCTION:
 				callCreateFunction(cmdCall);
 				break;
-			case DROP_TABLE:
-				callDropTable(cmdCall);
+			case DROP_FUNCTION:
+				callDropFunction(cmdCall);
 				break;
 			case SOURCE:
 				callSource(cmdCall);
@@ -508,12 +513,32 @@ public class CliClient {
 		}
 	}
 
+	private void callDropTable(SqlCommandCall cmdCall) {
+		try {
+			// perform and validate change
+			executor.dropTable(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_TABLE_REMOVED);
+		} catch (SqlExecutionException e) {
+			printExecutionException(CliStrings.MESSAGE_TABLE_NOT_REMOVED, e);
+		}
+	}
+
 	private void callCreateView(SqlCommandCall cmdCall) {
 		try {
 			executor.createView(context, cmdCall.operands[0]);
 			printInfo(CliStrings.MESSAGE_VIEW_CREATED);
 		} catch (SqlExecutionException e) {
 			printExecutionException(e);
+		}
+	}
+
+	private void callDropView(SqlCommandCall cmdCall) {
+		try {
+			// perform and validate change
+			executor.dropView(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_VIEW_REMOVED);
+		} catch (SqlExecutionException e) {
+			printExecutionException(CliStrings.MESSAGE_VIEW_NOT_REMOVED, e);
 		}
 	}
 
@@ -526,31 +551,11 @@ public class CliClient {
 		}
 	}
 
-	private void callDropView(SqlCommandCall cmdCall) {
-		final String name = cmdCall.operands[0];
-		final ViewEntry view = context.getViews().get(name);
-
-		if (view == null) {
-			printExecutionError(CliStrings.MESSAGE_VIEW_NOT_FOUND);
-			return;
-		}
-
+	private void callDropFunction(SqlCommandCall cmdCall) {
 		try {
 			// perform and validate change
-			context.removeView(name);
-			executor.validateSession(context);
-			printInfo(CliStrings.MESSAGE_VIEW_REMOVED);
-		} catch (SqlExecutionException e) {
-			// rollback change
-			context.addView(view);
-			printExecutionException(CliStrings.MESSAGE_VIEW_NOT_REMOVED, e);
-		}
-	}
-
-	private void callDropTable(SqlCommandCall cmdCall) {
-		try {
-			executor.dropTable(context, cmdCall.operands[0]);
-			printInfo(CliStrings.MESSAGE_TABLE_DROP);
+			executor.dropFunction(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_FUNCTION_REMOVED);
 		} catch (SqlExecutionException e) {
 			printExecutionException(e);
 		}
