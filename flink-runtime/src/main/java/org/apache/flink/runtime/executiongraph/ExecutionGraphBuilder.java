@@ -185,6 +185,14 @@ public class ExecutionGraphBuilder {
 		}
 
 		// set the basic properties
+		ExecutionConfig executionConfig;
+		try {
+			executionConfig = jobGraph.getSerializedExecutionConfig().deserializeValue(classLoader);
+		} catch (IOException | ClassNotFoundException e) {
+			throw new JobException("Failed to deserialize the execution config.", e);
+		}
+		executionGraph.setPerTaskInputSplitsLimitAsAverageMultiplier(
+			executionConfig.getPerTaskInputSplitsLimitAsAverageMultiplier());
 		executionGraph.setQueuedSchedulingAllowed(jobGraph.getAllowQueuedScheduling());
 
 		try {

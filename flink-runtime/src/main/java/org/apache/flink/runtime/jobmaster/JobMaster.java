@@ -725,7 +725,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		ExecutionVertex executionVertex = execution.getVertex();
 		InputSplit nextInputSplit = executionVertex.getNextInputSplitFromAssgined(operatorID);
-		if (nextInputSplit == null) {
+		if (nextInputSplit == null && !executionVertex.isOverInputSplitsLimit(operatorID)) {
 			final InputSplitAssigner splitAssigner = vertex.getSplitAssigner(operatorID);
 			if (splitAssigner == null) {
 				log.error("No InputSplitAssigner for vertexID {}, operatorID {}.", vertexID, operatorID);

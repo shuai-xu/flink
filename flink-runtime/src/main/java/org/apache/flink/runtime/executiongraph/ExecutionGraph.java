@@ -278,6 +278,13 @@ public class ExecutionGraph implements AccessExecutionGraph {
 	 */
 	private boolean allowLazyDeployment = true;
 
+	/**
+	 * This limit the count of input splits of a certain operator can be retrieved by one task.
+	 * The value is the multiplier of the average input split count one task can retrieve.
+	 * Less than zero means there is no limit.
+	 */
+	private double perTaskInputSplitsLimitAsAverageMultiplier = ExecutionConfig.DEFAULT_PER_TASK_INPUT_SPLITS_LIMMIT_AS_AVERAGE_MULTIPLIER;
+
 	// ------ Execution status and progress. These values are volatile, and accessed under the lock -------
 
 	private final AtomicInteger verticesFinished;
@@ -459,6 +466,14 @@ public class ExecutionGraph implements AccessExecutionGraph {
 
 	public boolean isLazyDeploymentAllowed() {
 		return allowLazyDeployment;
+	}
+
+	public double getPerTaskInputSplitsLimitAsAverageMultiplier() {
+		return perTaskInputSplitsLimitAsAverageMultiplier;
+	}
+
+	public void setPerTaskInputSplitsLimitAsAverageMultiplier(double multiplier) {
+		this.perTaskInputSplitsLimitAsAverageMultiplier = multiplier;
 	}
 
 	public void setGraphManager(GraphManager graphManager) {

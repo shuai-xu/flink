@@ -815,6 +815,12 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		return Collections.unmodifiableMap(assignedInputSplitsMap);
 	}
 
+	public boolean isOverInputSplitsLimit(OperatorID operatorID) {
+		int limit = getJobVertex().getInputSplitsLimit(operatorID);
+		Integer inputSplitIndex = inputSplitIndexMap.getOrDefault(operatorID, 0);
+		return limit != 0 && inputSplitIndex >= limit;
+	}
+
 	/**
 	 * Recover the execution vertex status after job master failover.
 	 *

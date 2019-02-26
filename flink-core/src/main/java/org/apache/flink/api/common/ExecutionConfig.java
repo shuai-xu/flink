@@ -93,6 +93,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
 	private static final long DEFAULT_RESTART_DELAY = 10000L;
 
+	public static final double DEFAULT_PER_TASK_INPUT_SPLITS_LIMMIT_AS_AVERAGE_MULTIPLIER = -1.0;
+
 	// --------------------------------------------------------------------------------------------
 
 	/** Defines how data exchange happens - batch or pipelined */
@@ -167,6 +169,13 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
 	/** Whether to converge slots in task managers. */
 	private boolean enableSlotsConverging = false;
+
+	/**
+	 * This limit the count of input splits of a certain operator can be retrieved by one task.
+	 * The value is the multiplier of the average input split count one task can retrieve.
+	 * Less than zero means there is no limit.
+	 */
+	private double perTaskInputSplitsLimitAsAverageMultiplier = DEFAULT_PER_TASK_INPUT_SPLITS_LIMMIT_AS_AVERAGE_MULTIPLIER;
 
 	// ------------------------------- User code values --------------------------------------------
 
@@ -1024,6 +1033,18 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
 	public void setEnableSlotsConverging(boolean enableSlotsConverging) {
 		this.enableSlotsConverging = enableSlotsConverging;
+	}
+
+	public double getPerTaskInputSplitsLimitAsAverageMultiplier() {
+		return perTaskInputSplitsLimitAsAverageMultiplier;
+	}
+
+	public void setPerTaskInputSplitsLimitAsAverageMultiplier(double multiplier) {
+		if (multiplier < 1.0 && multiplier >= 0) {
+			throw new IllegalArgumentException(
+				"PerTaskInputSplitsLimitAsAverageMultiplier must be at least one, or less than zero(means no limit).");
+		}
+		this.perTaskInputSplitsLimitAsAverageMultiplier = multiplier;
 	}
 // ------------------------------ Utilities  ----------------------------------
 

@@ -122,6 +122,8 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 	private final Map<OperatorID, InputSplit[]> inputSplitsMap;
 
+	private final Map<OperatorID, Integer> inputSplitsLimitMap;
+
 	private final boolean maxParallelismConfigured;
 
 	private int maxParallelism;
@@ -254,9 +256,11 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 			// lazy assignment
 			this.inputSplitsMap = new HashMap<>();
 			this.splitAssignerMap = new HashMap<>();
+			this.inputSplitsLimitMap = new HashMap<>();
 		} else {
 			this.inputSplitsMap = null;
 			this.splitAssignerMap = null;
+			this.inputSplitsLimitMap = null;
 		}
 	}
 
@@ -276,6 +280,7 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 				currentThread.setContextClassLoader(graph.getUserClassLoader());
 
 				try {
+					double limitMultiplier = graph.getPerTaskInputSplitsLimitAsAverageMultiplier();
 					for (Map.Entry<OperatorID, InputSplitSource<?>> entry : splitSourceMap.entrySet()) {
 						OperatorID operatorID = entry.getKey();
 						@SuppressWarnings("unchecked")
@@ -288,6 +293,11 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 						if (inputSplits != null) {
 							this.inputSplitsMap.put(operatorID, inputSplits);
 							this.splitAssignerMap.put(operatorID, splitSource.getInputSplitAssigner(inputSplits));
+							// Only limit input splits assignment when the multiplier is greater than one
+							if (limitMultiplier >= 1.0) {
+								this.inputSplitsLimitMap.put(operatorID,
+									(int) Math.ceil(1.0 * inputSplits.length / parallelism * limitMultiplier));
+							}
 						}
 					}
 
@@ -401,6 +411,15 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 
 	public List<IntermediateResult> getInputs() {
 		return inputs;
+	}
+
+	public int getInputSplitsLimit(OperatorID operatorID) {
+		if (inputSplitsLimitMap != null && inputSplitsLimitMap.containsKey(operatorID)) {
+			return inputSplitsLimitMap.get(operatorID);
+		} else {
+			// zero means no limit
+			return 0;
+		}
 	}
 
 	public Either<SerializedValue<TaskInformation>, PermanentBlobKey> getTaskInformationOrBlobKey() throws IOException {

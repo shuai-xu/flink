@@ -905,6 +905,93 @@ public class JobMasterTest extends TestLogger {
 	}
 
 	@Test
+	public void testRequestNextInputSplitLimit() throws Exception {
+		// build one node JobGraph
+		OperatorID sourceOperatorID = new OperatorID();
+		InputSplitSource<TestingInputSplit> inputSplitSource = new InputSplitSource<TestingInputSplit>() {
+			@Override
+			public TestingInputSplit[] createInputSplits(int minNumSplits) throws Exception {
+				TestingInputSplit[] inputSplits = new TestingInputSplit[3];
+				inputSplits[0] = new TestingInputSplit(0);
+				inputSplits[1] = new TestingInputSplit(1);
+				inputSplits[2] = new TestingInputSplit(2);
+				return inputSplits;
+			}
+
+			@Override
+			public InputSplitAssigner getInputSplitAssigner(TestingInputSplit[] inputSplits) {
+				return new InputSplitAssigner() {
+					int index = 0;
+
+					@Override
+					public InputSplit getNextInputSplit(String host, int taskId) {
+						if (index < inputSplits.length) {
+							return inputSplits[index++];
+						} else {
+							return null;
+						}
+					}
+
+					@Override
+					public void inputSplitsAssigned(int taskId, List<InputSplit> inputSplits) {
+					}
+				};
+			}
+		};
+
+		JobVertex source = new JobVertex("vertex1");
+		source.setParallelism(2);
+		source.setInputSplitSource(sourceOperatorID, inputSplitSource);
+		source.setInvokableClass(AbstractInvokable.class);
+
+		final JobGraph jobGraph = new JobGraph(source);
+		jobGraph.setAllowQueuedScheduling(true);
+		final ExecutionConfig executionConfig = new ExecutionConfig();
+		executionConfig.setPerTaskInputSplitsLimitAsAverageMultiplier(1);
+		jobGraph.setExecutionConfig(executionConfig);
+
+		configuration.setLong(ConfigConstants.RESTART_STRATEGY_FIXED_DELAY_ATTEMPTS, 1);
+		configuration.setString(ConfigConstants.RESTART_STRATEGY_FIXED_DELAY_DELAY, "0 s");
+
+		final JobManagerSharedServices jobManagerSharedServices =
+			new TestingJobManagerSharedServicesBuilder()
+				.setRestartStrategyFactory(RestartStrategyFactory.createRestartStrategyFactory(configuration))
+				.build();
+
+		final JobMaster jobMaster = createJobMaster(
+			configuration,
+			jobGraph,
+			haServices,
+			jobManagerSharedServices);
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+			ExecutionGraph eg = jobMaster.getExecutionGraph();
+			ExecutionVertex ev1 = eg.getJobVertex(source.getID()).getTaskVertices()[0];
+			ExecutionVertex ev2 = eg.getJobVertex(source.getID()).getTaskVertices()[1];
+
+			verifyGetNextInputSplit(0, jobMasterGateway, source, ev1, sourceOperatorID);
+			verifyGetNextInputSplit(1, jobMasterGateway, source, ev1, sourceOperatorID);
+			assertNull(getNextInputSplit(jobMasterGateway, source, ev1, sourceOperatorID));
+
+			verifyGetNextInputSplit(2, jobMasterGateway, source, ev2, sourceOperatorID);
+			assertNull(getNextInputSplit(jobMasterGateway, source, ev2, sourceOperatorID));
+
+			// check if a concurrent error occurred
+			testingFatalErrorHandler.rethrowError();
+
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	@Test
 	public void testInitInputSplitFailLeadToJobFail() throws Exception {
 		// build one node JobGraph
 		OperatorID sourceOperatorID = new OperatorID();
@@ -1689,6 +1776,17 @@ public class JobMasterTest extends TestLogger {
 			final ExecutionVertex executionVertex,
 			final OperatorID operatorID) throws Exception {
 
+		InputSplit inputSplit = getNextInputSplit(jobMasterGateway, jobVertex, executionVertex, operatorID);
+
+		assertEquals(expectedSplitNumber, inputSplit.getSplitNumber());
+	}
+
+	private InputSplit getNextInputSplit(
+			final JobMasterGateway jobMasterGateway,
+			final JobVertex jobVertex,
+			final ExecutionVertex executionVertex,
+			final OperatorID operatorID) throws Exception {
+
 		SerializedInputSplit serializedInputSplit = jobMasterGateway.requestNextInputSplit(
 			jobVertex.getID(),
 			operatorID,
@@ -1698,7 +1796,7 @@ public class JobMasterTest extends TestLogger {
 		InputSplit inputSplit = InstantiationUtil.deserializeObject(
 			serializedInputSplit.getInputSplitData(), Thread.currentThread().getContextClassLoader());
 
-		assertEquals(expectedSplitNumber, inputSplit.getSplitNumber());
+		return inputSplit;
 	}
 
 	/**
