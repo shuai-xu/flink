@@ -115,6 +115,7 @@ public class YarnJobClusterEntrypoint extends JobClusterEntrypoint {
 				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerRequestTimeout(),
 				rmServicesConfiguration.getSlotManagerConfiguration().getSlotRequestTimeout(),
 				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerTimeout(),
+				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerFastTimeout(),
 				rmServicesConfiguration.getSlotManagerConfiguration().getTaskManagerCheckerInitialDelay()),
 			metricRegistry,
 			rmRuntimeServices.getJobLeaderIdService(),

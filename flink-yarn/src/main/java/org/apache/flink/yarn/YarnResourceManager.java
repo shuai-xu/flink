@@ -404,6 +404,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 						num = priorityToBlockedWorkers.get(priority) + 1;
 					}
 					priorityToBlockedWorkers.put(priority, num);
+					slotManager.triggerIdleTaskManagersFastTimeout();
 					return;
 				}
 

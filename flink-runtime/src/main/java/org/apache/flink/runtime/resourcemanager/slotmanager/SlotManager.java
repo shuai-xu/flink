@@ -92,6 +92,9 @@ public class SlotManager implements AutoCloseable {
 	/** Timeout after which an unused TaskManager is released. */
 	private final Time taskManagerTimeout;
 
+	/** Timeout after which an unused TaskManager is released when it blocks starting of another TaskManager. */
+	private final Time taskManagerFastTimeout;
+
 	/** Timeout after which an unused TaskManager is released when SlotManager starts. */
 	private final Time taskManagerCheckerInitialDelay;
 
@@ -129,6 +132,8 @@ public class SlotManager implements AutoCloseable {
 	/** True iff the component has been started. */
 	private boolean started;
 
+	private boolean tmFastTimeout;
+
 	/** Listener for the slot actions. */
 	private SlotListener slotListener;
 
@@ -146,15 +151,26 @@ public class SlotManager implements AutoCloseable {
 	}
 
 	public SlotManager(
+		ScheduledExecutor scheduledExecutor,
+		Time taskManagerRequestTimeout,
+		Time slotRequestTimeout,
+		Time taskManagerTimeout,
+		Time taskManagerCheckerInitialDelay) {
+		this(scheduledExecutor, taskManagerRequestTimeout, slotRequestTimeout, taskManagerTimeout, Time.milliseconds(0), taskManagerCheckerInitialDelay);
+	}
+
+	public SlotManager(
 				ScheduledExecutor scheduledExecutor,
 				Time taskManagerRequestTimeout,
 				Time slotRequestTimeout,
 				Time taskManagerTimeout,
+				Time taskManagerFastTimeout,
 				Time taskManagerCheckerInitialDelay) {
 		this.scheduledExecutor = Preconditions.checkNotNull(scheduledExecutor);
 		this.taskManagerRequestTimeout = Preconditions.checkNotNull(taskManagerRequestTimeout);
 		this.slotRequestTimeout = Preconditions.checkNotNull(slotRequestTimeout);
 		this.taskManagerTimeout = Preconditions.checkNotNull(taskManagerTimeout);
+		this.taskManagerFastTimeout = Preconditions.checkNotNull(taskManagerFastTimeout);
 		this.taskManagerCheckerInitialDelay = taskManagerCheckerInitialDelay;
 
 		slots = new HashMap<>(16);
@@ -271,10 +287,11 @@ public class SlotManager implements AutoCloseable {
 		resourceActions = Preconditions.checkNotNull(newResourceActions);
 
 		started = true;
+		tmFastTimeout = false;
 
 		taskManagerTimeoutCheck = scheduledExecutor.scheduleWithFixedDelay(
 			() -> mainThreadExecutor.execute(
-				() -> checkTaskManagerTimeouts()),
+				() -> checkTaskManagerTimeouts(false)),
 			taskManagerCheckerInitialDelay.toMilliseconds(),
 			taskManagerTimeout.toMilliseconds(),
 			TimeUnit.MILLISECONDS);
@@ -556,6 +573,22 @@ public class SlotManager implements AutoCloseable {
 		} else {
 			LOG.debug("Trying to free a slot {} which has not been registered. Ignoring this message.", slotId);
 		}
+	}
+
+	public void triggerIdleTaskManagersFastTimeout() {
+		if (tmFastTimeout) {
+			return;
+		}
+		tmFastTimeout = true;
+
+		scheduledExecutor.schedule(
+			() -> mainThreadExecutor.execute(
+				() -> {
+					checkTaskManagerTimeouts(true);
+					tmFastTimeout = false;
+				}),
+			taskManagerFastTimeout.toMilliseconds(),
+			TimeUnit.MILLISECONDS);
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -1124,7 +1157,8 @@ public class SlotManager implements AutoCloseable {
 	// Internal timeout methods
 	// ---------------------------------------------------------------------------------------------
 
-	private void checkTaskManagerTimeouts() {
+	private void checkTaskManagerTimeouts(boolean fast) {
+		Time timeout = fast ? taskManagerFastTimeout : taskManagerTimeout;
 		if (!taskManagerRegistrations.isEmpty()) {
 			long currentTime = System.currentTimeMillis();
 
@@ -1132,7 +1166,7 @@ public class SlotManager implements AutoCloseable {
 
 			// first retrieve the timed out TaskManagers
 			for (TaskManagerRegistration taskManagerRegistration : taskManagerRegistrations.values()) {
-				if (currentTime - taskManagerRegistration.getIdleSince() >= taskManagerTimeout.toMilliseconds()) {
+				if (currentTime - taskManagerRegistration.getIdleSince() >= timeout.toMilliseconds()) {
 					// we collect the instance ids first in order to avoid concurrent modifications by the
 					// ResourceActions.releaseResource call
 					timedOutTaskManagerIds.add(taskManagerRegistration.getInstanceId());
@@ -1141,7 +1175,7 @@ public class SlotManager implements AutoCloseable {
 
 			// second we trigger the release resource callback which can decide upon the resource release
 			for (InstanceID timedOutTaskManagerId : timedOutTaskManagerIds) {
-				LOG.debug("Release TaskExecutor {} because it exceeded the idle timeout.", timedOutTaskManagerId);
+				LOG.debug("Release TaskExecutor {} because it exceeded the idle timeout. fast: {}", timedOutTaskManagerId, fast);
 				resourceActions.releaseResource(timedOutTaskManagerId, new FlinkException("TaskExecutor exceeded the idle timeout."));
 			}
 		}

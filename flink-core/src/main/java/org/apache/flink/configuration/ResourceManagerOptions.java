@@ -94,6 +94,13 @@ public class ResourceManagerOptions {
 		.withDescription("The timeout for an idle task manager to be released.");
 
 	/**
+	 * The timeout for an idle task manager to be released if it blocks the starting of another, in millisecond.
+	 */
+	public static final ConfigOption<Long> TASK_MANAGER_FAST_TIMEOUT = ConfigOptions
+		.key("slotmanager.taskmanager-fast-timeout")
+		.defaultValue(10000L);
+
+	/**
 	 * The timeout for an idle task manager to be released when slot manager starts, in milliseconds.
 	 */
 	public static final ConfigOption<Long> TASK_MANAGER_CHECKER_INITIAL_DELAY = ConfigOptions

@@ -39,7 +39,17 @@ public class StrictlyMatchingSlotManager extends SlotManager {
 		Time slotRequestTimeout,
 		Time taskManagerTimeout,
 		Time taskManagerCheckerInitialDelay) {
-		super(scheduledExecutor, taskManagerRequestTimeout, slotRequestTimeout, taskManagerTimeout, taskManagerCheckerInitialDelay);
+		this(scheduledExecutor, taskManagerRequestTimeout, slotRequestTimeout, taskManagerTimeout, Time.milliseconds(0), taskManagerCheckerInitialDelay);
+	}
+
+	public StrictlyMatchingSlotManager(
+		ScheduledExecutor scheduledExecutor,
+		Time taskManagerRequestTimeout,
+		Time slotRequestTimeout,
+		Time taskManagerTimeout,
+		Time taskManagerFastTimeout,
+		Time taskManagerCheckerInitialDelay) {
+		super(scheduledExecutor, taskManagerRequestTimeout, slotRequestTimeout, taskManagerTimeout, taskManagerFastTimeout, taskManagerCheckerInitialDelay);
 	}
 
 	@Override

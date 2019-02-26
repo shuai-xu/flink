@@ -35,16 +35,19 @@ public class SlotManagerConfiguration {
 	private final Time taskManagerRequestTimeout;
 	private final Time slotRequestTimeout;
 	private final Time taskManagerTimeout;
+	private final Time taskManagerFastTimeout;
 	private final Time taskManagerCheckerInitialDelay;
 
 	public SlotManagerConfiguration(
 			Time taskManagerRequestTimeout,
 			Time slotRequestTimeout,
 			Time taskManagerTimeout,
+			Time taskManagerFastTimeout,
 			Time taskManagerCheckerInitialDelay) {
 		this.taskManagerRequestTimeout = Preconditions.checkNotNull(taskManagerRequestTimeout);
 		this.slotRequestTimeout = Preconditions.checkNotNull(slotRequestTimeout);
 		this.taskManagerTimeout = Preconditions.checkNotNull(taskManagerTimeout);
+		this.taskManagerFastTimeout = Preconditions.checkNotNull(taskManagerFastTimeout);
 		this.taskManagerCheckerInitialDelay = Preconditions.checkNotNull(taskManagerCheckerInitialDelay);
 	}
 
@@ -58,6 +61,10 @@ public class SlotManagerConfiguration {
 
 	public Time getTaskManagerTimeout() {
 		return taskManagerTimeout;
+	}
+
+	public Time getTaskManagerFastTimeout() {
+		return taskManagerFastTimeout;
 	}
 
 	public Time getTaskManagerCheckerInitialDelay() {
@@ -79,9 +86,11 @@ public class SlotManagerConfiguration {
 				configuration.getLong(ResourceManagerOptions.SLOT_REQUEST_TIMEOUT));
 		final Time taskManagerTimeout = Time.milliseconds(
 				configuration.getLong(ResourceManagerOptions.TASK_MANAGER_TIMEOUT));
+		final Time taskManagerFastTimeout = Time.milliseconds(
+				configuration.getLong(ResourceManagerOptions.TASK_MANAGER_FAST_TIMEOUT));
 		final Time taskManagerCheckerInitialDelay = Time.milliseconds(
 			configuration.getLong(ResourceManagerOptions.TASK_MANAGER_CHECKER_INITIAL_DELAY));
 
-		return new SlotManagerConfiguration(rpcTimeout, slotRequestTimeout, taskManagerTimeout, taskManagerCheckerInitialDelay);
+		return new SlotManagerConfiguration(rpcTimeout, slotRequestTimeout, taskManagerTimeout, taskManagerFastTimeout, taskManagerCheckerInitialDelay);
 	}
 }
