@@ -121,9 +121,10 @@ class FirstLastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val sink = new TestingUpsertTableSink(Array(1))
     tEnv.sqlQuery(sql).writeToSink(sink)
 
-    // TODO: support FirstRow on rowtime in the future
-    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
+    // TODO FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     tEnv.execute()
+    val expected = List("1,Hi,1", "2,Hello,2", "3,Helloworld, how are you?,4", "4,Comment#1,7")
+    assertEquals(expected.sorted, sink.getUpsertResults.sorted)
   }
 
   @Test
@@ -160,9 +161,10 @@ class FirstLastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val sink = new TestingUpsertTableSink(Array(1))
     tEnv.sqlQuery(sql).writeToSink(sink)
 
-    // TODO: support LastRow on rowtime in the future
-    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
+    // TODO FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     tEnv.execute()
+    val expected = List("1,Hi,1", "2,Hello world,3", "3,Luke Skywalker,6", "4,Comment#4,10")
+    assertEquals(expected.sorted, sink.getUpsertResults.sorted)
   }
 
 
@@ -221,9 +223,10 @@ class FirstLastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val sink = new TestingUpsertTableSink(Array(1))
     tEnv.sqlQuery(sql).writeToSink(sink)
 
-    // TODO: support LastRow on rowtime in the future
-    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
+    // TODO FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     tEnv.execute()
+    val expected = List("1,Hi,1")
+    assertEquals(expected.sorted, sink.getUpsertResults.sorted)
   }
 
   @Test
@@ -251,9 +254,10 @@ class FirstLastRowITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     val sink = new TestingUpsertTableSink(Array(1))
     tEnv.sqlQuery(sql).writeToSink(sink)
 
-    // TODO: support LastRow on rowtime in the future
-    thrown.expectMessage("Currently not support FirstLastRow on rowtime")
+    // TODO FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     tEnv.execute()
+    val expected = List("4,Comment#4,10")
+    assertEquals(expected.sorted, sink.getUpsertResults.sorted)
   }
 
 }

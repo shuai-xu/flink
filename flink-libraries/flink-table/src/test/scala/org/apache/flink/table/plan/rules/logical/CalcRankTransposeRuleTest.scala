@@ -125,22 +125,6 @@ class CalcRankTransposeRuleTest extends TableTestBase {
   }
 
   @Test
-  def testLastRowOnRowtime(): Unit = {
-    // Push Calc into LastRow, project column (a, rowtime), prune column (b, c)
-    val sql =
-      """
-        |SELECT a, rowtime
-        |FROM (
-        |  SELECT *,
-        |      ROW_NUMBER() OVER (PARTITION BY a ORDER BY rowtime DESC) as rank_num
-        |  FROM MyTable)
-        |WHERE rank_num = 1
-      """.stripMargin
-
-    util.verifyPlan(sql)
-  }
-
-  @Test
   def testPruneRankFunc(): Unit = {
     // Push Calc into Rank, project column (a, rowtime), prune column (b, c)
     val sql =

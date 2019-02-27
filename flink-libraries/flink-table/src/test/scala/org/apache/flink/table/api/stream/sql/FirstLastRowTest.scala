@@ -79,6 +79,7 @@ class FirstLastRowTest extends TableTestBase {
 
   @Test
   def testSimpleLastRowOnRowtime(): Unit = {
+    // FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     val sql =
       """
         |SELECT a, b, c
@@ -109,6 +110,7 @@ class FirstLastRowTest extends TableTestBase {
 
   @Test
   def testSimpleFirstRowOnRowtime(): Unit = {
+    // FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     val sql =
       """
         |SELECT a, b, c

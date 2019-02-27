@@ -22,7 +22,8 @@ limitations under the License.
 StreamExecCalc(select=[a, 2 AS rank_num])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[proctime DESC], rankRange=[rankStart=2, rankEnd=2], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[hash[b]])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+      +- StreamExecCalc(select=[a, b, proctime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -32,7 +33,8 @@ StreamExecCalc(select=[a, 2 AS rank_num])
 StreamExecCalc(select=[a, 3 AS rank_num])
 +- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[rowtime DESC], rankRange=[rankStart=3, rankEnd=3], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[hash[b]])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+      +- StreamExecCalc(select=[a, b, rowtime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -40,9 +42,10 @@ StreamExecCalc(select=[a, 3 AS rank_num])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, b, c])
-+- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[PROCTIME], mode=[FirstRow])
++- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime], order=[PROCTIME], mode=[FirstRow])
    +- StreamExecExchange(distribution=[hash[a]])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+      +- StreamExecCalc(select=[a, b, c, proctime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -50,9 +53,10 @@ StreamExecCalc(select=[a, b, c])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, b, c])
-+- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[LastRow])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime DESC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[hash[a]])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+      +- StreamExecCalc(select=[a, b, c, rowtime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>
@@ -60,9 +64,10 @@ StreamExecCalc(select=[a, b, c])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a, b, c])
-+- StreamExecFirstLastRow(key=[a], select=[a, b, c, proctime, rowtime], order=[ROWTIME], mode=[FirstRow])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime ASC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[hash[a]])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+      +- StreamExecCalc(select=[a, b, c, rowtime])
+         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
   </TestCase>

@@ -51,7 +51,7 @@ trait BaseStreamExecRankRule {
     }
 
     val inputRowType = rank.getInput.getRowType
-    !rank.outputRankFunColumn && limit1 && sortOnTimeAttribute(sortCollation, inputRowType) &&
+    !rank.outputRankFunColumn && limit1 && sortOnProcTimeAttribute(sortCollation, inputRowType) &&
       isRowNumberFunction
   }
 
@@ -67,12 +67,12 @@ trait BaseStreamExecRankRule {
     val sortCollation = sort.collation
     val inputRowType = sort.getInput.getRowType
 
-    sortOnTimeAttribute(sortCollation, inputRowType) &&
+    sortOnProcTimeAttribute(sortCollation, inputRowType) &&
       (sort.offset == null || RexLiteral.intValue(sort.offset) == 0) &&
       (sort.fetch != null && RexLiteral.intValue(sort.fetch) == 1)
   }
 
-  private def sortOnTimeAttribute(
+  private def sortOnProcTimeAttribute(
     sortCollation: RelCollation,
     inputRowType: RelDataType): Boolean = {
     if (sortCollation.getFieldCollations.size() != 1) {
@@ -80,7 +80,7 @@ trait BaseStreamExecRankRule {
     } else {
       val fieldCollation = sortCollation.getFieldCollations.get(0)
       val fieldType = inputRowType.getFieldList.get(fieldCollation.getFieldIndex).getType
-      FlinkTypeFactory.isTimeIndicatorType(fieldType)
+      FlinkTypeFactory.isProctimeIndicatorType(fieldType)
     }
   }
 

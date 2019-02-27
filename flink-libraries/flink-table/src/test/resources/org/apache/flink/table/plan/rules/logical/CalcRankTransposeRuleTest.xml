@@ -16,16 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <Root>
-  <TestCase name="testLastRowOnRowtime">
-    <Resource name="plan">
-      <![CDATA[
-StreamExecFirstLastRow(key=[a], select=[a, rowtime], order=[ROWTIME], mode=[LastRow])
-+- StreamExecExchange(distribution=[hash[a]])
-   +- StreamExecCalc(select=[a, rowtime])
-      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
-]]>
-    </Resource>
-  </TestCase>
   <TestCase name="testNotTranspose">
     <Resource name="plan">
       <![CDATA[
@@ -53,7 +43,7 @@ StreamExecCalc(select=[rk AS rank_num, rowtime, a, rk AS rank_num0, a AS a0, rk 
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[a])
-+- StreamExecFirstLastRow(key=[a], select=[a, rowtime], order=[ROWTIME], mode=[LastRow])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime DESC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[hash[a]])
       +- StreamExecCalc(select=[a, rowtime])
          +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
@@ -64,7 +54,7 @@ StreamExecCalc(select=[a])
     <Resource name="plan">
       <![CDATA[
 StreamExecCalc(select=[rowtime])
-+- StreamExecFirstLastRow(key=[a], select=[a, rowtime], order=[ROWTIME], mode=[LastRow])
++- StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[a], orderBy=[rowtime DESC], rankRange=[rankStart=1, rankEnd=1], strategy=[AppendFastRank], select=[*])
    +- StreamExecExchange(distribution=[hash[a]])
       +- StreamExecCalc(select=[a, rowtime])
          +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])

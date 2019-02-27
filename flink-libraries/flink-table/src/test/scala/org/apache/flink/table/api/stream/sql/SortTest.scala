@@ -177,6 +177,7 @@ class SortTest extends TableTestBase {
 
   @Test
   def testSortRowTimeFirstDescWithLimit1(): Unit = {
+    // FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     streamUtil.verifyPlan("SELECT a FROM MyTable ORDER BY rowtime desc LIMIT 1")
   }
 
@@ -197,6 +198,7 @@ class SortTest extends TableTestBase {
 
   @Test
   def testSortRowTimeAscWithLimit1(): Unit = {
+    // FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     streamUtil.verifyPlan("SELECT a FROM MyTable ORDER BY rowtime LIMIT 1")
   }
 
@@ -212,11 +214,13 @@ class SortTest extends TableTestBase {
 
   @Test
   def testSortRowTimeDescWithOffSet0AndLimit1(): Unit = {
+    // FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     streamUtil.verifyPlan("SELECT a FROM MyTable ORDER BY rowtime desc LIMIT 1 OFFSET 0")
   }
 
   @Test
   def testSortRowTimeAscWithOffSet0AndLimit1(): Unit = {
+    // FirstLastRow does not support sort on rowtime now, so it is translated to Rank currently
     streamUtil.verifyPlan("SELECT a FROM MyTable ORDER BY rowtime LIMIT 1 OFFSET 0")
   }
 
