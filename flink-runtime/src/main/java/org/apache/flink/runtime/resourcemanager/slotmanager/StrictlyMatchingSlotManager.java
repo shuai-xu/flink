@@ -19,12 +19,14 @@
 package org.apache.flink.runtime.resourcemanager.slotmanager;
 
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.clusterframework.types.TaskManagerSlot;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
 import org.apache.flink.runtime.resourcemanager.SlotRequest;
 import org.apache.flink.util.Preconditions;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -54,7 +56,21 @@ public class StrictlyMatchingSlotManager extends SlotManager {
 
 	@Override
 	protected TaskManagerSlot findMatchingSlot(SlotRequest slotRequest) {
-		Iterator<Map.Entry<SlotID, TaskManagerSlot>> iterator = freeSlots.entrySet().iterator();
+		Map<ResourceID, Integer> numTmFreeSlots = new HashMap<>();
+		for (SlotID slotID : freeSlots.keySet()) {
+			ResourceID resourceID = slotID.getResourceID();
+			numTmFreeSlots.put(resourceID, numTmFreeSlots.getOrDefault(resourceID, 0) + 1);
+		}
+
+		Iterator<Map.Entry<SlotID, TaskManagerSlot>> iterator = freeSlots.entrySet().stream()
+			.sorted((entry1, entry2) -> {
+				int comp = numTmFreeSlots.get(entry1.getKey().getResourceID()) - numTmFreeSlots.get(entry2.getKey().getResourceID());
+				if (comp == 0) {
+					comp = entry1.getKey().getResourceID().hashCode() - entry2.getKey().getResourceID().hashCode();
+				}
+				return comp;
+			})
+			.iterator();
 		while (iterator.hasNext()) {
 			TaskManagerSlot taskManagerSlot = iterator.next().getValue();
 
