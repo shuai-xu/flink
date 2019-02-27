@@ -72,7 +72,7 @@ public class NativeMemoryAdjusterTest {
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
-		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, HighNativeMemoryDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, NativeMemoryAdjuster.class.getCanonicalName());

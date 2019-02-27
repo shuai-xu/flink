@@ -20,357 +20,137 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.execution.ExecutionState;
-import org.apache.flink.runtime.healthmanager.HealthMonitor;
+import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
-import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
-import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
-import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.HighCpuDetector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.LowCpuDetector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
-import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
-import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+import org.apache.flink.runtime.healthmanager.plugins.Symptom;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
- * Tests for CpuAdjusterTest.
+* Tests for cpu adjuster.
  */
 public class CpuAdjusterTest {
-	/**
-	 * test cpu increase.
-	 */
 	@Test
-	public void testCpuIncrease() throws Exception {
-		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
+	public void testDiagnose() {
+		CpuAdjuster cpuAdjuster = new CpuAdjuster();
+		Whitebox.setInternalState(cpuAdjuster, "stableTime", 10);
 
-		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
+		JobStable jobUnStable = JobStable.UNSTABLE;
+		JobStable jobStableShortTime = new JobStable(5L);
+		JobStable jobStableLongTime = new JobStable(15L);
+		JobVertexHighCpu jobVertexHighCpu = new JobVertexHighCpu(new JobID(), Collections.emptyMap(), false);
+		JobVertexLowCpu jobVertexLowCpu = new JobVertexLowCpu(new JobID(), Collections.emptyMap());
 
-		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(
-			1, new ExecutorThreadFactory("health-manager"));
+		List<Symptom> symptomList = new ArrayList<>();
 
-		JobID jobID = new JobID();
-		JobVertexID vertex1 = new JobVertexID();
-		JobVertexID vertex2 = new JobVertexID();
-		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
+		symptomList.add(jobVertexHighCpu);
+		symptomList.add(jobVertexLowCpu);
+		assertFalse(cpuAdjuster.diagnose(symptomList));
 
-		// job level configuration.
-		Configuration config = new Configuration();
-		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
-		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
-		config.setDouble(HighCpuDetector.HIGH_CPU_SEVERE_THRESHOLD, 0.9);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, HighCpuDetector.class.getCanonicalName() + "," +
-			TestingJobStableDetector.class.getCanonicalName());
-		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
+		symptomList.add(jobUnStable);
+		assertFalse(cpuAdjuster.diagnose(symptomList));
 
-		// initial job vertex config.
-		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
-		RestServerClient.VertexConfig vertex1Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
-		RestServerClient.VertexConfig vertex2Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
-		vertexConfigs.put(vertex1, vertex1Config);
-		vertexConfigs.put(vertex2, vertex2Config);
+		symptomList.remove(jobUnStable);
+		symptomList.add(jobStableShortTime);
+		assertFalse(cpuAdjuster.diagnose(symptomList));
 
-		// job vertex config after first round rescale.
-		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs2 = new HashMap<>();
-		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(2.0).build());
-		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
-		vertexConfigs2.put(vertex1, vertex1Config2);
-		vertexConfigs2.put(vertex2, vertex2Config2);
+		symptomList.clear();
 
-		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
-		inputNodes.put(vertex1, Collections.emptyList());
-		inputNodes.put(vertex2, Collections.emptyList());
+		symptomList.add(jobStableLongTime);
+		assertFalse(cpuAdjuster.diagnose(symptomList));
 
-		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
+		symptomList.add(jobVertexHighCpu);
+		assertTrue(cpuAdjuster.diagnose(symptomList));
 
-		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
-		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(usageSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-				usage1.put("tmId", Tuple2.of(now, 1.0));
-				return usage1;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-				usage1.put("tmId", Tuple2.of(now, 1.0));
-				return usage1;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-				usage1.put("tmId", Tuple2.of(now, 2.0));
-				return usage1;
-			}
-		});
-		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 1.0));
-				return capacity;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 1.0));
-				return capacity;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 2.0));
-				return capacity;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 4.0));
-				return capacity;
-			}
-		});
+		symptomList.remove(jobVertexHighCpu);
+		symptomList.add(jobVertexLowCpu);
+		assertTrue(cpuAdjuster.diagnose(symptomList));
 
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(usageSub);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(capacitySub);
+		symptomList.add(jobVertexHighCpu);
+		assertTrue(cpuAdjuster.diagnose(symptomList));
 
-		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
-			.thenReturn(Arrays.asList(executionVertexID1));
-
-		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
-		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
-
-		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
-		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats2);
-
-		// mock slow scheduling.
-		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
-			.thenReturn(jobStatus).thenReturn(jobStatus2);
-
-		HealthMonitor monitor = new HealthMonitor(
-			jobID,
-			metricProvider,
-			restServerClient,
-			executorService,
-			new Configuration()
-		);
-
-		monitor.start();
-
-		Thread.sleep(10000);
-
-		monitor.stop();
-
-		// verify rpc calls.
-		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setCpuCores(2.0).build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
-			.rescale(
-				Mockito.eq(jobID),
-				Mockito.eq(vertexParallelismResource));
-
-		vertexParallelismResource.clear();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setCpuCores(4.0).build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
-			.rescale(
-				Mockito.eq(jobID),
-				Mockito.eq(vertexParallelismResource));
+		assertEquals(jobStableLongTime, Whitebox.getInternalState(cpuAdjuster, "jobStable"));
+		assertEquals(jobVertexHighCpu, Whitebox.getInternalState(cpuAdjuster, "jobVertexHighCpu"));
+		assertEquals(jobVertexLowCpu, Whitebox.getInternalState(cpuAdjuster, "jobVertexLowCpu"));
 	}
 
-	/**
-	 * test cpu dncrease.
-	 */
 	@Test
-	@Ignore
-	public void testCpuDncrease() throws Exception {
-		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
-
-		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
-
-		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(
-			1, new ExecutorThreadFactory("health-manager"));
-
-		JobID jobID = new JobID();
+	public void testScaleUpVertexCpu() {
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
-		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
 
-		// job level configuration.
-		Configuration config = new Configuration();
-		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
-		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO, 2.0);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, LowCpuDetector.class.getCanonicalName());
-		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
+		Map<JobVertexID, Double> currentUtilities = new HashMap<>();
+		currentUtilities.put(vertex1, 1.5);
+		currentUtilities.put(vertex2, 1.5);
+		JobVertexHighCpu jobVertexHighCpu = new JobVertexHighCpu(new JobID(), currentUtilities, false);
 
-		// initial job vertex config.
+		Map<JobVertexID, Double> previousUtilities = new HashMap<>();
+		previousUtilities.put(vertex2, 2.0);
+
+		CpuAdjuster cpuAdjuster = new CpuAdjuster();
+		Whitebox.setInternalState(cpuAdjuster, "jobVertexHighCpu", jobVertexHighCpu);
+		Whitebox.setInternalState(cpuAdjuster, "vertexToScaleUpMaxUtility", previousUtilities);
+		Whitebox.setInternalState(cpuAdjuster, "scaleUpRatio", 1.0);
+
+		RestServerClient.VertexConfig vertexConfig1 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build());
+		RestServerClient.VertexConfig vertexConfig2 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build());
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
-		RestServerClient.VertexConfig vertex1Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(4.0).build());
-		RestServerClient.VertexConfig vertex2Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
-		vertexConfigs.put(vertex1, vertex1Config);
-		vertexConfigs.put(vertex2, vertex2Config);
+		vertexConfigs.put(vertex1, vertexConfig1);
+		vertexConfigs.put(vertex2, vertexConfig2);
+		RestServerClient.JobConfig jobConfig = Mockito.mock(RestServerClient.JobConfig.class);
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
 
-		// job vertex config after first round rescale.
-		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs2 = new HashMap<>();
-		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(2.0).build());
-		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
-		vertexConfigs2.put(vertex1, vertex1Config2);
-		vertexConfigs2.put(vertex2, vertex2Config2);
+		Map<JobVertexID, Double> results = cpuAdjuster.scaleUpVertexCpu(jobConfig);
+		assertNotNull(results);
+		assertEquals(2, results.size());
+		assertEquals(Double.valueOf(1.5), results.get(vertex1));
+		assertEquals(Double.valueOf(2.0), results.get(vertex2));
+	}
 
-		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
-		inputNodes.put(vertex1, Collections.emptyList());
-		inputNodes.put(vertex2, Collections.emptyList());
+	@Test
+	public void testScaleDownVertexCpu() {
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
 
-		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
+		Map<JobVertexID, Double> currentUtilities = new HashMap<>();
+		currentUtilities.put(vertex1, 0.5);
+		JobVertexLowCpu jobVertexLowCpu = new JobVertexLowCpu(new JobID(), currentUtilities);
 
-		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
-		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(usageSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			double[] values = new double[]{1, 0.5};
-			int callCount = 0;
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				callCount++;
-				Map<String, Tuple2<Long, Double>> usage = new HashMap<>();
-				usage.put("tmId", Tuple2.of(now, values[callCount < values.length ? callCount - 1 : values.length - 1]));
-				return usage;
-			}
-		});
-		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			double[] values = new double[]{4, 2, 1};
-			int callCount = 0;
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				callCount++;
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, values[callCount < values.length ? callCount - 1 : values.length - 1]));
-				return capacity;
-			}
-		});
+		CpuAdjuster cpuAdjuster = new CpuAdjuster();
+		Whitebox.setInternalState(cpuAdjuster, "jobVertexLowCpu", jobVertexLowCpu);
+		Whitebox.setInternalState(cpuAdjuster, "scaleDownRatio", 1.0);
 
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(usageSub);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(capacitySub);
+		RestServerClient.VertexConfig vertexConfig1 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build());
+		RestServerClient.VertexConfig vertexConfig2 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build());
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
+		vertexConfigs.put(vertex1, vertexConfig1);
+		vertexConfigs.put(vertex2, vertexConfig2);
+		RestServerClient.JobConfig jobConfig = Mockito.mock(RestServerClient.JobConfig.class);
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
 
-		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
-			.thenReturn(Arrays.asList(executionVertexID1));
-
-		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
-		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
-
-		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
-		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats2);
-
-		// mock slow scheduling.
-		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
-			.thenReturn(jobStatus).thenReturn(jobStatus2);
-
-		HealthMonitor monitor = new HealthMonitor(
-			jobID,
-			metricProvider,
-			restServerClient,
-			executorService,
-			new Configuration()
-		);
-
-		monitor.start();
-
-		Thread.sleep(10000);
-
-		monitor.stop();
-
-		// verify rpc calls.
-		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setCpuCores(2.0).build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
-			.rescale(
-				Mockito.eq(jobID),
-				Mockito.eq(vertexParallelismResource));
-
-		vertexParallelismResource.clear();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setCpuCores(1.0).build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
-			.rescale(
-				Mockito.eq(jobID),
-				Mockito.eq(vertexParallelismResource));
+		Map<JobVertexID, Double> results = cpuAdjuster.scaleDownVertexCpu(jobConfig);
+		assertNotNull(results);
+		assertEquals(1, results.size());
+		assertEquals(Double.valueOf(0.5), results.get(vertex1));
 	}
 }

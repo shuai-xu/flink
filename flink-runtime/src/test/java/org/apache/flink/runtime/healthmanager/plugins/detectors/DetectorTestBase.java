@@ -64,6 +64,7 @@ public abstract class DetectorTestBase {
 
 		PowerMockito.mockStatic(MetricUtils.class);
 		Mockito.when(MetricUtils.validateTaskMetric(Mockito.any(HealthMonitor.class), anyLong(), anyVararg())).thenReturn(true);
+		Mockito.when(MetricUtils.validateTmMetric(Mockito.any(HealthMonitor.class), anyLong(), anyVararg())).thenReturn(true);
 
 	}
 }

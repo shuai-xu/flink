@@ -32,6 +32,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -52,30 +53,39 @@ public class LowCpuDetector implements Detector {
 	private static final Logger LOGGER = LoggerFactory.getLogger(LowCpuDetector.class);
 
 	public static final ConfigOption<Double> LOW_CPU_THRESHOLD =
-		ConfigOptions.key("healthmonitor.low-cpu-detector.threashold").defaultValue(0.4);
+		ConfigOptions.key("healthmonitor.low-cpu-detector.threashold").defaultValue(0.6);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
+	private HealthMonitor monitor;
 
 	private long checkInterval;
 	private double threshold;
+	private long waitTime;
 
 	private JobTMMetricSubscription tmCpuAllocatedSubscription;
 	private JobTMMetricSubscription tmCpuUsageSubscription;
 
+	private Map<JobVertexID, Long> lowCpuSince;
+	private Map<JobVertexID, Double> maxCpuUtility;
+
 	@Override
 	public void open(HealthMonitor monitor) {
-
+		this.monitor = monitor;
 		jobID = monitor.getJobID();
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
 		checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
 		threshold = monitor.getConfig().getDouble(LOW_CPU_THRESHOLD);
+		waitTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_DOWN_WAIT_TIME);
 
 		tmCpuAllocatedSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_CPU_CAPACITY, checkInterval, TimelineAggType.AVG);
 		tmCpuUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_CPU_USAGE, checkInterval, TimelineAggType.AVG);
+
+		lowCpuSince = new HashMap<>();
+		maxCpuUtility = new HashMap<>();
 	}
 
 	@Override
@@ -102,10 +112,9 @@ public class LowCpuDetector implements Detector {
 			return null;
 		}
 
-		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
+		Map<JobVertexID, Double> vertexTaskMaxUtility = new HashMap<>();
 		for (String tmId : tmCapacities.keySet()) {
-			if (now - tmCapacities.get(tmId).f0 > checkInterval * 2 ||
-				now - tmUsages.get(tmId).f0 > checkInterval * 2) {
+			if (!MetricUtils.validateTmMetric(monitor, checkInterval * 2, tmCapacities.get(tmId), tmUsages.get(tmId))) {
 				LOGGER.debug("Skip tm {}, metrics missing.", tmId);
 				continue;
 			}
@@ -122,12 +131,31 @@ public class LowCpuDetector implements Detector {
 			List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
 			for (ExecutionVertexID jobExecutionVertexId : jobExecutionVertexIds) {
 				JobVertexID jvId = jobExecutionVertexId.getJobVertexID();
-				if (!vertexMaxUtility.containsKey(jvId) || vertexMaxUtility.get(jvId) < utility) {
-					vertexMaxUtility.put(jvId, utility);
+				if (!vertexTaskMaxUtility.containsKey(jvId) || vertexTaskMaxUtility.get(jvId) < utility) {
+					vertexTaskMaxUtility.put(jvId, utility);
 				}
 			}
+		}
 
-			vertexMaxUtility.entrySet().removeIf(entry -> entry.getValue() >= threshold);
+		for (Map.Entry<JobVertexID, Double> entry : vertexTaskMaxUtility.entrySet()) {
+			JobVertexID vertexID = entry.getKey();
+			double utility = entry.getValue();
+			if (utility >= threshold) {
+				lowCpuSince.put(vertexID, Long.MAX_VALUE);
+				maxCpuUtility.remove(vertexID);
+			} else {
+				lowCpuSince.put(vertexID, Math.min(now, lowCpuSince.getOrDefault(vertexID, Long.MAX_VALUE)));
+				maxCpuUtility.put(vertexID, Math.max(utility, maxCpuUtility.getOrDefault(vertexID, 0.0)));
+			}
+			LOGGER.debug("Vertex {}, utility {}, lowCpuSince {}, maxCpuUtility {}.",
+				vertexID, utility, lowCpuSince.get(vertexID), maxCpuUtility.getOrDefault(vertexID, 0.0));
+		}
+
+		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
+		for (JobVertexID vertexID : lowCpuSince.keySet()) {
+			if (now - lowCpuSince.get(vertexID) > waitTime) {
+				vertexMaxUtility.put(vertexID, maxCpuUtility.get(vertexID));
+			}
 		}
 
 		if (vertexMaxUtility != null && !vertexMaxUtility.isEmpty()) {

@@ -58,7 +58,7 @@ public class DirectMemoryAdjuster implements Resolver {
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO);
+		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO);
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);

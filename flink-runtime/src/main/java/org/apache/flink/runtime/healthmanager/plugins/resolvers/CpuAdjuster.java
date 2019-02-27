@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.ResourceManagerOptions;
@@ -50,7 +51,8 @@ public class CpuAdjuster implements Resolver {
 
 	private JobID jobID;
 	private HealthMonitor monitor;
-	private double scaleRatio;
+	private double scaleUpRatio;
+	private double scaleDownRatio;
 	private long timeout;
 	private long opportunisticActionDelay;
 	private long stableTime;
@@ -58,21 +60,26 @@ public class CpuAdjuster implements Resolver {
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
 
-	private Map<JobVertexID, Double> vertexMaxUtility;
+	private Map<JobVertexID, Double> vertexToScaleUpMaxUtility;
 	private long opportunisticActionDelayStart;
+
+	private JobVertexHighCpu jobVertexHighCpu;
+	private JobVertexLowCpu jobVertexLowCpu;
+	private JobStable jobStable;
 
 	@Override
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_RATIO);
+		this.scaleUpRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO);
+		this.scaleDownRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_DOWN_RATIO);
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_STABLE_TIME);
 
-		vertexMaxUtility = new HashMap<>();
+		vertexToScaleUpMaxUtility = new HashMap<>();
 		opportunisticActionDelayStart = -1;
 	}
 
@@ -87,12 +94,74 @@ public class CpuAdjuster implements Resolver {
 
 		if (opportunisticActionDelayStart < monitor.getJobStartExecutionTime()) {
 			opportunisticActionDelayStart = -1;
-			vertexMaxUtility.clear();
+			vertexToScaleUpMaxUtility.clear();
 		}
 
-		JobVertexHighCpu jobVertexHighCpu = null;
-		JobVertexLowCpu jobVertexLowCpu = null;
-		JobStable jobStable = null;
+		if (!diagnose(symptomList)) {
+			return null;
+		}
+
+		Map<JobVertexID, Double> targetCpu = new HashMap<>();
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
+
+		if (jobVertexLowCpu != null) {
+			targetCpu.putAll(scaleDownVertexCpu(jobConfig));
+		}
+
+		if (jobVertexHighCpu != null) {
+			targetCpu.putAll(scaleUpVertexCpu(jobConfig));
+		}
+
+		if (targetCpu.isEmpty()) {
+			return null;
+		}
+
+		AdjustJobCpu adjustJobCpu = new AdjustJobCpu(jobID, timeout);
+		for (Map.Entry<JobVertexID, Double> entry : targetCpu.entrySet()) {
+			JobVertexID vertexID = entry.getKey();
+			double target = entry.getValue();
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
+			ResourceSpec currentResource = vertexConfig.getResourceSpec();
+			ResourceSpec targetResource = new ResourceSpec.Builder(currentResource)
+					.setCpuCores(target).build();
+
+			adjustJobCpu.addVertex(
+				vertexID, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
+		}
+
+		if (maxCpuLimit != Double.MAX_VALUE || maxMemoryLimit != Integer.MAX_VALUE) {
+			RestServerClient.JobConfig targetJobConfig = adjustJobCpu.getAppliedJobConfig(jobConfig);
+			double targetTotalCpu = targetJobConfig.getJobTotalCpuCores();
+			int targetTotalMem = targetJobConfig.getJobTotalMemoryMb();
+			if (targetTotalCpu > maxCpuLimit || targetTotalMem > maxMemoryLimit) {
+				LOGGER.debug("Give up adjusting: total resource of target job config <cpu, mem>=<{}, {}> exceed max limit <cpu, mem>=<{}, {}>.",
+					targetTotalCpu, targetTotalMem, maxCpuLimit, maxMemoryLimit);
+				return null;
+			}
+		}
+
+		if (!adjustJobCpu.isEmpty()) {
+			long now = System.currentTimeMillis();
+			if (opportunisticActionDelayStart > 0 && now - opportunisticActionDelayStart > opportunisticActionDelay) {
+				adjustJobCpu.setActionMode(Action.ActionMode.IMMEDIATE);
+			} else {
+				if (opportunisticActionDelayStart < 0) {
+					opportunisticActionDelayStart = now;
+				}
+				adjustJobCpu.setActionMode(Action.ActionMode.OPPORTUNISTIC);
+			}
+			LOGGER.info("AdjustJobCpu action generated: {}.", adjustJobCpu);
+			return adjustJobCpu;
+		}
+		return null;
+	}
+
+	@VisibleForTesting
+	public boolean diagnose(List<Symptom> symptomList) {
+		jobVertexHighCpu = null;
+		jobVertexLowCpu = null;
+		jobStable = null;
+
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobStable) {
 				jobStable = (JobStable) symptom;
@@ -109,68 +178,52 @@ public class CpuAdjuster implements Resolver {
 
 		if (jobStable == null || jobStable.getStableTime() < stableTime) {
 			LOGGER.debug("Job unstable, should not rescale.");
-			return null;
+			return false;
 		}
 
-		if (jobVertexHighCpu != null) {
-			LOGGER.debug("High cpu detected for vertices with max utilities {}.", jobVertexHighCpu.getUtilities());
-			for (Map.Entry<JobVertexID, Double> entry : jobVertexHighCpu.getUtilities().entrySet()) {
-				if (!vertexMaxUtility.containsKey(entry.getKey()) || vertexMaxUtility.get(entry.getKey()) < entry.getValue()) {
-					vertexMaxUtility.put(entry.getKey(), entry.getValue());
-				}
+		if (jobVertexHighCpu == null && jobVertexLowCpu == null) {
+			LOGGER.debug("No need to rescale.");
+			return false;
+		}
+
+		return true;
+	}
+
+	@VisibleForTesting
+	public Map<JobVertexID, Double> scaleUpVertexCpu(RestServerClient.JobConfig jobConfig) {
+		LOGGER.debug("High cpu detected for vertices with max utilities {}.", jobVertexHighCpu.getUtilities());
+		for (Map.Entry<JobVertexID, Double> entry : jobVertexHighCpu.getUtilities().entrySet()) {
+			if (!vertexToScaleUpMaxUtility.containsKey(entry.getKey()) || vertexToScaleUpMaxUtility.get(entry.getKey()) < entry.getValue()) {
+				vertexToScaleUpMaxUtility.put(entry.getKey(), entry.getValue());
 			}
 		}
 
-		if (jobVertexLowCpu != null) {
-			LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
-			// TODO add cpu down scale strategy
-			// utilities.putAll(jobVertexLowCpu.getUtilities());
-		}
-
-		if (vertexMaxUtility.isEmpty()) {
-			return null;
-		}
-
-		AdjustJobCpu adjustJobCpu = new AdjustJobCpu(jobID, timeout);
-		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
-		for (JobVertexID jvId : vertexMaxUtility.keySet()) {
+		Map<JobVertexID, Double> results = new HashMap<>();
+		for (JobVertexID jvId : vertexToScaleUpMaxUtility.keySet()) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			double utility = vertexMaxUtility.get(jvId);
-			double targetCpu = currentResource.getCpuCores() * Math.max(1.0, utility) * scaleRatio;
-			LOGGER.debug("Target cpu for vertex {} is {}.", jvId, targetCpu);
-			ResourceSpec targetResource = new ResourceSpec.Builder(currentResource)
-					.setCpuCores(targetCpu).build();
-
-			adjustJobCpu.addVertex(
-				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
+			double utility = vertexToScaleUpMaxUtility.get(jvId);
+			double targetCpu = currentResource.getCpuCores() * Math.max(1.0, utility) * scaleUpRatio;
+			results.put(jvId, targetCpu);
+			LOGGER.debug("Scale up, target cpu for vertex {} is {}.", jvId, targetCpu);
 		}
 
-		if (maxCpuLimit != Double.MAX_VALUE || maxMemoryLimit != Integer.MAX_VALUE) {
-			RestServerClient.JobConfig targetJobConfig = adjustJobCpu.getAppliedJobConfig(jobConfig);
-			double targetTotalCpu = targetJobConfig.getJobTotalCpuCores();
-			int targetTotalMem = targetJobConfig.getJobTotalMemoryMb();
-			if (targetTotalCpu > maxCpuLimit || targetTotalMem > maxMemoryLimit) {
-				LOGGER.debug("Give up adjusting: total resource of target job config <cpu, mem>=<{}, {}> exceed max limit <cpu, mem>=<{}, {}>.",
-					targetTotalCpu, targetTotalMem, maxCpuLimit, maxMemoryLimit);
-				return null;
-			}
-		}
+		return results;
+	}
 
-		if (!adjustJobCpu.isEmpty()) {
-			long now = System.currentTimeMillis();
-			if ((jobVertexHighCpu != null && jobVertexHighCpu.isSevere()) ||
-				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
-				adjustJobCpu.setActionMode(Action.ActionMode.IMMEDIATE);
-			} else {
-				if (opportunisticActionDelayStart < 0) {
-					opportunisticActionDelayStart = now;
-				}
-				adjustJobCpu.setActionMode(Action.ActionMode.OPPORTUNISTIC);
-			}
-			LOGGER.info("AdjustJobCpu action generated: {}.", adjustJobCpu);
-			return adjustJobCpu;
+	@VisibleForTesting
+	public Map<JobVertexID, Double> scaleDownVertexCpu(RestServerClient.JobConfig jobConfig) {
+		LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
+		Map<JobVertexID, Double> results = new HashMap<>();
+		for (Map.Entry<JobVertexID, Double> entry : jobVertexLowCpu.getUtilities().entrySet()) {
+			JobVertexID vertexID = entry.getKey();
+			double utility = entry.getValue();
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
+			ResourceSpec currentResource = vertexConfig.getResourceSpec();
+			double targetCpu = currentResource.getCpuCores() * utility * scaleDownRatio;
+			results.put(vertexID, targetCpu);
+			LOGGER.debug("Scale down, target cpu for vertex {} is {}.", vertexID, targetCpu);
 		}
-		return null;
+		return results;
 	}
 }

@@ -36,11 +36,8 @@ import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -52,30 +49,17 @@ import static org.mockito.Matchers.anyVararg;
 /**
  * Test for JobStableDetector.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(MetricUtils.class)
-public class JobStableDetectorTest {
+public class JobStableDetectorTest extends DetectorTestBase {
 
 	@Test
 	public void testDetectJobStable() throws Exception {
-		HealthMonitor monitor = Mockito.mock(HealthMonitor.class);
-
-		JobID jobID = new JobID();
-		Mockito.when(monitor.getJobID()).thenReturn(jobID);
-		Mockito.when(monitor.getConfig()).thenReturn(new Configuration());
 
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
 		vertexConfigs.put(vertex1, Mockito.mock(RestServerClient.VertexConfig.class));
 		vertexConfigs.put(vertex2, Mockito.mock(RestServerClient.VertexConfig.class));
-
-		RestServerClient.JobConfig jobConfig = Mockito.mock(RestServerClient.JobConfig.class);
 		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
-		Mockito.when(monitor.getJobConfig()).thenReturn(jobConfig);
-
-		RestServerClient restClient = Mockito.mock(RestServerClient.class);
-		Mockito.when(monitor.getRestServerClient()).thenReturn(restClient);
 
 		RestServerClient.JobStatus jobStatus = Mockito.mock(RestServerClient.JobStatus.class);
 		Mockito.when(restClient.getJobStatus(jobID)).thenReturn(jobStatus);
@@ -87,9 +71,6 @@ public class JobStableDetectorTest {
 		status.put(new ExecutionVertexID(vertex2, 0), new Tuple2<>(now, ExecutionState.RUNNING));
 		Mockito.when(jobStatus.getTaskStatus()).thenReturn(status);
 
-		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
-		Mockito.when(monitor.getMetricProvider()).thenReturn(metricProvider);
-
 		TaskMetricSubscription initTimeSub = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(initTimeSub.getValue()).thenReturn(new Tuple2<>(now, 1.0));
 		Mockito.when(metricProvider.subscribeTaskMetric(
@@ -100,9 +81,6 @@ public class JobStableDetectorTest {
 			Mockito.anyLong(),
 			Mockito.eq(TimelineAggType.LATEST)))
 			.thenReturn(initTimeSub);
-
-		PowerMockito.mockStatic(MetricUtils.class);
-		Mockito.when(MetricUtils.validateTaskMetric(Mockito.any(HealthMonitor.class), Mockito.anyLong(), anyVararg())).thenReturn(true);
 
 		JobStableDetector detector = new JobStableDetector();
 		detector.open(monitor);
@@ -114,24 +92,13 @@ public class JobStableDetectorTest {
 
 	@Test
 	public void testDetectTaskNotRunning() throws Exception {
-		HealthMonitor monitor = Mockito.mock(HealthMonitor.class);
-
-		JobID jobID = new JobID();
-		Mockito.when(monitor.getJobID()).thenReturn(jobID);
-		Mockito.when(monitor.getConfig()).thenReturn(new Configuration());
 
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
 		vertexConfigs.put(vertex1, Mockito.mock(RestServerClient.VertexConfig.class));
 		vertexConfigs.put(vertex2, Mockito.mock(RestServerClient.VertexConfig.class));
-
-		RestServerClient.JobConfig jobConfig = Mockito.mock(RestServerClient.JobConfig.class);
 		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
-		Mockito.when(monitor.getJobConfig()).thenReturn(jobConfig);
-
-		RestServerClient restClient = Mockito.mock(RestServerClient.class);
-		Mockito.when(monitor.getRestServerClient()).thenReturn(restClient);
 
 		RestServerClient.JobStatus jobStatus = Mockito.mock(RestServerClient.JobStatus.class);
 		Mockito.when(restClient.getJobStatus(jobID)).thenReturn(jobStatus);
@@ -143,9 +110,6 @@ public class JobStableDetectorTest {
 		status.put(new ExecutionVertexID(vertex2, 0), new Tuple2<>(now, ExecutionState.RUNNING));
 		Mockito.when(jobStatus.getTaskStatus()).thenReturn(status);
 
-		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
-		Mockito.when(monitor.getMetricProvider()).thenReturn(metricProvider);
-
 		TaskMetricSubscription initTimeSub = Mockito.mock(TaskMetricSubscription.class);
 		Mockito.when(initTimeSub.getValue()).thenReturn(new Tuple2<>(now, 1.0));
 		Mockito.when(metricProvider.subscribeTaskMetric(
@@ -156,9 +120,6 @@ public class JobStableDetectorTest {
 			Mockito.anyLong(),
 			Mockito.eq(TimelineAggType.LATEST)))
 			.thenReturn(initTimeSub);
-
-		PowerMockito.mockStatic(MetricUtils.class);
-		Mockito.when(MetricUtils.validateTaskMetric(Mockito.any(HealthMonitor.class), Mockito.anyLong(), anyVararg())).thenReturn(true);
 
 		JobStableDetector detector = new JobStableDetector();
 		detector.open(monitor);

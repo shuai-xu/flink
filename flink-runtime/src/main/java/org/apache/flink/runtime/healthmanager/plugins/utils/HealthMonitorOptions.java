@@ -76,17 +76,30 @@ public class HealthMonitorOptions {
 
 	public static final ConfigOption<Long> PARALLELISM_SCALE_STATE_SIZE_THRESHOLD =
 			ConfigOptions.key("parallelism.scale.state.size.threshold").defaultValue(10L * 1024 * 1024 * 1024);
+
 	/**
-	 * resource scale ratio.
+	 * resource scale up ratio.
 	 */
-	public static final ConfigOption<Double> RESOURCE_SCALE_RATIO =
-			ConfigOptions.key("resource.scale.ratio").defaultValue(1.5);
+	public static final ConfigOption<Double> RESOURCE_SCALE_UP_RATIO =
+			ConfigOptions.key("resource.scale-up.ratio").defaultValue(1.5);
+
+	/**
+	 * resource scale down ratio.
+	 */
+	public static final ConfigOption<Double> RESOURCE_SCALE_DOWN_RATIO =
+		ConfigOptions.key("resource.scale-down.ratio").defaultValue(1.2);
 
 	/**
 	 * resource check interval.
 	 */
 	public static final ConfigOption<Long> RESOURCE_SCALE_INTERVAL =
 		ConfigOptions.key("resource.scale.interval.ms").defaultValue(180 * 1000L);
+
+	/**
+	 * resource scale down check interval.
+	 */
+	public static final ConfigOption<Long> RESOURCE_SCALE_DOWN_WAIT_TIME =
+		ConfigOptions.key("resource.scale-down.wait-time.ms").defaultValue(24 * 60 * 60 * 1000L);
 
 	/**
 	 * resource stable time.
