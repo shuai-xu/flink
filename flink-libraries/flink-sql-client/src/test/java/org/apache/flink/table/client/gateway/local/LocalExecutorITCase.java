@@ -1213,6 +1213,86 @@ public class LocalExecutorITCase extends TestLogger {
 		}
 	}
 
+	@Test(timeout = 30_000L)
+	public void testDatabases() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "streaming");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "update-mode: append");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		final List<String> actualDatabases1 =
+			executor.listDatabases(session).stream().sorted().collect(Collectors.toList());
+
+		final List<String> expectedDatabases1 =
+			Arrays.asList("default").stream().sorted().collect(Collectors.toList());
+
+		assertEquals(expectedDatabases1, actualDatabases1);
+
+		// try to create a new database
+		executor.createDatabase(
+			session,
+			"CREATE DATABASE mydb COMMENT 'This is a db for testing.' WITH (key='value')");
+
+		final List<String> actualDatabases2 =
+			executor.listDatabases(session).stream().sorted().collect(Collectors.toList());
+
+		final List<String> expectedDatabases2 =
+			Arrays.asList("default", "mydb").stream().sorted().collect(Collectors.toList());
+
+		assertEquals(expectedDatabases2, actualDatabases2);
+
+		// try to reference the database
+		executor.setDefaultDatabase(session, "mydb");
+
+		executor.createTable(
+			session,
+			"CREATE TABLE t(f1 INT, f2 VARCHAR) WITH (type='csv', path='" + url.getPath() + "', commentsPrefix='#')"
+		);
+
+		executor.setDefaultDatabase(session, "default");
+
+		final String query = "SELECT scalarUDF(f1), f2 FROM mydb.t";
+		final List<String> expectedResults = new ArrayList<>();
+		expectedResults.add("47,Hello World");
+		expectedResults.add("27,Hello World");
+		expectedResults.add("37,Hello World");
+		expectedResults.add("37,Hello World");
+		expectedResults.add("47,Hello World");
+		expectedResults.add("57,Hello World!!!!");
+
+		try {
+			// start job and retrieval
+			final ResultDescriptor desc = executor.executeQuery(session, query);
+
+			assertTrue(desc.isMaterialized());
+
+			final List<String> actualResults = retrieveTableResult(executor, session, desc.getResultId());
+
+			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
+		} finally {
+			// try to drop database
+			executor.dropDatabase(session, "mydb");
+
+			final List<String> actualDatabases =
+				executor.listDatabases(session).stream().sorted().collect(Collectors.toList());
+
+			final List<String> expectedDatabases =
+				Arrays.asList("default").stream().sorted().collect(Collectors.toList());
+
+			assertEquals(expectedDatabases, actualDatabases);
+
+			executor.stop(session);
+		}
+	}
+
 	private void produceMessages(String topic, String brokerConnectionStrings) {
 		KafkaITService.createTopic(topic, 1, 1);
 		Properties properties = new Properties();

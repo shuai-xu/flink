@@ -35,6 +35,7 @@
     "org.apache.flink.sql.parser.ddl.SqlDropView",
     "org.apache.flink.sql.parser.ddl.SqlWatermark",
     "org.apache.flink.sql.parser.ddl.SqlHiddenColumn",
+    "org.apache.flink.sql.parser.ddl.SqlCreateDatabase",
     "java.util.List",
     "java.util.ArrayList"
   ]
@@ -84,7 +85,8 @@
     "SqlDropView()",
     "SqlCreateOrReplaceView()",
     "SqlAnalyzeTable()",
-    "SqlRichDescribe()"
+    "SqlRichDescribe()",
+    "SqlCreateDatabase()"
   ]
 
   # List of methods for parsing custom literals.

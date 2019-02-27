@@ -450,7 +450,6 @@ SqlNode SqlDropView() :
 {
     SqlNode viewName = null;
     SqlParserPos pos;
-
 }
 {
     <DROP> { pos = getPos(); }
@@ -460,6 +459,60 @@ SqlNode SqlDropView() :
     viewName = CompoundIdentifier()
 
     {
-         return new SqlDropView(pos, viewName);
+        return new SqlDropView(pos, viewName);
+    }
+}
+
+
+/**
+ * Parses a create database statement.
+ * CREATE DATABASE database_name [COMMENT database_comment] [WITH (property_name=property_value, ...)];
+ */
+SqlNode SqlCreateDatabase() :
+{
+    SqlParserPos startPos;
+    SqlParserPos pos;
+    SqlIdentifier databaseName;
+    SqlCharStringLiteral comment = null;
+    SqlNodeList propertyList = null;
+}
+{
+    <CREATE> { startPos = getPos(); }
+    <DATABASE>
+    databaseName = CompoundIdentifier()
+    [ <COMMENT> <QUOTED_STRING> {
+        String p = SqlParserUtil.parseString(token.image);
+        comment = SqlLiteral.createCharString(p, getPos());
+    }]
+    [
+        <WITH>
+        {
+            SqlNode property;
+            List<SqlNode> proList = new ArrayList<SqlNode>();
+            pos = getPos();
+        }
+        <LPAREN>
+        [
+            property = PropertyValue()
+            {
+                proList.add(property);
+            }
+            (
+                <COMMA> property = PropertyValue()
+                {
+                    proList.add(property);
+                }
+            )*
+        ]
+        <RPAREN>
+        {
+            propertyList = new SqlNodeList(proList, pos.plus(getPos()));
+        }
+    ]
+    {
+        return new SqlCreateDatabase(startPos.plus(getPos()),
+            databaseName,
+            propertyList,
+            comment);
     }
 }

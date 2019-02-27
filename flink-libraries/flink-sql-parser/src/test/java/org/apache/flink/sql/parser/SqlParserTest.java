@@ -363,6 +363,23 @@ public class SqlParserTest extends ParserTestBase {
 		sql(sql).node(new WatermarkMatcher(1000));
 	}
 
+	@Test
+	public void testCreateDatabase() {
+		check(
+			"CREATE DATABASE myDatabase\n" +
+				" COMMENT 'This is a database for testing.'" +
+				" WITH (\n" +
+				"  key1='value1',\n" +
+				"  key2='value2'\n" +
+				" )\n",
+			"CREATE DATABASE `myDatabase` " +
+				"COMMENT 'This is a database for testing.'\n" +
+				"WITH (\n" +
+				"  `key1` = 'value1',\n" +
+				"  `key2` = 'value2'\n" +
+				")");
+	}
+
 	private static class WatermarkMatcher extends BaseMatcher<SqlNode> {
 
 		private boolean matchException;

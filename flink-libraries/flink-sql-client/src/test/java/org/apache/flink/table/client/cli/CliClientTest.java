@@ -239,6 +239,11 @@ public class CliClientTest extends TestLogger {
 		}
 
 		@Override
+		public void createDatabase(SessionContext session, String ddl) throws SqlExecutionException {
+			// nothing to do
+		}
+
+		@Override
 		public void createTable(SessionContext session, String ddl) throws SqlExecutionException {
 			// nothing to do
 		}
@@ -260,6 +265,11 @@ public class CliClientTest extends TestLogger {
 
 		@Override
 		public void dropFunction(SessionContext session, String ddl) throws SqlExecutionException {
+			// nothing to do
+		}
+
+		@Override
+		public void dropDatabase(SessionContext session, String databaseName) throws SqlExecutionException {
 			// nothing to do
 		}
 

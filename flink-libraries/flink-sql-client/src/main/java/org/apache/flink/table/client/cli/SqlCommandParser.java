@@ -144,6 +144,14 @@ public final class SqlCommandParser {
 				return Optional.of(new String[]{operands[0], operands[1], operands[2]});
 			}),
 
+		CREATE_DATABASE(
+			"(CREATE\\s+DATABASE.*)",
+			SINGLE_OPERAND),
+
+		DROP_DATABASE(
+			"DROP\\s+DATABASE\\s+(.*)",
+			SINGLE_OPERAND),
+
 		DROP_VIEW(
 			"(DROP\\s+VIEW.*)",
 			SINGLE_OPERAND),

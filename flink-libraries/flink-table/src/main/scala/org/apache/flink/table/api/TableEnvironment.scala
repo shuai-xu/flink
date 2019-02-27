@@ -619,6 +619,19 @@ abstract class TableEnvironment(
   }
 
   /**
+    * Registers a [[CatalogDatabase]] under a unique name in the TableEnvironment's catalog.
+    * Registered databases can be referenced in SQL queries.
+    *
+    * @param name the name uder which the database will be registered.
+    * @param database The database to register.
+    */
+  def registerDatabase(name: String, database: CatalogDatabase): Unit = {
+    val catalog = getDefaultCatalog()
+    catalog.asInstanceOf[ReadableWritableCatalog].createDatabase(name, database, false)
+  }
+
+
+  /**
     * Registers a [[Table]] under a unique name in the TableEnvironment's catalog.
     * Registered tables can be referenced in SQL queries.
     *
@@ -648,6 +661,15 @@ abstract class TableEnvironment(
     val catalog = getDefaultCatalog()
     val path = new ObjectPath(getDefaultDatabaseName(), name)
     catalog.asInstanceOf[ReadableWritableCatalog].createTable(path, catalogTable, false)
+  }
+
+  /**
+    * Drops a [[CatalogDatabase]] from the TableEnvironment's default catalog.
+    * Dropped database can not be referenced in SQL queries.
+    */
+  def dropDatabase(name: String): Unit = {
+    val catalog = getDefaultCatalog()
+    catalog.asInstanceOf[ReadableWritableCatalog].dropDatabase(name, false)
   }
 
   /**

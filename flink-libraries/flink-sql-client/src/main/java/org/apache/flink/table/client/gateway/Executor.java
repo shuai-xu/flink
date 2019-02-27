@@ -130,6 +130,11 @@ public interface Executor {
 	void validateSession(SessionContext session) throws SqlExecutionException;
 
 	/**
+	 * Create a database with a DDL.
+	 */
+	void createDatabase(SessionContext session, String ddl) throws SqlExecutionException;
+
+	/**
 	 * Create a table with a DDL.
 	 */
 	void createTable(SessionContext session, String ddl) throws SqlExecutionException;
@@ -153,6 +158,11 @@ public interface Executor {
 	 * Create a function with a DDL.
 	 */
 	void createFunction(SessionContext session, String ddl) throws SqlExecutionException;
+
+	/**
+	 * Drop a database.
+	 */
+	void dropDatabase(SessionContext session, String databaseName) throws SqlExecutionException;
 
 	/**
 	 * Drop a function with a DDL.

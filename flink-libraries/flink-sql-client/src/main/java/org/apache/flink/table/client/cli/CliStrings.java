@@ -44,6 +44,8 @@ public final class CliStrings {
 		.append(formatCommand(SqlCommand.QUIT, "Quits the SQL CLI client."))
 		.append(formatCommand(SqlCommand.CLEAR, "Clears the current terminal."))
 		.append(formatCommand(SqlCommand.HELP, "Prints the available commands."))
+		.append(formatCommand(SqlCommand.CREATE_DATABASE, "Creates a database with SQL DDL. Syntax: 'CREATE DATABASE <name> [COMMENT <comments>] [WITH (<key>=<value>)]'"))
+		.append(formatCommand(SqlCommand.DROP_DATABASE, "Deletes a previously created database. Syntax: 'DROP DATABASE <name>;'"))
 		.append(formatCommand(SqlCommand.CREATE_TABLE, "Creates a table with SQL DDL. Syntax: 'CREATE TABLE <name> (<field_name, field_type>) with (<key>=<value>)"))
 		.append(formatCommand(SqlCommand.DROP_TABLE, "Deletes a previously created table or virtual table. Syntax: 'DROP TABLE <name>;'"))
 		.append(formatCommand(SqlCommand.SHOW_TABLES, "Shows all registered tables."))
@@ -137,6 +139,10 @@ public final class CliStrings {
 	public static final String MESSAGE_WILL_EXECUTE = "Executing the following statement:";
 
 	public static final String MESSAGE_UNSUPPORTED_SQL = "Unsupported SQL statement.";
+
+	public static final String MESSAGE_DATABASE_CREATED = "Database has been created.";
+
+	public static final String MESSAGE_DATABASE_DROP = "Database has been removed.";
 
 	public static final String MESSAGE_VIEW_CREATED = "View has been created.";
 

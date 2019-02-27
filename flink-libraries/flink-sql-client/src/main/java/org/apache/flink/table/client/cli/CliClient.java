@@ -293,6 +293,12 @@ public class CliClient {
 			case DROP_FUNCTION:
 				callDropFunction(cmdCall);
 				break;
+			case CREATE_DATABASE:
+				callCreateDatabase(cmdCall);
+				break;
+			case DROP_DATABASE:
+				callDropDatabase(cmdCall);
+				break;
 			case SOURCE:
 				callSource(cmdCall);
 				break;
@@ -504,6 +510,15 @@ public class CliClient {
 		return true;
 	}
 
+	private void callCreateDatabase(SqlCommandCall cmdCall) {
+		try {
+			executor.createDatabase(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_DATABASE_CREATED);
+		} catch (SqlExecutionException e) {
+			printExecutionException(e);
+		}
+	}
+
 	private void callCreateTable(SqlCommandCall cmdCall) {
 		try {
 			executor.createTable(context, cmdCall.operands[0]);
@@ -546,6 +561,15 @@ public class CliClient {
 		try {
 			executor.createFunction(context, cmdCall.operands[0]);
 			printInfo(CliStrings.MESSAGE_FUNCTION_CREATE);
+		} catch (SqlExecutionException e) {
+			printExecutionException(e);
+		}
+	}
+
+	private void callDropDatabase(SqlCommandCall cmdCall) {
+		try {
+			executor.dropDatabase(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_DATABASE_DROP);
 		} catch (SqlExecutionException e) {
 			printExecutionException(e);
 		}

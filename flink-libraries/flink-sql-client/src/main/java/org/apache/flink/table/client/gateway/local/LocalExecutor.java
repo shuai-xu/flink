@@ -31,6 +31,7 @@ import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.sql.parser.ddl.SqlCreateDatabase;
 import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlCreateView;
@@ -371,6 +372,23 @@ public class LocalExecutor implements Executor {
 	}
 
 	@Override
+	public void createDatabase(SessionContext session, String ddl) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			List<SqlNodeInfo> sqlNodeList = SqlJobUtil.parseSqlContext(ddl);
+			sqlNodeList
+				.stream()
+				.filter((node) -> node.getSqlNode() instanceof SqlCreateDatabase)
+				.forEach((node) -> SqlJobUtil.registerExternalDatabase(tEnv, node));
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not create a database from ddl: " + ddl, e);
+		}
+	}
+
+	@Override
 	public void createTable(SessionContext session, String ddl) throws SqlExecutionException {
 		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
 		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
@@ -480,6 +498,19 @@ public class LocalExecutor implements Executor {
 				});
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not create a udx from ddl: " + ddl, e);
+		}
+	}
+
+	@Override
+	public void dropDatabase(SessionContext session, String databaseName) throws SqlExecutionException {
+		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
+		final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
+		TableEnvironment tEnv = envInst.getTableEnvironment();
+
+		try {
+			tEnv.dropDatabase(databaseName);
+		} catch (Exception e) {
+			throw new SqlExecutionException("Could not drop a database from current catalog.", e);
 		}
 	}
 

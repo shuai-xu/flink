@@ -20,6 +20,7 @@ package org.apache.flink.table.client.utils;
 
 import org.apache.flink.sql.parser.ddl.SqlAnalyzeTable;
 import org.apache.flink.sql.parser.ddl.SqlColumnType;
+import org.apache.flink.sql.parser.ddl.SqlCreateDatabase;
 import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlCreateView;
@@ -43,8 +44,10 @@ import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
+import org.apache.flink.table.catalog.config.CatalogDatabaseConfig;
 import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -89,6 +92,37 @@ import java.util.Map;
  */
 public class SqlJobUtil {
 	private static final Logger LOG = LoggerFactory.getLogger(SqlJobUtil.class);
+
+	/**
+	 * Register an external database to current catalog.
+	 *
+	 * @param tableEnv  table environment.
+	 * @param sqlNodeInfo external database defined in ddl.
+	 */
+	public static void registerExternalDatabase(TableEnvironment tableEnv, SqlNodeInfo sqlNodeInfo) {
+		final SqlCreateDatabase sqlCreateDatabase = (SqlCreateDatabase) sqlNodeInfo.getSqlNode();
+		final String databaseName = sqlCreateDatabase.getDatabaseName().toString();
+
+		// set with properties
+		SqlNodeList propertyList = sqlCreateDatabase.getPropertyList();
+		Map<String, String> properties = new HashMap<>();
+		for (SqlNode sqlNode : propertyList) {
+			SqlProperty sqlProperty = (SqlProperty) sqlNode;
+			properties.put(sqlProperty.getKeyString(), sqlProperty.getValueString());
+		}
+
+		// set comment
+		String comment = "";
+		if (sqlCreateDatabase.getComment() != null) {
+			comment = sqlCreateDatabase.getComment().getNlsString().getValue();
+		}
+
+		properties.put(CatalogDatabaseConfig.DATABASE_COMMENT, comment);
+
+		CatalogDatabase catalogDatabase = new CatalogDatabase(properties);
+
+		tableEnv.registerDatabase(databaseName, catalogDatabase);
+	}
 
 	/**
 	 * Register an external table to current catalog.
