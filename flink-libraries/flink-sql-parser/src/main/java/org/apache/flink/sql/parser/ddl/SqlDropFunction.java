@@ -33,10 +33,12 @@ import java.util.List;
 public class SqlDropFunction extends SqlCall {
 
 	private SqlNode functionName;
+	private boolean ifExists;
 
-	public SqlDropFunction(SqlParserPos pos, SqlNode functionName) {
+	public SqlDropFunction(SqlParserPos pos, SqlNode functionName, boolean ifExists) {
 		super(pos);
 		this.functionName = functionName;
+		this.ifExists = ifExists;
 	}
 
 	@Override
@@ -62,9 +64,20 @@ public class SqlDropFunction extends SqlCall {
 		this.functionName = functionName;
 	}
 
+	public boolean getIfExists() {
+		return this.ifExists;
+	}
+
+	public void setIfExists(boolean ifExists) {
+		this.ifExists = ifExists;
+	}
+
 	public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
 		writer.keyword("DROP");
 		writer.keyword("FUNCTION");
+		if (ifExists) {
+			writer.keyword("IF EXISTS");
+		}
 		functionName.unparse(writer, leftPrec, rightPrec);
 	}
 

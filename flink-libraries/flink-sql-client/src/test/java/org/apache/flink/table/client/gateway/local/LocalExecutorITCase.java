@@ -465,8 +465,17 @@ public class LocalExecutorITCase extends TestLogger {
 		int tableCount = executor.listTables(session).size();
 		executor.createTable(session, "CREATE TABLE T1(field1 INT, field2 VARCHAR) WITH (type = 'type', attributeKey1 = 'value1', attributeKey2 = 'value2')");
 		assertEquals(tableCount + 1, executor.listTables(session).size());
+		executor.dropTable(session, "DROP TABLE IF EXISTS T2_not_exists");
+		assertEquals(tableCount + 1, executor.listTables(session).size());
 		executor.dropTable(session, "DROP TABLE T1");
 		assertEquals(tableCount, executor.listTables(session).size());
+		try {
+			// T1 doesn't exist any more.
+			executor.dropTable(session, "DROP TABLE T1");
+			fail("Failure is expected when dropping a table that doesn't exist.");
+		} catch (Exception ex) {
+			// expected
+		}
 	}
 
 	@Test(timeout = 30_000L)
@@ -1006,8 +1015,24 @@ public class LocalExecutorITCase extends TestLogger {
 		// Currently executor.dropFunction() doesn't remove the corresponding sql operator generated, causing the
 		// following test failure. We comment this test out as our work on function is WIP.
 		//assertEquals(funcs, executor.listUserDefinedFunctions(session).size());
+		// TODO: enable the following tests when function is fully supported.
+		//executor.dropFunction(session, "DROP FUNCTION IF EXISTS F1");
+		//try {
+		//	executor.dropFunction(session, "DROP FUNCTION F1");
+		//	fail("Failure is expected when dropping a view that doesn't exist.");
+		//} catch (Exception ex) {
+		//	// expected
+		//}
+
 		executor.dropView(session, "DROP VIEW V1");
 		assertEquals(views, executor.listViews(session).size());
+		executor.dropView(session, "DROP VIEW IF EXISTS V1");
+		try {
+			executor.dropView(session, "DROP VIEW V1");
+			fail("Failure is expected when dropping a view that doesn't exist.");
+		} catch (Exception ex) {
+			// expected
+		}
 	}
 
 	@Test(timeout = 30_000L)

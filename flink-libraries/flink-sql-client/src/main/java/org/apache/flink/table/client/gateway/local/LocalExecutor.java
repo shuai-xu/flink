@@ -419,7 +419,7 @@ public class LocalExecutor implements Executor {
 				.forEach((node) -> {
 					SqlDropTable sqlDropTable = (SqlDropTable) node.getSqlNode();
 					String funcName = sqlDropTable.getTableName().toString();
-					tEnv.dropTable(funcName);
+					tEnv.dropTable(funcName, sqlDropTable.getIfExists());
 				});
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not drop a table from ddl: " + ddl, e);
@@ -457,7 +457,7 @@ public class LocalExecutor implements Executor {
 				.forEach((node) -> {
 					SqlDropView sqlDropView = (SqlDropView) node.getSqlNode();
 					String viewName = sqlDropView.getViewName().toString();
-					tEnv.dropTable(viewName);
+					tEnv.dropTable(viewName, sqlDropView.getIfExists());
 				});
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not drop a view from ddl: " + ddl, e);
@@ -528,7 +528,7 @@ public class LocalExecutor implements Executor {
 				.forEach((node) -> {
 					SqlDropFunction sqlDropFunction = (SqlDropFunction) node.getSqlNode();
 					String funcName = sqlDropFunction.getFunctionName().toString();
-					tEnv.dropFunction(funcName);
+					tEnv.dropFunction(funcName, sqlDropFunction.getIfExists());
 				});
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not drop a udx from ddl: " + ddl, e);

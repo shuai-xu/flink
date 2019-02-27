@@ -33,10 +33,12 @@ import java.util.List;
 public class SqlDropTable extends SqlCall {
 
 	private SqlNode tableName;
+	private boolean ifExists;
 
-	public SqlDropTable(SqlParserPos pos, SqlNode tableName) {
+	public SqlDropTable(SqlParserPos pos, SqlNode tableName, boolean ifExists) {
 		super(pos);
 		this.tableName = tableName;
+		this.ifExists = ifExists;
 	}
 
 	@Override
@@ -62,9 +64,20 @@ public class SqlDropTable extends SqlCall {
 		this.tableName = viewName;
 	}
 
+	public boolean getIfExists() {
+		return this.ifExists;
+	}
+
+	public void setIfExists(boolean ifExists) {
+		this.ifExists = ifExists;
+	}
+
 	public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
 		writer.keyword("DROP");
 		writer.keyword("TABLE");
+		if (ifExists) {
+			writer.keyword("IF EXISTS");
+		}
 		tableName.unparse(writer, leftPrec, rightPrec);
 	}
 

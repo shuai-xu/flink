@@ -562,9 +562,9 @@ abstract class TableEnvironment(
     * Drop a function with the given function name.
     * @param name the name of the function to be dropped.
     */
-  def dropFunction(name: String): Unit = {
+  def dropFunction(name: String, ifExists: Boolean): Unit = {
     // TODO: This needs to adapt to the new function catalog design.
-    builtInFunctionCatalog.dropFunction(name);
+    builtInFunctionCatalog.dropFunction(name); // TODO: pass on ifExists flag for error handling.
   }
 
   /**
@@ -677,11 +677,20 @@ abstract class TableEnvironment(
     * from the TableEnvironment's default catalog.
     * Dropped tables can not be referenced in SQL queries.
     */
-  def dropTable(name: String): Unit = {
+  def dropTable(name: String): Unit = { this.dropTable(name, false) }
+
+  /**
+    * Drop a Table (or view) with the given name from the TableEnvironment's default catalog
+    * and default database.
+    *
+    * @param name the name of the table to be dropped.
+    * @param ifExists drop the table if only the table exists (ignore if table doesn't exist).
+    */
+  def dropTable(name: String, ifExists: Boolean): Unit = {
     val catalog = getDefaultCatalog().asInstanceOf[ReadableWritableCatalog]
     val path = new ObjectPath(getDefaultDatabaseName(), name)
 
-    catalog.dropTable(path, false)
+    catalog.dropTable(path, ifExists);
   }
 
   /**

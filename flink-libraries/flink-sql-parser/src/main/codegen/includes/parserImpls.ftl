@@ -328,19 +328,21 @@ SqlNode SqlCreateTable() :
 
 SqlNode SqlDropTable() :
 {
-    SqlNode tableName = null;
     SqlParserPos pos;
-
+    SqlNode tableName = null;
+    boolean ifExists = false;
 }
 {
     <DROP> { pos = getPos(); }
 
     <TABLE>
 
+    [<IF> <EXISTS> { ifExists = true; } ]
+
     tableName = CompoundIdentifier()
 
     {
-         return new SqlDropTable(pos, tableName);
+         return new SqlDropTable(pos, tableName, ifExists);
     }
 }
 
@@ -369,19 +371,21 @@ SqlNode SqlCreateFunction() :
 
 SqlNode SqlDropFunction() :
 {
-    SqlNode functionName = null;
     SqlParserPos pos;
-
+    SqlNode functionName = null;
+    boolean ifExists = false;
 }
 {
     <DROP> { pos = getPos(); }
 
     <FUNCTION>
 
+     [<IF> <EXISTS> { ifExists = true; } ]
+
     functionName = CompoundIdentifier()
 
     {
-         return new SqlDropFunction(pos, functionName);
+         return new SqlDropFunction(pos, functionName, ifExists);
     }
 }
 
@@ -448,18 +452,21 @@ SqlNode SqlCreateOrReplaceView() :
 
 SqlNode SqlDropView() :
 {
-    SqlNode viewName = null;
     SqlParserPos pos;
+    SqlNode viewName = null;
+    boolean ifExists = false;
 }
 {
     <DROP> { pos = getPos(); }
 
     <VIEW>
 
+    [<IF> <EXISTS> { ifExists = true; } ]
+
     viewName = CompoundIdentifier()
 
     {
-        return new SqlDropView(pos, viewName);
+         return new SqlDropView(pos, viewName, ifExists);
     }
 }
 
