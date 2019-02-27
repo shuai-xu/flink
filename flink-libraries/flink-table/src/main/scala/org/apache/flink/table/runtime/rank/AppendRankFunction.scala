@@ -176,7 +176,6 @@ class AppendRankFunction(
 
   private def processElementWithoutRowNumber(inputRow: BaseRow, out: Collector[BaseRow]): Unit = {
     val currentKey = executionContext.currentKey()
-    collect(out, inputRow)
     // remove retired element
     if (sortedMap.currentTopNum > rankEnd) {
       val lastEntry = sortedMap.lastEntry()
@@ -193,6 +192,7 @@ class AppendRankFunction(
       // lastElement shouldn't be null
       delete(out, lastElement)
     }
+    collect(out, inputRow)
   }
 
   override def onTimer(

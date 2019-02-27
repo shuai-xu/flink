@@ -1098,12 +1098,12 @@ class RankITCase(mode: StateBackendMode) extends StreamingWithStateTestBase(mode
     val expected = List(
       "(true,book,12,1)",
       "(true,book,19,2)",
-      "(true,book,20,5)",
       "(false,book,12,1)",
+      "(true,book,20,5)",
       "(true,fruit,33,4)",
       "(true,fruit,44,3)",
-      "(true,fruit,40,1)",
-      "(false,fruit,33,4)")
+      "(false,fruit,33,4)",
+      "(true,fruit,40,1)")
     assertEquals(expected, tableSink.getRawResults)
 
     val updatedExpected = List(
