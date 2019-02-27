@@ -275,7 +275,7 @@ public class RestServerClientImplTest extends TestLogger {
 	public void testGetTaskManagerExceptions() throws Exception {
 		TestTaskManagerExceptionsHandler testTaskManagerExceptionsHandler = new TestTaskManagerExceptionsHandler();
 		try (TestRestServerEndpoint ignored = createRestServerEndpoint(testTaskManagerExceptionsHandler)) {
-			Map<Long, Tuple2<String, Exception>> exceptions = restServerClientImpl.getTaskManagerExceptions();
+			Map<String, List<Exception>> exceptions = restServerClientImpl.getTaskManagerExceptions(0, Long.MAX_VALUE);
 			Assert.assertTrue(exceptions.size() == 1);
 		}
 	}

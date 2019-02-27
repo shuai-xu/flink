@@ -70,6 +70,12 @@ public interface RestServerClient {
 	List<ExecutionVertexID> getTaskManagerTasks(String tmId);
 
 	/**
+	 * Get all task managers tasks.
+	 * @return Map from TM id to a list of JobVertexIDs of all tasks running on the TM, including repetitions.
+	 */
+	Map<String, List<ExecutionVertexID>> getAllTaskManagerTasks();
+
+	/**
 	 * Get failover history in time range.
 	 * @param jobID     id of job.
 	 * @param startTime start time in millisecond of the range.
@@ -119,7 +125,7 @@ public interface RestServerClient {
 	/**
 	 * get task manager exceptions.
 	 */
-	Map<Long, Tuple2<String, Exception>> getTaskManagerExceptions() throws Exception;
+	Map<String, List<Exception>> getTaskManagerExceptions(long startTime, long endTime) throws Exception;
 
 	/**
 	 * get all JobVertex state size.

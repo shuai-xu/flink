@@ -250,6 +250,11 @@ public class RestServerClientImpl implements RestServerClient {
 		return executionVertexIDs;
 	}
 
+	@Override
+	public Map<String, List<ExecutionVertexID>> getAllTaskManagerTasks() {
+		return null;
+	}
+
 	//需要获取 vertex 的所有 metrics
 	//@return metric values in a map: [metric name, [subtask index, [fetch timestamp, metric value]]]
 	//todo: how to handle exception
@@ -388,16 +393,23 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public Map<Long, Tuple2<String, Exception>> getTaskManagerExceptions() throws Exception {
+	public Map<String, List<Exception>> getTaskManagerExceptions(long startTime, long endTime) throws Exception {
 		final TaskManagerExceptionsHeaders header = TaskManagerExceptionsHeaders.getInstance();
 		final EmptyMessageParameters param = header.getUnresolvedMessageParameters();
-		Map<Long, Tuple2<String, Exception>> result = new HashMap<>();
+		Map<String, List<Exception>> result = new HashMap<>();
 		return sendRequest(header, param, EmptyRequestBody.getInstance()).thenApply(
 			(TaskManagerExceptionsInfos taskManagerExceptionsInfos) -> {
 				Map<Long, TaskManagerExceptionsInfos.TaskManagerException> taskmanagerExceptions = taskManagerExceptionsInfos.getTaskmanagerExceptions();
 				for (Map.Entry<Long, TaskManagerExceptionsInfos.TaskManagerException> time2Exception: taskmanagerExceptions.entrySet()) {
+					if (time2Exception.getKey() < startTime || time2Exception.getKey() > endTime) {
+						continue;
+					}
 					TaskManagerExceptionsInfos.TaskManagerException te = time2Exception.getValue();
-					result.put(time2Exception.getKey(), new Tuple2<>(te.getResourceId().getResourceIdString(), te.getException()));
+					String tmId = te.getResourceId().getResourceIdString();
+					if (!result.containsKey(tmId)) {
+						result.put(tmId, new ArrayList<>());
+					}
+					result.get(tmId).add(te.getException());
 				}
 				return result;
 			}
