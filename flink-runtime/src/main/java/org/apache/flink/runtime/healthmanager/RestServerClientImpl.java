@@ -71,7 +71,9 @@ import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsH
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsInfos;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExecutionVertexIdsInfo;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagersExecutionVertexIdsInfo;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -230,7 +232,7 @@ public class RestServerClientImpl implements RestServerClient {
 
 	@Override
 	public List<ExecutionVertexID> getTaskManagerTasks(String tmId) {
-		final TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders header = new TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders();
+		final TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders header = TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders.getInstance();
 		final TaskManagerMessageParameters parameters = header.getUnresolvedMessageParameters();
 		final ResourceID  resourceId = new ResourceID(tmId);
 		parameters.taskManagerIdParameter.resolve(resourceId);
@@ -252,7 +254,28 @@ public class RestServerClientImpl implements RestServerClient {
 
 	@Override
 	public Map<String, List<ExecutionVertexID>> getAllTaskManagerTasks() {
-		return null;
+		final TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders headers = TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders.getInstance();
+		final EmptyMessageParameters param = headers.getUnresolvedMessageParameters();
+		Map<String, List<ExecutionVertexID>> result = new HashMap<>();
+		try {
+			sendRequest(headers, param, EmptyRequestBody.getInstance()).thenApply(
+				(TaskManagersExecutionVertexIdsInfo taskManagersExecutionVertexIdsInfo) -> {
+					Map<String, TaskManagerExecutionVertexIdsInfo> id2ExecutionVertexIds = taskManagersExecutionVertexIdsInfo.getExecutionVertexIds();
+					for (Map.Entry<String, TaskManagerExecutionVertexIdsInfo> id2ExecutionVertexId: id2ExecutionVertexIds.entrySet()) {
+						List<ExecutionVertexIDInfo> executionVertexIDInfos = id2ExecutionVertexId.getValue().getExecutionVertexIds();
+						List<ExecutionVertexID> executionVertexIDs = new ArrayList<>();
+						if (executionVertexIDInfos != null && !executionVertexIDInfos.isEmpty()){
+							executionVertexIDs.addAll(executionVertexIDInfos.stream().map(ExecutionVertexIDInfo::convertToResourceSpec).collect(Collectors.toList()));
+						}
+						result.put(id2ExecutionVertexId.getKey(), executionVertexIDs);
+					}
+					return result;
+				}
+			).get();
+		} catch (Exception e) {
+
+		}
+		return result;
 	}
 
 	//需要获取 vertex 的所有 metrics

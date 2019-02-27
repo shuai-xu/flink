@@ -66,7 +66,7 @@ public class TaskManagerExecutionVertexCache implements Closeable {
 		this.timeToLive = checkNotNull(timeToLive);
 		this.ttl = System.currentTimeMillis() + timeToLive.toMilliseconds();
 
-		cachedExcutionVertixIds = new ConcurrentHashMap<>(20);
+		cachedExcutionVertixIds = new ConcurrentHashMap<>(100);
 	}
 
 	@Override

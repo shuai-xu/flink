@@ -98,6 +98,7 @@ import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerLogsHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagerStdoutFileHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskManagersHandler;
 import org.apache.flink.runtime.rest.handler.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsHandler;
+import org.apache.flink.runtime.rest.handler.taskmanager.TaskmanagersAllSubtaskCurrentAttemptsHandler;
 import org.apache.flink.runtime.rest.messages.ClusterConfigurationInfoHeaders;
 import org.apache.flink.runtime.rest.messages.ClusterOverviewHeaders;
 import org.apache.flink.runtime.rest.messages.DashboardConfigurationHeaders;
@@ -142,6 +143,7 @@ import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerLogsHeaders
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerStdoutFileHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagersHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.webmonitor.history.ArchivedJson;
 import org.apache.flink.runtime.webmonitor.history.JsonArchivist;
@@ -635,6 +637,17 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			executionGraphCache
 		);
 
+		final TaskmanagersAllSubtaskCurrentAttemptsHandler taskmanagersAllSubtaskCurrentAttemptsHandler = new TaskmanagersAllSubtaskCurrentAttemptsHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders,
+			TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders.getInstance(),
+			taskManagerExecutionVertexCache,
+			executionGraphCache,
+			resourceManagerRetriever
+		);
+
 		final RescalingHandlers rescalingHandlers = new RescalingHandlers();
 
 		final RescalingHandlers.RescalingTriggerHandler rescalingTriggerHandler = rescalingHandlers.new RescalingTriggerHandler(
@@ -781,6 +794,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(subtaskAllExecutionAttemptDetailsHandler.getMessageHeaders(), subtaskAllExecutionAttemptDetailsHandler));
 		handlers.add(Tuple2.of(jobAllSubtaskCurrentAttemptsHandler.getMessageHeaders(), jobAllSubtaskCurrentAttemptsHandler));
 		handlers.add(Tuple2.of(taskmanagerAllSubtaskCurrentAttemptsHandler.getMessageHeaders(), taskmanagerAllSubtaskCurrentAttemptsHandler));
+		handlers.add(Tuple2.of(taskmanagersAllSubtaskCurrentAttemptsHandler.getMessageHeaders(), taskmanagersAllSubtaskCurrentAttemptsHandler));
 		handlers.add(Tuple2.of(jobVertexTaskManagersHandler.getMessageHeaders(), jobVertexTaskManagersHandler));
 		handlers.add(Tuple2.of(jobVertexBackPressureHandler.getMessageHeaders(), jobVertexBackPressureHandler));
 		handlers.add(Tuple2.of(jobCancelTerminationHandler.getMessageHeaders(), jobCancelTerminationHandler));

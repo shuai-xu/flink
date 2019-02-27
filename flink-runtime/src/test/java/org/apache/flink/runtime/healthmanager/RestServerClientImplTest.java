@@ -89,7 +89,9 @@ import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsH
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsInfos;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExecutionVertexIdsInfo;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessageParameters;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagersExecutionVertexIdsInfo;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
+import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
@@ -230,6 +232,16 @@ public class RestServerClientImplTest extends TestLogger {
 	}
 
 	@Test
+	public void testGetTaskManagersTasks() throws Exception {
+		try (TestRestServerEndpoint ignored = createRestServerEndpoint(new TestTaskmanagersAllSubtaskCurrentAttemptsHandler())) {
+			{
+				Map<String, List<ExecutionVertexID>> executionVertexIDS = restServerClientImpl.getAllTaskManagerTasks();
+				Assert.assertTrue(executionVertexIDS.size() == 2);
+			}
+		}
+	}
+
+	@Test
 	public void testGetJobStatus() throws Exception {
 		try (TestRestServerEndpoint ignored = createRestServerEndpoint(new TestJobAllSubtaskCurrentAttemptsHandler())) {
 			{
@@ -323,6 +335,35 @@ public class RestServerClientImplTest extends TestLogger {
 			executionVertexIds.add(executionVertexIDInfo3);
 			TaskManagerExecutionVertexIdsInfo taskManagerExecutionVertexIdsInfo = new TaskManagerExecutionVertexIdsInfo(executionVertexIds);
 			return CompletableFuture.completedFuture(taskManagerExecutionVertexIdsInfo);
+		}
+
+	}
+
+	private class TestTaskmanagersAllSubtaskCurrentAttemptsHandler extends TestHandler<EmptyRequestBody, TaskManagersExecutionVertexIdsInfo, EmptyMessageParameters> {
+		private TestTaskmanagersAllSubtaskCurrentAttemptsHandler() {
+			super(TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders.getInstance());
+		}
+
+		@Override
+		protected CompletableFuture<TaskManagersExecutionVertexIdsInfo> handleRequest(@Nonnull HandlerRequest<EmptyRequestBody, EmptyMessageParameters> request, @Nonnull DispatcherGateway gateway) throws RestHandlerException {
+			TaskManagerExecutionVertexIdsInfo taskManagerExecutionVertexIdsInfo1 = mockTaskManagersExecutionVertexIdsInfo();
+			TaskManagerExecutionVertexIdsInfo taskManagerExecutionVertexIdsInfo2 = mockTaskManagersExecutionVertexIdsInfo();
+			Map<String, TaskManagerExecutionVertexIdsInfo> executionVertexIds = new HashMap<>(2);
+			executionVertexIds.put(ResourceID.generate().getResourceIdString(), taskManagerExecutionVertexIdsInfo1);
+			executionVertexIds.put(ResourceID.generate().getResourceIdString(), taskManagerExecutionVertexIdsInfo2);
+			return CompletableFuture.completedFuture(new TaskManagersExecutionVertexIdsInfo(executionVertexIds));
+		}
+
+		public TaskManagerExecutionVertexIdsInfo mockTaskManagersExecutionVertexIdsInfo() {
+			List<ExecutionVertexIDInfo> executionVertexIds = new ArrayList<>();
+			ExecutionVertexIDInfo executionVertexIDInfo1 = new ExecutionVertexIDInfo(new JobVertexID(), 0);
+			ExecutionVertexIDInfo executionVertexIDInfo2 = new ExecutionVertexIDInfo(new JobVertexID(), 0);
+			ExecutionVertexIDInfo executionVertexIDInfo3 = new ExecutionVertexIDInfo(new JobVertexID(), 0);
+			executionVertexIds.add(executionVertexIDInfo1);
+			executionVertexIds.add(executionVertexIDInfo2);
+			executionVertexIds.add(executionVertexIDInfo3);
+			TaskManagerExecutionVertexIdsInfo taskManagerExecutionVertexIdsInfo = new TaskManagerExecutionVertexIdsInfo(executionVertexIds);
+			return taskManagerExecutionVertexIdsInfo;
 		}
 
 	}
