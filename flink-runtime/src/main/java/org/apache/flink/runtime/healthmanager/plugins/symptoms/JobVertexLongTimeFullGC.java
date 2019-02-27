@@ -24,18 +24,19 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import java.util.List;
 
 /**
- * Symptom indicating job vertices frequent full gc.
+ * Symptom indicating job vertices exist long time full gc.
  */
-public class JobVertexFrequentFullGC extends AbstractJobVertexSymptom {
+public class JobVertexLongTimeFullGC extends AbstractJobVertexSymptom {
 
 	private boolean severe;
 
-	public JobVertexFrequentFullGC(JobID jobID, List<JobVertexID> jobVertexIDs, boolean severe) {
+	public JobVertexLongTimeFullGC(JobID jobID, List<JobVertexID> jobVertexIDs, boolean severe) {
 		super(jobID, jobVertexIDs);
 		this.severe = severe;
 	}
 
 	public boolean isSevere() {
-		return severe;
+		return this.severe;
 	}
 }
+

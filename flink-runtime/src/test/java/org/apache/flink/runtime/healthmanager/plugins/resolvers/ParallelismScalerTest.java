@@ -34,6 +34,7 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayInc
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighDelay;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
@@ -68,6 +69,9 @@ public class ParallelismScalerTest {
 		JobVertexFrequentFullGC frequentFullGC = mock(JobVertexFrequentFullGC.class);
 		symptoms.add(frequentFullGC);
 
+		JobVertexLongTimeFullGC longTimeFullGC = mock(JobVertexLongTimeFullGC.class);
+		symptoms.add(longTimeFullGC);
+
 		JobVertexFailover failover = mock(JobVertexFailover.class);
 		symptoms.add(failover);
 
@@ -90,6 +94,7 @@ public class ParallelismScalerTest {
 
 		assertEquals(jobStable, Whitebox.getInternalState(scaler, "jobStableSymptom"));
 		assertEquals(frequentFullGC, Whitebox.getInternalState(scaler, "frequentFullGCSymptom"));
+		assertEquals(longTimeFullGC, Whitebox.getInternalState(scaler, "longTimeFullGCSymptom"));
 		assertEquals(failover, Whitebox.getInternalState(scaler, "failoverSymptom"));
 		assertEquals(jobStuck, Whitebox.getInternalState(scaler, "jobStuckSymptom"));
 		assertEquals(highDelay, Whitebox.getInternalState(scaler, "highDelaySymptom"));
@@ -100,6 +105,7 @@ public class ParallelismScalerTest {
 		scaler.parseSymptoms(new LinkedList<>());
 		assertEquals(null, Whitebox.getInternalState(scaler, "jobStableSymptom"));
 		assertEquals(null, Whitebox.getInternalState(scaler, "frequentFullGCSymptom"));
+		assertEquals(null, Whitebox.getInternalState(scaler, "longTimeFullGCSymptom"));
 		assertEquals(null, Whitebox.getInternalState(scaler, "failoverSymptom"));
 		assertEquals(null, Whitebox.getInternalState(scaler, "jobStuckSymptom"));
 		assertEquals(null, Whitebox.getInternalState(scaler, "highDelaySymptom"));

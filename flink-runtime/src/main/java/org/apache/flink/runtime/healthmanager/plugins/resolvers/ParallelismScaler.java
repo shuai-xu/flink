@@ -40,6 +40,7 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDelayInc
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFailover;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighDelay;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
@@ -128,6 +129,7 @@ public class ParallelismScaler implements Resolver {
 	private JobVertexOverParallelized overParallelizedSymptom;
 	private JobStable jobStableSymptom;
 	private JobVertexFrequentFullGC frequentFullGCSymptom;
+	private JobVertexLongTimeFullGC longTimeFullGCSymptom;
 	private JobVertexFailover failoverSymptom;
 	private JobStuck jobStuckSymptom;
 
@@ -393,6 +395,7 @@ public class ParallelismScaler implements Resolver {
 		// clear old symptoms
 		jobStableSymptom = null;
 		frequentFullGCSymptom = null;
+		longTimeFullGCSymptom = null;
 		failoverSymptom = null;
 		jobStuckSymptom = null;
 		highDelaySymptom = null;
@@ -409,6 +412,12 @@ public class ParallelismScaler implements Resolver {
 			if (symptom instanceof JobVertexFrequentFullGC) {
 				frequentFullGCSymptom = (JobVertexFrequentFullGC) symptom;
 				LOGGER.debug("Frequent full gc detected for vertices {}.", frequentFullGCSymptom.getJobVertexIDs());
+				continue;
+			}
+
+			if (symptom instanceof JobVertexLongTimeFullGC) {
+				longTimeFullGCSymptom = (JobVertexLongTimeFullGC) symptom;
+				LOGGER.debug("Long time full gc detected for vertices {}.", longTimeFullGCSymptom.getJobVertexIDs());
 				continue;
 			}
 
@@ -454,6 +463,7 @@ public class ParallelismScaler implements Resolver {
 		if (jobStableSymptom == null ||
 			jobStableSymptom.getStableTime() < stableTime ||
 			frequentFullGCSymptom != null && frequentFullGCSymptom.isSevere() ||
+			longTimeFullGCSymptom != null && longTimeFullGCSymptom.isSevere() ||
 			failoverSymptom != null) {
 
 			LOGGER.debug("Job is not stable, should not rescale parallelism.");

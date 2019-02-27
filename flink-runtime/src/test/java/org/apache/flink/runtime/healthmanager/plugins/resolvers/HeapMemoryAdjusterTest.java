@@ -31,8 +31,10 @@ import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LongTimeFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
@@ -165,10 +167,103 @@ public class HeapMemoryAdjusterTest {
 	}
 
 	/**
-	 * test heap memory adjustment triggered by full gc.
+	 * test heap memory adjustment triggered by frequent full gc.
 	 */
 	@Test
-	public void testFullGCTriggerAdjustment() throws Exception {
+	public void testFrequentFullGCTriggerAdjustment() throws Exception {
+		// job level configuration.
+		Configuration config = new Configuration();
+		config.setString("healthmonitor.health.check.interval.ms", "3000");
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
+		config.setString(HealthMonitor.DETECTOR_CLASSES, FrequentFullGCDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
+		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_SEVERE_THRESHOLD, 3);
+
+		JobTMMetricSubscription gcTimeSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(gcTimeSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				callCount++;
+				if (callCount <= 3) {
+					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
+					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 4.0));
+					return fullGCs;
+				} else {
+					return new HashMap<>();
+				}
+			}
+		});
+
+		fullGCTriggerAdjustmentTestBase(config, gcTimeSub, gcTimeSub);
+	}
+
+	/**
+	 * test heap memory adjustment triggered by long time full gc.
+	 */
+	@Test
+	public void testLongTimeFullGCTriggerAdjustment() throws Exception {
+		// job level configuration.
+		Configuration config = new Configuration();
+		config.setString("healthmonitor.health.check.interval.ms", "3000");
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
+		config.setString(HealthMonitor.DETECTOR_CLASSES, LongTimeFullGCDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
+		config.setLong(LongTimeFullGCDetector.FULL_GC_TIME_SEVERE_THRESHOLD, 5000L);
+
+		// mock subscribing JM GC time metric
+		JobTMMetricSubscription gcTimeSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(gcTimeSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				callCount++;
+				if (callCount <= 3) {
+					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
+					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 18000.0));
+					return fullGCs;
+				} else {
+					return new HashMap<>();
+				}
+			}
+		});
+
+		// mock subscribing JM GC count metric
+		JobTMMetricSubscription gcCountSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(gcCountSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				callCount++;
+				if (callCount <= 3) {
+					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
+					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 3.0));
+					return fullGCs;
+				} else {
+					return new HashMap<>();
+				}
+			}
+		});
+
+		fullGCTriggerAdjustmentTestBase(config, gcTimeSub, gcCountSub);
+	}
+
+	/**
+	 * @param config job level configuration.
+	 * @param gcTimeSub JM GC metric subscription.
+	 * @throws Exception
+	 */
+	public void fullGCTriggerAdjustmentTestBase(
+		Configuration config,
+		JobTMMetricSubscription gcTimeSub,
+		JobTMMetricSubscription gcCountSub) throws Exception {
 		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
 
 		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
@@ -180,16 +275,6 @@ public class HeapMemoryAdjusterTest {
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
 		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
-
-		// job level configuration.
-		Configuration config = new Configuration();
-		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
-		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, FrequentFullGCDetector.class.getCanonicalName() + "," +
-			TestingJobStableDetector.class.getCanonicalName());
-		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
-		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_SEVERE_THRESHOLD, 3);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs = new HashMap<>();
@@ -218,28 +303,15 @@ public class HeapMemoryAdjusterTest {
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
-		long now = System.currentTimeMillis();
-
-		JobTMMetricSubscription gcSub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(gcSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			int callCount = 0;
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				callCount++;
-				if (callCount <= 3) {
-					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
-					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 4.0));
-					return fullGCs;
-				} else {
-					return new HashMap<>();
-				}
-			}
-		});
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.FULL_GC_TIME_METRIC),
+			Mockito.anyLong(), Mockito.eq(TimelineAggType.RANGE)))
+			.thenReturn(gcTimeSub);
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.anyString(), Mockito.anyLong(), Mockito.eq(TimelineAggType.RANGE)))
-			.thenReturn(gcSub);
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.FULL_GC_COUNT_METRIC),
+			Mockito.anyLong(), Mockito.eq(TimelineAggType.RANGE)))
+			.thenReturn(gcCountSub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
 			.thenReturn(Arrays.asList(executionVertexID1));

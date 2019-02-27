@@ -43,6 +43,7 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetecto
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighNativeMemoryDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStuckDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LongTimeFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.DirectMemoryAdjuster;
@@ -82,6 +83,7 @@ public class HealthMonitor {
 					.defaultValue(HeapOOMDetector.class.getCanonicalName() + ","
 						+ DirectOOMDetector.class.getCanonicalName() + ","
 						+ FrequentFullGCDetector.class.getCanonicalName() + ","
+						+ LongTimeFullGCDetector.class.getCanonicalName() + ","
 						+ HighNativeMemoryDetector.class.getCanonicalName() + ","
 						+ HighDelayDetector.class.getCanonicalName() + ","
 						+ LowDelayDetector.class.getCanonicalName() + ","

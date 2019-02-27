@@ -29,7 +29,7 @@ import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
-import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
@@ -47,29 +47,30 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * FrequentFullGCDetector detects full GCs count of a job.
- * Detects {@link JobVertexFrequentFullGC} on locating TaskManager of any task of the vertex,
+ * This detector detects full GCs' time of a job.
+ * Detects {@link JobVertexLongTimeFullGC} on locating TaskManager of any task of the vertex,
  * full gc occur count is higher than the threshold within the interval.
  */
-public class FrequentFullGCDetector implements Detector {
+public class LongTimeFullGCDetector implements Detector {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(FrequentFullGCDetector.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(LongTimeFullGCDetector.class);
 
-	public static final ConfigOption<Integer> FULL_GC_COUNT_THRESHOLD =
-		ConfigOptions.key("healthmonitor.full-gc-detector.count.threshold").defaultValue(3);
-	public static final ConfigOption<Integer> FULL_GC_COUNT_SEVERE_THRESHOLD =
-		ConfigOptions.key("healthmonitor.full-gc-detector.count.severe-threshold").defaultValue(10);
+	public static final ConfigOption<Long> FULL_GC_TIME_THRESHOLD =
+		ConfigOptions.key("healthmonitor.full-gc-detector.time.threshold").defaultValue(5000L);
+	public static final ConfigOption<Long> FULL_GC_TIME_SEVERE_THRESHOLD =
+		ConfigOptions.key("healthmonitor.full-gc-detector.time.severe-threshold").defaultValue(10000L);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
 	private MetricProvider metricProvider;
 	private HealthMonitor monitor;
 
-	private int gcCountThreshold;
-	private int gcCountSevereThreshold;
+	private long gcTimeThreshold;
+	private long gcTimeSevereThreshold;
 	private long gcCheckInterval;
 
-	private JobTMMetricSubscription gcMetricSubscription;
+	private JobTMMetricSubscription gcTimeSubscription;
+	private JobTMMetricSubscription gcCountSubscription;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -79,18 +80,21 @@ public class FrequentFullGCDetector implements Detector {
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
-		gcCountThreshold = monitor.getConfig().getInteger(FULL_GC_COUNT_THRESHOLD);
-		gcCountSevereThreshold = monitor.getConfig().getInteger(FULL_GC_COUNT_SEVERE_THRESHOLD);
 		gcCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
+		gcTimeThreshold = monitor.getConfig().getLong(FULL_GC_TIME_THRESHOLD);
+		gcTimeSevereThreshold = monitor.getConfig().getLong(FULL_GC_TIME_SEVERE_THRESHOLD);
 
-		gcMetricSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.RANGE);
+		gcTimeSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.FULL_GC_TIME_METRIC, gcCheckInterval, TimelineAggType.RANGE);
+		gcCountSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.RANGE);
 	}
 
 	@Override
 	public void close() {
-		if (metricProvider != null && gcMetricSubscription != null) {
-			metricProvider.unsubscribe(gcMetricSubscription);
-			gcMetricSubscription = null;
+		if (metricProvider != null && gcTimeSubscription != null && gcCountSubscription != null) {
+			metricProvider.unsubscribe(gcTimeSubscription);
+			metricProvider.unsubscribe(gcCountSubscription);
+			gcTimeSubscription = null;
+			gcCountSubscription = null;
 		}
 	}
 
@@ -98,37 +102,41 @@ public class FrequentFullGCDetector implements Detector {
 	public Symptom detect() {
 		LOGGER.debug("Start detecting.");
 
-		Map<String, Tuple2<Long, Double>> gcCount = gcMetricSubscription.getValue();
-		if (gcCount == null || gcCount.isEmpty()) {
+		Map<String, Tuple2<Long, Double>> gcTime = gcTimeSubscription.getValue();
+		Map<String, Tuple2<Long, Double>> gcCount = gcCountSubscription.getValue();
+		if (gcTime == null || gcTime.isEmpty() || gcCount == null || gcCount.isEmpty()) {
 			return null;
 		}
 
 		boolean severe = false;
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
-		for (String tmId : gcCount.keySet()) {
-			if (!MetricUtils.validateTmMetric(monitor, gcCheckInterval * 2, gcCount.get(tmId))) {
-				LOGGER.debug("Skip vertex {}, metrics missing.", jobVertexIDs);
+		for (String tmId : gcTime.keySet()) {
+			if (!gcCount.containsKey(tmId) ||
+				!MetricUtils.validateTmMetric(monitor, gcCheckInterval * 2, gcTime.get(tmId), gcCount.get(tmId))) {
+				LOGGER.debug("Skip vertex {}, GC metrics missing.", jobVertexIDs);
 				continue;
 			}
 
-			double deltaGCCount = gcCount.get(tmId).f1;
+			double perGCDeltaTime = gcTime.get(tmId).f1 / gcCount.get(tmId).f1;
 
-			if (deltaGCCount > gcCountThreshold) {
+			if (perGCDeltaTime > gcTimeThreshold) {
 				List<ExecutionVertexID> jobExecutionVertexIds = restServerClient.getTaskManagerTasks(tmId);
 				if (jobExecutionVertexIds != null) {
-					jobVertexIDs.addAll(jobExecutionVertexIds.stream().map(ExecutionVertexID::getJobVertexID).collect(Collectors.toList()));
+					jobVertexIDs.addAll(jobExecutionVertexIds.stream().map(ExecutionVertexID::getJobVertexID).collect(
+						Collectors.toList()));
 				}
-				if (deltaGCCount > gcCountSevereThreshold) {
+				if (perGCDeltaTime > gcTimeSevereThreshold) {
 					severe = true;
 				}
 			}
-			LOGGER.debug("tm {} gc {}", tmId, gcCount.get(tmId));
+			LOGGER.debug("tm {} gc {}", tmId, gcTime.get(tmId));
 		}
 
 		if (jobVertexIDs != null && !jobVertexIDs.isEmpty()) {
-			LOGGER.info("Frequent full gc detected for vertices {}.", jobVertexIDs);
-			return new JobVertexFrequentFullGC(jobID, new ArrayList<>(jobVertexIDs), severe);
+			LOGGER.info("Long time full gc detected for vertices {}.", jobVertexIDs);
+			return new JobVertexLongTimeFullGC(jobID, new ArrayList<>(jobVertexIDs), severe);
 		}
 		return null;
 	}
 }
+

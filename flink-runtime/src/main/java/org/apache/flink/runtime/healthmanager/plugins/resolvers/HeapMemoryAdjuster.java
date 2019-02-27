@@ -30,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobHeapMemor
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -93,6 +94,7 @@ public class HeapMemoryAdjuster implements Resolver {
 		JobStable jobStable = null;
 		JobVertexHeapOOM jobVertexHeapOOM = null;
 		JobVertexFrequentFullGC jobVertexFrequentFullGC = null;
+		JobVertexLongTimeFullGC jobVertexLongTimeFullGC = null;
 
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobStable) {
@@ -109,6 +111,11 @@ public class HeapMemoryAdjuster implements Resolver {
 				jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
 				LOGGER.debug("Frequent full gc detected for vertices {}.", jobVertexFrequentFullGC.getJobVertexIDs());
 			}
+
+			if (symptom instanceof JobVertexLongTimeFullGC) {
+				jobVertexLongTimeFullGC = (JobVertexLongTimeFullGC) symptom;
+				LOGGER.debug("Long time full gc detected for vertices {}.", jobVertexLongTimeFullGC.getJobVertexIDs());
+			}
 		}
 
 		if ((jobStable == null || jobStable.getStableTime() < stableTime) && jobVertexHeapOOM == null) {
@@ -122,6 +129,10 @@ public class HeapMemoryAdjuster implements Resolver {
 
 		if (jobVertexFrequentFullGC != null) {
 			vertexToScaleUp.addAll(jobVertexFrequentFullGC.getJobVertexIDs());
+		}
+
+		if (jobVertexLongTimeFullGC != null) {
+			vertexToScaleUp.addAll(jobVertexLongTimeFullGC.getJobVertexIDs());
 		}
 
 		if (vertexToScaleUp.isEmpty()) {
@@ -158,6 +169,7 @@ public class HeapMemoryAdjuster implements Resolver {
 			long now = System.currentTimeMillis();
 			if (jobVertexHeapOOM != null ||
 				(jobVertexFrequentFullGC != null && jobVertexFrequentFullGC.isSevere()) ||
+				(jobVertexLongTimeFullGC != null && jobVertexLongTimeFullGC.isSevere()) ||
 				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
 				adjustJobHeapMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
