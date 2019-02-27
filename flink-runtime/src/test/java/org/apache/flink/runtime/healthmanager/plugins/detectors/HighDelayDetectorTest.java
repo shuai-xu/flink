@@ -149,5 +149,39 @@ public class HighDelayDetectorTest extends DetectorTestBase {
 		List<JobVertexID> vertex = new LinkedList<>();
 		vertex.add(vertex1);
 		assertEquals(vertex, delaySyptom.getJobVertexIDs());
+		assertEquals(Collections.emptyList(), delaySyptom.getSevereJobVertexIDs());
+
+		// check severe delay.
+		Mockito.when(metricProvider.subscribeTaskMetric(
+				Mockito.any(JobID.class),
+				Mockito.any(JobVertexID.class),
+				Mockito.anyString(),
+				Mockito.any(MetricAggType.class),
+				Mockito.anyLong(),
+				Mockito.any(TimelineAggType.class))).then(new Answer<TaskMetricSubscription>() {
+			@Override
+			public TaskMetricSubscription answer(InvocationOnMock invocation) throws Throwable {
+				JobVertexID vertexId = (JobVertexID) invocation.getArguments()[1];
+				String metricName = (String) invocation.getArguments()[2];
+				TimelineAggType timelineAggType = (TimelineAggType) invocation.getArguments()[5];
+				if (vertex1.equals(vertexId)) {
+					// task latency: 3 partition latency: 10 partition count: 10
+					if (metricName.equals(MetricNames.SOURCE_DELAY)) {
+						if (timelineAggType.equals(TimelineAggType.LATEST)) {
+							TaskMetricSubscription subscription = Mockito.mock(TaskMetricSubscription.class);
+							Mockito.when(subscription.getValue()).thenReturn(Tuple2.of(0L, 1 + 60 * 60 * 1000.0));
+							return subscription;
+						}
+					}
+				}
+				return Mockito.mock(TaskMetricSubscription.class);
+			}
+		});
+		detector = new HighDelayDetector();
+		detector.open(monitor);
+		delaySyptom = (JobVertexHighDelay) detector.detect();
+		assertEquals(vertex, delaySyptom.getJobVertexIDs());
+		assertEquals(vertex, delaySyptom.getSevereJobVertexIDs());
+
 	}
 }

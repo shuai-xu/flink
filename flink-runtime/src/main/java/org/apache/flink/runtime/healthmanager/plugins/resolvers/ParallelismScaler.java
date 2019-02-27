@@ -693,19 +693,22 @@ public class ParallelismScaler implements Resolver {
 				TaskMetrics metric = taskMetrics.get(vertexId);
 
 				// init ratio to make sure we can cache up the delay.
-				double ratio = 1 / (1 - metric.delayIncreasingRate);
+				double ratio = 1 / (1 - metric.delayIncreasingRate) * upScaleTpsRatio;
 
 				if (metric.isParallelSource) {
 					double maxTps = 1.0 / Math.max(metric.partitionLatency, metric.taskLatencyPerRecord - metric.waitOutputPerRecord) * metric.partitionCount;
-					ratio = maxTps / metric.getInputTps();
-					if (ratio < reservedParallelismRatio) {
-						LOGGER.debug("parallel source {} has reach max input tps, should not rescale", vertexId);
-						continue;
+
+					// limit target tps to be max tps.
+					if (maxTps / metric.getInputTps() < ratio) {
+						ratio = maxTps / metric.getInputTps();
+					} else if (highDelaySymptom.getSevereJobVertexIDs().contains(vertexId)) {
+						ratio = maxTps / metric.getInputTps();
 					}
 				}
 
-				if (ratio < upScaleTpsRatio) {
-					ratio = upScaleTpsRatio;
+				if (ratio < reservedParallelismRatio) {
+					LOGGER.debug("source {} has reach max input tps, should not rescale", vertexId);
+					continue;
 				}
 				subDagTargetTpsRatio.put(vertex2SubDagRoot.get(vertexId), ratio);
 			}
@@ -744,7 +747,8 @@ public class ParallelismScaler implements Resolver {
 		return subDagTargetTpsRatio;
 	}
 
-	private Map<JobVertexID, Integer> getVertexTargetParallelisms(
+	@VisibleForTesting
+	public Map<JobVertexID, Integer> getVertexTargetParallelisms(
 			Map<JobVertexID, Double> subDagTargetTpsRatio,
 			Set<JobVertexID> vertexToDownScale,
 			Map<JobVertexID, TaskMetrics> taskMetrics) {
@@ -753,11 +757,15 @@ public class ParallelismScaler implements Resolver {
 		for (JobVertexID subDagRoot : subDagTargetTpsRatio.keySet()) {
 			double ratio = subDagTargetTpsRatio.get(subDagRoot);
 			for (JobVertexID vertexId : subDagRoot2SubDagVertex.get(subDagRoot)) {
-				if (taskMetrics.get(vertexId).getWorkload() > 0) {
+				TaskMetrics metric = taskMetrics.get(vertexId);
+				if (metric.getWorkload() > 0) {
 					if (taskMetrics.get(vertexId).isParallelSource) {
-						targetParallelisms.put(vertexId, (int) Math.ceil(taskMetrics.get(vertexId).getWorkload() * reservedParallelismRatio));
+						// source workload means parallelism to reach max tps.
+						double maxTps = 1.0 / Math.max(metric.partitionLatency, metric.taskLatencyPerRecord - metric.waitOutputPerRecord) * metric.partitionCount;
+						double sourceRatio = ratio / (maxTps / metric.getInputTps());
+						targetParallelisms.put(vertexId, (int) Math.floor(metric.getWorkload() * sourceRatio));
 					} else {
-						targetParallelisms.put(vertexId, (int) Math.ceil(taskMetrics.get(vertexId).getWorkload() * ratio));
+						targetParallelisms.put(vertexId, (int) Math.floor(metric.getWorkload() * ratio));
 					}
 				}
 			}
@@ -766,11 +774,7 @@ public class ParallelismScaler implements Resolver {
 		for (JobVertexID vertexID : vertexToDownScale) {
 			if (!targetParallelisms.containsKey(vertexID)) {
 				if (taskMetrics.get(vertexID).getWorkload() > 0) {
-					if (taskMetrics.get(vertexID).isParallelSource) {
-						targetParallelisms.put(vertexID, (int) Math.ceil(taskMetrics.get(vertexID).getWorkload() * reservedParallelismRatio));
-					} else {
-						targetParallelisms.put(vertexID, (int) Math.ceil(taskMetrics.get(vertexID).getWorkload() * downScaleTpsRatio));
-					}
+					targetParallelisms.put(vertexID, (int) Math.floor(taskMetrics.get(vertexID).getWorkload() * downScaleTpsRatio));
 				}
 			}
 		}

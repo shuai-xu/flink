@@ -44,9 +44,11 @@ import org.mockito.Mockito;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -125,14 +127,16 @@ public class ParallelismScalerTest {
 		vertexToRoot.put(vertexID, vertexID);
 		Whitebox.setInternalState(scaler, "vertex2SubDagRoot", vertexToRoot);
 		Whitebox.setInternalState(scaler, "subDagRoot2UpstreamVertices", new HashMap<>());
+		Whitebox.setInternalState(scaler, "upScaleTpsRatio", 4);
 
 		Whitebox.setInternalState(scaler, "needScaleUpForDelay", true);
-		JobVertexHighDelay highDelay = new JobVertexHighDelay(jobID, Collections.singletonList(vertexID));
+
+		// parallel source
+		JobVertexHighDelay highDelay = new JobVertexHighDelay(jobID, Collections.singletonList(vertexID), Collections.singletonList(vertexID));
 		JobVertexDelayIncreasing delayIncreasing = new JobVertexDelayIncreasing(jobID, Collections.singletonList(vertexID));
 		Whitebox.setInternalState(scaler, "highDelaySymptom", highDelay);
 		Whitebox.setInternalState(scaler, "delayIncreasingSymptom", delayIncreasing);
 
-		// parallel source
 		Map<JobVertexID, ParallelismScaler.TaskMetrics> allMetrics = new HashMap<>();
 		ParallelismScaler.TaskMetrics taskMetrics = new ParallelismScaler.TaskMetrics(
 				vertexID,
@@ -151,7 +155,36 @@ public class ParallelismScalerTest {
 
 		assertTrue(Math.abs(3.2 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
 
+		// parallel source without severe delay
+		highDelay = new JobVertexHighDelay(jobID, Collections.singletonList(vertexID), Collections.emptyList());
+		delayIncreasing = new JobVertexDelayIncreasing(jobID, Collections.singletonList(vertexID));
+		Whitebox.setInternalState(scaler, "highDelaySymptom", highDelay);
+		Whitebox.setInternalState(scaler, "delayIncreasingSymptom", delayIncreasing);
+
+		allMetrics = new HashMap<>();
+		taskMetrics = new ParallelismScaler.TaskMetrics(
+				vertexID,
+				true,
+				10,
+				0,
+				1.1,
+				0,
+				0.1,
+				0,
+				0.9,
+				0.1,
+				32
+		);
+		allMetrics.put(vertexID, taskMetrics);
+
+		assertTrue(Math.abs(3.2 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
+
 		// not parallel source
+		highDelay = new JobVertexHighDelay(jobID, Collections.singletonList(vertexID), Collections.singletonList(vertexID));
+		delayIncreasing = new JobVertexDelayIncreasing(jobID, Collections.singletonList(vertexID));
+		Whitebox.setInternalState(scaler, "highDelaySymptom", highDelay);
+		Whitebox.setInternalState(scaler, "delayIncreasingSymptom", delayIncreasing);
+
 		taskMetrics = new ParallelismScaler.TaskMetrics(
 				vertexID,
 				false,
@@ -167,7 +200,7 @@ public class ParallelismScalerTest {
 		);
 		allMetrics.put(vertexID, taskMetrics);
 
-		assertTrue(Math.abs(10 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
+		assertTrue(Math.abs(40 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
 
 		// not parallel source and target ratio less than ratio.
 		Whitebox.setInternalState(scaler, "upScaleTpsRatio", 11);
@@ -186,7 +219,7 @@ public class ParallelismScalerTest {
 		);
 		allMetrics.put(vertexID, taskMetrics);
 
-		assertTrue(Math.abs(11 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
+		assertTrue(Math.abs(110 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
 	}
 
 	@Test
@@ -290,5 +323,74 @@ public class ParallelismScalerTest {
 		expectedMinParallelism.put(vertex4, 1);
 		scaler.analyzeJobGraph(jobConfig);
 		assertEquals(expectedMinParallelism, scaler.getVertexMinParallelisms(jobConfig, checkpointInfo));
+	}
+
+	@Test
+	public void testGetTargetParallelism() {
+		ParallelismScaler scaler = new ParallelismScaler();
+		Whitebox.setInternalState(scaler, "reservedParallelismRatio", 1.2);
+		Whitebox.setInternalState(scaler, "downScaleTpsRatio", 2);
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
+		JobVertexID vertex3 = new JobVertexID();
+		JobVertexID vertex4 = new JobVertexID();
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
+		RestServerClient.VertexConfig config1 = new RestServerClient.VertexConfig(32, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config2 = new RestServerClient.VertexConfig(157, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config3 = new RestServerClient.VertexConfig(28, 1000, ResourceSpec.DEFAULT);
+		RestServerClient.VertexConfig config4 = new RestServerClient.VertexConfig(97, 1000, ResourceSpec.DEFAULT);
+		vertexConfigs.put(vertex1, config1);
+		vertexConfigs.put(vertex2, config2);
+		vertexConfigs.put(vertex3, config3);
+		vertexConfigs.put(vertex4, config4);
+
+		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputConfigs = new HashMap<>();
+		inputConfigs.put(vertex1, Collections.emptyList());
+		inputConfigs.put(vertex2, Collections.singletonList(Tuple2.of(vertex1, "HASH")));
+		inputConfigs.put(vertex3, Collections.singletonList(Tuple2.of(vertex1, "HASH")));
+		inputConfigs.put(vertex4, Collections.singletonList(Tuple2.of(vertex2, "HASH")));
+		RestServerClient.JobConfig jobConfig = new RestServerClient.JobConfig(new Configuration(), vertexConfigs, inputConfigs);
+		scaler.analyzeJobGraph(jobConfig);
+
+		Map<JobVertexID, Double> scaleupRatio = new HashMap<>();
+		Set<JobVertexID> scaleDownSet = new HashSet<>();
+		Map<JobVertexID, ParallelismScaler.TaskMetrics> metrics = new HashMap<>();
+		ParallelismScaler.TaskMetrics v1Metrics = new ParallelismScaler.TaskMetrics(
+				vertex1, true, 1, 1, 1, 1, 1, 256, 1, 1, 256);
+		ParallelismScaler.TaskMetrics v2Metrics = new ParallelismScaler.TaskMetrics(
+				vertex2, false, 1, 1,  1, 1, 1, 1, 1, 1, 1);
+		ParallelismScaler.TaskMetrics v3Metrics = new ParallelismScaler.TaskMetrics(
+				vertex3, false, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+		ParallelismScaler.TaskMetrics v4Metrics = new ParallelismScaler.TaskMetrics(
+				vertex4, false, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+		metrics.put(vertex1, v1Metrics);
+		metrics.put(vertex2, v2Metrics);
+		metrics.put(vertex3, v3Metrics);
+		metrics.put(vertex4, v4Metrics);
+		scaleupRatio.clear();
+		scaleDownSet.clear();
+		Map<JobVertexID, Integer> expectedParallelism = new HashMap<>();
+		expectedParallelism.put(vertex1, 4);
+		expectedParallelism.put(vertex2, 4);
+		expectedParallelism.put(vertex3, 4);
+		expectedParallelism.put(vertex4, 4);
+
+		scaleupRatio.put(vertex1, 4.0);
+		assertEquals(expectedParallelism, scaler.getVertexTargetParallelisms(scaleupRatio, scaleDownSet, metrics));
+
+		scaleupRatio.clear();
+		scaleDownSet.clear();
+		expectedParallelism.clear();
+
+		scaleDownSet.add(vertex1);
+		expectedParallelism.put(vertex1, 512);
+		assertEquals(expectedParallelism, scaler.getVertexTargetParallelisms(scaleupRatio, scaleDownSet, metrics));
+
+		scaleDownSet.clear();
+		expectedParallelism.clear();
+		scaleDownSet.add(vertex2);
+		expectedParallelism.put(vertex2, 2);
+		assertEquals(expectedParallelism, scaler.getVertexTargetParallelisms(scaleupRatio, scaleDownSet, metrics));
 	}
 }

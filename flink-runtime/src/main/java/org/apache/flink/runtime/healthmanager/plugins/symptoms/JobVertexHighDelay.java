@@ -28,8 +28,15 @@ import java.util.List;
  */
 public class JobVertexHighDelay extends AbstractJobVertexSymptom {
 
+	private final List<JobVertexID> severeJobVertexIDs;
+
 	public JobVertexHighDelay(JobID jobID,
-			List<JobVertexID> jobVertexIDs) {
+			List<JobVertexID> jobVertexIDs, List<JobVertexID> severeJobVertexIDs) {
 		super(jobID, jobVertexIDs);
+		this.severeJobVertexIDs = severeJobVertexIDs;
+	}
+
+	public List<JobVertexID> getSevereJobVertexIDs() {
+		return severeJobVertexIDs;
 	}
 }

@@ -54,6 +54,8 @@ public class HighDelayDetector implements Detector {
 
 	public static final ConfigOption<Long> HIGH_DELAY_THRESHOLD =
 		ConfigOptions.key("healthmonitor.high-delay.threshold.ms").defaultValue(10 * 60 * 1000L);
+	public static final ConfigOption<Long> SEVERE_DELAY_THRESHOLD =
+			ConfigOptions.key("healthmonitor.severe-delay.threshold.ms").defaultValue(60 * 60 * 1000L);
 
 	private JobID jobID;
 	private HealthMonitor healthMonitor;
@@ -61,6 +63,7 @@ public class HighDelayDetector implements Detector {
 
 	private long highDelayCheckInterval;
 	private long highDelayThreshold;
+	private long severeDelayThreshold;
 
 	private Map<JobVertexID, TaskMetricSubscription> delaySubs;
 
@@ -72,6 +75,7 @@ public class HighDelayDetector implements Detector {
 
 		highDelayCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		highDelayThreshold = monitor.getConfig().getLong(HIGH_DELAY_THRESHOLD);
+		severeDelayThreshold = monitor.getConfig().getLong(SEVERE_DELAY_THRESHOLD);
 
 		delaySubs = new HashMap<>();
 		for (JobVertexID vertexId : monitor.getJobConfig().getVertexConfigs().keySet()) {
@@ -99,6 +103,7 @@ public class HighDelayDetector implements Detector {
 		LOGGER.debug("Start detecting.");
 
 		List<JobVertexID> jobVertexIDs = new ArrayList<>();
+		List<JobVertexID> severeJobVertexIDs = new ArrayList<>();
 		for (JobVertexID vertexId : delaySubs.keySet()) {
 			TaskMetricSubscription delaySub = delaySubs.get(vertexId);
 
@@ -110,11 +115,15 @@ public class HighDelayDetector implements Detector {
 			if (delaySub.getValue().f1 > highDelayThreshold) {
 				jobVertexIDs.add(vertexId);
 			}
+
+			if (delaySub.getValue().f1 > severeDelayThreshold) {
+				severeJobVertexIDs.add(vertexId);
+			}
 		}
 
 		if (!jobVertexIDs.isEmpty()) {
 			LOGGER.info("High delay detected for vertices {}.", jobVertexIDs);
-			return new JobVertexHighDelay(jobID, jobVertexIDs);
+			return new JobVertexHighDelay(jobID, jobVertexIDs, severeJobVertexIDs);
 		}
 		return null;
 	}
