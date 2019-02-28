@@ -111,8 +111,9 @@ public class LongTimeFullGCDetector implements Detector {
 		boolean severe = false;
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
 		for (String tmId : gcTime.keySet()) {
-			if (!gcCount.containsKey(tmId) ||
-				!MetricUtils.validateTmMetric(monitor, gcCheckInterval * 2, gcTime.get(tmId), gcCount.get(tmId))) {
+			if (!gcCount.containsKey(tmId)
+				|| !MetricUtils.validateTmMetric(monitor, gcCheckInterval * 2, gcTime.get(tmId), gcCount.get(tmId))
+				|| gcCount.get(tmId).f1 < 1) {
 				LOGGER.debug("Skip vertex {}, GC metrics missing.", jobVertexIDs);
 				continue;
 			}
