@@ -108,7 +108,7 @@ public class CpuAdjuster implements Resolver {
 			targetCpu.putAll(scaleDownVertexCpu(jobConfig));
 		}
 
-		if (jobVertexHighCpu != null) {
+		if (jobVertexHighCpu != null || !vertexToScaleUpMaxUtility.isEmpty()) {
 			targetCpu.putAll(scaleUpVertexCpu(jobConfig));
 		}
 
@@ -165,14 +165,18 @@ public class CpuAdjuster implements Resolver {
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobStable) {
 				jobStable = (JobStable) symptom;
+				continue;
 			}
 
 			if (symptom instanceof JobVertexHighCpu) {
 				jobVertexHighCpu = (JobVertexHighCpu) symptom;
+				LOGGER.debug("High cpu detected for vertices with max utilities {}.", jobVertexHighCpu.getUtilities());
+				continue;
 			}
 
 			if (symptom instanceof  JobVertexLowCpu) {
 				jobVertexLowCpu = (JobVertexLowCpu) symptom;
+				LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
 			}
 		}
 
@@ -191,7 +195,6 @@ public class CpuAdjuster implements Resolver {
 
 	@VisibleForTesting
 	public Map<JobVertexID, Double> scaleUpVertexCpu(RestServerClient.JobConfig jobConfig) {
-		LOGGER.debug("High cpu detected for vertices with max utilities {}.", jobVertexHighCpu.getUtilities());
 		for (Map.Entry<JobVertexID, Double> entry : jobVertexHighCpu.getUtilities().entrySet()) {
 			if (!vertexToScaleUpMaxUtility.containsKey(entry.getKey()) || vertexToScaleUpMaxUtility.get(entry.getKey()) < entry.getValue()) {
 				vertexToScaleUpMaxUtility.put(entry.getKey(), entry.getValue());
@@ -213,14 +216,17 @@ public class CpuAdjuster implements Resolver {
 
 	@VisibleForTesting
 	public Map<JobVertexID, Double> scaleDownVertexCpu(RestServerClient.JobConfig jobConfig) {
-		LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
 		Map<JobVertexID, Double> results = new HashMap<>();
 		for (Map.Entry<JobVertexID, Double> entry : jobVertexLowCpu.getUtilities().entrySet()) {
 			JobVertexID vertexID = entry.getKey();
 			double utility = entry.getValue();
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			double targetCpu = currentResource.getCpuCores() * utility * scaleDownRatio;
+			double targetCpu = currentResource.getCpuCores();
+			if (targetCpu == 0.0) {
+				targetCpu = 1.0;
+			}
+			targetCpu = targetCpu * utility * scaleDownRatio;
 			results.put(vertexID, targetCpu);
 			LOGGER.debug("Scale down, target cpu for vertex {} is {}.", vertexID, targetCpu);
 		}

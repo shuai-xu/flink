@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.ResourceManagerOptions;
@@ -31,14 +32,17 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHeapOOM;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowMemory;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,7 +55,8 @@ public class HeapMemoryAdjuster implements Resolver {
 
 	private JobID jobID;
 	private HealthMonitor monitor;
-	private double scaleRatio;
+	private double scaleUpRatio;
+	private double scaleDownRatio;
 	private long timeout;
 	private long opportunisticActionDelay;
 	private long stableTime;
@@ -62,11 +67,18 @@ public class HeapMemoryAdjuster implements Resolver {
 	private Set<JobVertexID> vertexToScaleUp;
 	private long opportunisticActionDelayStart;
 
+	private JobStable jobStable;
+	private JobVertexHeapOOM jobVertexHeapOOM;
+	private JobVertexFrequentFullGC jobVertexFrequentFullGC;
+	private JobVertexLongTimeFullGC jobVertexLongTimeFullGC;
+	private JobVertexLowMemory jobVertexLowMemory;
+
 	@Override
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO);
+		this.scaleUpRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO);
+		this.scaleDownRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_DOWN_RATIO);
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
@@ -91,67 +103,37 @@ public class HeapMemoryAdjuster implements Resolver {
 			vertexToScaleUp.clear();
 		}
 
-		JobStable jobStable = null;
-		JobVertexHeapOOM jobVertexHeapOOM = null;
-		JobVertexFrequentFullGC jobVertexFrequentFullGC = null;
-		JobVertexLongTimeFullGC jobVertexLongTimeFullGC = null;
-
-		for (Symptom symptom : symptomList) {
-			if (symptom instanceof JobStable) {
-				jobStable = (JobStable) symptom;
-			}
-
-			if (symptom instanceof JobVertexHeapOOM) {
-				jobVertexHeapOOM = (JobVertexHeapOOM) symptom;
-				LOGGER.debug("Heap OOM detected for vertices {}.", jobVertexHeapOOM.getJobVertexIDs());
-				continue;
-			}
-
-			if (symptom instanceof JobVertexFrequentFullGC) {
-				jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
-				LOGGER.debug("Frequent full gc detected for vertices {}.", jobVertexFrequentFullGC.getJobVertexIDs());
-			}
-
-			if (symptom instanceof JobVertexLongTimeFullGC) {
-				jobVertexLongTimeFullGC = (JobVertexLongTimeFullGC) symptom;
-				LOGGER.debug("Long time full gc detected for vertices {}.", jobVertexLongTimeFullGC.getJobVertexIDs());
-			}
-		}
-
-		if ((jobStable == null || jobStable.getStableTime() < stableTime) && jobVertexHeapOOM == null) {
-			LOGGER.debug("Job unstable, should not rescale.");
+		if (!diagnose(symptomList)) {
 			return null;
 		}
 
-		if (jobVertexHeapOOM != null) {
-			vertexToScaleUp.addAll(jobVertexHeapOOM.getJobVertexIDs());
+		Map<JobVertexID, Integer> targetHeap = new HashMap<>();
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
+
+		if (jobVertexLowMemory != null) {
+			targetHeap.putAll(scaleDownVertexHeapMem(jobConfig));
 		}
 
-		if (jobVertexFrequentFullGC != null) {
-			vertexToScaleUp.addAll(jobVertexFrequentFullGC.getJobVertexIDs());
+		if (jobVertexHeapOOM != null || jobVertexFrequentFullGC != null || jobVertexLongTimeFullGC != null || !vertexToScaleUp.isEmpty()) {
+			targetHeap.putAll(scaleUpVertexHeapMem(jobConfig));
 		}
 
-		if (jobVertexLongTimeFullGC != null) {
-			vertexToScaleUp.addAll(jobVertexLongTimeFullGC.getJobVertexIDs());
-		}
-
-		if (vertexToScaleUp.isEmpty()) {
+		if (targetHeap.isEmpty()) {
 			return null;
 		}
 
 		AdjustJobHeapMemory adjustJobHeapMemory = new AdjustJobHeapMemory(jobID, timeout);
-		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
-		for (JobVertexID jvId : vertexToScaleUp) {
-			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
+		for (Map.Entry<JobVertexID, Integer> entry : targetHeap.entrySet()) {
+			JobVertexID vertexID = entry.getKey();
+			int targetHeapMemory = entry.getValue();
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			int targetHeapMemory = (int) (currentResource.getHeapMemory() * scaleRatio);
 			ResourceSpec targetResource =
 				new ResourceSpec.Builder(currentResource)
 					.setHeapMemoryInMB(targetHeapMemory)
 					.build();
-
 			adjustJobHeapMemory.addVertex(
-				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
+				vertexID, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
 		}
 
 		if (maxCpuLimit != Double.MAX_VALUE || maxMemoryLimit != Integer.MAX_VALUE) {
@@ -182,5 +164,106 @@ public class HeapMemoryAdjuster implements Resolver {
 			return adjustJobHeapMemory;
 		}
 		return null;
+	}
+
+	@VisibleForTesting
+	public boolean diagnose(List<Symptom> symptomList) {
+		jobStable = null;
+		jobVertexHeapOOM = null;
+		jobVertexFrequentFullGC = null;
+		jobVertexLongTimeFullGC = null;
+		jobVertexLowMemory = null;
+
+		for (Symptom symptom : symptomList) {
+			if (symptom instanceof JobStable) {
+				jobStable = (JobStable) symptom;
+				continue;
+			}
+
+			if (symptom instanceof JobVertexHeapOOM) {
+				jobVertexHeapOOM = (JobVertexHeapOOM) symptom;
+				continue;
+			}
+
+			if (symptom instanceof JobVertexFrequentFullGC) {
+				jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
+				continue;
+			}
+
+			if (symptom instanceof JobVertexLongTimeFullGC) {
+				jobVertexLongTimeFullGC = (JobVertexLongTimeFullGC) symptom;
+			}
+
+			if (symptom instanceof JobVertexLowMemory) {
+				jobVertexLowMemory = (JobVertexLowMemory) symptom;
+			}
+		}
+
+		if (jobVertexHeapOOM != null) {
+			LOGGER.debug("Heap OOM detected, should rescale.");
+			return true;
+		}
+
+		if (jobStable == null || jobStable.getStableTime() < stableTime) {
+			LOGGER.debug("Job unstable, should not rescale.");
+			return false;
+		}
+
+		if (jobVertexFrequentFullGC == null && jobVertexLongTimeFullGC == null && jobVertexLowMemory == null) {
+			LOGGER.debug("No need to rescale.");
+			return false;
+		}
+
+		return true;
+	}
+
+	@VisibleForTesting
+	public Map<JobVertexID, Integer> scaleUpVertexHeapMem(RestServerClient.JobConfig jobConfig) {
+		if (jobVertexHeapOOM != null) {
+			vertexToScaleUp.addAll(jobVertexHeapOOM.getJobVertexIDs());
+		}
+
+		if (jobVertexFrequentFullGC != null) {
+			vertexToScaleUp.addAll(jobVertexFrequentFullGC.getJobVertexIDs());
+		}
+
+		if (jobVertexLongTimeFullGC != null) {
+			vertexToScaleUp.addAll(jobVertexLongTimeFullGC.getJobVertexIDs());
+		}
+
+		Map<JobVertexID, Integer> results = new HashMap<>();
+		for (JobVertexID vertexID : vertexToScaleUp) {
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
+			ResourceSpec currentResource = vertexConfig.getResourceSpec();
+			int targetHeapMemory;
+			if (currentResource.getHeapMemory() == 0) {
+				targetHeapMemory = (int) Math.ceil(1 * scaleUpRatio);
+			} else {
+				targetHeapMemory = (int) Math.ceil(currentResource.getHeapMemory() * scaleUpRatio);
+			}
+			results.put(vertexID, targetHeapMemory);
+			LOGGER.debug("Scale up, target heap memory for vertex {} is {}.", vertexID, targetHeapMemory);
+		}
+		return results;
+	}
+
+	@VisibleForTesting
+	public Map<JobVertexID, Integer> scaleDownVertexHeapMem(RestServerClient.JobConfig jobConfig) {
+		Map<JobVertexID, Integer> results = new HashMap<>();
+		for (Map.Entry<JobVertexID, Double> entry : jobVertexLowMemory.getHeapUtilities().entrySet()) {
+			JobVertexID vertexID = entry.getKey();
+			double utility = entry.getValue();
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
+			int targetHeapMemory = vertexConfig.getResourceSpec().getHeapMemory();
+			if (targetHeapMemory == 0) {
+				targetHeapMemory = 1;
+			}
+			if (utility * scaleDownRatio < 1) {
+				targetHeapMemory = (int) Math.ceil(targetHeapMemory * utility * scaleDownRatio);
+			}
+			results.put(vertexID, targetHeapMemory);
+			LOGGER.debug("Scale down, target heap memory for vertex {} is {}.", vertexID, targetHeapMemory);
+		}
+		return results;
 	}
 }

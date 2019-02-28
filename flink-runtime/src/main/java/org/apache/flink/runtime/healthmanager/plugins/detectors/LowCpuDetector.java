@@ -53,7 +53,7 @@ public class LowCpuDetector implements Detector {
 	private static final Logger LOGGER = LoggerFactory.getLogger(LowCpuDetector.class);
 
 	public static final ConfigOption<Double> LOW_CPU_THRESHOLD =
-		ConfigOptions.key("healthmonitor.low-cpu-detector.threashold").defaultValue(0.6);
+		ConfigOptions.key("healthmonitor.low-cpu-detector.threashold").defaultValue(0.7);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;

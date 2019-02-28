@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.ResourceManagerOptions;
@@ -29,6 +30,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobNativeMemory;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighNativeMemory;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowMemory;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -50,7 +52,8 @@ public class NativeMemoryAdjuster implements Resolver {
 
 	private JobID jobID;
 	private HealthMonitor monitor;
-	private double scaleRatio;
+	private double scaleUpRatio;
+	private double scaleDownRatio;
 	private long timeout;
 	private long opportunisticActionDelay;
 	private long stableTime;
@@ -58,21 +61,26 @@ public class NativeMemoryAdjuster implements Resolver {
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
 
-	private Map<JobVertexID, Double> vertexMaxUtilities;
+	private Map<JobVertexID, Double> vertexToScaleUpMaxUtilities;
 	private long opportunisticActionDelayStart;
+
+	private JobStable jobStable;
+	private JobVertexHighNativeMemory jobVertexHighNativeMemory;
+	private JobVertexLowMemory jobVertexLowMemory;
 
 	@Override
 	public void open(HealthMonitor monitor) {
 		this.monitor = monitor;
 		this.jobID = monitor.getJobID();
-		this.scaleRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO);
+		this.scaleUpRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO);
+		this.scaleDownRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESOURCE_SCALE_DOWN_RATIO);
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
 		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_STABLE_TIME);
 
-		vertexMaxUtilities = new HashMap<>();
+		vertexToScaleUpMaxUtilities = new HashMap<>();
 		opportunisticActionDelayStart = -1;
 	}
 
@@ -87,51 +95,39 @@ public class NativeMemoryAdjuster implements Resolver {
 
 		if (opportunisticActionDelayStart < monitor.getJobStartExecutionTime()) {
 			opportunisticActionDelayStart = -1;
-			vertexMaxUtilities.clear();
+			vertexToScaleUpMaxUtilities.clear();
 		}
 
-		JobVertexHighNativeMemory jobVertexNativeMemHigh = null;
-		JobStable jobStable = null;
-
-		for (Symptom symptom : symptomList) {
-			if (symptom instanceof JobStable) {
-				jobStable = (JobStable) symptom;
-			}
-
-			if (symptom instanceof JobVertexHighNativeMemory) {
-				jobVertexNativeMemHigh = (JobVertexHighNativeMemory) symptom;
-				LOGGER.debug("Native memory high detected for vertices with max utilities {}.", jobVertexNativeMemHigh.getUtilities());
-				Map<JobVertexID, Double> utilities = jobVertexNativeMemHigh.getUtilities();
-				for (JobVertexID jvId : utilities.keySet()) {
-					if (!vertexMaxUtilities.containsKey(jvId) || vertexMaxUtilities.get(jvId) < utilities.get(jvId)) {
-						vertexMaxUtilities.put(jvId, utilities.get(jvId));
-					}
-				}
-			}
-		}
-
-		if ((jobStable == null || jobStable.getStableTime() < stableTime) &&
-			(jobVertexNativeMemHigh == null || !jobVertexNativeMemHigh.isCritical())) {
-			LOGGER.debug("Job unstable and memory overuse not critical, should not rescale.");
+		if (!diagnose(symptomList)) {
 			return null;
 		}
 
-		if (vertexMaxUtilities.isEmpty()) {
+		Map<JobVertexID, Integer> targetNative = new HashMap<>();
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
+
+		if (jobVertexLowMemory != null) {
+			targetNative.putAll(scaleDownVertexNativeMemory(jobConfig));
+		}
+
+		if (jobVertexHighNativeMemory != null || vertexToScaleUpMaxUtilities != null) {
+			targetNative.putAll(scaleUpVertexNativeMemory(jobConfig));
+		}
+
+		if (targetNative.isEmpty()) {
 			return null;
 		}
 
 		AdjustJobNativeMemory adjustJobNativeMemory = new AdjustJobNativeMemory(jobID, timeout);
-		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
-		for (JobVertexID jvId : vertexMaxUtilities.keySet()) {
-			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
+		for (Map.Entry<JobVertexID, Integer> entry : targetNative.entrySet()) {
+			JobVertexID vertexID = entry.getKey();
+			int targetNativeMemory = entry.getValue();
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
 			ResourceSpec currentResource = vertexConfig.getResourceSpec();
-			int targetNativeMemory = (int) Math.ceil(currentResource.getNativeMemory() * Math.max(1.0, vertexMaxUtilities.get(jvId)) * scaleRatio);
-			LOGGER.debug("Target native memory for vertex {} is {}.", jvId, targetNativeMemory);
 			ResourceSpec targetResource = new ResourceSpec.Builder(currentResource)
 					.setNativeMemoryInMB(targetNativeMemory).build();
 
 			adjustJobNativeMemory.addVertex(
-				jvId, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
+				vertexID, vertexConfig.getParallelism(), vertexConfig.getParallelism(), currentResource, targetResource);
 		}
 
 		if (maxCpuLimit != Double.MAX_VALUE || maxMemoryLimit != Integer.MAX_VALUE) {
@@ -147,7 +143,7 @@ public class NativeMemoryAdjuster implements Resolver {
 
 		if (!adjustJobNativeMemory.isEmpty()) {
 			long now = System.currentTimeMillis();
-			if ((jobVertexNativeMemHigh != null && jobVertexNativeMemHigh.isSevere()) ||
+			if ((jobVertexHighNativeMemory != null && jobVertexHighNativeMemory.isSevere()) ||
 				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
 				adjustJobNativeMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
@@ -160,5 +156,89 @@ public class NativeMemoryAdjuster implements Resolver {
 			return adjustJobNativeMemory;
 		}
 		return null;
+	}
+
+	@VisibleForTesting
+	public boolean diagnose(List<Symptom> symptomList) {
+		jobStable = null;
+		jobVertexHighNativeMemory = null;
+		jobVertexLowMemory = null;
+
+		for (Symptom symptom : symptomList) {
+			if (symptom instanceof JobStable) {
+				jobStable = (JobStable) symptom;
+				continue;
+			}
+
+			if (symptom instanceof JobVertexHighNativeMemory) {
+				jobVertexHighNativeMemory = (JobVertexHighNativeMemory) symptom;
+				continue;
+			}
+
+			if (symptom instanceof JobVertexLowMemory) {
+				jobVertexLowMemory = (JobVertexLowMemory) symptom;
+			}
+		}
+
+		if (jobVertexHighNativeMemory != null && jobVertexHighNativeMemory.isCritical()) {
+			LOGGER.debug("Critical native memory high detected, should rescale.");
+			return true;
+		}
+
+		if (jobStable == null || jobStable.getStableTime() < stableTime) {
+			LOGGER.debug("Job unstable, should not rescale.");
+			return false;
+		}
+
+		if (jobVertexHighNativeMemory == null && jobVertexLowMemory == null) {
+			LOGGER.debug("No need to rescale.");
+			return false;
+		}
+
+		return true;
+	}
+
+	@VisibleForTesting
+	public Map<JobVertexID, Integer> scaleUpVertexNativeMemory(RestServerClient.JobConfig jobConfig) {
+		for (Map.Entry<JobVertexID, Double> entry : jobVertexHighNativeMemory.getUtilities().entrySet()) {
+			if (!vertexToScaleUpMaxUtilities.containsKey(entry.getKey()) || vertexToScaleUpMaxUtilities.get(entry.getKey()) < entry.getValue()) {
+				vertexToScaleUpMaxUtilities.put(entry.getKey(), entry.getValue());
+			}
+		}
+
+		Map<JobVertexID, Integer> results = new HashMap<>();
+		for (JobVertexID jvId : vertexToScaleUpMaxUtilities.keySet()) {
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(jvId);
+			ResourceSpec currentResource = vertexConfig.getResourceSpec();
+			int targetNativeMemory;
+			if (currentResource.getNativeMemory() == 0) {
+				targetNativeMemory = (int) Math.ceil(vertexToScaleUpMaxUtilities.get(jvId) * scaleUpRatio);
+			} else {
+				targetNativeMemory = (int) Math.ceil(
+					currentResource.getNativeMemory() * Math.max(1.0, vertexToScaleUpMaxUtilities.get(jvId)) * scaleUpRatio);
+			}
+			results.put(jvId, targetNativeMemory);
+			LOGGER.debug("Scale up, target native memory for vertex {} is {}.", jvId, targetNativeMemory);
+		}
+
+		return results;
+	}
+
+	@VisibleForTesting
+	public Map<JobVertexID, Integer> scaleDownVertexNativeMemory(RestServerClient.JobConfig jobConfig) {
+		Map<JobVertexID, Integer> results = new HashMap<>();
+		for (Map.Entry<JobVertexID, Double> entry : jobVertexLowMemory.getNativeUtilities().entrySet()) {
+			JobVertexID vertexID = entry.getKey();
+			double utility = entry.getValue();
+			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexID);
+			int targetNativeMemory = vertexConfig.getResourceSpec().getNativeMemory();
+			if (targetNativeMemory == 0) {
+				targetNativeMemory = 1;
+			}
+			targetNativeMemory = (int) Math.ceil(targetNativeMemory * utility * scaleDownRatio);
+			results.put(vertexID, targetNativeMemory);
+			LOGGER.debug("Scale down, target native memory for vertex {} is {}.", vertexID, targetNativeMemory);
+		}
+		return results;
 	}
 }

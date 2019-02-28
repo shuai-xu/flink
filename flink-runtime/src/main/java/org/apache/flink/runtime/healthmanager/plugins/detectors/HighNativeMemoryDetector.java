@@ -171,8 +171,8 @@ public class HighNativeMemoryDetector implements Detector {
 				nativeCapacity += jobConfig.getVertexConfigs().get(jobVertexID).getResourceSpec().getNativeMemory();
 			}
 
-			if (nativeCapacity <= 0) {
-				continue;
+			if (nativeCapacity == 0.0) {
+				nativeCapacity = 1.0;
 			}
 
 			double utility = nativeUsage / nativeCapacity;

@@ -20,146 +20,129 @@ package org.apache.flink.runtime.healthmanager.plugins.resolvers;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.JobException;
-import org.apache.flink.runtime.execution.ExecutionState;
-import org.apache.flink.runtime.healthmanager.HealthMonitor;
+import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
-import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.DirectOOMDetector;
-import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
-import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
+import org.apache.flink.runtime.healthmanager.plugins.Symptom;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexDirectOOM;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowMemory;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.util.ExecutorThreadFactory;
+
+import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
 
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
- * Tests for DirectMemoryAdjuster.
+ * Tests for direct memory adjuster.
  */
 public class DirectMemoryAdjusterTest {
-	/**
-	 * test direct memory adjustment triggered by direct oom.
-	 */
 	@Test
-	public void testDirectOOMTriggerAdjustment() throws Exception {
-		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
+	public void testDiagnose() {
+		DirectMemoryAdjuster directMemoryAdjuster = new DirectMemoryAdjuster();
+		Whitebox.setInternalState(directMemoryAdjuster, "stableTime", 10);
 
-		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
+		JobStable jobUnStable = JobStable.UNSTABLE;
+		JobStable jobStableShortTime = new JobStable(5L);
+		JobStable jobStableLongTime = new JobStable(15L);
+		JobVertexDirectOOM jobVertexDirectOOM = new JobVertexDirectOOM(new JobID(), Collections.emptyList());
+		JobVertexLowMemory jobVertexLowMemory = new JobVertexLowMemory(new JobID());
 
-		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(
-			1, new ExecutorThreadFactory("health-manager"));
+		List<Symptom> symptomList = new ArrayList<>();
 
-		JobID jobID = new JobID();
+		symptomList.add(jobVertexDirectOOM);
+		assertTrue(directMemoryAdjuster.diagnose(symptomList));
+
+		symptomList.clear();
+		symptomList.add(jobStableLongTime);
+		assertFalse(directMemoryAdjuster.diagnose(symptomList));
+
+		symptomList.clear();
+		symptomList.add(jobVertexLowMemory);
+		assertFalse(directMemoryAdjuster.diagnose(symptomList));
+
+		symptomList.add(jobUnStable);
+		assertFalse(directMemoryAdjuster.diagnose(symptomList));
+
+		symptomList.remove(jobUnStable);
+		symptomList.add(jobStableShortTime);
+		assertFalse(directMemoryAdjuster.diagnose(symptomList));
+
+		symptomList.remove(jobStableShortTime);
+		symptomList.add(jobStableLongTime);
+		assertTrue(directMemoryAdjuster.diagnose(symptomList));
+
+		symptomList.add(jobVertexDirectOOM);
+		assertTrue(directMemoryAdjuster.diagnose(symptomList));
+
+		assertEquals(jobStableLongTime, Whitebox.getInternalState(directMemoryAdjuster, "jobStable"));
+		assertEquals(jobVertexDirectOOM, Whitebox.getInternalState(directMemoryAdjuster, "jobVertexDirectOOM"));
+		assertEquals(jobVertexLowMemory, Whitebox.getInternalState(directMemoryAdjuster, "jobVertexLowMemory"));
+	}
+
+	@Test
+	public void testScaleUpVertexDirectMem() {
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
 
-		// job level configuration.
-		Configuration config = new Configuration();
-		config.setString("healthmonitor.health.check.interval.ms", "3000");
-		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
-		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, DirectOOMDetector.class.getCanonicalName());
-		config.setString(HealthMonitor.RESOLVER_CLASSES, DirectMemoryAdjuster.class.getCanonicalName());
+		JobVertexDirectOOM jobVertexDirectOOM = new JobVertexDirectOOM(new JobID(), Lists.newArrayList(vertex1));
 
-		// initial job vertex config.
+		DirectMemoryAdjuster directMemoryAdjuster = new DirectMemoryAdjuster();
+		Whitebox.setInternalState(directMemoryAdjuster, "scaleUpRatio", 1.5);
+		Whitebox.setInternalState(directMemoryAdjuster, "jobVertexDirectOOM", jobVertexDirectOOM);
+
+		RestServerClient.VertexConfig vertexConfig1 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setDirectMemoryInMB(100).build());
+		RestServerClient.VertexConfig vertexConfig2 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setDirectMemoryInMB(100).build());
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
-		RestServerClient.VertexConfig vertex1Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setDirectMemoryInMB(10).build());
-		RestServerClient.VertexConfig vertex2Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setDirectMemoryInMB(20).build());
-		vertexConfigs.put(vertex1, vertex1Config);
-		vertexConfigs.put(vertex2, vertex2Config);
+		vertexConfigs.put(vertex1, vertexConfig1);
+		vertexConfigs.put(vertex2, vertexConfig2);
+		RestServerClient.JobConfig jobConfig = Mockito.mock(RestServerClient.JobConfig.class);
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
 
-		// job vertex config after first round rescale.
-		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs2 = new HashMap<>();
-		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setDirectMemoryInMB(20).build());
-		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setDirectMemoryInMB(20).build());
-		vertexConfigs2.put(vertex1, vertex1Config2);
-		vertexConfigs2.put(vertex2, vertex2Config2);
+		Map<JobVertexID, Integer> results = directMemoryAdjuster.scaleUpVertexDirectMem(jobConfig);
+		assertNotNull(results);
+		assertEquals(1, results.size());
+		assertEquals(Integer.valueOf(150), results.get(vertex1));
+	}
 
-		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
-		inputNodes.put(vertex1, Collections.emptyList());
-		inputNodes.put(vertex2, Collections.emptyList());
+	@Test
+	public void testScaleDownVertexDirectMem() {
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
 
-		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
+		JobVertexLowMemory jobVertexLowMemory = new JobVertexLowMemory(new JobID());
+		jobVertexLowMemory.addVertex(vertex1, 0.0, 0.5, 0.0);
 
-		Map<JobVertexID, List<JobException>> exceptions = new HashMap<>();
-		List<JobException> oomError = new LinkedList<>();
-		OutOfMemoryError error = new OutOfMemoryError("Direct buffer memory");
-		oomError.add(new JobException(error.getMessage(), error));
-		exceptions.put(vertex1, oomError);
+		DirectMemoryAdjuster directMemoryAdjuster = new DirectMemoryAdjuster();
+		Whitebox.setInternalState(directMemoryAdjuster, "scaleDownRatio", 1.0);
+		Whitebox.setInternalState(directMemoryAdjuster, "jobVertexLowMemory", jobVertexLowMemory);
 
-		// return oom exception twice to trigger rescale twice.
-		Mockito.when(restServerClient.getFailover(Mockito.eq(jobID), Mockito.anyLong(), Mockito.anyLong()))
-			.thenReturn(exceptions).thenReturn(exceptions).thenReturn(new HashMap<>());
+		RestServerClient.VertexConfig vertexConfig1 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setDirectMemoryInMB(100).build());
+		RestServerClient.VertexConfig vertexConfig2 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setDirectMemoryInMB(100).build());
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
+		vertexConfigs.put(vertex1, vertexConfig1);
+		vertexConfigs.put(vertex2, vertexConfig2);
+		RestServerClient.JobConfig jobConfig = Mockito.mock(RestServerClient.JobConfig.class);
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
 
-		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
-		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.SCHEDULED));
-		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
-
-		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
-		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
-			Tuple2.of(System.currentTimeMillis(), ExecutionState.RUNNING));
-		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats2);
-
-		// mock slow scheduling.
-		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
-			.thenReturn(jobStatus).thenReturn(jobStatus2);
-
-		HealthMonitor monitor = new HealthMonitor(
-			jobID,
-			metricProvider,
-			restServerClient,
-			executorService,
-			new Configuration()
-		);
-
-		monitor.start();
-
-		Thread.sleep(10000);
-
-		monitor.stop();
-
-		// verify rpc calls.
-		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setDirectMemoryInMB(20).build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
-			.rescale(
-				Mockito.eq(jobID),
-				Mockito.eq(vertexParallelismResource));
-
-		vertexParallelismResource.clear();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setDirectMemoryInMB(40).build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
-			.rescale(
-				Mockito.eq(jobID),
-				Mockito.eq(vertexParallelismResource));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobStatus(Mockito.eq(jobID));
-
-		Mockito.verify(restServerClient, Mockito.times(3))
-			.getJobConfig(Mockito.eq(jobID));
+		Map<JobVertexID, Integer> results = directMemoryAdjuster.scaleDownVertexDirectMem(jobConfig);
+		assertNotNull(results);
+		assertEquals(1, results.size());
+		assertEquals(Integer.valueOf(50), results.get(vertex1));
 	}
 }

@@ -22,16 +22,19 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.JobException;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.HighCpuDetector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.LowCpuDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LongTimeFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
+import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -49,6 +52,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -58,16 +62,16 @@ import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyVararg;
 
 /**
- * Tests for CpuAdjusterITTest.
+ * Tests for HeapMemoryAdjuster.
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(MetricUtils.class)
-public class CpuAdjusterITTest {
+public class HeapMemoryAdjusterITTest {
 	/**
-	 * test cpu increase.
+	 * test heap memory adjustment triggered by heap oom.
 	 */
 	@Test
-	public void testCpuIncrease() throws Exception {
+	public void testHeapOOMTriggerAdjustment() throws Exception {
 		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
 
 		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
@@ -78,34 +82,30 @@ public class CpuAdjusterITTest {
 		JobID jobID = new JobID();
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
-		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
 
 		// job level configuration.
 		Configuration config = new Configuration();
-		config.setLong(HealthMonitor.HEALTH_CHECK_INTERNAL, 1000L);
+		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
-		config.setDouble(HighCpuDetector.HIGH_CPU_SEVERE_THRESHOLD, 0.9);
-		config.setLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY, 100L);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, HighCpuDetector.class.getCanonicalName() + "," +
-			TestingJobStableDetector.class.getCanonicalName());
-		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
+		config.setString(HealthMonitor.DETECTOR_CLASSES, HeapOOMDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(10).build());
 		RestServerClient.VertexConfig vertex2Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(20).build());
 		vertexConfigs.put(vertex1, vertex1Config);
 		vertexConfigs.put(vertex2, vertex2Config);
 
 		// job vertex config after first round rescale.
 		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs2 = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(2.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(20).build());
 		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(20).build());
 		vertexConfigs2.put(vertex1, vertex1Config2);
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
@@ -116,104 +116,17 @@ public class CpuAdjusterITTest {
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
-		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
-		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(usageSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-				usage1.put("tmId", Tuple2.of(now, 1.0));
-				return usage1;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-				InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-				usage1.put("tmId", Tuple2.of(now, 1.0));
-				return usage1;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-				InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-				usage1.put("tmId", Tuple2.of(now, 1.0));
-				return usage1;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();
-				usage1.put("tmId", Tuple2.of(now, 2.0));
-				return usage1;
-			}
-		});
-		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-				InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 1.0));
-				return capacity;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-				InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 1.0));
-				return capacity;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 1.0));
-				return capacity;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 2.0));
-				return capacity;
-			}
-		}).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, 4.0));
-				return capacity;
-			}
-		});
+		Map<JobVertexID, List<JobException>> exceptions = new HashMap<>();
+		List<JobException> oomError = new LinkedList<>();
+		OutOfMemoryError error = new OutOfMemoryError("Java heap space");
+		oomError.add(new JobException(error.getMessage(), error));
+		exceptions.put(vertex1, oomError);
 
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(usageSub);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(capacitySub);
-
-		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
-			.thenReturn(Arrays.asList(executionVertexID1));
+		// return oom exception twice to trigger rescale twice.
+		Mockito.when(restServerClient.getFailover(Mockito.eq(jobID), Mockito.anyLong(), Mockito.anyLong()))
+			.thenReturn(exceptions).thenReturn(exceptions).thenReturn(new HashMap<>());
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
@@ -249,14 +162,14 @@ public class CpuAdjusterITTest {
 
 		// verify rpc calls.
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setCpuCores(2.0).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setHeapMemoryInMB(20).build()));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
 
 		vertexParallelismResource.clear();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setCpuCores(4.0).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setHeapMemoryInMB(40).build()));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),
@@ -264,10 +177,103 @@ public class CpuAdjusterITTest {
 	}
 
 	/**
-	 * test cpu dncrease.
+	 * test heap memory adjustment triggered by frequent full gc.
 	 */
 	@Test
-	public void testCpuDecrease() throws Exception {
+	public void testFrequentFullGCTriggerAdjustment() throws Exception {
+		// job level configuration.
+		Configuration config = new Configuration();
+		config.setString("healthmonitor.health.check.interval.ms", "3000");
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
+		config.setString(HealthMonitor.DETECTOR_CLASSES, FrequentFullGCDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
+		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_SEVERE_THRESHOLD, 3);
+
+		JobTMMetricSubscription gcTimeSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(gcTimeSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				callCount++;
+				if (callCount <= 2) {
+					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
+					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 4.0));
+					return fullGCs;
+				} else {
+					return new HashMap<>();
+				}
+			}
+		});
+
+		fullGCTriggerAdjustmentTestBase(config, gcTimeSub, gcTimeSub);
+	}
+
+	/**
+	 * test heap memory adjustment triggered by long time full gc.
+	 */
+	@Test
+	public void testLongTimeFullGCTriggerAdjustment() throws Exception {
+		// job level configuration.
+		Configuration config = new Configuration();
+		config.setString("healthmonitor.health.check.interval.ms", "3000");
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
+		config.setString(HealthMonitor.DETECTOR_CLASSES, LongTimeFullGCDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
+		config.setLong(LongTimeFullGCDetector.FULL_GC_TIME_SEVERE_THRESHOLD, 5000L);
+
+		// mock subscribing JM GC time metric
+		JobTMMetricSubscription gcTimeSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(gcTimeSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				callCount++;
+				if (callCount <= 2) {
+					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
+					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 18000.0));
+					return fullGCs;
+				} else {
+					return new HashMap<>();
+				}
+			}
+		});
+
+		// mock subscribing JM GC count metric
+		JobTMMetricSubscription gcCountSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(gcCountSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
+			int callCount = 0;
+			@Override
+			public Map<String, Tuple2<Long, Double>> answer(
+				InvocationOnMock invocationOnMock) throws Throwable {
+				callCount++;
+				if (callCount <= 3) {
+					Map<String, Tuple2<Long, Double>> fullGCs = new HashMap<>();
+					fullGCs.put("tmId", Tuple2.of(System.currentTimeMillis(), 3.0));
+					return fullGCs;
+				} else {
+					return new HashMap<>();
+				}
+			}
+		});
+
+		fullGCTriggerAdjustmentTestBase(config, gcTimeSub, gcCountSub);
+	}
+
+	/**
+	 * @param config job level configuration.
+	 * @param gcTimeSub JM GC metric subscription.
+	 * @throws Exception
+	 */
+	public void fullGCTriggerAdjustmentTestBase(
+		Configuration config,
+		JobTMMetricSubscription gcTimeSub,
+		JobTMMetricSubscription gcCountSub) throws Exception {
 		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
 
 		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
@@ -280,33 +286,21 @@ public class CpuAdjusterITTest {
 		JobVertexID vertex2 = new JobVertexID();
 		ExecutionVertexID executionVertexID1 = new ExecutionVertexID(vertex1, 0);
 
-		// job level configuration.
-		Configuration config = new Configuration();
-		config.setLong(HealthMonitor.HEALTH_CHECK_INTERNAL, 1000L);
-		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT, 10000L);
-		config.setDouble(LowCpuDetector.LOW_CPU_THRESHOLD, 0.6);
-		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_DOWN_RATIO, 1.5);
-		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_DOWN_WAIT_TIME, -1L);
-		config.setLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY, -1L);
-		config.setString(HealthMonitor.DETECTOR_CLASSES, LowCpuDetector.class.getCanonicalName() + ","
-			+ TestingJobStableDetector.class.getCanonicalName());
-		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
-
 		// initial job vertex config.
-		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
+		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(4.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(10).build());
 		RestServerClient.VertexConfig vertex2Config = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(20).build());
 		vertexConfigs.put(vertex1, vertex1Config);
 		vertexConfigs.put(vertex2, vertex2Config);
 
 		// job vertex config after first round rescale.
 		Map<JobVertexID, RestServerClient.VertexConfig>  vertexConfigs2 = new HashMap<>();
 		RestServerClient.VertexConfig vertex1Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(3.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(20).build());
 		RestServerClient.VertexConfig vertex2Config2 = new RestServerClient.VertexConfig(
-			1, 3, new ResourceSpec.Builder().setCpuCores(1.0).build());
+			1, 3, new ResourceSpec.Builder().setHeapMemoryInMB(20).build());
 		vertexConfigs2.put(vertex1, vertex1Config2);
 		vertexConfigs2.put(vertex2, vertex2Config2);
 
@@ -317,50 +311,23 @@ public class CpuAdjusterITTest {
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
-		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
-		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
-		Mockito.when(usageSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			double[] values = new double[]{2, 2, 2};
-			int callCount = 0;
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				callCount++;
-				Map<String, Tuple2<Long, Double>> usage = new HashMap<>();
-				usage.put("tmId", Tuple2.of(now, values[callCount < values.length ? callCount - 1 : values.length - 1]));
-				return usage;
-			}
-		});
-		Mockito.when(capacitySub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
-			double[] values = new double[]{4, 4, 3};
-			int callCount = 0;
-			@Override
-			public Map<String, Tuple2<Long, Double>> answer(
-					InvocationOnMock invocationOnMock) throws Throwable {
-				long now = System.currentTimeMillis();
-				callCount++;
-				Map<String, Tuple2<Long, Double>> capacity = new HashMap<>();
-				capacity.put("tmId", Tuple2.of(now, values[callCount < values.length ? callCount - 1 : values.length - 1]));
-				return capacity;
-			}
-		});
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.FULL_GC_TIME_METRIC),
+			Mockito.anyLong(), Mockito.eq(TimelineAggType.RANGE)))
+			.thenReturn(gcTimeSub);
 
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Usage"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(usageSub);
-		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq("Status.ProcessTree.CPU.Allocated"), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
-			.thenReturn(capacitySub);
-
-		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
-			.thenReturn(Arrays.asList(executionVertexID1));
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.FULL_GC_COUNT_METRIC),
+			Mockito.anyLong(), Mockito.eq(TimelineAggType.RANGE)))
+			.thenReturn(gcCountSub);
 
 		PowerMockito.mockStatic(MetricUtils.class);
 		Mockito.when(MetricUtils.validateTmMetric(Mockito.any(HealthMonitor.class), anyLong(), anyVararg())).thenReturn(true);
+
+		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))
+			.thenReturn(Arrays.asList(executionVertexID1));
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
@@ -396,7 +363,14 @@ public class CpuAdjusterITTest {
 
 		// verify rpc calls.
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
-		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setCpuCores(3.0).build()));
+		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setHeapMemoryInMB(20).build()));
+		Mockito.verify(restServerClient, Mockito.times(1))
+			.rescale(
+				Mockito.eq(jobID),
+				Mockito.eq(vertexParallelismResource));
+
+		vertexParallelismResource.clear();
+		vertexParallelismResource.put(vertex1, new Tuple2<>(1, ResourceSpec.newBuilder().setHeapMemoryInMB(40).build()));
 		Mockito.verify(restServerClient, Mockito.times(1))
 			.rescale(
 				Mockito.eq(jobID),

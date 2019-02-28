@@ -35,19 +35,21 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actionselectors.RescaleResourcePriorActionSelector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DelayIncreasingDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DirectOOMDetector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.ExceedMaxResourceLimitDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.FailoverDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.FrequentFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HeapOOMDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.HighCpuDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighNativeMemoryDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStuckDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LongTimeFullGCDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LowCpuDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowDelayDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LowMemoryDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
+import org.apache.flink.runtime.healthmanager.plugins.resolvers.CpuAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.DirectMemoryAdjuster;
-import org.apache.flink.runtime.healthmanager.plugins.resolvers.ExceedMaxResourceLimitResolver;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.NativeMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.ParallelismScaler;
@@ -80,27 +82,29 @@ public class HealthMonitor {
 
 	public static final ConfigOption<String> DETECTOR_CLASSES =
 			ConfigOptions.key("healthmonitor.detector.classes")
-					.defaultValue(HeapOOMDetector.class.getCanonicalName() + ","
-						+ DirectOOMDetector.class.getCanonicalName() + ","
+					.defaultValue(HighCpuDetector.class.getCanonicalName() + ","
+						+ LowCpuDetector.class.getCanonicalName() + ","
+						+ HeapOOMDetector.class.getCanonicalName() + ","
 						+ FrequentFullGCDetector.class.getCanonicalName() + ","
 						+ LongTimeFullGCDetector.class.getCanonicalName() + ","
+						+ DirectOOMDetector.class.getCanonicalName() + ","
 						+ HighNativeMemoryDetector.class.getCanonicalName() + ","
+						+ LowMemoryDetector.class.getCanonicalName() + ","
 						+ HighDelayDetector.class.getCanonicalName() + ","
 						+ LowDelayDetector.class.getCanonicalName() + ","
 						+ DelayIncreasingDetector.class.getCanonicalName() + ","
 						+ OverParallelizedDetector.class.getCanonicalName() + ","
 						+ FailoverDetector.class.getCanonicalName() + ","
-						+ ExceedMaxResourceLimitDetector.class.getCanonicalName() + ","
 						+ JobStableDetector.class.getCanonicalName() + ","
 						+ JobStuckDetector.class.getCanonicalName());
 
 	public static final ConfigOption<String> RESOLVER_CLASSES =
 			ConfigOptions.key("healthmonitor.resolver.classes")
-					.defaultValue(HeapMemoryAdjuster.class.getCanonicalName() + ","
+					.defaultValue(CpuAdjuster.class.getCanonicalName() + ","
+						+ HeapMemoryAdjuster.class.getCanonicalName() + ","
 						+ DirectMemoryAdjuster.class.getCanonicalName() + ","
 						+ NativeMemoryAdjuster.class.getCanonicalName() + ","
-						+ ParallelismScaler.class.getCanonicalName() + ","
-						+ ExceedMaxResourceLimitResolver.class.getCanonicalName());
+						+ ParallelismScaler.class.getCanonicalName());
 
 	private JobID jobID;
 	private Configuration config;
