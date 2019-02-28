@@ -31,6 +31,7 @@ import org.apache.flink.table.catalog.CatalogFunction;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
+import org.apache.flink.table.catalog.FlinkCatalogException;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -99,7 +100,7 @@ public class HiveCatalog extends HiveCatalogBase {
 		try {
 			return client.getTableColumnStatistics(dbName, tableName, cols);
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to get table column stats for columns %s of table %s", cols,
 					new ObjectPath(dbName, tableName)));
 		}
@@ -126,7 +127,7 @@ public class HiveCatalog extends HiveCatalogBase {
 				client.createTable(HiveCatalogUtil.createHiveTable(path, table));
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to create table %s", path.getFullName()), e);
 		}
 	}
@@ -141,7 +142,7 @@ public class HiveCatalog extends HiveCatalogBase {
 				throw new TableNotExistException(catalogName, path.getFullName());
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to alter table %s", path.getFullName()), e);
 		}
 	}
@@ -204,7 +205,7 @@ public class HiveCatalog extends HiveCatalogBase {
 				throw new TableNotExistException(catalogName, path.getFullName());
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to alter table stats of table %s", path.getFullName()), e);
 		}
 	}
@@ -229,7 +230,7 @@ public class HiveCatalog extends HiveCatalogBase {
 				throw new PartitionAlreadyExistException(catalogName, path, partition.getPartitionSpec());
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to create partition %s of table %s", partition.getPartitionSpec(), path));
 		}
 	}
@@ -251,7 +252,7 @@ public class HiveCatalog extends HiveCatalogBase {
 				throw new PartitionNotExistException(catalogName, path, partitionSpec);
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to drop partition %s of table %s", partitionSpec, path));
 		}
 	}
@@ -275,7 +276,7 @@ public class HiveCatalog extends HiveCatalogBase {
 					HiveCatalogUtil.createHivePartition(hiveTable, newPartition)
 				);
 			} catch (TException e) {
-				throw new FlinkHiveException(
+				throw new FlinkCatalogException(
 					String.format("Failed to alter existing partition with new partition %s of table %s", newPartition.getPartitionSpec(), path), e);
 			}
 		} else if (!ignoreIfNotExists) {
@@ -298,7 +299,7 @@ public class HiveCatalog extends HiveCatalogBase {
 				.map(n -> HiveCatalogUtil.createPartitionSpec(n))
 				.collect(Collectors.toList());
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to list partitions of table %s", path), e);
 		}
 	}
@@ -318,7 +319,7 @@ public class HiveCatalog extends HiveCatalogBase {
 				.map(n -> HiveCatalogUtil.createPartitionSpec(n))
 				.collect(Collectors.toList());
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to list partitions of table %s", path), e);
 		}
 	}
@@ -340,7 +341,7 @@ public class HiveCatalog extends HiveCatalogBase {
 		} catch (NoSuchObjectException e) {
 			throw new PartitionNotExistException(catalogName, path, partitionSpec);
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to get partition %s of table %s", partitionSpec, path), e);
 		}
 	}
@@ -353,7 +354,7 @@ public class HiveCatalog extends HiveCatalogBase {
 		} catch (NoSuchObjectException | TableNotExistException e) {
 			return false;
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to get partition %s of table %s", partitionSpec, path), e);
 		}
 	}

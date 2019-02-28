@@ -142,6 +142,7 @@ public class CatalogCalciteSchemaTest {
 		);
 
 		// Test databases (sub-schemas) dropped won't show up
+		((ReadableWritableCatalog) catalog).dropTable(new ObjectPath(db1, table1), false);
 		((ReadableWritableCatalog) catalog).dropDatabase(db1, false);
 
 		subSchemas = calciteCatalogReader.getAllSchemaObjectNames(Arrays.asList(catalogName)).stream()

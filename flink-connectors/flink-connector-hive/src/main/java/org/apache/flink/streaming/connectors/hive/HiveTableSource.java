@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.TypeConverters;
-import org.apache.flink.table.catalog.hive.FlinkHiveException;
+import org.apache.flink.table.catalog.FlinkCatalogException;
 import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.expressions.Expression;
@@ -210,7 +210,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 					allPartitions.add(new HiveTablePartition(sd, partitionColValues));
 				}
 			} catch (Exception e) {
-				throw new FlinkHiveException("Failed creating Hive metaStore client", e);
+				throw new FlinkCatalogException("Failed creating Hive metaStore client", e);
 			} finally {
 				if (null != client) {
 					client.close();
@@ -284,7 +284,7 @@ public class HiveTableSource extends PartitionableTableSource implements BatchTa
 			if (null == hiveType) {
 				logger.error("Now we don't support flink type of " + rowTypeInfo.getFieldTypes()[i]
 							+ " converting from hive");
-				throw new FlinkHiveException("Now we don't support flink's type of "
+				throw new FlinkCatalogException("Now we don't support flink's type of "
 											+ rowTypeInfo.getFieldTypes()[i] + " converting from hive");
 			}
 			fieldSchemas.add(

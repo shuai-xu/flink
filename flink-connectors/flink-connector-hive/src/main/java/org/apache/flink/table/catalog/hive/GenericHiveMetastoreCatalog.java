@@ -32,6 +32,7 @@ import org.apache.flink.table.catalog.CatalogFunction;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
+import org.apache.flink.table.catalog.FlinkCatalogException;
 import org.apache.flink.table.catalog.FlinkInMemoryCatalog;
 import org.apache.flink.table.catalog.FlinkTempFunction;
 import org.apache.flink.table.catalog.FlinkTempTable;
@@ -144,7 +145,7 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 					}
 					client.createTable(GenericHiveMetastoreCatalogUtil.createHiveTable(path, table));
 				} catch (TException e) {
-					throw new FlinkHiveException(String.format("Failed to create table %s", path.getFullName()), e);
+					throw new FlinkCatalogException(String.format("Failed to create table %s", path.getFullName()), e);
 				}
 			}
 		}
@@ -281,7 +282,7 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 						throw new FunctionAlreadyExistException(catalogName, functionPath.getFullName());
 					}
 				} catch (TException e) {
-					throw new FlinkHiveException(String.format("Failed to create function %s", functionPath.getFullName()), e);
+					throw new FlinkCatalogException(String.format("Failed to create function %s", functionPath.getFullName()), e);
 				}
 			}
 		}
@@ -305,7 +306,7 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 					try {
 						client.alterFunction(path.getDbName(), path.getObjectName(), createHiveFunction(path, newFunction));
 					} catch (TException e) {
-						throw new FlinkHiveException(String.format("Failed to alter function %s", path.getFullName()), e);
+						throw new FlinkCatalogException(String.format("Failed to alter function %s", path.getFullName()), e);
 					}
 				} else {
 					// HMS can only store non FlinkTempFunction
@@ -330,7 +331,7 @@ public class GenericHiveMetastoreCatalog extends HiveCatalogBase {
 					throw new FunctionNotExistException(catalogName, functionPath.getFullName());
 				}
 			} catch (TException e) {
-				throw new FlinkHiveException(String.format("Failed to drop function %s", functionPath.getFullName()), e);
+				throw new FlinkCatalogException(String.format("Failed to drop function %s", functionPath.getFullName()), e);
 			}
 		}
 	}

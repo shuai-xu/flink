@@ -608,6 +608,15 @@ public abstract class CatalogTestBase {
 	}
 
 	@Test
+	public void testDropDb_databaseIsNotEmpty() {
+		catalog.createDatabase(db1, createDb(), false);
+		catalog.createTable(path1, createTable(), false);
+
+		exception.expect(FlinkCatalogException.class);
+		catalog.dropDatabase(db1, true);
+	}
+
+	@Test
 	public void testAlterDb() {
 		CatalogDatabase db = createDb();
 		catalog.createDatabase(db1, db, false);

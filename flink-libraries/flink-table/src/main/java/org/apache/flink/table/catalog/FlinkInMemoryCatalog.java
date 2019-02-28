@@ -331,10 +331,21 @@ public class FlinkInMemoryCatalog implements ReadableWritableCatalog {
 	@Override
 	public void dropDatabase(String dbName, boolean ignoreIfNotExists) throws DatabaseNotExistException {
 		if (databases.containsKey(dbName)) {
-			databases.remove(dbName);
+
+			// Make sure the database is empty
+			if (isDatabaseEmpty(dbName)) {
+				databases.remove(dbName);
+			} else {
+				throw new FlinkCatalogException(String.format("Database %s is not empty, thus cannot be dropped.", dbName));
+			}
 		} else if (!ignoreIfNotExists) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		}
+	}
+
+	private boolean isDatabaseEmpty(String dbName) {
+		return tables.keySet().stream().noneMatch(op -> op.getDbName().equals(dbName))
+			&& functions.keySet().stream().noneMatch(op -> op.getDbName().equals(dbName));
 	}
 
 	@Override

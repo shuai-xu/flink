@@ -24,7 +24,7 @@ import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSourceParser;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.TypeConverters;
-import org.apache.flink.table.catalog.hive.FlinkHiveException;
+import org.apache.flink.table.catalog.FlinkCatalogException;
 import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
@@ -105,7 +105,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 									partitionColumns);
 		} catch (Exception e){
 			logger.error("Error when create hive batch table source ...", e);
-			throw new FlinkHiveException(e);
+			throw new FlinkCatalogException(e);
 		}
 	}
 

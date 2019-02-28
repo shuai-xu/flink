@@ -25,6 +25,7 @@ import org.apache.flink.table.api.TableAlreadyExistException;
 import org.apache.flink.table.api.TableNotExistException;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogFunction;
+import org.apache.flink.table.catalog.FlinkCatalogException;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ReadableWritableCatalog;
 import org.apache.flink.table.catalog.config.CatalogDatabaseConfig;
@@ -98,7 +99,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				HiveMetaStoreClient.class.getName(),
 				true);
 		} catch (Exception e) {
-			throw new FlinkHiveException("Failed to create Hive metastore client", e);
+			throw new FlinkCatalogException("Failed to create Hive metastore client", e);
 		}
 	}
 
@@ -137,7 +138,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (NoSuchObjectException e) {
 			throw new TableNotExistException(catalogName, path.getFullName());
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to get table %s", path.getFullName()), e);
 		}
 	}
@@ -170,7 +171,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				throw new TableNotExistException(catalogName, path.getFullName());
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to alter table %s", path.getFullName()), e);
 		}
 	}
@@ -184,7 +185,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				throw new TableNotExistException(catalogName, path.getFullName());
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to drop table %s", path.getFullName()), e);
 		}
 	}
@@ -198,7 +199,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (UnknownDBException e) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to list tables in database %s", dbName), e);
 		}
 	}
@@ -222,7 +223,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (UnknownDBException e) {
 			return false;
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to check if table %s exists in database %s", path.getObjectName(), path.getDbName()), e);
 		}
 	}
@@ -238,7 +239,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (UnknownDBException e) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to list tables in database %s", dbName), e);
 		}
 	}
@@ -254,7 +255,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				throw new DatabaseAlreadyExistException(catalogName, dbName);
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(String.format("Failed to create database %s", dbName), e);
+			throw new FlinkCatalogException(String.format("Failed to create database %s", dbName), e);
 		}
 	}
 
@@ -267,7 +268,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				throw new DatabaseNotExistException(catalogName, dbName);
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(String.format("Failed to alter database %s", dbName), e);
+			throw new FlinkCatalogException(String.format("Failed to alter database %s", dbName), e);
 		}
 	}
 
@@ -280,7 +281,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (NoSuchObjectException e) {
 			throw new DatabaseNotExistException(catalogName, dbName);
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to get database %s from HiveCatalog %s", dbName, catalogName), e);
 		}
 
@@ -296,7 +297,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 				throw new DatabaseNotExistException(catalogName, dbName);
 			}
 		} catch (TException e) {
-			throw new FlinkHiveException(String.format("Failed to drop database %s", dbName), e);
+			throw new FlinkCatalogException(String.format("Failed to drop database %s", dbName), e);
 		}
 	}
 
@@ -305,7 +306,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		try {
 			return client.getAllDatabases();
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to list all databases in HiveCatalog %s", catalogName));
 		}
 	}
@@ -317,7 +318,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (NoSuchObjectException e) {
 			return false;
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to get database %s", dbName), e);
 		}
 	}
@@ -351,7 +352,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 					.map(f -> new ObjectPath(dbName, f))
 					.collect(Collectors.toList());
 			} catch (TException e) {
-				throw new FlinkHiveException(
+				throw new FlinkCatalogException(
 					String.format("Failed to list functions in database %s", dbName), e);
 			}
 		} else {
@@ -372,7 +373,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (NoSuchObjectException e) {
 			return false;
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to check whether function %s exists or not", functionPath.getFullName()), e);
 		}
 	}
@@ -383,7 +384,7 @@ public abstract class HiveCatalogBase implements ReadableWritableCatalog {
 		} catch (NoSuchObjectException e) {
 			throw new FunctionNotExistException(catalogName, functionPath.getFullName());
 		} catch (TException e) {
-			throw new FlinkHiveException(
+			throw new FlinkCatalogException(
 				String.format("Failed to get function %s", functionPath.getFullName()), e);
 		}
 	}

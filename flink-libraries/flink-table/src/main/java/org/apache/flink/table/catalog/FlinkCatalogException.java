@@ -16,31 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.catalog.hive;
+package org.apache.flink.table.catalog;
+
+import org.apache.flink.util.FlinkRuntimeException;
 
 /**
- * Hive-related Exceptions in Flink.
+ * Catalog-related exceptions in Flink.
  */
-public class FlinkHiveException extends RuntimeException {
+public class FlinkCatalogException extends FlinkRuntimeException {
 	/**
 	 * @param   message   the detail message.
 	 */
-	public FlinkHiveException(String message) {
+	public FlinkCatalogException(String message) {
 		super(message);
+	}
+
+	/**
+	 * @param  cause the cause.
+	 */
+	public FlinkCatalogException(Throwable cause) {
+		super(cause);
 	}
 
 	/**
 	 * @param  message the detail message.
 	 * @param  cause the cause.
 	 */
-	public FlinkHiveException(String message, Throwable cause) {
+	public FlinkCatalogException(String message, Throwable cause) {
 		super(message, cause);
-	}
-
-	/**
-	 * @param  cause the cause.
-	 */
-	public FlinkHiveException(Throwable cause) {
-		super(cause);
 	}
 }
