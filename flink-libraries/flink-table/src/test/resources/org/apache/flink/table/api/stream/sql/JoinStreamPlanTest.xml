@@ -489,4 +489,16 @@ StreamExecCalc(select=[a1, a2, b1, b2])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSelfJoinPlan">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecJoin(where=[=(key, key0)], join=[key, v, key0, v0], joinType=[LeftOuterJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[ONLY_EQUALITY_CONDITION_EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
+  StreamExecExchange(distribution=[hash[key]])
+    StreamExecCalc(select=[CAST(0) AS key, v], where=[=(key, 0)])
+      StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_2]])
+  StreamExecExchange(distribution=[hash[key]])
+    StreamExecValues(tuples=[[]])
+]]>
+    </Resource>
+  </TestCase>
 </Root>

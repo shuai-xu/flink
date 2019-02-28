@@ -17,7 +17,9 @@
  */
 package org.apache.flink.table.api.stream.sql
 
+import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 
 import org.junit.{Before, Test}
@@ -231,5 +233,19 @@ class JoinStreamPlanTest extends StreamPlanTestBase {
     val query2 = "SELECT SUM(b2) AS b2, b1 FROM B group by b1"
     val query = s"SELECT a1, a2, b1, b2 FROM ($query1) FULL JOIN ($query2) ON a2 = b2"
     verifyPlanAndTrait(query)
+  }
+
+  @Test
+  def testSelfJoinPlan(): Unit = {
+    streamUtil.addTable[(Long, String)]("src", 'key, 'v)
+    val sql =
+      s"""
+         |SELECT * FROM (
+         |  select * from src where key = 0) src1
+         |LEFT OUTER JOIN (
+         |  select * from src where key = 0) src2
+         |ON (src1.key = src2.key AND src2.key > 10)
+       """.stripMargin
+    verifyPlanAndTrait(sql)
   }
 }

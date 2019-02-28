@@ -190,4 +190,16 @@ class JoinTest extends TableTestBase {
     util.verifyPlan(sqlQuery)
   }
 
+  @Test
+  def testSelfJoinPlan(): Unit = {
+    val util = batchTestUtil()
+    util.addTable[(Long, String)]("src", 'key, 'v)
+    val sql =
+      s"""SELECT * FROM (
+         |  select * from src where key = 0) src1
+         |LEFT OUTER JOIN (
+         |  select * from src where key = 0) src2
+         |ON (src1.key = src2.key AND src2.key > 10)""".stripMargin
+    util.verifyPlan(sql)
+  }
 }

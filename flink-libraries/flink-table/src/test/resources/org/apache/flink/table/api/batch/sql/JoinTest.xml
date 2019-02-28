@@ -384,4 +384,36 @@ Calc(select=[c, g])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testSelfJoinPlan">
+    <Resource name="sql">
+      <![CDATA[SELECT * FROM (
+  select * from src where key = 0) src1
+LEFT OUTER JOIN (
+  select * from src where key = 0) src2
+ON (src1.key = src2.key AND src2.key > 10)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(key=[$0], v=[$1], key0=[$2], v0=[$3])
++- LogicalProject(key=[$0], v=[$1], key0=[$2], v0=[$3])
+   +- LogicalJoin(condition=[AND(=($0, $2), $4)], joinType=[left])
+      :- LogicalProject(key=[$0], v=[$1])
+      :  +- LogicalFilter(condition=[=($0, 0)])
+      :     +- LogicalTableScan(table=[[builtin, default, src]])
+      +- LogicalProject(key=[$0], v=[$1], $f2=[>($0, 10)])
+         +- LogicalProject(key=[$0], v=[$1])
+            +- LogicalFilter(condition=[=($0, 0)])
+               +- LogicalTableScan(table=[[builtin, default, src]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+NestedLoopJoin(where=[=(key, key0)], join=[key, v, key0, v0], joinType=[LeftOuterJoin], build=[right])
+:- Calc(select=[CAST(0) AS key, v], where=[=(key, 0)])
+:  +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[key, v])
++- Exchange(distribution=[broadcast])
+   +- Values(tuples=[[]], values=[key, v])
+]]>
+    </Resource>
+  </TestCase>
 </Root>

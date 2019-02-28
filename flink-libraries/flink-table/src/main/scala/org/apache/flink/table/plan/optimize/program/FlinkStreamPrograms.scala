@@ -137,6 +137,12 @@ object FlinkStreamPrograms {
             .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
             .add(FlinkStreamExecRuleSets.FILTER_TABLESCAN_PUSHDOWN_RULES)
             .build(), "push filter to table scan")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+            .add(FlinkStreamExecRuleSets.PRUNE_EMPTY_RULES)
+            .build(), "prune empty after predicate push down")
         .build())
 
     // join reorder
