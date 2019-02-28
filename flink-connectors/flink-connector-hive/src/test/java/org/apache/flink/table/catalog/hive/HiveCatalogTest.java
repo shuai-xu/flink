@@ -19,8 +19,12 @@
 package org.apache.flink.table.catalog.hive;
 
 import org.apache.flink.table.catalog.CatalogTestBase;
+import org.apache.flink.table.catalog.FlinkTempTable;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.impl.AbstractTable;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,6 +65,17 @@ public class HiveCatalogTest extends CatalogTestBase {
 		properties.put(HiveTableConfig.HIVE_TABLE_LOCATION, HiveTestUtils.warehouseDir + "/tmp");
 
 		return properties;
+	}
+
+	@Test
+	public void testCreateTable_FlinkTempTable() {
+		exception.expect(IllegalArgumentException.class);
+		catalog.createTable(path1, new FlinkTempTable(new AbstractTable() {
+			@Override
+			public RelDataType getRowType(RelDataTypeFactory relDataTypeFactory) {
+				return null;
+			}
+		}), false);
 	}
 
 	// ------------------------------------------------

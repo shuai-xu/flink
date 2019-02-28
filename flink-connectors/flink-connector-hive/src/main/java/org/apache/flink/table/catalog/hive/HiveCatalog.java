@@ -32,6 +32,7 @@ import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogView;
 import org.apache.flink.table.catalog.FlinkCatalogException;
+import org.apache.flink.table.catalog.FlinkTempTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.plan.stats.ColumnStats;
 import org.apache.flink.table.plan.stats.TableStats;
@@ -111,6 +112,11 @@ public class HiveCatalog extends HiveCatalogBase {
 	@Override
 	public void createTable(ObjectPath path, CatalogTable table, boolean ignoreIfExists)
 		throws TableAlreadyExistException, DatabaseNotExistException {
+
+		if (table instanceof FlinkTempTable) {
+			throw new IllegalArgumentException(
+				String.format("HiveCatalog only support registering CatalogTable, not FlinkTempTable."));
+		}
 
 		try {
 			if (tableExists(path)) {

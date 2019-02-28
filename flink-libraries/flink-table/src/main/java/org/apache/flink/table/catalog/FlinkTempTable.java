@@ -30,6 +30,10 @@ public class FlinkTempTable extends CatalogTable {
 
 	private final AbstractTable abstractTable;
 
+	public FlinkTempTable(AbstractTable table) {
+		this(table, new HashMap<>());
+	}
+
 	public FlinkTempTable(AbstractTable table, Map<String, String> properties) {
 
 		super(null,
