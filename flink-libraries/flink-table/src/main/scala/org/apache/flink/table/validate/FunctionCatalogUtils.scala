@@ -21,7 +21,7 @@ package org.apache.flink.table.validate
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.table.api.functions._
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.catalog.CatalogFunction
+import org.apache.flink.table.catalog.{CatalogFunction, FlinkTempFunction}
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, UserDefinedFunctionUtils}
 import org.apache.flink.table.types.TypeInfoWrappedDataType
 
@@ -39,56 +39,63 @@ object FunctionCatalogUtils {
   def toSqlFunction(name: String, catalogFunc: CatalogFunction, typeFactory: FlinkTypeFactory):
     SqlFunction = {
 
-    val functionInstance = UserDefinedFunctionUtils.createUserDefinedFunction(
-      getClass.getClassLoader,
-      name,
-      catalogFunc.getClazzName)
+    var functionInstance: UserDefinedFunction = null
 
-    val sqlFunction = {
-      functionInstance match {
-        case _: ScalarFunction =>
-          UserDefinedFunctionUtils.createScalarSqlFunction(
-            name,
-            name,
-            functionInstance.asInstanceOf[ScalarFunction],
-            typeFactory)
-            .asInstanceOf[ScalarSqlFunction]
+    if (catalogFunc.isInstanceOf[FlinkTempFunction]) {
+      catalogFunc.asInstanceOf[FlinkTempFunction].getSqlFunction
+    } else {
+      functionInstance = UserDefinedFunctionUtils.createUserDefinedFunction(
+        getClass.getClassLoader,
+        name,
+        catalogFunc.getClazzName
+      ).asInstanceOf[UserDefinedFunction]
 
-        case _: TableFunction[_] =>
-          val f = functionInstance.asInstanceOf[TableFunction[_]]
+      val sqlFunction = {
+        functionInstance match {
+          case _: ScalarFunction =>
+            UserDefinedFunctionUtils.createScalarSqlFunction(
+              name,
+              name,
+              functionInstance.asInstanceOf[ScalarFunction],
+              typeFactory)
+              .asInstanceOf[ScalarSqlFunction]
 
-          UserDefinedFunctionUtils.createTableSqlFunction(
-            name,
-            name,
-            f,
-            typeFactory
-          )
+          case _: TableFunction[_] =>
+            val f = functionInstance.asInstanceOf[TableFunction[_]]
 
-        case _: AggregateFunction[_, _] =>
-          val f = functionInstance.asInstanceOf[AggregateFunction[_, _]]
-          val implicitResultType = new TypeInfoWrappedDataType(TypeExtractor
-            .createTypeInfo(f, classOf[AggregateFunction[_, _]], f.getClass, 0))
-          val implicitAccType = new TypeInfoWrappedDataType(TypeExtractor
-            .createTypeInfo(f, classOf[AggregateFunction[_, _]], f.getClass, 1))
-          val externalResultType = UserDefinedFunctionUtils.getResultTypeOfAggregateFunction(
-            f, implicitResultType)
-          val externalAccType = UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction(
-            f, implicitAccType)
-          UserDefinedFunctionUtils.createAggregateSqlFunction(
-            name,
-            name,
-            f,
-            externalResultType,
-            externalAccType,
-            typeFactory
-          )
+            UserDefinedFunctionUtils.createTableSqlFunction(
+              name,
+              name,
+              f,
+              typeFactory
+            )
 
-        case _ =>
-          throw new UnsupportedOperationException(
-            s"Function ${name} should be of ScalarFunction, TableFunction, or AggregateFunction")
+          case _: AggregateFunction[_, _] =>
+            val f = functionInstance.asInstanceOf[AggregateFunction[_, _]]
+            val implicitResultType = new TypeInfoWrappedDataType(TypeExtractor
+              .createTypeInfo(f, classOf[AggregateFunction[_, _]], f.getClass, 0))
+            val implicitAccType = new TypeInfoWrappedDataType(TypeExtractor
+              .createTypeInfo(f, classOf[AggregateFunction[_, _]], f.getClass, 1))
+            val externalResultType = UserDefinedFunctionUtils.getResultTypeOfAggregateFunction(
+              f, implicitResultType)
+            val externalAccType = UserDefinedFunctionUtils.getAccumulatorTypeOfAggregateFunction(
+              f, implicitAccType)
+            UserDefinedFunctionUtils.createAggregateSqlFunction(
+              name,
+              name,
+              f,
+              externalResultType,
+              externalAccType,
+              typeFactory
+            )
+
+          case _ =>
+            throw new UnsupportedOperationException(
+              s"Function ${name} should be of ScalarFunction, TableFunction, or AggregateFunction")
+        }
       }
-    }
 
-    sqlFunction
+      sqlFunction
+    }
   }
 }

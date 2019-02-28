@@ -297,7 +297,6 @@ class CalcITCase extends BatchTestBase {
 
   @Test
   def testUserDefinedScalarFunction(): Unit = {
-    tEnv.registerFunction("hashCode", OldHashCode)
     tEnv.registerFunction("hashCode", MyHashCode)
     val data = Seq(row("a"), row("b"), row("c"))
     tEnv.registerCollection("MyTable", data, new RowTypeInfo(STRING_TYPE_INFO), 'text)

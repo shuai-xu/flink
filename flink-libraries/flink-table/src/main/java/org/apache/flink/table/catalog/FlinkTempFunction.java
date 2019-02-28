@@ -20,6 +20,8 @@ package org.apache.flink.table.catalog;
 
 import org.apache.flink.table.api.functions.UserDefinedFunction;
 
+import org.apache.calcite.sql.SqlFunction;
+
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -27,18 +29,24 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class FlinkTempFunction extends CatalogFunction {
 	private final UserDefinedFunction udf;
+	private final SqlFunction sqlFunction;
 
-	public FlinkTempFunction(UserDefinedFunction udf) {
+	public FlinkTempFunction(UserDefinedFunction udf, SqlFunction sqlFunction) {
 		super(null);
 		this.udf = checkNotNull(udf, "udf cannot be null");
+		this.sqlFunction = checkNotNull(sqlFunction, "sqlFunction cannot be null");
 	}
 
 	public UserDefinedFunction getUdf() {
 		return udf;
 	}
 
+	public SqlFunction getSqlFunction() {
+		return sqlFunction;
+	}
+
 	@Override
 	public FlinkTempFunction deepCopy() {
-		return new FlinkTempFunction(udf);
+		return new FlinkTempFunction(udf, sqlFunction);
 	}
 }

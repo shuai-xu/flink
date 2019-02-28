@@ -24,6 +24,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.util.{ChainedSqlOperatorTable, ListSqlOperatorTable, ReflectiveSqlOperatorTable}
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
+import org.apache.flink.table.catalog.CatalogFunction
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.{AggSqlFunctions, ScalarSqlFunctions}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{createTableSqlFunction, getResultTypeOfCTDFunction}
@@ -43,12 +45,17 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
   private val functionBuilders = mutable.HashMap.empty[String, Class[_]]
   private val sqlFunctions = mutable.ListBuffer[SqlFunction]()
 
-  override def registerFunction(name: String, builder: Class[_]): Unit =
+  private def registerFunction(name: String, builder: Class[_]): Unit =
     functionBuilders.put(name.toLowerCase, builder)
 
-  override def registerSqlFunction(sqlFunction: SqlFunction): Unit = {
+  private def registerSqlFunction(sqlFunction: SqlFunction): Unit = {
     sqlFunctions --= sqlFunctions.filter(_.getName == sqlFunction.getName)
     sqlFunctions += sqlFunction
+  }
+
+  override def registerFunction(name: String, catalogFunction: CatalogFunction): Unit = {
+    throw new UnsupportedOperationException(
+      "BuiltInFunctionCatalog is readable only and does not support registering functions")
   }
 
   override def getSqlOperatorTable: SqlOperatorTable = {
@@ -134,10 +141,9 @@ class BuiltInFunctionCatalog extends FunctionCatalog{
     }
   }
 
-  override def dropFunction(name: String): Boolean =
-    functionBuilders.remove(name.toLowerCase).isDefined
-
-  override def clear(): Unit = functionBuilders.clear()
+  override def dropFunction(name: String): Unit =
+    throw new UnsupportedOperationException(
+      "BuiltInFunctionCatalog is readable only and does not support dropping functions")
 }
 
 object BuiltInFunctionCatalog {

@@ -18,8 +18,10 @@
 
 package org.apache.flink.table.validate
 
-import org.apache.calcite.sql.{SqlFunction, SqlOperatorTable}
+import org.apache.calcite.sql.SqlOperatorTable
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable
+import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.catalog.CatalogFunction
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.util.Logging
 
@@ -34,39 +36,39 @@ class ChainedFunctionCatalog(
     builtInFunctionCatalog: BuiltInFunctionCatalog)
   extends FunctionCatalog with Logging {
 
-  val catalogs = Seq(externalFunctionCatalog, builtInFunctionCatalog)
-
-  override def registerFunction(name: String, builder: Class[_]): Unit = {
-    externalFunctionCatalog.registerFunction(name, builder)
-  }
-
-  override def registerSqlFunction(sqlFunction: SqlFunction): Unit = {
-    throw new UnsupportedOperationException("To be implemented")
-  }
+  override def registerFunction(name: String, catalogFunction: CatalogFunction): Unit =
+    externalFunctionCatalog.registerFunction(name, catalogFunction)
 
   override def getSqlOperatorTable: SqlOperatorTable = {
     LOG.info("Getting sql operator tables")
 
-    new ChainedSqlOperatorTable(catalogs.map(_.getSqlOperatorTable))
+    new ChainedSqlOperatorTable(
+      Seq(externalFunctionCatalog.getSqlOperatorTable, builtInFunctionCatalog.getSqlOperatorTable))
   }
 
   override def lookupFunction(name: String, children: Seq[Expression]): Expression = {
-    var exception: Throwable = null
-    catalogs.foreach(catalog =>
-      try {
-        return catalog.lookupFunction(name, children)
-      } catch {
-        // continue lookup function from next functionCatalog
-        case t: Throwable => exception = t
+    // Search externalFunctionCatalog first
+    try {
+      externalFunctionCatalog.lookupFunction(name, children)
+    } catch {
+      case t: Throwable => {
+        LOG.warn(s"Failed to find function ${name} in ExternalFunctionCatalog: " + t.getMessage)
+
+        // Search builtinFunctionCatalog second
+        try {
+          builtInFunctionCatalog.lookupFunction(name, children);
+        } catch {
+          case t: Throwable => {
+            LOG.warn(s"Failed to find function ${name} in BuiltInFunctionCatalog: " + t.getMessage)
+
+            throw new ValidationException(
+              s"Cannot find function ${name} with given parameters in any function catalogs")
+          }
+        }
       }
-    )
-    throw exception
+    }
   }
 
-  override def dropFunction(name: String): Boolean = {
-    catalogs.find(_.dropFunction(name)).isDefined
-  }
-
-  override def clear(): Unit = catalogs.foreach(_.clear)
-
+  override def dropFunction(name: String): Unit =
+    externalFunctionCatalog.dropFunction(name)
 }

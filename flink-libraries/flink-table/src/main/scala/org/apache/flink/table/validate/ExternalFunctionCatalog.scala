@@ -20,7 +20,6 @@ package org.apache.flink.table.validate
 
 import org.apache.calcite.sql._
 import org.apache.calcite.sql.util.ListSqlOperatorTable
-import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.expressions._
@@ -38,38 +37,40 @@ import _root_.scala.collection.mutable
 class ExternalFunctionCatalog(catalogManager: CatalogManager, typeFactory: FlinkTypeFactory)
   extends FunctionCatalog with Logging {
 
-  override def registerFunction(name: String, builder: Class[_]): Unit = {
+  val sqlFunctions = mutable.ListBuffer[SqlFunction]()
+
+  override def registerFunction(name: String, catalogFunction: CatalogFunction): Unit = {
     catalogManager.getDefaultCatalog.asInstanceOf[ReadableWritableCatalog]
       .createFunction(
-        new ObjectPath(catalogManager.getDefaultDatabaseName, name),
-        new CatalogFunction(builder.getName),
+        new ObjectPath(catalogManager.getDefaultDatabaseName, name.toLowerCase),
+        catalogFunction,
         false
       )
-  }
 
-  override def registerSqlFunction(sqlFunction: SqlFunction): Unit = {
-    throw new UnsupportedOperationException("Please register functions through catalog APIs.")
+    sqlFunctions += FunctionCatalogUtils.toSqlFunction(
+      name,
+      catalogFunction,
+      typeFactory
+    )
   }
 
   override def getSqlOperatorTable: SqlOperatorTable = {
     LOG.info("Getting sql operator tables")
 
-    val sqlFunctions = mutable.ListBuffer[SqlFunction]()
-
     val catalog = catalogManager.getDefaultCatalog
-    catalog.listFunctions(catalogManager.getDefaultDatabaseName).foreach(functionPath => {
-      sqlFunctions +=
-        FunctionCatalogUtils.toSqlFunction(
-          functionPath.getObjectName,
-          catalog.getFunction(functionPath),
-          typeFactory
-        )
-    })
+    catalog.listFunctions(catalogManager.getDefaultDatabaseName).foreach(functionPath =>
+      sqlFunctions += FunctionCatalogUtils.toSqlFunction(
+        functionPath.getObjectName,
+        catalog.getFunction(functionPath),
+        typeFactory
+      )
+    )
 
     new ListSqlOperatorTable(sqlFunctions)
   }
 
   override def lookupFunction(name: String, children: Seq[Expression]): Expression = {
+
     val catalog = catalogManager.getDefaultCatalog
 
     val externalFunc =
@@ -90,22 +91,19 @@ class ExternalFunctionCatalog(catalogManager: CatalogManager, typeFactory: Flink
             tableSqlFunction.getTableFunction,
             children.toArray, () => tableSqlFunction.getImplicitResultType))
       case _: AggSqlFunction =>
-        val aggSqlFunction = sqlFunction.asInstanceOf[AggregateFunction[_, _]]
+        val aggSqlFunction = sqlFunction.asInstanceOf[AggSqlFunction]
         AggFunctionCall(
-          aggSqlFunction,
-          aggSqlFunction.getResultType,
-          aggSqlFunction.getAccumulatorType,
+          aggSqlFunction.getFunction,
+          aggSqlFunction.externalResultType,
+          aggSqlFunction.externalAccType,
           children)
-      case default =>
+      case _ =>
         throw new RuntimeException(s"Cannot match sql function ${name} with any existing types")
     }
   }
 
-  override def dropFunction(name: String): Boolean = {
-    throw new UnsupportedOperationException("Please drop functions through catalog APIs.")
-  }
-
-  override def clear(): Unit = {
-    throw new UnsupportedOperationException()
+  def dropFunction(name: String): Unit = {
+    catalogManager.getDefaultCatalog.asInstanceOf[ReadableWritableCatalog]
+      .dropFunction(new ObjectPath(catalogManager.getDefaultDatabaseName, name), false)
   }
 }

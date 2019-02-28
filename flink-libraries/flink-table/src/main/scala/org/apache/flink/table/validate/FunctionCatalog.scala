@@ -19,6 +19,7 @@
 package org.apache.flink.table.validate
 
 import org.apache.calcite.sql._
+import org.apache.flink.table.catalog.CatalogFunction
 import org.apache.flink.table.expressions._
 
 /**
@@ -26,23 +27,13 @@ import org.apache.flink.table.expressions._
   * of both Table API and SQL API.
   */
 trait FunctionCatalog {
-
-  /**
-    * Register function(through Table API) to this function catalog.
-    * Different implementations may have different behaviors when registering repeatedly.
-    *
-    * @param name The function name.
-    * @param builder The class name of the function.
-    */
-  def registerFunction(name: String, builder: Class[_]): Unit
-
   /**
     * Register function(through SQL API) to this function catalog.
     * Different implementations may have different behaviors when registering repeatedly.
     *
     * @param sqlFunction The SQL function that needs to be registered.
     */
-  def registerSqlFunction(sqlFunction: SqlFunction): Unit
+  def registerFunction(name: String, catalogFunction: CatalogFunction): Unit
 
   /**
     * Get [[SqlOperatorTable]] from this catalog.
@@ -59,10 +50,5 @@ trait FunctionCatalog {
   /**
     * Drop a function and return true if the function existed.
     */
-  def dropFunction(name: String): Boolean
-
-  /**
-    * Drop all registered functions.
-    */
-  def clear(): Unit
+  def dropFunction(name: String): Unit
 }

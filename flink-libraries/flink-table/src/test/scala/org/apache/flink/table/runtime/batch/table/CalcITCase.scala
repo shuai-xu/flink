@@ -300,7 +300,6 @@ class CalcITCase extends BatchTestBase {
 
   @Test
   def testUserDefinedScalarFunction() {
-    tEnv.registerFunction("hashCode", OldHashCode)
     tEnv.registerFunction("hashCode", HashCode)
     val table = tEnv.fromElements("a", "b", "c")
     val result = table.select("f0.hashCode()")

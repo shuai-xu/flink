@@ -498,7 +498,7 @@ abstract class TableEnvironment(
     * constructor in order to be instantiated in runtime.
     */
   def registerFunction(functionName: String, udf: UserDefinedFunction): Unit = {
-    chainedFunctionCatalog.registerFunction(functionName, udf.getClass)
+    chainedFunctionCatalog.registerFunction(functionName, new CatalogFunction(udf.getClass.getName))
   }
 
   /**
@@ -509,13 +509,9 @@ abstract class TableEnvironment(
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
 
-    // register in Table API
-    builtInFunctionCatalog.registerFunction(name, function.getClass)
-
-    // register in SQL API
-    builtInFunctionCatalog.registerSqlFunction(
-      createScalarSqlFunction(name, name, function, typeFactory)
-    )
+    chainedFunctionCatalog.registerFunction(
+      name,
+      new FlinkTempFunction(function, createScalarSqlFunction(name, name, function, typeFactory)))
   }
 
   /**
@@ -562,7 +558,7 @@ abstract class TableEnvironment(
     */
   def dropFunction(name: String, ifExists: Boolean): Unit = {
     // TODO: This needs to adapt to the new function catalog design.
-    builtInFunctionCatalog.dropFunction(name); // TODO: pass on ifExists flag for error handling.
+    chainedFunctionCatalog.dropFunction(name); // TODO: pass on ifExists flag for error handling.
   }
 
   /**
@@ -575,15 +571,10 @@ abstract class TableEnvironment(
     checkNotSingleton(function.getClass)
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
-    val implicitResultType: DataType = implicitly[TypeInformation[T]]
+    val sqlFunction =
+      createTableSqlFunction(name, name, function, implicitly[TypeInformation[T]], typeFactory)
 
-    // register in Table API
-    builtInFunctionCatalog.registerFunction(name, function.getClass)
-
-    // register in SQL API
-    val sqlFunctions =
-      createTableSqlFunction(name, name, function, implicitResultType, typeFactory)
-    builtInFunctionCatalog.registerSqlFunction(sqlFunctions)
+    chainedFunctionCatalog.registerFunction(name, new FlinkTempFunction(function, sqlFunction))
   }
 
   /**
@@ -601,11 +592,7 @@ abstract class TableEnvironment(
     val resultType = getResultTypeOfAggregateFunction(function, implicitly[TypeInformation[T]])
     val accType = getAccumulatorTypeOfAggregateFunction(function, implicitly[TypeInformation[ACC]])
 
-    // register in Table API
-    builtInFunctionCatalog.registerFunction(name, function.getClass)
-
-    // register in SQL API
-    val sqlFunctions = createAggregateSqlFunction(
+    val sqlFunction = createAggregateSqlFunction(
       name,
       name,
       function,
@@ -613,7 +600,7 @@ abstract class TableEnvironment(
       accType,
       typeFactory)
 
-    builtInFunctionCatalog.registerSqlFunction(sqlFunctions)
+    chainedFunctionCatalog.registerFunction(name, new FlinkTempFunction(function, sqlFunction))
   }
 
   /**

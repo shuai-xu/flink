@@ -22,9 +22,12 @@ import org.apache.flink.table.api.DatabaseNotExistException;
 import org.apache.flink.table.api.FunctionAlreadyExistException;
 import org.apache.flink.table.api.FunctionNotExistException;
 import org.apache.flink.table.api.functions.ScalarFunction;
+import org.apache.flink.table.calcite.FlinkTypeFactory;
+import org.apache.flink.table.calcite.FlinkTypeSystem;
 import org.apache.flink.table.catalog.CatalogFunction;
 import org.apache.flink.table.catalog.CatalogTestBase;
 import org.apache.flink.table.catalog.FlinkTempFunction;
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -156,12 +159,20 @@ public class GenericHiveMetastoreCatalogTest extends CatalogTestBase {
 		assertFalse(catalog.functionExists(path1));
 	}
 
+	private static FlinkTypeFactory factory = new FlinkTypeFactory(new FlinkTypeSystem());
+
 	protected FlinkTempFunction createTempFunction() {
-		return new FlinkTempFunction(new MyScalarFunction());
+		String name = "test";
+		ScalarFunction func = new MyScalarFunction();
+		return new FlinkTempFunction(func,
+			UserDefinedFunctionUtils.createScalarSqlFunction(name, name, func, factory));
 	}
 
 	protected FlinkTempFunction createAnotherTempFunction() {
-		return new FlinkTempFunction(new MyOtherScalarFunction());
+		String name = "test";
+		ScalarFunction func = new MyOtherScalarFunction();
+		return new FlinkTempFunction(func,
+			UserDefinedFunctionUtils.createScalarSqlFunction(name, name, func, factory));
 	}
 
 	/**
