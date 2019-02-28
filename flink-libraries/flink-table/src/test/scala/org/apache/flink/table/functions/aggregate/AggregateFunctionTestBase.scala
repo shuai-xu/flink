@@ -17,10 +17,6 @@
  */
 package org.apache.flink.table.functions.aggregate
 
-import java.util.function.{Function => JFunction}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.logical.LogicalAggregate
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.{BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.runtime.execution.Environment
@@ -33,7 +29,6 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.runtime.tasks.{OneInputStreamTask, OneInputStreamTaskTestHarness}
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelOptClusterFactory, FlinkTypeFactory}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat._
@@ -43,11 +38,17 @@ import org.apache.flink.table.plan.logical.Aggregate
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecLocalSortAggregate, BatchExecSortAggregate}
 import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
+import org.apache.flink.table.types.{RowType, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rel.logical.LogicalAggregate
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.mockito.Mockito.{mock, when}
+
+import _root_.java.util.function.{Function => JFunction}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.util.Random

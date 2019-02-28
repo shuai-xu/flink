@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.api.functions;
 
-import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.expressions.ScalarFunctionCall;
+import org.apache.flink.table.types.DataType;
 
 import scala.collection.Seq;
 

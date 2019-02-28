@@ -18,10 +18,11 @@
 
 package org.apache.flink.table.plan.schema
 
-import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType, RowType}
+
+import org.apache.calcite.rel.`type`.RelDataType
 
 import scala.collection.JavaConversions._
 

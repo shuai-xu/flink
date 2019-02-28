@@ -21,7 +21,6 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
@@ -35,6 +34,7 @@ import org.apache.flink.table.plan.nodes.{ExpressionFormat, FlinkConventions}
 import org.apache.flink.table.plan.util.JoinUtil
 import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashBucketArea
 import org.apache.flink.table.runtime.join.batch.{HashJoinOperator, HashJoinType}
+import org.apache.flink.table.types.{RowType, TypeConverters}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.NodeResourceUtil
 

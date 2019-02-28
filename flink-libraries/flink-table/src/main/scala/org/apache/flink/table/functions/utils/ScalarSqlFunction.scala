@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.functions.utils
 
+import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.api.functions.{CustomTypeDefinedFunction, ScalarFunction}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.functions.utils.ScalarSqlFunction._
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getOperandType, _}
+import org.apache.flink.table.types.TypeConverters
+import org.apache.flink.table.typeutils.TypeUtils
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql._
 import org.apache.calcite.sql.`type`.SqlOperandTypeChecker.Consistency
 import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.parser.SqlParserPos
-import org.apache.flink.table.api.ValidationException
-import org.apache.flink.table.api.functions.{CustomTypeDefinedFunction, ScalarFunction}
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.utils.ScalarSqlFunction._
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getOperandType, _}
-import org.apache.flink.table.typeutils.TypeUtils
 
 import scala.collection.JavaConverters._
 

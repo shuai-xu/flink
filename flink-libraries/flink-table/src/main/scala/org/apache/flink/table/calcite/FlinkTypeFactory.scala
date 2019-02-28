@@ -18,7 +18,19 @@
 
 package org.apache.flink.table.calcite
 
-import java.util
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, _}
+import org.apache.flink.api.common.typeinfo._
+import org.apache.flink.api.common.typeutils.CompositeType
+import org.apache.flink.api.java.typeutils.ValueTypeInfo._
+import org.apache.flink.api.java.typeutils.{MapTypeInfo, MultisetTypeInfo, ObjectArrayTypeInfo, RowTypeInfo, PojoField => _}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.{TableException, TableSchema}
+import org.apache.flink.table.calcite.FlinkTypeFactory.typeInfoToSqlTypeName
+import org.apache.flink.table.dataformat.Decimal
+import org.apache.flink.table.plan.schema._
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, InternalType, RowType, TypeConverters}
+import org.apache.flink.table.typeutils._
+import org.apache.flink.types.Row
 
 import org.apache.calcite.avatica.util.TimeUnit
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl
@@ -27,19 +39,8 @@ import org.apache.calcite.sql.SqlIntervalQualifier
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.`type`.{BasicSqlType, SqlTypeName, SqlTypeUtil}
 import org.apache.calcite.sql.parser.SqlParserPos
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, _}
-import org.apache.flink.api.common.typeinfo._
-import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.java.typeutils.ValueTypeInfo._
-import org.apache.flink.api.java.typeutils.{MapTypeInfo, MultisetTypeInfo, ObjectArrayTypeInfo, RowTypeInfo, PojoField => _}
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types._
-import org.apache.flink.table.api.{TableException, TableSchema}
-import org.apache.flink.table.calcite.FlinkTypeFactory.typeInfoToSqlTypeName
-import org.apache.flink.table.dataformat.{BaseRow, Decimal}
-import org.apache.flink.table.plan.schema._
-import org.apache.flink.table.typeutils._
-import org.apache.flink.types.Row
+
+import java.util
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

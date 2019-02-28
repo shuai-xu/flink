@@ -23,11 +23,11 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms
 import org.apache.flink.table.sources._
+import org.apache.flink.table.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.util.{TableSchemaUtil, TableTestBase}
 
 import org.junit.Assert.{assertTrue, fail}

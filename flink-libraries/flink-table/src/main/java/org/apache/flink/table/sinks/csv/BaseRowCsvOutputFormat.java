@@ -20,9 +20,9 @@ package org.apache.flink.table.sinks.csv;
 
 import org.apache.flink.api.java.io.AbstractCsvOutputFormat;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters;
+import org.apache.flink.table.types.InternalType;
 
 /**
  * BaseRow csv output format.

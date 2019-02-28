@@ -19,15 +19,14 @@
 package org.apache.flink.table.temptable
 
 import org.apache.flink.table.api.RichTableSchema
-
-import java.util.Collections
-import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory}
 import org.apache.flink.table.sinks.BatchTableSink
 import org.apache.flink.table.sources.BatchTableSource
-import org.apache.flink.table.temptable.rpc.TableServiceClient
+import org.apache.flink.table.types.{DataType, RowType}
 import org.apache.flink.table.util.TableProperties
+
+import java.util.Collections
 
 class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
   with BatchTableSourceFactory[BaseRow] {

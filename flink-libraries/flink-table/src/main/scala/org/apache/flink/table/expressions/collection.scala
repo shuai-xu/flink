@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.expressions
 
+import org.apache.flink.table.calcite.FlinkRelBuilder
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{ArrayType, DataType, DataTypes, InternalType, MapType}
+import org.apache.flink.table.typeutils.TypeCheckUtils.{isArray, isMap}
+import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
+
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.types.{ArrayType, DataType, DataTypes, InternalType, MapType}
-import org.apache.flink.table.calcite.FlinkRelBuilder
-import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.typeutils.TypeCheckUtils.{isArray, isMap}
-import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
 import scala.collection.JavaConverters._
 

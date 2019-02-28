@@ -21,9 +21,9 @@ package org.apache.flink.table.sources.orc
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sinks.orc.OrcTableSink
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.test.util.TestBaseUtils
 
 import org.junit.{Assert, Test}

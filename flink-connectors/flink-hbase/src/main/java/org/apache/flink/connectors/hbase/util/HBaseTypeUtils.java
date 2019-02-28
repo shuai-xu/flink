@@ -20,11 +20,11 @@ package org.apache.flink.connectors.hbase.util;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.dataformat.BinaryString;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.DecimalType;
 
 import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.hadoop.hbase.util.Bytes;

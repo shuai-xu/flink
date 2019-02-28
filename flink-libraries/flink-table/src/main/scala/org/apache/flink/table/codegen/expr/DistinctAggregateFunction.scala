@@ -20,9 +20,9 @@ package org.apache.flink.table.codegen.expr
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.expressions.{AggFunctionCall, DistinctAgg, Expression}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getAccumulatorTypeOfAggregateFunction, getResultTypeOfAggregateFunction}
+import org.apache.flink.table.types.DataType
 
 /**
   * Defines an implicit conversion method (distinct) that converts [[AggregateFunction]]s into

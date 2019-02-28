@@ -18,16 +18,16 @@
 
 package org.apache.flink.table.runtime.batch.table
 
-import TestData._
 import org.apache.flink.table.api.Table
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.expressions.{Rank, RowNumber}
-import org.apache.flink.table.expressions._
+import org.apache.flink.table.expressions.{Rank, RowNumber, _}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
+import org.apache.flink.table.runtime.batch.table.TestData._
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTime, UTCTimestamp}
 import org.apache.flink.types.Row
+
 import org.junit.{Assert, Before, Test}
 
 import scala.collection.Seq

@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.sinks.parquet
 
-import java.io.File
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
-import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
+import org.apache.flink.table.types.{DataType, RowType}
 
 import org.apache.hadoop.fs.FileUtil
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
+
+import java.io.File
 
 /**
   * A subclass of [[BatchTableSink]] to write [[BaseRow]] to Parquet files.

@@ -22,15 +22,15 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.descriptors.SchemaValidator;
 import org.apache.flink.table.factories.StreamTableSinkFactory;
 import org.apache.flink.table.sinks.AppendStreamTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.types.Row;
 
 import java.util.ArrayList;

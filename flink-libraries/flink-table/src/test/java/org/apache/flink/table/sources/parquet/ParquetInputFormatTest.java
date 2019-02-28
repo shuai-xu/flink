@@ -19,9 +19,9 @@
 package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.core.fs.FileInputSplit;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.DecimalType;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.TimeConvertUtils;
 

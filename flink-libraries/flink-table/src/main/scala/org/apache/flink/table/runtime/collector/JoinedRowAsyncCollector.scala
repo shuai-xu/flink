@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.runtime.collector
 
+import org.apache.flink.streaming.api.functions.async.ResultFuture
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.types.{DataTypes, InternalType, RowType}
+import org.apache.flink.table.typeutils.BaseRowSerializer
+
 import java.util
 import java.util.Collections
 import java.util.concurrent.BlockingQueue
-import org.apache.flink.streaming.api.functions.async.ResultFuture
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
-import org.apache.flink.table.typeutils.{BaseRowSerializer, TypeUtils}
 
 /**
   * The [[JoinedRowAsyncCollector]] is used to wrap left [[BaseRow]] and

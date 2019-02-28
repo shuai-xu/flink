@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.flink.table.api.types.{RowType, DataTypes}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToExternal
+import org.apache.flink.table.types.RowType
 
 /**
   * CodeGenerator for single field access of BaseRow

@@ -22,7 +22,6 @@ import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.TwoInputTransformation.ReadOrder
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext._
@@ -37,6 +36,7 @@ import org.apache.flink.table.plan.nodes.ExpressionFormat
 import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
+import org.apache.flink.table.types.{RowType, TypeConverters}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.table.util.NodeResourceUtil
 

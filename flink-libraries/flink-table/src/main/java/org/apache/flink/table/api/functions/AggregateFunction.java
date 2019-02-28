@@ -20,8 +20,8 @@ package org.apache.flink.table.api.functions;
 
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.table.api.ValidationException;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.DataTypes;
 
 /**
  * Base class for User-Defined Aggregates.

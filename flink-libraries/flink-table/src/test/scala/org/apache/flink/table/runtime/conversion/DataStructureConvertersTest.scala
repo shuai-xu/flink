@@ -18,20 +18,21 @@
 
 package org.apache.flink.table.runtime.conversion
 
-import java.util.{Map => JavaMap}
-
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.conversion.DataStructureConverters._
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType, MapType}
 import org.apache.flink.table.typeutils.{BaseArraySerializer, BaseMapSerializer}
 import org.apache.flink.types.Row
+
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
+
+import java.util.{Map => JavaMap}
 
 import scala.collection.JavaConverters._
 

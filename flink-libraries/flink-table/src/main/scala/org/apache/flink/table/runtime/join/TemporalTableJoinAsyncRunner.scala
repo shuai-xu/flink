@@ -17,17 +17,18 @@
  */
 package org.apache.flink.table.runtime.join
 
-import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.async.{AsyncFunction, ResultFuture, RichAsyncFunction}
-import org.apache.flink.table.api.types.{DataTypes, InternalType, TypeConverters}
 import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.collector.{JoinedRowAsyncCollector, TableAsyncCollector}
+import org.apache.flink.table.types.{InternalType, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
+
+import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 
 class TemporalTableJoinAsyncRunner(
     fetcherName: String,

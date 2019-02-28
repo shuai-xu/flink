@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.Types;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.Types;
 
 /**
  * An interface for array used internally in Flink Table/SQL.

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.api.functions;
 
-import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.util.Collector;
 
 /**

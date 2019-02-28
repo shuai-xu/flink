@@ -24,9 +24,9 @@ import org.apache.flink.api.common.typeutils.CompositeType;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.TupleTypeInfoBase;
-import org.apache.flink.table.api.types.RowType;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.types.RowType;
+import org.apache.flink.table.types.TypeConverters;
 
 import java.util.Arrays;
 import java.util.HashSet;

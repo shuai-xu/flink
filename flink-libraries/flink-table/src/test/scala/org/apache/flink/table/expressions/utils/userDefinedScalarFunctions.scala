@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.expressions.utils
 
-import java.sql.{Date, Time, Timestamp}
+import org.apache.flink.table.api.functions.{FunctionContext, ScalarFunction}
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.types.Row
 
 import org.apache.commons.lang3.StringUtils
-import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.api.functions.{FunctionContext, ScalarFunction}
-import org.apache.flink.types.Row
 import org.junit.Assert
+
+import java.sql.{Date, Time, Timestamp}
 
 import scala.annotation.varargs
 import scala.collection.mutable

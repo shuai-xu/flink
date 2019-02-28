@@ -18,9 +18,10 @@
 
 package org.apache.flink.table.sources.orc
 
-import org.apache.calcite.util.NlsString
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.expressions.{ArrayConstructor, Expression, Literal}
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
+
+import org.apache.calcite.util.NlsString
 import org.apache.orc.storage.ql.io.sarg.SearchArgument.Builder
 import org.apache.orc.storage.ql.io.sarg.{PredicateLeaf, SearchArgument, SearchArgumentFactory}
 import org.apache.orc.storage.serde2.io.HiveDecimalWritable

@@ -45,7 +45,7 @@ class JavaTableSink(object):
             'java.lang.String',
             field_names)
         j_types = TypesUtil._convert_py_list_to_java_array(
-            'org.apache.flink.table.api.types.DataType',
+            'org.apache.flink.table.types.DataType',
             j_field_types)
         self._j_table_sink.configure(j_names, j_types)
         return self

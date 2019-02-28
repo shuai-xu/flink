@@ -19,17 +19,16 @@
 package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfigOptions, Types}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 
 import org.junit.{Before, Test}
 
-import scala.collection.JavaConverters._
 import scala.collection.Seq
 
 abstract class DistinctAggregateITCaseBase(testName: String) extends BatchTestBase {

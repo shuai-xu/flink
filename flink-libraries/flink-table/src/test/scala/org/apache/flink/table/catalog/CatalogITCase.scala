@@ -18,26 +18,27 @@
 
 package org.apache.flink.table.catalog
 
-import java.sql.Timestamp
-import java.util
-
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, IntType, TypeInfoWrappedDataType}
-import org.apache.flink.table.api._
-import org.apache.flink.types.Row
-import org.apache.flink.streaming.api.TimeCharacteristic
+import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.expressions.{Proctime, ResolvedFieldReference}
+import org.apache.flink.table.types.{DataType, DataTypes, IntType, TypeInfoWrappedDataType}
+import org.apache.flink.table.util.TableSchemaUtil
+import org.apache.flink.types.Row
+
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.table.catalog.config.CatalogTableConfig
-import org.apache.flink.table.util.TableSchemaUtil
 import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.mockito.Mockito
+
+import _root_.java.sql.Timestamp
+import _root_.java.util
 
 /**
   * IT tests for catalogs.

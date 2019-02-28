@@ -18,17 +18,17 @@
 
 package org.apache.flink.streaming.connectors.kafka.v2.sink
 
-import java.lang.{Boolean => JBool}
-
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.connectors.kafka.v2.common.TupleOutputFormatAdapterSink
 import org.apache.flink.streaming.connectors.kafka.v2.common.util.SourceUtils
 import org.apache.flink.table.api.RichTableSchema
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, TableSinkBase, UpsertStreamTableSink}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
+
+import java.lang.{Boolean => JBool}
 
 /** Kafka011 TableSink. */
 class Kafka011TableSink(

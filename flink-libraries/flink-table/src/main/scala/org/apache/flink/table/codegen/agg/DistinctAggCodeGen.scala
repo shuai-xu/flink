@@ -18,22 +18,23 @@
 
 package org.apache.flink.table.codegen.agg
 
-import java.lang.{Long => JLong}
-import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview.MapView
-import org.apache.flink.table.api.types.{DataType, InternalType, RowType}
-import org.apache.flink.table.codegen.CodeGenUtils._
-import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
-import org.apache.flink.table.codegen.CodeGenUtils.newName
-import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.codegen.CodeGenUtils.{newName, _}
 import org.apache.flink.table.codegen.GeneratedExpression._
+import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
+import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.util.DistinctInfo
+import org.apache.flink.table.types.{DataType, InternalType, RowType}
 import org.apache.flink.util.Preconditions
 import org.apache.flink.util.Preconditions.checkArgument
+
+import org.apache.calcite.tools.RelBuilder
+
+import java.lang.{Long => JLong}
 
 /**
   * It is for code generate distinct aggregate. The distinct aggregate buffer is a MapView which

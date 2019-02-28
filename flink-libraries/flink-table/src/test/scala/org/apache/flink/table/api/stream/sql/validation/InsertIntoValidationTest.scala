@@ -20,10 +20,11 @@ package org.apache.flink.table.api.stream.sql.validation
 
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableEnvironment, ValidationException}
 import org.apache.flink.table.runtime.utils.StreamTestData
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil
+
 import org.junit.Test
 
 class InsertIntoValidationTest {

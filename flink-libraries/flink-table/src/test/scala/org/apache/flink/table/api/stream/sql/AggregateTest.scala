@@ -22,9 +22,9 @@ import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.expressions.AggFunctionCall
+import org.apache.flink.table.types.{DataType, DataTypes, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 import org.apache.flink.types.Row
 

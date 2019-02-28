@@ -19,9 +19,10 @@
 package org.apache.flink.table.util
 
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.sources.parquet.ParquetFilters
+import org.apache.flink.table.types.{DataTypes, InternalType}
+
 import org.junit.Assert._
 import org.junit.Test
 

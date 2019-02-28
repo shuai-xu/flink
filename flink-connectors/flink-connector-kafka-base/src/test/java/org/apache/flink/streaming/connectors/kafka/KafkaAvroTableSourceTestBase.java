@@ -23,7 +23,7 @@ import org.apache.flink.formats.avro.generated.DifferentSchemaRecord;
 import org.apache.flink.formats.avro.generated.SchemaRecord;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Types;
-import org.apache.flink.table.api.types.TypeConverters;
+import org.apache.flink.table.types.TypeConverters;
 
 import org.junit.Test;
 

@@ -17,9 +17,9 @@
  */
 package org.apache.flink.table.runtime.aggfunctions
 
-import java.math.BigDecimal
+import org.apache.flink.table.types.{DataTypes, DecimalType}
 
-import org.apache.flink.table.api.types.{DataTypes, DecimalType}
+import java.math.BigDecimal
 
 /**
   * Base class for built-in Sum0 with retract aggregate function.

@@ -19,11 +19,11 @@
 package org.apache.flink.table.catalog.hive;
 
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.CatalogTestUtil;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
 
 import org.junit.After;
 import org.junit.AfterClass;

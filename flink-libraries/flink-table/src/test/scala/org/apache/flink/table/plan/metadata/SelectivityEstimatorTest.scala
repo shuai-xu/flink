@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.metadata
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.functions.ScalarFunction
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.expressions.Expression
@@ -28,6 +27,7 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
 import org.apache.flink.table.sources.{Partition, PartitionableTableSource, TableSource}
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.util.Preconditions
 
@@ -41,19 +41,18 @@ import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
-
-import java.math.BigDecimal
-import java.sql.{Date, Time, Timestamp}
-import java.util
-
-import scala.collection.JavaConverters._
-
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.{Before, BeforeClass, Test}
 import org.powermock.api.mockito.PowerMockito._
 import org.powermock.core.classloader.annotations.PrepareForTest
 import org.powermock.modules.junit4.PowerMockRunner
+
+import java.math.BigDecimal
+import java.sql.{Date, Time, Timestamp}
+import java.util
+
+import scala.collection.JavaConverters._
 
 /**
   * Tests for [[SelectivityEstimator]].

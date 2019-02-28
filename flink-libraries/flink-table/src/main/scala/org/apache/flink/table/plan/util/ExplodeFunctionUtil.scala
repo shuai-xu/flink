@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.plan.util
 
-import java.util
 import org.apache.flink.api.common.typeinfo.{BasicArrayTypeInfo, BasicTypeInfo, PrimitiveArrayTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.{MultisetTypeInfo, ObjectArrayTypeInfo}
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.functions.TableFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.types.{DataType, DataTypes}
+
+import java.util
 
 import scala.collection.JavaConverters._
 

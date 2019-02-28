@@ -38,7 +38,6 @@ import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -58,6 +57,7 @@ import org.apache.flink.table.runtime.join.stream.state.match.JoinKeyNotContainP
 import org.apache.flink.table.runtime.join.stream.state.match.JoinMatchStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.match.NonBatchOnlyEqualityConditionMatchStateHandler;
 import org.apache.flink.table.runtime.join.stream.state.match.WithoutPrimaryKeyMatchStateHandler;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 

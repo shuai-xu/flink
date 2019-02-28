@@ -25,11 +25,11 @@ import org.apache.flink.api.java.typeutils.GenericTypeInfo;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.api.Types;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.BinaryRowTest.MyObj;
 import org.apache.flink.table.dataformat.util.BaseRowUtil;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.table.typeutils.BaseRowComparator;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 

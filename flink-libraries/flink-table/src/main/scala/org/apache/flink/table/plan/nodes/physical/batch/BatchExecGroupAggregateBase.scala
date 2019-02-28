@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{InternalType, RowType}
 import org.apache.flink.table.api.{AggPhaseEnforcer, BatchTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.BatchExecAggregateCodeGen
@@ -30,6 +29,7 @@ import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil, FlinkRelOptUtil}
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
+import org.apache.flink.table.types.{InternalType, RowType}
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType

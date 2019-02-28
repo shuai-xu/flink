@@ -18,18 +18,18 @@
 
 package org.apache.flink.table.factories.utils
 
-import java.util
-
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.table.api.RichTableSchema
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator._
 import org.apache.flink.table.factories.utils.TestTableSinkFactory._
 import org.apache.flink.table.factories.{StreamTableSinkFactory, TableFactory}
 import org.apache.flink.table.sinks.{AppendStreamTableSink, StreamTableSink, TableSinkBase}
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.types.Row
+
+import java.util
 
 import scala.collection.mutable.ArrayBuffer
 

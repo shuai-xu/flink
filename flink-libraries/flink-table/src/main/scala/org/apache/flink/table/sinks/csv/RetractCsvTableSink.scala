@@ -22,10 +22,11 @@ import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, RetractStreamTableSink, TableSinkBase}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
+
 import java.lang.{Boolean => JBool}
 import java.util.TimeZone
 

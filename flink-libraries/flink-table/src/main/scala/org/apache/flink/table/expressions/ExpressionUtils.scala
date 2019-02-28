@@ -18,14 +18,14 @@
 
 package org.apache.flink.table.expressions
 
+import org.apache.flink.streaming.api.windowing.time.{Time => FlinkTime}
+import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.types.{DataTypes, InternalType}
+
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInteger, Long => JLong, Short => JShort}
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.{Date, Time, Timestamp}
 import java.time.Duration
-
-import org.apache.flink.streaming.api.windowing.time.{Time => FlinkTime}
-import org.apache.flink.table.api.ValidationException
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 
 object ExpressionUtils {
   /**

@@ -18,7 +18,7 @@
 package org.apache.flink.table.runtime.functions.tablefunctions
 
 import org.apache.flink.table.api.functions.TableFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.types.{DataType, DataTypes}
 
 class GenerateSeries extends TableFunction[Integer] {
   def eval(start: Integer, end: Integer): Unit = {

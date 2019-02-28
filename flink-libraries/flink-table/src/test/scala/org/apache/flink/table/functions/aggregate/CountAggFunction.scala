@@ -17,11 +17,11 @@
  */
 package org.apache.flink.table.functions.aggregate
 
-import java.lang.{Iterable => JIterable, Long => JLong}
-
 import org.apache.flink.api.java.tuple.{Tuple1 => JTuple1}
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.types.{DataType, DataTypes}
+
+import java.lang.{Iterable => JIterable, Long => JLong}
 
 /** The initial accumulator for count aggregate function */
 class CountAccumulator extends JTuple1[Long] {

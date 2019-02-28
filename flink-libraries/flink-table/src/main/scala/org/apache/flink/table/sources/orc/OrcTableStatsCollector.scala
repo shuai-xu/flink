@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.sources.orc
 
-import java.util
-import java.util.concurrent.{Callable, Executors, TimeUnit}
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import org.apache.flink.core.fs.{FileStatus, FileSystem, Path}
 import org.apache.flink.runtime.util.Hardware
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.util.Logging
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import org.apache.hadoop.conf.Configuration
 import org.apache.orc.impl.ColumnStatisticsImpl
 import org.apache.orc.{ColumnStatistics, DateColumnStatistics, DecimalColumnStatistics, DoubleColumnStatistics, IntegerColumnStatistics, OrcConf, OrcFile, StringColumnStatistics, TimestampColumnStatistics}
+
+import java.util
+import java.util.concurrent.{Callable, Executors, TimeUnit}
 
 import scala.collection.JavaConversions._
 

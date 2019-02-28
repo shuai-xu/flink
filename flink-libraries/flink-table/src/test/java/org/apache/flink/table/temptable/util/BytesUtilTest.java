@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.temptable.util;
 
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 
 import org.junit.Assert;

@@ -21,10 +21,10 @@ package org.apache.flink.table.runtime.batch.sql
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.plan.batch.sql.StringSplit
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util._
 
 import org.junit.{Before, Test}

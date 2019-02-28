@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.api.functions
 
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.expressions.{Expression, UnresolvedAggBufferReference, UnresolvedFieldReference}
+import org.apache.flink.table.types.InternalType
 
 /**
  * API for aggregation functions that are expressed in terms of expressions.

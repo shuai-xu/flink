@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.util
 
-import java.util.{ArrayList => JArrayList, List => JList}
 import org.apache.flink.api.common.io.statistics.BaseStatistics
 import org.apache.flink.api.common.io.{DefaultInputSplitAssigner, InputFormat}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
@@ -29,11 +28,13 @@ import org.apache.flink.core.io.{GenericInputSplit, InputSplit, InputSplitAssign
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
+import org.apache.flink.table.types.DataType
 import org.apache.flink.types.Row
+
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

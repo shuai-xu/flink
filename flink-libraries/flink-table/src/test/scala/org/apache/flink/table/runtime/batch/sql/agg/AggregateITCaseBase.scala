@@ -21,13 +21,13 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.types.{DataTypes, DecimalType}
 import org.apache.flink.table.api.{TableConfigOptions, TableException, Types}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sources.csv.CsvTableSource
+import org.apache.flink.table.types.{DataTypes, DecimalType}
 import org.apache.flink.types.Row
 
 import org.junit.{Before, Test}

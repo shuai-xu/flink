@@ -17,14 +17,14 @@
  */
 package org.apache.flink.table.plan.rules.physical.batch
 
-import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.InternalType
+import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil}
-import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
+import org.apache.flink.table.types.InternalType
 
 import org.apache.calcite.plan.RelOptRuleCall
 import org.apache.calcite.rel.`type`.RelDataType

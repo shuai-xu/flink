@@ -17,10 +17,8 @@
  */
 package org.apache.flink.table.api
 
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.api.functions.TemporalTableFunction
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Literal, Ordering, ResolvedFieldReference, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
@@ -28,7 +26,10 @@ import org.apache.flink.table.plan.ProjectionTranslator._
 import org.apache.flink.table.plan.logical.{Minus, _}
 import org.apache.flink.table.plan.schema.TableSourceSinkTable
 import org.apache.flink.table.sinks.{CollectRowTableSink, CollectTableSink, TableSink}
+import org.apache.flink.table.types.{DataType, InternalType, TimestampType}
 import org.apache.flink.types.Row
+
+import org.apache.calcite.rel.RelNode
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._

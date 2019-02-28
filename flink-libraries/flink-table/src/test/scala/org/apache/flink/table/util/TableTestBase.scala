@@ -30,7 +30,6 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JBatchTableEnvironment, StreamTableEnvironment => JStreamTableEnvironment}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment, StreamTableEnvironment, _}
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, TypeConverters}
 import org.apache.flink.table.errorcode.TableErrors
 
 import java.util.{ArrayList => JArrayList, HashSet => JHashSet}
@@ -44,6 +43,7 @@ import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.resource.batch.BatchRunningUnitBuildProcessor
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType, TypeConverters}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.rel.RelNode

@@ -19,11 +19,10 @@
 package org.apache.flink.table.codegen
 
 import org.apache.flink.table.api.TableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.runtime.io.ValuesInputFormat
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.types.TypeConverters
 
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.rel.`type`.RelDataType

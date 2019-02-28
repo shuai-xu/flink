@@ -20,12 +20,11 @@ package org.apache.flink.table.api.stream.table
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sources.csv.CsvTableSource
+import org.apache.flink.table.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.util._
 import org.apache.flink.types.Row
 

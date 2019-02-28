@@ -21,7 +21,6 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.newName
@@ -38,6 +37,7 @@ import org.apache.flink.table.plan.nodes.physical.batch.OverWindowMode.OverWindo
 import org.apache.flink.table.plan.util.AggregateUtil.{CalcitePair, transformToBatchAggregateInfoList}
 import org.apache.flink.table.plan.util.{AggregateUtil, FlinkRelOptUtil, OverAggregateUtil}
 import org.apache.flink.table.runtime.overagg._
+import org.apache.flink.table.types.{IntType, LongType, RowType, ShortType, TypeConverters}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.NodeResourceUtil
 

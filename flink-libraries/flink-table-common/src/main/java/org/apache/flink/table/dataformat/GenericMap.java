@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.types.InternalType;
 
 import java.util.HashMap;
 import java.util.Map;

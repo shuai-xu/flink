@@ -20,7 +20,6 @@ package org.apache.flink.table.plan
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala.{BatchTableEnvironment, _}
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{Table, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
@@ -32,6 +31,7 @@ import org.apache.flink.table.sinks.{BatchTableSink, CollectRowTableSink}
 import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.temptable.{FlinkTableServiceFactory, FlinkTableServiceFactoryDescriptor}
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.{CollectionBatchExecTable, TableProperties}
 import org.apache.flink.test.util.TestBaseUtils
 

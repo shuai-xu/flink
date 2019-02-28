@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.plan.nodes.calcite
 
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.sinks.TableSink
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 
 /**
   * Relational expression that write out data of input node into a [[TableSink]].

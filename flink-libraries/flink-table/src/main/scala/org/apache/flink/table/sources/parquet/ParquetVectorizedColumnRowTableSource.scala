@@ -23,15 +23,15 @@ import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{DataType, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch
+import org.apache.flink.table.types.{DataType, InternalType, RowType, TypeConverters}
 
 import _root_.java.util.{Set => JSet}
 
-import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
 
 /**
   * Creates a TableSource to scan an Parquet table based

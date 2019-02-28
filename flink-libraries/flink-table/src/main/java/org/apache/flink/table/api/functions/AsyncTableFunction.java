@@ -19,7 +19,7 @@
 package org.apache.flink.table.api.functions;
 
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.types.DataType;
 
 /**
  * Base class for a user-defined asynchronously table function (UDTF). This is similar to

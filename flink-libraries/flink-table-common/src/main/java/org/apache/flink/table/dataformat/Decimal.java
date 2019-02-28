@@ -17,9 +17,9 @@
 
 package org.apache.flink.table.dataformat;
 
-import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.Types;
+import org.apache.flink.table.types.DecimalType;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.Types;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

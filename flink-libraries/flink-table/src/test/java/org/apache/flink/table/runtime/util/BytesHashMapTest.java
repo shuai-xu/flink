@@ -23,12 +23,12 @@ import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.memory.MemoryManager;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.RowType;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.util.MutableObjectIterator;
 

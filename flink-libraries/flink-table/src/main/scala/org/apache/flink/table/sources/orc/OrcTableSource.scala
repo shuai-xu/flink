@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.sources.orc
 
-import java.util
-
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.tools.RelBuilder
 import org.apache.orc.storage.ql.io.sarg.SearchArgument
+
+import java.util
 
 /**
   * A [[BatchTableSource]] for Orc files.

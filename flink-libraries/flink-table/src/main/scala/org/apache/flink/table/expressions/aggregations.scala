@@ -17,21 +17,22 @@
  */
 package org.apache.flink.table.expressions
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.sql.fun._
-import org.apache.calcite.sql.SqlAggFunction
-import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.tools.RelBuilder.AggCall
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, MultisetType}
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.sql.AggSqlFunctions
 import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType, MultisetType}
 import org.apache.flink.table.typeutils.TypeCheckUtils
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.sql.SqlAggFunction
+import org.apache.calcite.sql.fun._
+import org.apache.calcite.tools.RelBuilder
+import org.apache.calcite.tools.RelBuilder.AggCall
 
 abstract sealed class Aggregation extends Expression {
 

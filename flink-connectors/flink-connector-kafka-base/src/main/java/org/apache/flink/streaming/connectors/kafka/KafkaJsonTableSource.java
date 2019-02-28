@@ -23,9 +23,9 @@ import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.formats.json.JsonRowDeserializationSchema;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.descriptors.ConnectorDescriptor;
 import org.apache.flink.table.sources.StreamTableSource;
+import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 

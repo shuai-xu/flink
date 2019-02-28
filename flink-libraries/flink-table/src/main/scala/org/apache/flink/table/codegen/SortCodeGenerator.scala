@@ -19,13 +19,13 @@
 package org.apache.flink.table.codegen
 
 import org.apache.flink.api.common.typeutils.TypeComparator
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.CodeGeneratorContext.BASE_ROW
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.dataformat.util.BinaryRowUtil
 import org.apache.flink.table.runtime.sort.{NormalizedKeyComputer, RecordComparator}
+import org.apache.flink.table.types.{ArrayType, DataTypes, DateType, DecimalType, InternalType, MapType, RowType, TimestampType}
 
 import scala.collection.mutable
 

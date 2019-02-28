@@ -21,11 +21,11 @@ package org.apache.flink.table.sources.parquet
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.{FileStatus, Path}
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.parquet.ParquetTableSink
+import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.util.NodeResourceUtil
 import org.apache.flink.test.util.TestBaseUtils
 

@@ -18,15 +18,19 @@
 
 package org.apache.flink.table.plan.metadata
 
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
+import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableSchema}
 import org.apache.flink.table.calcite.{FlinkCalciteCatalogReader, FlinkTypeSystem}
 import org.apache.flink.table.codegen.ExpressionReducer
 import org.apache.flink.table.plan.cost.FlinkStreamCostFactory
 import org.apache.flink.table.plan.stats.{ColumnStats, FlinkStatistic, TableStats}
 import org.apache.flink.table.sources.{StreamTableSource, TableSource}
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.util.{TableSchemaUtil, TestTableSourceTable}
 import org.apache.flink.table.validate.BuiltInFunctionCatalog
+import org.apache.flink.types.Row
+
 import com.google.common.collect.ImmutableSet
 import org.apache.calcite.config.{CalciteConnectionConfigImpl, CalciteConnectionProperty, Lex}
 import org.apache.calcite.jdbc.CalciteSchema
@@ -34,12 +38,9 @@ import org.apache.calcite.rel.`type`.RelDataTypeFactory
 import org.apache.calcite.schema.SchemaPlus
 import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.tools.{FrameworkConfig, Frameworks}
+
 import java.util
 import java.util.{Collections, Properties}
-
-import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.types.Row
 
 import scala.collection.JavaConversions._
 

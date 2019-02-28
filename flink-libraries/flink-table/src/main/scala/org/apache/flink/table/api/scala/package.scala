@@ -18,12 +18,12 @@
 package org.apache.flink.table.api
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.types.Row
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTableEnv}
-import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters, TypeInfoWrappedDataType}
+import org.apache.flink.table.types.{DataType, InternalType, TypeConverters, TypeInfoWrappedDataType}
+import org.apache.flink.types.Row
 
 import _root_.scala.language.implicitConversions
 

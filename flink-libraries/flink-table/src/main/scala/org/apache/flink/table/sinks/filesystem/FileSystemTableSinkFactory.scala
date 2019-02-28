@@ -21,15 +21,15 @@ package org.apache.flink.table.sinks.filesystem
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.factories.BatchTableSinkFactory
 import org.apache.flink.table.factories.csv.CsvOptions
 import org.apache.flink.table.sinks.filesystem.FileSystemOutputFormat.OutputSpec
-import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
 import org.apache.flink.table.sinks.filesystem.csv.CSVFormatFactory
+import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
+import org.apache.flink.table.types.{DataType, RowType}
 import org.apache.flink.table.util.TableProperties
 
 import java.util

@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.sinks.csv
 
-import java.util.TimeZone
-
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.java.io.AbstractCsvOutputFormat
 import org.apache.flink.core.fs.FileSystem.WriteMode
@@ -27,9 +25,11 @@ import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.OutputFormatSinkFunction
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks._
+import org.apache.flink.table.types.{DataType, RowType}
+
+import java.util.TimeZone
 
 /**
   * A simple [[TableSink]] to emit data as CSV files.

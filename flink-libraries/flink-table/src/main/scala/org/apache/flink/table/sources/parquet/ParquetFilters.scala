@@ -18,9 +18,10 @@
 
 package org.apache.flink.table.sources.parquet
 
-import org.apache.calcite.util.NlsString
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.expressions._
+import org.apache.flink.table.types.{DataTypes, InternalType}
+
+import org.apache.calcite.util.NlsString
 import org.apache.parquet.filter2.predicate.FilterApi._
 import org.apache.parquet.filter2.predicate.{FilterApi, FilterPredicate}
 import org.apache.parquet.io.api.Binary

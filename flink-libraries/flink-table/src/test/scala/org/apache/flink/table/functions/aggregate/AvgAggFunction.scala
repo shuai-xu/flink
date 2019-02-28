@@ -17,14 +17,15 @@
  */
 package org.apache.flink.table.functions.aggregate
 
-import java.lang.{Iterable => JIterable}
-import java.math.{BigDecimal, BigInteger, MathContext}
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType}
 import org.apache.flink.table.dataformat.Decimal
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType}
+
+import java.lang.{Iterable => JIterable}
+import java.math.{BigDecimal, BigInteger, MathContext}
 
 /** The initial accumulator for Integral Avg aggregate function */
 class IntegralAvgAccumulator extends JTuple2[Long, Long] {

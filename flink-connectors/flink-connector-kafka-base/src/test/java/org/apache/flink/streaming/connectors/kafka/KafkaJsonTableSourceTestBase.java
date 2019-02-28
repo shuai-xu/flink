@@ -21,10 +21,10 @@ package org.apache.flink.streaming.connectors.kafka;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.Types;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.sources.tsextractors.ExistingField;
 import org.apache.flink.table.sources.wmstrategies.AscendingTimestamps;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.TypeConverters;
 
 import org.junit.Test;
 

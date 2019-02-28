@@ -95,7 +95,7 @@ class TableSchema(object):
 
             j_table_schema_cls = TypesUtil.class_for_name('org.apache.flink.table.api.TableSchema')
             j_name_arr = TypesUtil._convert_py_list_to_java_array('java.lang.String', names)
-            j_type_arr = TypesUtil._convert_py_list_to_java_array('org.apache.flink.table.api.types.DataType', types)
+            j_type_arr = TypesUtil._convert_py_list_to_java_array('org.apache.flink.table.types.DataType', types)
 
             self._j_table_schema = j_table_schema_cls(j_name_arr, j_type_arr)
         if j_schema is not None:

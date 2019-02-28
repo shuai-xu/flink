@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.expressions
 
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.typeutils.TypeCheckUtils._
+import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
+
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.rex.{RexNode, RexSubQuery}
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
-import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.typeutils.TypeCheckUtils._
-import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
 case class In(expression: Expression, elements: Seq[Expression]) extends Expression  {
 

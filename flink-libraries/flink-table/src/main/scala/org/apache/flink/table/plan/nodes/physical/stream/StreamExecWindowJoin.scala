@@ -24,9 +24,8 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
 import org.apache.flink.streaming.api.operators.{StreamFlatMap, StreamMap, TwoInputStreamOperator}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation, TwoInputTransformation, UnionTransformation}
-import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
@@ -35,6 +34,7 @@ import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, StreamExecUtil, UpdatingPlanChecker}
 import org.apache.flink.table.runtime.KeyedCoProcessOperatorWithWatermarkDelay
 import org.apache.flink.table.runtime.join._
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Collector
 

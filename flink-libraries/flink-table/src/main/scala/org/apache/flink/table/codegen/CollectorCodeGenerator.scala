@@ -18,10 +18,10 @@
 package org.apache.flink.table.codegen
 
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.runtime.collector.{TableAsyncCollector, TableFunctionCollector}
+import org.apache.flink.table.types.InternalType
 
 /**
   * A code generator for generating [[org.apache.flink.util.Collector]]s.

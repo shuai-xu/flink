@@ -19,7 +19,6 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.table.api.dataview.Order
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
@@ -29,6 +28,7 @@ import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRul
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.runtime.aggregate.SorterHelper
 import org.apache.flink.table.runtime.{BinaryRowKeySelector, NullBinaryRowKeySelector}
+import org.apache.flink.table.types.{RowType, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptUtil}

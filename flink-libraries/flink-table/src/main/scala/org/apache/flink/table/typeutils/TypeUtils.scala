@@ -26,7 +26,7 @@ import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.api.java.typeutils.{PojoField, _}
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.table.api.Types._
-import org.apache.flink.table.api.types._
+import org.apache.flink.table.types.{ArrayType, DataType, DataTypes, DateType, GenericType, InternalType, PrimitiveType, RowType, TimestampType, TypeConverters, TypeInfoWrappedDataType}
 
 import scala.collection.mutable
 

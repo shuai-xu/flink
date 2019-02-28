@@ -21,16 +21,15 @@ package org.apache.flink.table.util
 import org.apache.flink.api.common.JobExecutionResult
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api._
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.plan.cost.{FlinkCostFactory, FlinkStreamCost}
-import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.table.plan.nodes.exec.ExecNode
 import org.apache.flink.table.plan.optimize.Optimizer
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
+import org.apache.flink.table.types.DataType
 
 import org.apache.calcite.rel.RelNode
 

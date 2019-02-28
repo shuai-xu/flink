@@ -18,6 +18,19 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.api.{Column, TableException, TableSchema}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.catalog.CatalogView
+import org.apache.flink.table.expressions._
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
+import org.apache.flink.table.plan.nodes.calcite.LogicalWatermarkAssigner
+import org.apache.flink.table.plan.schema._
+import org.apache.flink.table.sources.TableSourceUtil
+import org.apache.flink.table.types.DataTypes
+
+import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableList
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
@@ -27,17 +40,6 @@ import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.sql.{SemiJoinType, SqlLiteral}
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.shaded.guava18.com.google.common.collect.ImmutableList
-import org.apache.flink.table.api.{Column, TableException, TableSchema}
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
-import org.apache.flink.table.plan.nodes.calcite.LogicalWatermarkAssigner
-import org.apache.flink.table.plan.schema._
-import org.apache.flink.table.sources.TableSourceUtil
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.catalog.CatalogView
 
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Map => JMap}
 

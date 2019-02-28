@@ -23,10 +23,10 @@ import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, InternalType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch
+import org.apache.flink.table.types.{DataType, InternalType, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 /**

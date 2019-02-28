@@ -17,17 +17,6 @@
  */
 package org.apache.flink.table.plan.nodes.common
 
-import com.google.common.primitives.Primitives
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
-import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
-import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlKind
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.calcite.sql.validate.SqlValidatorUtil
-import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.mapping.IntPair
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.streaming.api.datastream.AsyncDataStream.OutputMode
@@ -38,7 +27,6 @@ import org.apache.flink.streaming.api.operators.async.AsyncWaitOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.functions.{AsyncTableFunction, CustomTypeDefinedFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, GenericType, InternalType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.TemporalJoinCodeGenerator._
@@ -52,9 +40,22 @@ import org.apache.flink.table.plan.util.TemporalJoinUtil._
 import org.apache.flink.table.plan.util.{CalcUtil, RexLiteralUtil}
 import org.apache.flink.table.runtime.join.{TemporalTableJoinAsyncRunner, TemporalTableJoinProcessRunner, TemporalTableJoinWithCalcAsyncRunner, TemporalTableJoinWithCalcProcessRunner}
 import org.apache.flink.table.sources.{LookupConfig, LookupableTableSource, TableSource}
+import org.apache.flink.table.types.{DataType, GenericType, InternalType, TypeConverters}
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.TableConnectorUtil
 import org.apache.flink.types.Row
+
+import com.google.common.primitives.Primitives
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField}
+import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
+import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.calcite.sql.validate.SqlValidatorUtil
+import org.apache.calcite.tools.RelBuilder
+import org.apache.calcite.util.mapping.IntPair
 
 import java.util
 import java.util.Collections

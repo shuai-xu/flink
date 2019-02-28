@@ -18,19 +18,19 @@
 
 package org.apache.flink.table.hive.functions;
 
-import org.apache.flink.table.api.types.BooleanType;
-import org.apache.flink.table.api.types.ByteArrayType;
-import org.apache.flink.table.api.types.ByteType;
-import org.apache.flink.table.api.types.DoubleType;
-import org.apache.flink.table.api.types.FloatType;
-import org.apache.flink.table.api.types.IntType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.LongType;
-import org.apache.flink.table.api.types.RowType;
-import org.apache.flink.table.api.types.ShortType;
-import org.apache.flink.table.api.types.StringType;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.types.BooleanType;
+import org.apache.flink.table.types.ByteArrayType;
+import org.apache.flink.table.types.ByteType;
+import org.apache.flink.table.types.DoubleType;
+import org.apache.flink.table.types.FloatType;
+import org.apache.flink.table.types.IntType;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.LongType;
+import org.apache.flink.table.types.RowType;
+import org.apache.flink.table.types.ShortType;
+import org.apache.flink.table.types.StringType;
 
 import org.apache.hadoop.hive.common.type.HiveChar;
 import org.apache.hadoop.hive.common.type.HiveDecimal;

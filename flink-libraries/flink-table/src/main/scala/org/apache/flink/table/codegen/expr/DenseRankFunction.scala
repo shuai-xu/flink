@@ -19,8 +19,8 @@
 package org.apache.flink.table.codegen.expr
 
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.expressions.{Literal, _}
+import org.apache.flink.table.types.InternalType
 
 /**
   * built-in dense_rank aggregate function

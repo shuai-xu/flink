@@ -18,7 +18,6 @@
 package org.apache.flink.table.plan
 
 import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
-import org.apache.flink.table.api.types.{DataType, InternalType, TimestampType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory, TableFactory}
 import org.apache.flink.table.plan.logical.LogicalNode
@@ -26,6 +25,7 @@ import org.apache.flink.table.plan.util.LogicalNodeUtil
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.TableServiceOptions
+import org.apache.flink.table.types.{DataType, InternalType, TimestampType}
 import org.apache.flink.table.util.TableProperties
 
 import _root_.scala.collection.JavaConverters._

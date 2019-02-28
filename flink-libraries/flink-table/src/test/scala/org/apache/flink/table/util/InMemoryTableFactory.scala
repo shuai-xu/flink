@@ -18,11 +18,6 @@
 
 package org.apache.flink.table.util
 
-import java.util
-
-import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.
-  {CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.descriptors.RowtimeValidator._
@@ -31,7 +26,10 @@ import org.apache.flink.table.descriptors.{DescriptorProperties, SchemaValidator
 import org.apache.flink.table.factories.{StreamTableSinkFactory, StreamTableSourceFactory, TableFactory}
 import org.apache.flink.table.sinks.StreamTableSink
 import org.apache.flink.table.sources.StreamTableSource
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
+
+import java.util
 
 /**
   * Factory for creating stream table sources and sinks.

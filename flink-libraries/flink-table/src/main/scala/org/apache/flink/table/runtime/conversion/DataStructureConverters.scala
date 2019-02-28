@@ -18,16 +18,6 @@
 
 package org.apache.flink.table.runtime.conversion
 
-import java.math.{BigDecimal => JBigDecimal}
-import java.sql.{Date, Time, Timestamp}
-import java.util
-import java.util.{Map => JavaMap}
-
-import javax.annotation.Nullable
-
-import scala.collection.convert.WrapAsJava
-import scala.collection.JavaConverters._
-import org.apache.commons.codec.binary.Base64
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.{BasicArrayTypeInfo, BasicTypeInfo, PrimitiveArrayTypeInfo}
 import org.apache.flink.api.common.typeutils.TypeSerializer
@@ -36,7 +26,6 @@ import org.apache.flink.api.java.typeutils._
 import org.apache.flink.api.scala.typeutils.{CaseClassSerializer, CaseClassTypeInfo}
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataTypes, _}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext}
@@ -44,11 +33,23 @@ import org.apache.flink.table.dataformat.BinaryArray.calculateElementSize
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions
+import org.apache.flink.table.types.{ArrayType, DataType, DataTypes, DateType, DecimalType, GenericType, InternalType, MapType, RowType, TimestampType, TypeConverters, TypeInfoWrappedDataType}
 import org.apache.flink.table.typeutils.TypeUtils._
 import org.apache.flink.table.typeutils._
 import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
 
+import org.apache.commons.codec.binary.Base64
+
+import javax.annotation.Nullable
+
+import java.math.{BigDecimal => JBigDecimal}
+import java.sql.{Date, Time, Timestamp}
+import java.util
+import java.util.{Map => JavaMap}
+
+import scala.collection.JavaConverters._
+import scala.collection.convert.WrapAsJava
 import scala.reflect.ClassTag
 
 /**

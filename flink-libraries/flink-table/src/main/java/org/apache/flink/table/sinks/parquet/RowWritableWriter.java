@@ -18,13 +18,13 @@
 
 package org.apache.flink.table.sinks.parquet;
 
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.sources.parquet.ParquetSchemaConverter;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.DecimalType;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.RowType;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.parquet.io.api.Binary;

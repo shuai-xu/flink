@@ -19,14 +19,14 @@
 package org.apache.flink.table.api.dataview
 
 
+import org.apache.flink.api.common.typeinfo.TypeInfo
+import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.types.DataType
+import org.apache.flink.table.typeutils.{OrderedTypeUtils, SortedMapViewTypeInfoFactory}
+
 import java.lang.{Iterable => JIterable}
 import java.util
 import java.util.Comparator
-
-import org.apache.flink.api.common.typeinfo.TypeInfo
-import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.typeutils.{OrderedTypeUtils, SortedMapViewTypeInfoFactory}
 
 /**
   * A [[SortedMapView]] provides Map functionality for accumulators used by user-defined aggregate

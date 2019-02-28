@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.dataformat._
+import org.apache.flink.table.types.{DataTypes, InternalType, RowType}
 
 import scala.collection.mutable
 

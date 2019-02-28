@@ -23,18 +23,19 @@ import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.BinaryString
 import org.apache.flink.table.expressions.utils.{Func1, Func18, RichFunc2}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedTableFunctions.JavaTableFunc0
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.table.util._
 import org.apache.flink.types.Row
+
 import org.junit.{Before, Test}
 
 import scala.collection.Seq

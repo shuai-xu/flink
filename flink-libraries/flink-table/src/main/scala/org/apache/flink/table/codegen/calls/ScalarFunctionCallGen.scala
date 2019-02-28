@@ -19,7 +19,6 @@
 package org.apache.flink.table.codegen.calls
 
 import org.apache.flink.table.api.functions.{CustomTypeDefinedFunction, ScalarFunction}
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.calls.ScalarFunctionCallGen.prepareUDFArgs
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
@@ -27,6 +26,7 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.runtime.conversion.DataStructureConverters._
 import org.apache.flink.table.runtime.functions.python.PythonScalarFunction
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.typeutils.TypeUtils
 
 /**

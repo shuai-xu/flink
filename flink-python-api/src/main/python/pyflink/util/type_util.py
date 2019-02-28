@@ -46,7 +46,7 @@ class TypesUtil(object):
         if (_sql_basic_types_py2j_map is None) or (_sql_complex_type_py2j_map is None):
             with _init_lock:
                 _gateway = get_gateway()
-                j_sql_types = _gateway.jvm.org.apache.flink.table.api.types.DataTypes
+                j_sql_types = _gateway.jvm.org.apache.flink.table.types.DataTypes
                 j_sql_decimal = _gateway.jvm.org.apache.flink.table.api.types.DECIMAL
                 _sql_basic_types_py2j_map = {
                     DataTypes.STRING: j_sql_types.STRING,
@@ -69,7 +69,7 @@ class TypesUtil(object):
 
                 _sql_complex_type_py2j_map = {
                     DecimalType: j_sql_decimal,
-                    RowType: _gateway.jvm.org.apache.flink.table.api.types.RowType
+                    RowType: _gateway.jvm.org.apache.flink.table.types.RowType
                 }
 
         # TODO: other complex types
@@ -79,7 +79,7 @@ class TypesUtil(object):
         if isinstance(py_sql_type, RowType):
             j_types = [_sql_basic_types_py2j_map[pt] for pt in py_sql_type.data_types]
             j_types_arr = TypesUtil._convert_py_list_to_java_array(
-                'org.apache.flink.table.api.types.DataType',
+                'org.apache.flink.table.types.DataType',
                 j_types
             )
             j_names_arr = TypesUtil._convert_py_list_to_java_array(
@@ -98,7 +98,7 @@ class TypesUtil(object):
         if (_sql_basic_types_j2py_map is None) or (_sql_complex_type_j2py_map is None):
             with _init_lock:
                 _gateway = get_gateway()
-                j_data_types = _gateway.jvm.org.apache.flink.table.api.types.DataTypes
+                j_data_types = _gateway.jvm.org.apache.flink.table.types.DataTypes
                 # j_sql_decimal = _gateway.jvm.org.apache.flink.table.api.types.DECIMAL
                 _sql_basic_types_j2py_map = {
                     j_data_types.STRING: DataTypes.STRING,

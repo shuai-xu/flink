@@ -17,12 +17,6 @@
  */
 package org.apache.flink.table.runtime.harness
 
-import java.lang.{Integer => JInt, Long => JLong}
-import java.util.concurrent.ConcurrentLinkedQueue
-import org.apache.calcite.rel.core.JoinInfo
-import org.apache.calcite.rex.{RexBuilder, RexNode}
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.calcite.util.ImmutableIntList
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.functions.KeySelector
@@ -31,7 +25,6 @@ import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
-import org.apache.flink.table.api.types.{DataType, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.api.{TableConfig, Types, ValidationException}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.dataformat.BinaryString.fromString
@@ -44,14 +37,22 @@ import org.apache.flink.table.plan.util.TemporalJoinUtil.TEMPORAL_JOIN_CONDITION
 import org.apache.flink.table.runtime.BaseRowKeySelector
 import org.apache.flink.table.runtime.utils.BaseRowHarnessAssertor
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.types.{DataType, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 
+import org.apache.calcite.rel.core.JoinInfo
+import org.apache.calcite.rex.{RexBuilder, RexNode}
+import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.calcite.util.ImmutableIntList
 import org.hamcrest.CoreMatchers
 import org.hamcrest.Matchers.{endsWith, startsWith}
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+import java.lang.{Integer => JInt, Long => JLong}
+import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer

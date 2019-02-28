@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.sinks.parquet;
 
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.types.InternalType;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.parquet.hadoop.api.WriteSupport;

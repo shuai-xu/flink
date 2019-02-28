@@ -87,8 +87,8 @@ Calc(select=[a, b, c, CAST(1000) AS f, CAST(1500) AS f500], where=[AND(>(a, 1000
   <TestCase name="testReduceConstantUdfForBatchTableAPI">
     <Resource name="planBefore">
       <![CDATA[
-LogicalProject(a=[$0], b=[$1], c=[$2], f=[AS(org$apache$flink$table$plan$ConstantFunc$5a26fad18d716041a0b18c33d798679b(), 'f')], f500=[AS(org$apache$flink$table$plan$ConstantFunc$5a26fad18d716041a0b18c33d798679b(500), 'f500')])
-+- LogicalFilter(condition=[AND(>($0, org$apache$flink$table$plan$ConstantFunc$5a26fad18d716041a0b18c33d798679b()), <($1, org$apache$flink$table$plan$ConstantFunc$5a26fad18d716041a0b18c33d798679b(500)), =(org$apache$flink$table$plan$ConstantFunc$5a26fad18d716041a0b18c33d798679b(), 1000))])
+LogicalProject(a=[$0], b=[$1], c=[$2], f=[AS(org$apache$flink$table$plan$ConstantFunc$d98178b3255bab31986baaf2a0c9be00(), 'f')], f500=[AS(org$apache$flink$table$plan$ConstantFunc$d98178b3255bab31986baaf2a0c9be00(500), 'f500')])
++- LogicalFilter(condition=[AND(>($0, org$apache$flink$table$plan$ConstantFunc$d98178b3255bab31986baaf2a0c9be00()), <($1, org$apache$flink$table$plan$ConstantFunc$d98178b3255bab31986baaf2a0c9be00(500)), =(org$apache$flink$table$plan$ConstantFunc$d98178b3255bab31986baaf2a0c9be00(), 1000))])
    +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
@@ -162,7 +162,7 @@ Calc(select=[a, CAST(1) AS f1, CAST(2) AS f2, CAST(3) AS f3, CAST(4) AS f4, CAST
   <TestCase name="testReduceIllegalConstantUdfForBatchTableAPI">
     <Resource name="planBefore">
       <![CDATA[
-LogicalProject(a=[$0], f1=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getMetricGroup'), 'f1')], f2=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getCachedFile'), 'f2')], f3=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getNumberOfParallelSubtasks'), 'f3')], f4=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getIndexOfThisSubtask'), 'f4')], f5=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getIntCounter'), 'f5')], f6=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getLongCounter'), 'f6')], f7=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getDoubleCounter'), 'f7')], f8=[AS(org$apache$flink$table$plan$IllegalConstantFunc$990d9a6e353c42d46bd9b5f473903ef8('getHistogram'), 'f8')])
+LogicalProject(a=[$0], f1=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getMetricGroup'), 'f1')], f2=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getCachedFile'), 'f2')], f3=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getNumberOfParallelSubtasks'), 'f3')], f4=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getIndexOfThisSubtask'), 'f4')], f5=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getIntCounter'), 'f5')], f6=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getLongCounter'), 'f6')], f7=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getDoubleCounter'), 'f7')], f8=[AS(org$apache$flink$table$plan$IllegalConstantFunc$59fa3042e6387395270ae1b273417846('getHistogram'), 'f8')])
 +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>

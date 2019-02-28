@@ -18,13 +18,10 @@
 
 package org.apache.flink.table.factories
 
-import java.util
-
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.table.descriptors.{ConnectorDescriptorValidator, FormatDescriptorValidator}
@@ -32,11 +29,15 @@ import org.apache.flink.table.factories.csv.CsvTableFactory
 import org.apache.flink.table.factories.orc.OrcTableFactory
 import org.apache.flink.table.factories.parquet.ParquetTableFactory
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.binaryRow
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.junit.rules.TemporaryFolder
 import org.junit.{After, Before, Rule, Test}
+
+import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.Seq

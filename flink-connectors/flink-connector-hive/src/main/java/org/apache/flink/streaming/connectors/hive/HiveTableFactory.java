@@ -22,8 +22,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSourceParser;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.catalog.FlinkCatalogException;
 import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
@@ -33,6 +31,8 @@ import org.apache.flink.table.factories.BatchTableSourceFactory;
 import org.apache.flink.table.factories.TableSourceParserFactory;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.table.util.TableProperties;
 
 import org.apache.hadoop.hive.common.StatsSetupConst;

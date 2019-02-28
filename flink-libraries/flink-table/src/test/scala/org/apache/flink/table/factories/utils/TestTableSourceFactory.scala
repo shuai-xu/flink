@@ -18,19 +18,19 @@
 
 package org.apache.flink.table.factories.utils
 
-import java.util
-
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.RichTableSchema
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.factories.utils.TestTableSinkFactory.CONNECTOR_TYPE_VALUE_TEST
 import org.apache.flink.table.factories.{StreamTableSourceFactory, TableFactory}
 import org.apache.flink.table.sources.StreamTableSource
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.{TableProperties, TableSchemaUtil}
 import org.apache.flink.types.Row
+
 import java.lang.{Integer => JInt, Long => JLong}
+import java.util
 
 /**
   * Table source factory for testing.

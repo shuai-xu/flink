@@ -18,26 +18,26 @@
 
 package org.apache.flink.table.runtime.batch.table
 
-import java.sql.Timestamp
-import java.util
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.ScalarFunction
-import org.apache.flink.table.api.types.DataTypes._
-import org.apache.flink.table.api.types.DecimalType
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils.{Func13, SplitUDF}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.types.DataTypes._
+import org.apache.flink.table.types.DecimalType
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.test.util.TestBaseUtils.compareResultAsText
 import org.apache.flink.types.Row
 
-import org.junit._
 import org.junit.Assert.assertEquals
-import org.junit.runners.Parameterized
+import org.junit._
+
+import java.sql.Timestamp
+import java.util
 
 import scala.collection.JavaConverters._
 import scala.collection.{Seq, mutable}

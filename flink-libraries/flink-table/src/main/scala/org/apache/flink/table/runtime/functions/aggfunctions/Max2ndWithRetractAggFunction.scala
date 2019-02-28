@@ -17,15 +17,15 @@
  */
 package org.apache.flink.table.runtime.functions.aggfunctions
 
-import java.math.BigDecimal
-import java.util.{HashMap => JHashMap}
-import java.lang.{Iterable => JIterable}
-
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.BinaryString
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, InternalType, MapType}
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
+
+import java.lang.{Iterable => JIterable}
+import java.math.BigDecimal
+import java.util.{HashMap => JHashMap}
 
 /** The initial accumulator for Max2nd with retraction aggregate function */
 class Max2ndWithRetractAccumulator[T] extends JTuple3[T, T, JHashMap[T, Long]]

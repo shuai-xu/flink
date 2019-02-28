@@ -19,9 +19,10 @@
 package org.apache.flink.table.expressions
 
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.utils.RowTypeTestBase
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.DateTimeTestUtil._
+
 import org.junit.Test
 
 class RowTypeTest extends RowTypeTestBase {

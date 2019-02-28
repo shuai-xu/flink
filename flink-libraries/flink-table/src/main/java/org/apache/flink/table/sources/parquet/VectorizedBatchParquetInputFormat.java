@@ -20,9 +20,9 @@ package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.TypeConverters;
 
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.parquet.filter2.predicate.FilterPredicate;

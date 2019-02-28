@@ -18,16 +18,14 @@
 
 package org.apache.flink.table.codegen.calls
 
-import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Short => JShort,
-  Integer => JInt, Long => JLong, Float => JFloat, Double => JDouble}
-import java.lang.reflect.Method
-
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.qualifyMethod
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
-import org.apache.flink.table.codegen.calls.CallGenerator.{generateCallIfArgsNotNull,
-  generateCallIfArgsNullable}
+import org.apache.flink.table.codegen.calls.CallGenerator.{generateCallIfArgsNotNull, generateCallIfArgsNullable}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedExpression}
+import org.apache.flink.table.types.{DataTypes, InternalType}
+
+import java.lang.reflect.Method
+import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 
 /**
   * Generates a function call by using a [[java.lang.reflect.Method]].

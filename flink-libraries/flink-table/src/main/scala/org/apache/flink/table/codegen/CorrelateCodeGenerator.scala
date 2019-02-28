@@ -21,8 +21,7 @@ package org.apache.flink.table.codegen
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType, TypeConverters}
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException, TableSchema}
+import org.apache.flink.table.api.{TableConfig, TableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.generateOneInputStreamOperator
@@ -35,12 +34,13 @@ import org.apache.flink.table.plan.util.CorrelateUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.DataStructureConverters._
 import org.apache.flink.table.runtime.util.StreamRecordCollector
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.types.{DataType, InternalType, RowType, TypeConverters}
+import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.util.TableSchemaUtil
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
 import org.apache.calcite.sql.SemiJoinType
-import org.apache.flink.table.util.TableSchemaUtil
 
 import scala.collection.JavaConversions._
 

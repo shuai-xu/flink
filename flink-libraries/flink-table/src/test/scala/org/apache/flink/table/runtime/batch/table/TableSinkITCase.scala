@@ -18,19 +18,20 @@
 
 package org.apache.flink.table.runtime.batch.table
 
-import java.io.{ByteArrayOutputStream, File, PrintStream}
-
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.csv.CsvTableSink
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.CollectionBatchExecTable
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
+
+import java.io.{ByteArrayOutputStream, File, PrintStream}
 
 class TableSinkITCase extends BatchTestBase {
 

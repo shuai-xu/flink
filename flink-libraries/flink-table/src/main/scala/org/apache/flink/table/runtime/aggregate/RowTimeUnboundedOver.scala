@@ -17,20 +17,20 @@
  */
 package org.apache.flink.table.runtime.aggregate
 
-import java.lang.{Long => JLong}
-import java.util.{ArrayList => JArrayList, LinkedList => JLinkedList, List => JList}
 import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
-import org.apache.flink.table.api.types.{InternalType, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.types.{InternalType, RowType, TypeConverters}
 import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.Collector
+
+import java.lang.{Long => JLong}
+import java.util.{ArrayList => JArrayList, LinkedList => JLinkedList, List => JList}
 
 
 /**

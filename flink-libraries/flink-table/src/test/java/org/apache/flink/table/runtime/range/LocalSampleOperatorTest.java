@@ -26,13 +26,13 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTaskTestHarness;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.RowType;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.CodeGeneratorContext;
 import org.apache.flink.table.codegen.GeneratedProjection;
 import org.apache.flink.table.codegen.ProjectionCodeGenerator;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.RowType;
+import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
 import org.junit.Test;

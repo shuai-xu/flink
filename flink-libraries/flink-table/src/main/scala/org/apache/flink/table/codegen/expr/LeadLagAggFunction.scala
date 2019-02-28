@@ -18,9 +18,9 @@
 package org.apache.flink.table.codegen.expr
 
 import org.apache.flink.table.api.functions.DeclarativeAggregateFunction
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.runtime.overagg.OverWindowFrame
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 
 /**
  * LEAD and LAG aggregate functions return the value of given expression evaluated at given offset.

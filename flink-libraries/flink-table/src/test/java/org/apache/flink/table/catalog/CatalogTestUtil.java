@@ -23,9 +23,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.catalog.config.CatalogTableConfig;
 import org.apache.flink.table.plan.stats.TableStats;
+import org.apache.flink.table.types.TypeInfoWrappedDataType;
 import org.apache.flink.table.util.TableSchemaUtil;
 import org.apache.flink.types.Row;
 

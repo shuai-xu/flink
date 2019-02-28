@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.api.batch.table
 
-import java.sql.Timestamp
 import org.apache.flink.api.java.typeutils.GenericTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.runtime.utils.CommonTestData.NonPojo
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.table.util.TableTestBase
 
 import org.junit.{Ignore, Test}
+
+import java.sql.Timestamp
 
 class SetOperatorsTest extends TableTestBase {
 

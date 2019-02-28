@@ -30,7 +30,6 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, TableFunction, UserDefinedFunction}
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnvironment, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnvironment, StreamTableEnvironment => ScalaStreamTableEnv, _}
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite._
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.catalog.config.CatalogTableConfig
@@ -52,10 +51,10 @@ import org.apache.flink.table.plan.util.SubplanReuseUtil
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.FlinkTableServiceManager
+import org.apache.flink.table.types.{DataType, DateType, GenericType, InternalType, RowType, TimestampType}
 import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
 import org.apache.flink.table.util.PlanUtil.dumpExecNodes
-import org.apache.flink.table.validate.{BuiltInFunctionCatalog, FunctionCatalog}
+import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
 
 import org.apache.calcite.config.Lex
 import org.apache.calcite.plan.{Contexts, RelOptPlanner}
@@ -73,8 +72,7 @@ import org.apache.commons.lang3.StringUtils
 
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util
-import _root_.java.util.concurrent.atomic.AtomicInteger
-import _root_.java.util.concurrent.atomic.AtomicBoolean
+import _root_.java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConversions._

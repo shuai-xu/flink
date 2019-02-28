@@ -21,7 +21,6 @@ package org.apache.flink.table.factories.orc;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.api.RichTableSchema;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.ColumnarRow;
 import org.apache.flink.table.descriptors.FileSystemValidator;
@@ -33,6 +32,7 @@ import org.apache.flink.table.sinks.orc.OrcTableSink;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.sources.orc.OrcVectorizedColumnRowTableSource;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.util.StringUtils;
 

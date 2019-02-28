@@ -19,12 +19,6 @@
 
 package org.apache.flink.table.functions.utils
 
-import com.google.common.primitives.Primitives
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
-import org.apache.calcite.rex.{RexLiteral, RexNode}
-import org.apache.calcite.sql.`type`.SqlTypeName
-import org.apache.calcite.sql.{SqlFunction, SqlOperatorBinding}
-import org.apache.commons.codec.binary.Base64
 import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils._
@@ -32,16 +26,23 @@ import org.apache.flink.table.api.functions._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.expressions._
-import org.apache.flink.table.plan.logical._
-import org.apache.flink.table.plan.schema.DeferredTypeFlinkTableFunction
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.expressions._
 import org.apache.flink.table.hive.functions._
-import org.apache.flink.table.api.types._
+import org.apache.flink.table.plan.logical._
+import org.apache.flink.table.plan.schema.DeferredTypeFlinkTableFunction
+import org.apache.flink.table.types.{BooleanType, ByteArrayType, ByteType, DataType, DateType, DecimalType, DoubleType, FloatType, GenericType, IntType, InternalType, LongType, RowType, ShortType, StringType, TimeType, TimestampType, TypeInfoWrappedDataType}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
 import org.apache.flink.util.InstantiationUtil
+
+import com.google.common.primitives.Primitives
+import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
+import org.apache.calcite.rex.{RexLiteral, RexNode}
+import org.apache.calcite.sql.`type`.SqlTypeName
+import org.apache.calcite.sql.{SqlFunction, SqlOperatorBinding}
+import org.apache.commons.codec.binary.Base64
 import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
 import org.apache.hadoop.hive.ql.udf.generic.{GenericUDAFResolver2, GenericUDF, GenericUDTF}
 

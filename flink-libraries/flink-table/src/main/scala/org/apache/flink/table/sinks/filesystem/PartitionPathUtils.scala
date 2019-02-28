@@ -18,11 +18,12 @@
 
 package org.apache.flink.table.sinks.filesystem
 
-import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, RowType}
+
+import org.apache.calcite.avatica.util.DateTimeUtils
 import org.apache.hadoop.util.Shell
 
 import java.util.TimeZone

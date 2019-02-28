@@ -17,12 +17,13 @@
  */
 package org.apache.flink.table.codegen
 
-import java.lang.{Integer => JInt, Long => JLong}
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
+import org.apache.flink.table.types.{DataTypes, InternalType, RowType}
 
 import org.junit.Assert.{assertFalse, assertTrue}
 import org.junit.Test
+
+import java.lang.{Integer => JInt, Long => JLong}
 
 /**
   * Test for [[EqualiserCodeGenerator]].

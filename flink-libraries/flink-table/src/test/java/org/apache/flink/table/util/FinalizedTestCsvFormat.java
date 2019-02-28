@@ -20,8 +20,8 @@ package org.apache.flink.table.util;
 
 import org.apache.flink.api.common.io.FinalizeOnMaster;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.sinks.csv.BaseRowCsvOutputFormat;
+import org.apache.flink.table.types.InternalType;
 
 import java.io.File;
 import java.io.IOException;

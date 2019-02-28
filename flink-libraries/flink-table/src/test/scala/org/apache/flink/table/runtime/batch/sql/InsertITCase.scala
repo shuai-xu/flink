@@ -18,9 +18,10 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.sinks.CollectRowTableSink
+import org.apache.flink.table.types.DataType
+
 import org.junit._
 
 class InsertITCase extends BatchTestBase {

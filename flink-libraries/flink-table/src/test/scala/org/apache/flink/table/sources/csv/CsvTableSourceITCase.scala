@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.sources.csv
 
-import java.io.File
-import java.util.Collections
-
 import org.apache.flink.core.fs.FileSystem.WriteMode
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.sinks.csv.CsvTableSink
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row
+
 import org.junit.{Assert, Test}
+
+import java.io.File
+import java.util.Collections
 
 import scala.collection.JavaConverters._
 

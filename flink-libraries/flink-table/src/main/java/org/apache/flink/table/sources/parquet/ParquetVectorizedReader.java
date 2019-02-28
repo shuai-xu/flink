@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.sources.parquet;
 
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
+import org.apache.flink.table.types.InternalType;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;

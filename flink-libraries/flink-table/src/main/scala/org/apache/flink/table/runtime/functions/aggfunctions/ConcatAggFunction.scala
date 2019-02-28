@@ -17,15 +17,16 @@
  */
 package org.apache.flink.table.runtime.functions.aggfunctions
 
-import java.lang.{Iterable => JIterable}
-import java.util.{List => JList}
 import org.apache.flink.table.api.dataview.ListView
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
-import org.apache.flink.table.runtime.functions.aggfunctions.ConcatAggFunction._
 import org.apache.flink.table.dataformat.{BinaryString, GenericRow}
+import org.apache.flink.table.runtime.functions.aggfunctions.ConcatAggFunction._
+import org.apache.flink.table.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.typeutils.BinaryStringTypeInfo
+
+import java.lang.{Iterable => JIterable}
+import java.util.{List => JList}
 
 /**
   * built-in concat aggregate function

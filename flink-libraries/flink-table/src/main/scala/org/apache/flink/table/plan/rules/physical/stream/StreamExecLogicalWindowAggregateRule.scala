@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.plan.rules.physical.stream
 
-import java.math.{BigDecimal => JBigDecimal}
-
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.table.api.scala.{Session, Slide, Tumble}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableException, ValidationException, WindowExpression}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions.{Literal, ResolvedFieldReference, WindowReference}
 import org.apache.flink.table.plan.rules.physical.LogicalWindowAggregateRule
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.validate.BasicOperatorTable
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.`type`.SqlTypeName
+
+import java.math.{BigDecimal => JBigDecimal}
 
 class StreamExecLogicalWindowAggregateRule
   extends LogicalWindowAggregateRule("StreamExecLogicalWindowAggregateRule") {

@@ -19,13 +19,13 @@
 package org.apache.flink.table.sources.parquet;
 
 import org.apache.flink.core.fs.FileInputSplit;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters;
 import org.apache.flink.table.sinks.parquet.RowParquetOutputFormat;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.RowType;
 import org.apache.flink.types.Row;
 
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;

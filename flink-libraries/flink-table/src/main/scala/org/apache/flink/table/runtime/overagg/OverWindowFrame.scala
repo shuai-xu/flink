@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.runtime.overagg
 
-import java.util
-import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedAggsHandleFunction, GeneratedBoundComparator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
 import org.apache.flink.table.runtime.util.ResettableExternalBuffer
-import org.apache.flink.table.typeutils.{AbstractRowSerializer, TypeUtils}
+import org.apache.flink.table.types.{DataTypes, RowType}
+import org.apache.flink.table.typeutils.AbstractRowSerializer
+
+import java.util
 
 /**
  * A window frame calculates the results for those records belong to a window frame.

@@ -24,9 +24,9 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableException, TableSchema}
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.BatchTableSource
+import org.apache.flink.table.types.DataType
 import org.apache.flink.types.Row
 
 class TestTableSourceWithFieldNullables(

@@ -17,20 +17,22 @@
  */
 package org.apache.flink.table.runtime.stream.sql
 
-import java.lang.{Integer => JInt}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.utils.TemporalTableUtils._
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendSink, TestingRetractSink}
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.types.Row
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
+
+import java.lang.{Integer => JInt}
 
 class TemporalTableJoinITCase extends StreamingTestBase {
 

@@ -17,22 +17,24 @@
  */
 package org.apache.flink.table.runtime.utils
 
-import java.lang.{Long => JLong}
-import java.util.Collections
-import java.util.concurrent.{CompletableFuture, ExecutorService, Executors}
-import java.util.function.{Consumer, Supplier}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.api.functions.{AsyncTableFunction, CustomTypeDefinedFunction, FunctionContext, TableFunction}
-import org.apache.flink.table.api.types.{DataType, TypeConverters}
 import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow}
 import org.apache.flink.table.sources._
+import org.apache.flink.table.types.{DataType, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableSchemaUtil
+
 import org.junit.Assert
+
+import java.lang.{Long => JLong}
+import java.util.Collections
+import java.util.concurrent.{CompletableFuture, ExecutorService, Executors}
+import java.util.function.{Consumer, Supplier}
 
 object TemporalTableUtils {
 

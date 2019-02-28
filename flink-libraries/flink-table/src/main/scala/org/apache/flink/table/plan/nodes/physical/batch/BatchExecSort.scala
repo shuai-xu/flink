@@ -21,7 +21,6 @@ import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{GeneratedSorter, SortCodeGenerator}
@@ -33,6 +32,7 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.SortOperator
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.NodeResourceUtil
 

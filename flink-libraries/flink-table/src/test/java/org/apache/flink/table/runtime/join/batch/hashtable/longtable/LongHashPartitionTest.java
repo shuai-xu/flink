@@ -20,11 +20,11 @@ package org.apache.flink.table.runtime.join.batch.hashtable.longtable;
 
 import org.apache.flink.api.common.io.blockcompression.BlockCompressionFactory;
 import org.apache.flink.core.memory.MemorySegment;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.dataformat.BinaryRowWriter;
 import org.apache.flink.table.runtime.sort.InMemorySortTest;
 import org.apache.flink.table.runtime.util.RowIterator;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 
 import org.junit.Assert;

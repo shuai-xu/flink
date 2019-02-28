@@ -17,14 +17,13 @@
  */
 package org.apache.flink.table.runtime.batch.sql.agg
 
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.CommonTestData
+import org.apache.flink.table.types.DataTypes
 
 import org.junit.{Before, Test}
 
-import _root_.scala.collection.JavaConverters._
 import scala.collection.Seq
 
 class FlinkAggregateRemoveRuleITCase extends BatchTestBase {

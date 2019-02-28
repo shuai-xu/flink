@@ -18,23 +18,25 @@
 
 package org.apache.flink.table.plan.util
 
-import java.math.{BigInteger => JBigInteger}
-import java.util.{ArrayList => JArrayList, List => JList}
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.functions.FlatMapFunction
 import org.apache.flink.api.common.functions.util.ListCollector
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator}
-import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
+import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.sources.Partition
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Preconditions
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.tools.RelBuilder
+
+import java.math.{BigInteger => JBigInteger}
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConverters._
 

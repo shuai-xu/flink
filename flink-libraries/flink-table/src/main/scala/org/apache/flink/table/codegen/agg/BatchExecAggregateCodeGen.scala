@@ -18,25 +18,24 @@
 
 package org.apache.flink.table.codegen.agg
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator.STREAM_RECORD
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression, GeneratedOperator, _}
+import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.DataStructureConverters._
-import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.types.{ArrayType, DataTypes, InternalType, MapType, RowType, StringType}
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.tools.RelBuilder
 
 import scala.collection.JavaConverters._
 

@@ -19,12 +19,12 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.Logging
 
 import org.apache.calcite.rel.`type`.RelDataType

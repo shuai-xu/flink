@@ -18,14 +18,15 @@
 
 package org.apache.flink.table.runtime.aggfunctions
 
-import java.math.{BigDecimal => JBigDecimal}
-import java.util
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataTypes, GenericType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal}
 import org.apache.flink.table.runtime.functions.aggfunctions.{CollectAccumulator, CollectAggFunction}
+import org.apache.flink.table.types.{DataTypes, GenericType}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
+
+import java.math.{BigDecimal => JBigDecimal}
+import java.util
 
 import scala.collection.JavaConverters._
 

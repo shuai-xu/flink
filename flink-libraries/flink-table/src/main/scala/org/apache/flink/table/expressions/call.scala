@@ -17,10 +17,17 @@
  */
 package org.apache.flink.table.expressions
 
-import java.util
-import java.math.BigDecimal
+import org.apache.flink.table.api._
+import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
+import org.apache.flink.table.api.scala.{CURRENT_ROW, UNBOUNDED_ROW}
+import org.apache.flink.table.calcite.{FlinkPlannerImpl, FlinkTypeFactory}
+import org.apache.flink.table.functions.sql.internal.SqlThrowExceptionFunction
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
+import org.apache.flink.table.plan.logical.{LogicalExprVisitor, LogicalNode, LogicalTableFunctionCall}
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, InternalType, TypeConverters}
+import org.apache.flink.table.typeutils.TypeCheckUtils.isTimeInterval
+import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
-import scala.collection.mutable
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.rel.RelFieldCollation
 import org.apache.calcite.rex.RexWindowBound._
@@ -29,19 +36,12 @@ import org.apache.calcite.sql._
 import org.apache.calcite.sql.`type`.OrdinalReturnTypeInference
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api._
-import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
-import org.apache.flink.table.api.scala.{CURRENT_ROW, UNBOUNDED_ROW}
-import org.apache.flink.table.calcite.{FlinkPlannerImpl, FlinkTypeFactory}
-import org.apache.flink.table.functions.sql.internal.SqlThrowExceptionFunction
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.plan.logical.{LogicalExprVisitor, LogicalNode, LogicalTableFunctionCall}
-import org.apache.flink.table.api.types._
-import org.apache.flink.table.typeutils.TypeCheckUtils.isTimeInterval
-import org.apache.flink.table.typeutils.TypeUtils
-import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
+
+import _root_.java.math.BigDecimal
+import _root_.java.util
 
 import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 
 /**
   * General expression for unresolved function calls. The function can be a built-in

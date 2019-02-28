@@ -23,13 +23,13 @@ import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.api.functions.FunctionContext;
 import org.apache.flink.table.api.functions.TableFunction;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.dataformat.TypeGetterSetters;
 import org.apache.flink.table.plan.schema.IndexKey;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.RowType;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 
 import java.util.ArrayList;

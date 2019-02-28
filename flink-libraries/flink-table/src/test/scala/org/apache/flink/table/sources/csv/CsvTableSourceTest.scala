@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.sources.csv
 
-import java.io.File
-
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.{Assert, Test}
 import org.powermock.reflect.Whitebox
+
+import java.io.File
 
 class CsvTableSourceTest extends TableTestBase {
 

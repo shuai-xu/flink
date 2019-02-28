@@ -29,14 +29,14 @@ import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseArray;
 import org.apache.flink.table.dataformat.BinaryArray;
 import org.apache.flink.table.dataformat.BinaryArrayWriter;
 import org.apache.flink.table.dataformat.GenericArray;
 import org.apache.flink.table.dataformat.TypeGetterSetters;
 import org.apache.flink.table.dataformat.util.BaseRowUtil;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.util.InstantiationUtil;
 
 import java.io.IOException;

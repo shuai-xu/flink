@@ -20,22 +20,24 @@ package org.apache.flink.table.runtime.utils
 
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType, TypeConverters}
 import org.apache.flink.table.api.{RichTableSchema, TableSchema}
 import org.apache.flink.table.catalog._
 import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.dataformat.Decimal
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.csv.CsvTableSource
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType, TypeConverters}
 import org.apache.flink.types.Row
+
 import org.apache.calcite.avatica.util.DateTimeUtils
+
 import java.io.{File, FileOutputStream, OutputStreamWriter}
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.{lang, util}
 
-import scala.collection.mutable
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.Random
 
 object CommonTestData {

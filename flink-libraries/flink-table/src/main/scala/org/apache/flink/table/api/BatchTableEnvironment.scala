@@ -30,7 +30,6 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.graph.{StreamGraph, StreamGraphGenerator}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.errorcode.TableErrors
@@ -40,18 +39,18 @@ import org.apache.flink.table.plan.cost.{FlinkBatchCost, FlinkCostFactory}
 import org.apache.flink.table.plan.logical.SinkNode
 import org.apache.flink.table.plan.nodes.calcite.LogicalSink
 import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
-import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.nodes.physical.batch.BatchExecSink
-import org.apache.flink.table.plan.nodes.process.{ChainedDAGProcessors, DAGProcessContext}
+import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.plan.optimize.{BatchOptimizer, Optimizer}
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil, SubplanReuseUtil}
+import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
 import org.apache.flink.table.resource.batch.RunningUnitKeeper
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources._
 import org.apache.flink.table.temptable.TableServiceException
+import org.apache.flink.table.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.util.PlanUtil._
 import org.apache.flink.table.util._
 import org.apache.flink.util.{AbstractID, ExceptionUtils}
@@ -62,7 +61,7 @@ import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.sql2rel.SqlToRelConverter.Config
 
-import _root_.java.util.{ArrayList => JArrayList, List => JList, Map => JMap, Set => JSet}
+import _root_.java.util.{ArrayList => JArrayList}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._

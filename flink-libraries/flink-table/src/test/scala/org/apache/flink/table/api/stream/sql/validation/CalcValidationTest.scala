@@ -21,9 +21,10 @@ package org.apache.flink.table.api.stream.sql.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil.UnsafeMemoryAppendTableSink
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+
 import org.junit.Test
 
 class CalcValidationTest extends TableTestBase {

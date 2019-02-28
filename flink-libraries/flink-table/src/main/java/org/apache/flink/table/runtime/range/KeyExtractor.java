@@ -20,9 +20,9 @@ package org.apache.flink.table.runtime.range;
 
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.java.typeutils.runtime.NullAwareComparator;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.TypeGetterSetters;
+import org.apache.flink.table.types.InternalType;
 
 import java.io.Serializable;
 import java.util.Collections;

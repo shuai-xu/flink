@@ -21,11 +21,11 @@ package org.apache.flink.table.runtime.aggregate
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.codegen.EqualiserCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.runtime.functions.{BundleFunction, ExecutionContext}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector

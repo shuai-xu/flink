@@ -24,7 +24,6 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
-import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedJoinConditionFunction, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
@@ -33,6 +32,7 @@ import org.apache.flink.table.runtime.join.stream.bundle.{MiniBatchAntiSemiJoinS
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
 import org.apache.flink.table.runtime.join.stream.state.`match`.JoinMatchStateHandler
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
+import org.apache.flink.table.types.{DataTypes, RowType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.junit.Test

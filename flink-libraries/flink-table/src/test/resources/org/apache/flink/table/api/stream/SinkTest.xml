@@ -1541,14 +1541,14 @@ LogicalProject(num=[$0], cnt=[$1])
    +- LogicalProject(num=[$1], cnt=[AS(COUNT($0) OVER (ORDER BY $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 'cnt')], proctime=[$3])
       +- LogicalCorrelate(correlation=[$cor2], joinType=[inner], requiredColumns=[{}])
          :- LogicalTableScan(table=[[builtin, default, MyTable]])
-         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
+         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$4b256fbbe9ecfb5e26d74f3df6b4ab80($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
 
 LogicalProject(num=[$0], cnt=[$1])
 +- LogicalFilter(condition=[>=($0, 5)])
    +- LogicalProject(num=[$1], cnt=[AS(COUNT($0) OVER (ORDER BY $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 'cnt')], proctime=[$3])
       +- LogicalCorrelate(correlation=[$cor3], joinType=[inner], requiredColumns=[{}])
          :- LogicalTableScan(table=[[builtin, default, MyTable]])
-         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
+         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$4b256fbbe9ecfb5e26d74f3df6b4ab80($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
@@ -1558,14 +1558,14 @@ StreamExecSink(fields=[num, cnt])
 +- StreamExecCalc(select=[num, w0$o0 AS cnt], where=[<(num, 5)])
    +- StreamExecOverAggregate(orderBy=[proctime ASC], window=[ ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[id, num, proctime, COUNT(id) AS w0$o0])
       +- StreamExecExchange(distribution=[single])
-         +- StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], correlate=[table(TableFunc0(text))], select=[id,num,proctime], rowType=[RecordType(INTEGER id, BIGINT num, TIME ATTRIBUTE(PROCTIME) proctime)], joinType=[INNER])
+         +- StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc0$4b256fbbe9ecfb5e26d74f3df6b4ab80($2)], correlate=[table(TableFunc0(text))], select=[id,num,proctime], rowType=[RecordType(INTEGER id, BIGINT num, TIME ATTRIBUTE(PROCTIME) proctime)], joinType=[INNER])
             +- Reused(reference_id=[1])
 
 StreamExecSink(fields=[num, cnt])
 +- StreamExecCalc(select=[num, w0$o0 AS cnt], where=[>=(num, 5)])
    +- StreamExecOverAggregate(orderBy=[proctime ASC], window=[ ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[id, num, proctime, COUNT(id) AS w0$o0])
       +- StreamExecExchange(distribution=[single])
-         +- StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], correlate=[table(TableFunc0(text))], select=[id,num,proctime], rowType=[RecordType(INTEGER id, BIGINT num, TIME ATTRIBUTE(PROCTIME) proctime)], joinType=[INNER])
+         +- StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc0$4b256fbbe9ecfb5e26d74f3df6b4ab80($2)], correlate=[table(TableFunc0(text))], select=[id,num,proctime], rowType=[RecordType(INTEGER id, BIGINT num, TIME ATTRIBUTE(PROCTIME) proctime)], joinType=[INNER])
             +- Reused(reference_id=[1])
 ]]>
     </Resource>
@@ -1578,20 +1578,20 @@ LogicalProject(num=[$0], cnt=[$1])
    +- LogicalProject(num=[$1], cnt=[AS(COUNT($0) OVER (ORDER BY $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 'cnt')], proctime=[$3])
       +- LogicalCorrelate(correlation=[$cor2], joinType=[inner], requiredColumns=[{}])
          :- LogicalTableScan(table=[[builtin, default, MyTable]])
-         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
+         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$4b256fbbe9ecfb5e26d74f3df6b4ab80($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
 
 LogicalProject(num=[$0], cnt=[$1])
 +- LogicalFilter(condition=[>=($0, 5)])
    +- LogicalProject(num=[$1], cnt=[AS(COUNT($0) OVER (ORDER BY $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 'cnt')], proctime=[$3])
       +- LogicalCorrelate(correlation=[$cor3], joinType=[inner], requiredColumns=[{}])
          :- LogicalTableScan(table=[[builtin, default, MyTable]])
-         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
+         +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc0$4b256fbbe9ecfb5e26d74f3df6b4ab80($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER age)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[StreamExecOverAggregate(orderBy=[proctime ASC], window=[ ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW], select=[id, num, proctime, COUNT(id) AS w0$o0], reuse_id=[1])
 +- StreamExecExchange(distribution=[single])
-   +- StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc0$a1937c68d8fd71db30e87e222941a1a9($2)], correlate=[table(TableFunc0(text))], select=[id,num,proctime], rowType=[RecordType(INTEGER id, BIGINT num, TIME ATTRIBUTE(PROCTIME) proctime)], joinType=[INNER])
+   +- StreamExecCorrelate(invocation=[org$apache$flink$table$util$TableFunc0$4b256fbbe9ecfb5e26d74f3df6b4ab80($2)], correlate=[table(TableFunc0(text))], select=[id,num,proctime], rowType=[RecordType(INTEGER id, BIGINT num, TIME ATTRIBUTE(PROCTIME) proctime)], joinType=[INNER])
       +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
 
 StreamExecSink(fields=[num, cnt])

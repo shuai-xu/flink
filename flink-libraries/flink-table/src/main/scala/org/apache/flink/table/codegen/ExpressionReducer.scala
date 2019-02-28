@@ -18,22 +18,24 @@
 
 package org.apache.flink.table.codegen
 
-import java.io.File
-import org.apache.calcite.avatica.util.ByteString
-import org.apache.calcite.plan.RelOptPlanner
-import org.apache.calcite.rex.{RexBuilder, RexNode}
-import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.api.common.accumulators.{DoubleCounter, Histogram, IntCounter, LongCounter}
 import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.metrics.MetricGroup
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{FunctionContext, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.FunctionCodeGenerator.generateFunction
 import org.apache.flink.table.dataformat.{Decimal, GenericRow}
 import org.apache.flink.table.runtime.functions.FunctionContextImpl
+import org.apache.flink.table.types.RowType
+
+import org.apache.calcite.avatica.util.ByteString
+import org.apache.calcite.plan.RelOptPlanner
+import org.apache.calcite.rex.{RexBuilder, RexNode}
+import org.apache.calcite.sql.`type`.SqlTypeName
+
+import java.io.File
 
 import scala.collection.JavaConverters._
 

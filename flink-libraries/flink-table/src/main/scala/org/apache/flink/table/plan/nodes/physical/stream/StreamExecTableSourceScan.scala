@@ -20,17 +20,17 @@ package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.functions.{AssignerWithPeriodicWatermarks, AssignerWithPunctuatedWatermarks}
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.plan.nodes.physical.{FlinkPhysicalRel, PhysicalTableSourceScan}
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
-import org.apache.flink.table.sources.{RowtimeAttributeDescriptor, StreamTableSource, TableSourceUtil}
-import org.apache.flink.streaming.api.functions.{AssignerWithPeriodicWatermarks, AssignerWithPunctuatedWatermarks}
-import org.apache.flink.streaming.api.watermark.Watermark
-import org.apache.flink.table.plan.nodes.common.CommonScan
 import org.apache.flink.table.sources.wmstrategies.{PeriodicWatermarkAssigner, PreserveWatermarks, PunctuatedWatermarkAssigner}
+import org.apache.flink.table.sources.{RowtimeAttributeDescriptor, StreamTableSource, TableSourceUtil}
+import org.apache.flink.table.types.{DataTypes, TypeConverters}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode

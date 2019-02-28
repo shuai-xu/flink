@@ -19,9 +19,9 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.expressions._
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.validate.FunctionCatalog
 import org.apache.flink.util.Preconditions
 

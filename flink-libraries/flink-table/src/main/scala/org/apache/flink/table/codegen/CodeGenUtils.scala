@@ -18,23 +18,10 @@
 
 package org.apache.flink.table.codegen
 
-import java.lang.reflect.Method
-import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
-import java.math.{BigDecimal => JBigDecimal}
-import java.sql.{Date, Time, Timestamp}
-import java.util.concurrent.atomic.AtomicInteger
-import org.apache.calcite.avatica.util.ByteString
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.sql.SqlOperator
-import org.apache.calcite.sql.`type`.SqlTypeName.{ROW => _, _}
-import org.apache.calcite.sql.fun.SqlStdOperatorTable._
-import org.apache.calcite.util.BuiltInMethod
-import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.flink.api.common.InvalidProgramException
 import org.apache.flink.api.common.functions.{FlatJoinFunction, FlatMapFunction, MapFunction}
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo._
 import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.codegen.CodeGeneratorContext.{BASE_ROW_UTIL, BINARY_STRING}
 import org.apache.flink.table.codegen.GeneratedExpression.NEVER_NULL
 import org.apache.flink.table.codegen.calls.ScalarOperators._
@@ -43,6 +30,7 @@ import org.apache.flink.table.dataformat._
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.sql.internal.{SqlRuntimeFilterBuilderFunction, SqlRuntimeFilterFunction, SqlThrowExceptionFunction}
+import org.apache.flink.table.types.{ArrayType, ByteType, DataType, DataTypes, DateType, DecimalType, DoubleType, FloatType, GenericType, IntType, InternalType, LongType, MapType, RowType, ShortType, TimestampType, TypeConverters, TypeInfoWrappedDataType}
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isNumeric, isTemporal, isTimeInterval}
 import org.apache.flink.table.typeutils._
 import org.apache.flink.table.util.Logging.CODE_LOG
@@ -51,8 +39,21 @@ import org.apache.flink.util.{Preconditions, StringUtils}
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import com.google.common.util.concurrent.{ExecutionError, UncheckedExecutionException}
-import org.codehaus.commons.compiler.{CompileException, ICookable}
+import org.apache.calcite.avatica.util.ByteString
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.sql.SqlOperator
+import org.apache.calcite.sql.`type`.SqlTypeName.{ROW => _, _}
+import org.apache.calcite.sql.fun.SqlStdOperatorTable._
+import org.apache.calcite.util.BuiltInMethod
+import org.apache.commons.lang3.StringEscapeUtils
+import org.codehaus.commons.compiler.ICookable
 import org.codehaus.janino.SimpleCompiler
+
+import java.lang.reflect.Method
+import java.lang.{Boolean => JBoolean, Byte => JByte, Character => JChar, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
+import java.math.{BigDecimal => JBigDecimal}
+import java.sql.{Date, Time, Timestamp}
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.mutable.ListBuffer
 

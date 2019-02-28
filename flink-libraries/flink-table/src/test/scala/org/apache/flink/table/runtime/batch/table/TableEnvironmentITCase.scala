@@ -20,8 +20,8 @@ package org.apache.flink.table.runtime.batch.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.{CollectionBatchExecTable, MemoryTableSourceSinkUtil}
 import org.apache.flink.test.util.TestBaseUtils
 

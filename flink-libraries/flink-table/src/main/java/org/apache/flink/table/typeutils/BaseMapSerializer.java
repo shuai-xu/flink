@@ -26,14 +26,14 @@ import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseMap;
 import org.apache.flink.table.dataformat.BinaryArray;
 import org.apache.flink.table.dataformat.BinaryArrayWriter;
 import org.apache.flink.table.dataformat.BinaryMap;
 import org.apache.flink.table.dataformat.GenericMap;
 import org.apache.flink.table.dataformat.util.BaseRowUtil;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
 
 import java.io.IOException;
 import java.util.HashMap;

@@ -27,7 +27,6 @@ import org.apache.flink.api.scala.createTuple2TypeInformation
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, GenericType, RowType, TimestampType, TypeConverters}
 import org.apache.flink.table.api.{Table, TableConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -37,13 +36,12 @@ import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToExternal
 import org.apache.flink.table.sinks.{DataStreamTableSink, TableSink}
+import org.apache.flink.table.types.{DataType, RowType, TimestampType, TypeConverters}
 import org.apache.flink.table.typeutils.TypeUtils.getCompositeTypes
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo, TypeUtils}
+import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TimeIndicatorTypeInfo}
 import org.apache.flink.types.Row
 
 import org.apache.calcite.rel.`type`.RelDataType
-
-import java.util
 
 import scala.collection.JavaConversions._
 

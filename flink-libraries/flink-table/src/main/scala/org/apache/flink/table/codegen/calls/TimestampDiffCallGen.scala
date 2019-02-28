@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.codegen.calls
 
-import org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY
-import org.apache.calcite.avatica.util.TimeUnit
-import org.apache.calcite.util.BuiltInMethod
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.calls.CallGenerator.generateCallIfArgsNotNull
 import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, GeneratedExpression}
+import org.apache.flink.table.types.{DataTypes, InternalType}
+
+import org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY
+import org.apache.calcite.avatica.util.TimeUnit
+import org.apache.calcite.util.BuiltInMethod
 
 class TimestampDiffCallGen extends CallGenerator {
 

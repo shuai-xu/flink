@@ -23,11 +23,11 @@ import org.apache.flink.connectors.hbase.streaming.HBase143Writer;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.table.api.RichTableSchema;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sinks.UpsertStreamTableSink;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 

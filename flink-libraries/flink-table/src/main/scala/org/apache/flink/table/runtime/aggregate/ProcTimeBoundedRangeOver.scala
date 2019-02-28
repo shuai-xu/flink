@@ -17,21 +17,22 @@
  */
 package org.apache.flink.table.runtime.aggregate
 
-import java.util.{ArrayList => JArrayList, List => JList}
-import java.lang.{Long => JLong}
 import org.apache.flink.api.common.state.{MapStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedValueState}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataTypes, InternalType, TypeConverters}
 import org.apache.flink.table.codegen.GeneratedAggsHandleFunction
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.ProcessFunction.{Context, OnTimerContext}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContext}
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.types.{InternalType, TypeConverters}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.{Logging, StateUtil}
 import org.apache.flink.util.Collector
+
+import java.lang.{Long => JLong}
+import java.util.{ArrayList => JArrayList, List => JList}
 
 /**
   * Process Function used for the aggregate in bounded proc-time OVER window

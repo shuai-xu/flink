@@ -106,7 +106,7 @@ class TableEnvironment(object):
         j_types = []
         for field_type in field_types:
             j_types.append(TypesUtil.to_java_sql_type(field_type))
-        j_types_array = TypesUtil._convert_py_list_to_java_array('org.apache.flink.table.api.types.DataType',
+        j_types_array = TypesUtil._convert_py_list_to_java_array('org.apache.flink.table.types.DataType',
                             j_types)
 
         self._j_tenv.registerTableSink(name, j_names, j_types_array, table_sink._j_table_sink)

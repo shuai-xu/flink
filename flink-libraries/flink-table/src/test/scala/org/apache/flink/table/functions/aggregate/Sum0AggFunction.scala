@@ -17,9 +17,9 @@
  */
 package org.apache.flink.table.functions.aggregate
 
-import java.math.BigDecimal
+import org.apache.flink.table.types.{DataTypes, DecimalType}
 
-import org.apache.flink.table.api.types.{DataTypes, DecimalType}
+import java.math.BigDecimal
 
 /**
   * Base class for built-in Sum0 aggregate function. If all values are null, 0 is returned.

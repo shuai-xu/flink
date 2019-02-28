@@ -25,7 +25,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
 
 /**

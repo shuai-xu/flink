@@ -31,7 +31,7 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.io.disk.RandomAccessOutputView;
-import org.apache.flink.table.api.types.Types;
+import org.apache.flink.table.types.Types;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 import org.apache.flink.table.util.hash.Murmur32;

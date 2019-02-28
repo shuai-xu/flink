@@ -18,9 +18,6 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
-import java.sql.Timestamp
-import java.util
-
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo.{DATE, TIME, TIMESTAMP}
@@ -28,7 +25,6 @@ import org.apache.flink.api.java.typeutils.{ListTypeInfo, RowTypeInfo, TypeExtra
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.api.{TableConfigOptions, Types, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.expressions.utils.{RichFunc1, RichFunc2, RichFunc3, SplitUDF}
@@ -36,11 +32,16 @@ import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row
+
 import org.junit.Assert.assertEquals
 import org.junit._
+
+import java.sql.Timestamp
+import java.util
 
 import scala.collection.JavaConverters._
 import scala.collection.Seq

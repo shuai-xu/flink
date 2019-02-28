@@ -19,8 +19,8 @@
 package org.apache.flink.streaming.connectors.kafka.v2.common.util;
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.TypeConverters;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.TypeConverters;
 
 import java.util.ArrayList;
 import java.util.Collection;

@@ -17,18 +17,19 @@
  */
 package org.apache.flink.table.runtime.aggregate
 
-import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Map => JMap}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.util.{BaseRowUtil, BinaryRowUtil}
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, BundleFunction, ExecutionContext}
 import org.apache.flink.table.runtime.sort.RecordEqualiser
-import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.types.{DataTypes, InternalType, RowType, TypeConverters}
+import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Collector
+
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Map => JMap}
 
 /**
   * Class of Aggregate Function used for the groupby (without window) aggregate in miniBatch mode.

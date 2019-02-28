@@ -20,25 +20,26 @@ package org.apache.flink.table.runtime.batch.sql.agg
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo.TIMESTAMP
-import org.apache.flink.api.scala._
 import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.api.{TableConfig, TableSchema, _}
+import org.apache.flink.table.api.{TableSchema, _}
 import org.apache.flink.table.functions.aggregate.{CountAggFunction, IntAvgAggFunction, IntSumAggFunction}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.sources.BatchTableSource
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.DateTimeTestUtil.UTCTimestamp
 import org.apache.flink.table.util.TableSchemaUtil
 import org.apache.flink.types.Row
+
 import org.junit.{Before, Test}
 
 class GroupWindowITCase extends BatchTestBase {

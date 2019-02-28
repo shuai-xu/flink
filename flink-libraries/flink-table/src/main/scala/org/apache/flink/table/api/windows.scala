@@ -19,9 +19,9 @@
 package org.apache.flink.table.api
 
 import org.apache.flink.table.api.scala.{CURRENT_RANGE, CURRENT_ROW}
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical._
+import org.apache.flink.table.types.DataTypes
 
 /**
   * Over window is similar to the traditional OVER SQL.

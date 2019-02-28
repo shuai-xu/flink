@@ -18,16 +18,17 @@
 
 package org.apache.flink.table.runtime.batch.sql.agg
 
-import java.util
-
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData.{data3, nullablesOfData3, type3}
+import org.apache.flink.table.types.{DataType, DataTypes}
+
 import org.junit.{Before, Test}
+
+import java.util
 
 import scala.collection.Seq
 

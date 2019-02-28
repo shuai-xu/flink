@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.runtime.functions.aggfunctions
 
-import java.lang.{Iterable => JIterable}
-import java.util
 import org.apache.flink.table.api.dataview.MapView
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types._
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.typeutils.MapViewTypeInfo
+
+import java.lang.{Iterable => JIterable}
+import java.util
 
 import scala.collection.JavaConverters._
 

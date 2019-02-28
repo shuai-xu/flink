@@ -18,18 +18,18 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
-import java.util
-
-import junit.framework.TestCase.assertTrue
-import junit.framework.TestCase.fail
 import org.apache.flink.runtime.io.network.DataExchangeMode
 import org.apache.flink.streaming.api.graph.{StreamEdge, StreamGraph, StreamNode}
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.utils.CommonTestData.createCsvTableSource
 import org.apache.flink.table.sinks.csv.CsvTableSink
+import org.apache.flink.table.types.DataTypes
+
+import junit.framework.TestCase.{assertTrue, fail}
 import org.junit.Test
+
+import java.util
 
 import scala.collection.JavaConverters._
 

@@ -32,13 +32,25 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.ValidationException;
-import org.apache.flink.table.api.types.ArrayType;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.GenericType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.MapType;
-import org.apache.flink.table.api.types.MultisetType;
-import org.apache.flink.table.api.types.RowType;
+import org.apache.flink.table.types.ArrayType;
+import org.apache.flink.table.types.BooleanType;
+import org.apache.flink.table.types.ByteType;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.DateType;
+import org.apache.flink.table.types.DecimalType;
+import org.apache.flink.table.types.DoubleType;
+import org.apache.flink.table.types.FloatType;
+import org.apache.flink.table.types.GenericType;
+import org.apache.flink.table.types.IntType;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.LongType;
+import org.apache.flink.table.types.MapType;
+import org.apache.flink.table.types.MultisetType;
+import org.apache.flink.table.types.RowType;
+import org.apache.flink.table.types.ShortType;
+import org.apache.flink.table.types.StringType;
+import org.apache.flink.table.types.TimeType;
+import org.apache.flink.table.types.TimestampType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -163,30 +175,30 @@ public class TypeStringUtils {
 	}
 
 	public static String writeDataType(DataType dataType) {
-		if (dataType instanceof org.apache.flink.table.api.types.StringType) {
+		if (dataType instanceof StringType) {
 			return VARCHAR;
-		} else if (dataType instanceof org.apache.flink.table.api.types.BooleanType) {
+		} else if (dataType instanceof BooleanType) {
 			return BOOLEAN;
-		} else if (dataType instanceof org.apache.flink.table.api.types.ByteType) {
+		} else if (dataType instanceof ByteType) {
 			return BYTE;
-		} else if (dataType instanceof org.apache.flink.table.api.types.ShortType) {
+		} else if (dataType instanceof ShortType) {
 			return SHORT;
-		} else if (dataType instanceof org.apache.flink.table.api.types.IntType) {
+		} else if (dataType instanceof IntType) {
 			return INT;
-		} else if (dataType instanceof org.apache.flink.table.api.types.LongType) {
+		} else if (dataType instanceof LongType) {
 			return LONG;
-		} else if (dataType instanceof org.apache.flink.table.api.types.FloatType) {
+		} else if (dataType instanceof FloatType) {
 			return FLOAT;
-		} else if (dataType instanceof org.apache.flink.table.api.types.DoubleType) {
+		} else if (dataType instanceof DoubleType) {
 			return DOUBLE;
-		} else if (dataType instanceof org.apache.flink.table.api.types.DecimalType) {
+		} else if (dataType instanceof DecimalType) {
 			//TODO: support precision and scale
 			return DECIMAL;
-		} else if (dataType instanceof org.apache.flink.table.api.types.DateType) {
+		} else if (dataType instanceof DateType) {
 			return SQL_DATE;
-		} else if (dataType instanceof org.apache.flink.table.api.types.TimeType) {
+		} else if (dataType instanceof TimeType) {
 			return SQL_TIME;
-		} else if (dataType instanceof org.apache.flink.table.api.types.TimestampType) {
+		} else if (dataType instanceof TimestampType) {
 			return SQL_TIMESTAMP;
 		} else if (dataType instanceof RowType) {
 			final RowType rt = (RowType) dataType;
@@ -213,19 +225,19 @@ public class TypeStringUtils {
 			}
 			result.append('>');
 			return result.toString();
-		} else if (dataType instanceof org.apache.flink.table.api.types.GenericType) {
-			String clazzName = ((org.apache.flink.table.api.types.GenericType) dataType).getTypeClass().getName();
+		} else if (dataType instanceof GenericType) {
+			String clazzName = ((GenericType) dataType).getTypeClass().getName();
 			return ANY + '<' + clazzName + '>';
-		} else if (dataType instanceof org.apache.flink.table.api.types.MultisetType) {
-			final DataType elementType = ((org.apache.flink.table.api.types.MultisetType) dataType).getElementType();
+		} else if (dataType instanceof MultisetType) {
+			final DataType elementType = ((MultisetType) dataType).getElementType();
 			return MULTISET + '<' + writeDataType(elementType) + '>';
-		}  else if (dataType instanceof org.apache.flink.table.api.types.MapType) {
-			final DataType keyType = ((org.apache.flink.table.api.types.MapType) dataType).getKeyType();
-			final DataType valueType = ((org.apache.flink.table.api.types.MapType) dataType).getValueType();
+		}  else if (dataType instanceof MapType) {
+			final DataType keyType = ((MapType) dataType).getKeyType();
+			final DataType valueType = ((MapType) dataType).getValueType();
 			return MAP + '<' + writeDataType(keyType) + ", " + writeDataType(valueType) + '>';
-		} else if (dataType instanceof org.apache.flink.table.api.types.ArrayType) {
-			final boolean isPrimitive = ((org.apache.flink.table.api.types.ArrayType) dataType).isPrimitive();
-			final DataType elementType = ((org.apache.flink.table.api.types.ArrayType) dataType).getElementType();
+		} else if (dataType instanceof ArrayType) {
+			final boolean isPrimitive = ((ArrayType) dataType).isPrimitive();
+			final DataType elementType = ((ArrayType) dataType).getElementType();
 			final String result = isPrimitive ? PRIMITIVE_ARRAY : OBJECT_ARRAY;
 			return result + '<' + writeDataType(elementType) + '>';
 		} else {
@@ -409,35 +421,35 @@ public class TypeStringUtils {
 			switch (token().literal) {
 				case VARCHAR:
 				case STRING:
-					return org.apache.flink.table.api.types.Types.STRING;
+					return org.apache.flink.table.types.Types.STRING;
 				case BOOLEAN:
-					return org.apache.flink.table.api.types.Types.BOOLEAN;
+					return org.apache.flink.table.types.Types.BOOLEAN;
 				case TINYINT:
 				case BYTE:
-					return org.apache.flink.table.api.types.Types.BYTE;
+					return org.apache.flink.table.types.Types.BYTE;
 				case SMALLINT:
 				case SHORT:
-					return org.apache.flink.table.api.types.Types.SHORT;
+					return org.apache.flink.table.types.Types.SHORT;
 				case INT:
-					return org.apache.flink.table.api.types.Types.INT;
+					return org.apache.flink.table.types.Types.INT;
 				case BIGINT:
 				case LONG:
-					return org.apache.flink.table.api.types.Types.LONG;
+					return org.apache.flink.table.types.Types.LONG;
 				case FLOAT:
-					return org.apache.flink.table.api.types.Types.FLOAT;
+					return org.apache.flink.table.types.Types.FLOAT;
 				case DOUBLE:
-					return org.apache.flink.table.api.types.Types.DOUBLE;
+					return org.apache.flink.table.types.Types.DOUBLE;
 				case DECIMAL:
-					return org.apache.flink.table.api.types.Types.DECIMAL;
+					return org.apache.flink.table.types.Types.DECIMAL;
 				case DATE:
 				case SQL_DATE:
-					return org.apache.flink.table.api.types.Types.DATE;
+					return org.apache.flink.table.types.Types.DATE;
 				case TIME:
 				case SQL_TIME:
-					return org.apache.flink.table.api.types.Types.TIME;
+					return org.apache.flink.table.types.Types.TIME;
 				case TIMESTAMP:
 				case SQL_TIMESTAMP:
-					return org.apache.flink.table.api.types.Types.TIMESTAMP;
+					return org.apache.flink.table.types.Types.TIMESTAMP;
 				case ROW:
 					return convertDataTypeRow();
 				case ANY:

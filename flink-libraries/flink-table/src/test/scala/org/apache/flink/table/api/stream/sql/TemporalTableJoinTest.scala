@@ -17,22 +17,23 @@
  */
 package org.apache.flink.table.api.stream.sql
 
-import java.sql.Timestamp
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.api.{SqlParserException, TableException, TableSchema, ValidationException}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString}
 import org.apache.flink.table.sources._
+import org.apache.flink.table.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableSchemaUtil, TableTestBase}
 import org.apache.flink.types.Row
 
 import org.junit.Assert.{assertTrue, fail}
 import org.junit.Test
+
+import java.sql.Timestamp
 
 import scala.annotation.varargs
 

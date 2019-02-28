@@ -17,14 +17,15 @@
  */
 package org.apache.flink.table.plan.schema
 
-import java.lang.reflect.Type
-import java.util
-import java.util.Collections
+import org.apache.flink.table.api.functions
+import org.apache.flink.table.types.DataType
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeFactory}
 import org.apache.calcite.schema.{FunctionParameter, TableFunction}
-import org.apache.flink.table.api.functions
-import org.apache.flink.table.api.types.DataType
+
+import java.lang.reflect.Type
+import java.util
+import java.util.Collections
 
 /**
   * A [[FlinkTableFunction]] is an implementation of  [[org.apache.calcite.schema.TableFunction]].

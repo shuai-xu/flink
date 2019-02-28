@@ -17,13 +17,8 @@
  */
 package org.apache.flink.table.codegen
 
-import org.apache.calcite.plan.RelOptCluster
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForType, newNames}
@@ -31,6 +26,12 @@ import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, BoxedWrapperRow}
 import org.apache.flink.table.plan.util.FlinkRexUtil
 import org.apache.flink.table.runtime.OneInputSubstituteStreamOperator
+import org.apache.flink.table.types.{DataTypes, RowType, TypeConverters}
+
+import org.apache.calcite.plan.RelOptCluster
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlKind
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

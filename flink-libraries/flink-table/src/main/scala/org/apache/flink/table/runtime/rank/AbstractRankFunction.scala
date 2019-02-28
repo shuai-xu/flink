@@ -17,12 +17,9 @@
  */
 package org.apache.flink.table.runtime.rank
 
-import java.lang.{Long => JLong}
-import java.util.Comparator
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.metrics.{Counter, Gauge}
 import org.apache.flink.runtime.state.keyed.KeyedValueState
-import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.codegen.{EqualiserCodeGenerator, GeneratedRecordEqualiser}
 import org.apache.flink.table.dataformat.util.BaseRowUtil
@@ -31,8 +28,12 @@ import org.apache.flink.table.plan.util.{ConstantRankRange, RankRange, VariableR
 import org.apache.flink.table.runtime.aggregate.ProcessFunctionWithCleanupState
 import org.apache.flink.table.runtime.functions.ExecutionContext
 import org.apache.flink.table.runtime.sort.RecordEqualiser
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Collector
+
+import java.lang.{Long => JLong}
+import java.util.Comparator
 
 abstract class AbstractRankFunction(
     tableConfig: TableConfig,

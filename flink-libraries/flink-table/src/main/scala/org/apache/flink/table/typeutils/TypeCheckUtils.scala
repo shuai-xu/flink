@@ -21,8 +21,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{ListTypeInfo, PojoTypeInfo}
 import org.apache.flink.table.api.ValidationException
-import org.apache.flink.table.api.types._
-import org.apache.flink.table.dataformat.BinaryRow
+import org.apache.flink.table.types.{ArrayType, DataTypes, DateType, DecimalType, GenericType, InternalType, MapType, RowType, TimeType, TimestampType, TypeConverters}
 import org.apache.flink.table.validate._
 
 object TypeCheckUtils {

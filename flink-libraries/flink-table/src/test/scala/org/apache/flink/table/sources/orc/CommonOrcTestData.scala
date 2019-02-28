@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.sources.orc
 
-import java.io.File
-import java.lang.{Double => JDouble, Integer => JInt}
-
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.dataformat.GenericRow
 import org.apache.flink.table.dataformat.GenericRow.of
 import org.apache.flink.table.sinks.orc.RowOrcOutputFormat
+import org.apache.flink.table.types.{DoubleType, IntType, InternalType, StringType}
+
 import org.apache.orc.CompressionKind
+
+import java.io.File
+import java.lang.{Double => JDouble, Integer => JInt}
 
 object CommonOrcTestData {
   def getOrcVectorizedColumnRowTableSource(copyToFlink: Boolean):

@@ -18,15 +18,11 @@
 
 package org.apache.flink.table.codegen.agg
 
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.metrics.Gauge
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils.{binaryRowFieldSetAccess, binaryRowSetNull}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator
@@ -35,8 +31,13 @@ import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.{BufferedKVExternalSorter, NormalizedKeyComputer, RecordComparator}
 import org.apache.flink.table.runtime.util.{BytesHashMap, BytesHashMapSpillMemorySegmentPool}
+import org.apache.flink.table.types.{InternalType, RowType}
 import org.apache.flink.table.typeutils.{BinaryRowSerializer, TypeUtils}
 import org.apache.flink.table.util.NodeResourceUtil
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.tools.RelBuilder
 
 trait BatchExecHashAggregateCodeGen extends BatchExecAggregateCodeGen {
 

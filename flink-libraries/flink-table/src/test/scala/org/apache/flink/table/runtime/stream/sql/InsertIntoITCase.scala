@@ -20,10 +20,10 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.stream.table.{RowCollector, TestRetractSink, TestUpsertSink}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingWithStateTestBase}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.test.util.TestBaseUtils
 

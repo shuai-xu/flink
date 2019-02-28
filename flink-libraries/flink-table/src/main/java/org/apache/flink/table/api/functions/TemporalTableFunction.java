@@ -19,9 +19,9 @@
 package org.apache.flink.table.api.functions;
 
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.types.RowType;
 
 import java.sql.Timestamp;
 

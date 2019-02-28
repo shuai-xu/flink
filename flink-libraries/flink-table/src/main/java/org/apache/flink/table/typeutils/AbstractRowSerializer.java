@@ -26,10 +26,10 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.TypeConverters;
 
 import java.io.IOException;
 import java.util.List;

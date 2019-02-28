@@ -19,12 +19,12 @@
 package org.apache.flink.table.api;
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.RowType;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.plan.schema.IndexKey;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.RowType;
+import org.apache.flink.table.types.TypeConverters;
 
 import java.io.Serializable;
 import java.util.ArrayList;

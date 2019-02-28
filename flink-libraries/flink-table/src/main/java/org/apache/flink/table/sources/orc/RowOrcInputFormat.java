@@ -20,7 +20,7 @@ package org.apache.flink.table.sources.orc;
 
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.types.Row;
 
 import org.apache.orc.mapred.OrcStruct;

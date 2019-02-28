@@ -23,18 +23,17 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.{AssignerWithPunctuatedWatermarks, ProcessFunction}
 import org.apache.flink.streaming.api.watermark.Watermark
-import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter, GenericRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{ExpressionParser, TimeIntervalUnit}
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc
 import org.apache.flink.table.runtime.stream.TimeAttributesITCase._
 import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
 import org.apache.flink.table.runtime.utils.{StreamingTestBase, TestingAppendPojoSink, TestingAppendSink}
 import org.apache.flink.table.sinks.PrintTableSink
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, BinaryRowTypeInfoTest}
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TestTableSourceWithTime
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
@@ -46,7 +45,6 @@ import java.lang.{Integer => JInt, Long => JLong}
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.TimeZone
-
 
 import scala.collection.mutable
 

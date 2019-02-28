@@ -20,8 +20,6 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.streaming.api.bundle.CountBundleTrigger
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes._
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
@@ -33,7 +31,9 @@ import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.sql.{SqlConcatAggFunction, SqlFirstLastValueAggFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.`trait`.RelModifiedMonotonicity
-import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, MapViewTypeInfo, TypeUtils}
+import org.apache.flink.table.types.DataTypes._
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, RowType, TypeConverters}
+import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, MapViewTypeInfo}
 
 import org.apache.calcite.rel.`type`._
 import org.apache.calcite.rel.core.AggregateCall

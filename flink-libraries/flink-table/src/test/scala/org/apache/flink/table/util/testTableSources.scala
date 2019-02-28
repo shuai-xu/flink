@@ -18,20 +18,21 @@
 
 package org.apache.flink.table.util
 
-import java.util
-import java.util.Collections
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSource}
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{DataType, RowType}
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeSourceFunction
 import org.apache.flink.table.sources._
 import org.apache.flink.table.sources.tsextractors.ExistingField
 import org.apache.flink.table.sources.wmstrategies.{AscendingTimestamps, PreserveWatermarks, WatermarkStrategy}
+import org.apache.flink.table.types.{DataType, RowType}
 import org.apache.flink.types.Row
+
+import java.util
+import java.util.Collections
 
 import scala.collection.JavaConverters._
 

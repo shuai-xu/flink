@@ -19,7 +19,7 @@
 package org.apache.flink.table.factories;
 
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.Types;
+import org.apache.flink.table.types.Types;
 
 import org.junit.Test;
 

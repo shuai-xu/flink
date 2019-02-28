@@ -18,9 +18,6 @@
 
 package org.apache.flink.table.util
 
-import java.util.{List => JList}
-
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CollectionInputFormat
@@ -28,14 +25,17 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala.getCallLocationName
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.Types._
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
+import org.apache.flink.table.types.{DataType, DataTypes, DoubleType, IntType, LongType, StringType}
 import org.apache.flink.types.Row
 import org.apache.flink.util.Preconditions
+
+import org.apache.calcite.tools.RelBuilder
+
+import java.util.{List => JList}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

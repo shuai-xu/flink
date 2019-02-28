@@ -20,7 +20,6 @@ package org.apache.flink.table.codegen.operator
 
 import org.apache.flink.metrics.Gauge
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataTypes, DateType, RowType, TimestampType}
 import org.apache.flink.table.codegen.CodeGenUtils.{baseRowFieldReadAccess, newName}
 import org.apache.flink.table.codegen.CodeGeneratorContext._
 import org.apache.flink.table.codegen.operator.OperatorCodeGenerator._
@@ -29,6 +28,7 @@ import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
 import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.join.batch.HashJoinType
 import org.apache.flink.table.runtime.join.batch.hashtable.longtable.{LongHashPartition, LongHybridHashTable}
+import org.apache.flink.table.types.{DataTypes, DateType, RowType, TimestampType}
 import org.apache.flink.table.typeutils.{BaseRowSerializer, BinaryRowSerializer}
 
 object LongHashJoinGenerator {

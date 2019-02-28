@@ -23,8 +23,8 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.core.memory.MemorySegmentWritable;
-import org.apache.flink.table.api.types.GenericType;
 import org.apache.flink.table.runtime.util.StringUtf8Utils;
+import org.apache.flink.table.types.GenericType;
 
 import java.io.IOException;
 import java.io.OutputStream;

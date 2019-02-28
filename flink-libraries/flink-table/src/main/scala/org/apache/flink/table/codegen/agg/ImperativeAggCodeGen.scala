@@ -17,24 +17,24 @@
  */
 package org.apache.flink.table.codegen.agg
 
-import java.lang.reflect.ParameterizedType
-import java.lang.{Iterable => JIterable}
-
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.runtime.util.SingleElementIterator
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils._
-import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
-import org.apache.flink.table.expressions.ResolvedDistinctKeyReference
+import org.apache.flink.table.codegen.{CodeGenException, CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.dataformat.{GenericRow, UpdatableRow}
 import org.apache.flink.table.dataview.DataViewSpec
-import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference}
+import org.apache.flink.table.expressions.{Expression, ResolvedAggInputReference, ResolvedDistinctKeyReference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.util.AggregateInfo
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.{genToExternal, genToInternal}
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType, RowType}
 import org.apache.flink.table.typeutils.TypeUtils
+
+import org.apache.calcite.tools.RelBuilder
+
+import java.lang.reflect.ParameterizedType
+import java.lang.{Iterable => JIterable}
 
 import scala.collection.mutable.ArrayBuffer
 

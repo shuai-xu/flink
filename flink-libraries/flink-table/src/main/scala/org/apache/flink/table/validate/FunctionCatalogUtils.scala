@@ -18,13 +18,14 @@
 
 package org.apache.flink.table.validate
 
-import org.apache.calcite.sql.SqlFunction
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.table.api.functions._
-import org.apache.flink.table.api.types.TypeInfoWrappedDataType
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.catalog.CatalogFunction
 import org.apache.flink.table.functions.utils.{ScalarSqlFunction, UserDefinedFunctionUtils}
+import org.apache.flink.table.types.TypeInfoWrappedDataType
+
+import org.apache.calcite.sql.SqlFunction
 
 /**
   * Utils for FunctionCatalog.

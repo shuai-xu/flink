@@ -24,10 +24,10 @@ import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator;
 import org.apache.flink.table.factories.TableFactoryService;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.util.TableProperties;
 
 import org.junit.After;

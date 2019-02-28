@@ -18,15 +18,15 @@
 
 package org.apache.flink.table.runtime.batch.sql
 
-import java.math.{BigDecimal => JBigDecimal}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, BigDecimalTypeInfo, TypeInformation}
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
-import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.types.Row
 
 import org.junit.{Assert, Test}
+
+import java.math.{BigDecimal => JBigDecimal}
 
 import scala.collection.Seq
 

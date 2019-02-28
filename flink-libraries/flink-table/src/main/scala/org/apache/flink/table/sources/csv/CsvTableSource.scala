@@ -18,8 +18,6 @@
 
 package org.apache.flink.table.sources.csv
 
-import java.util.{Set => JSet}
-import java.util.TimeZone
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CsvInputFormat
 import org.apache.flink.core.fs.Path
@@ -27,17 +25,18 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.plan.stats.TableStats
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.schema.IndexKey
+import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
-import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
+import org.apache.flink.table.types.{DataType, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.util.Logging
 
-import _root_.scala.collection.mutable
+import _root_.java.util.{TimeZone, Set => JSet}
+
 import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.mutable
 
 /**
   * A [[BatchTableSource]] and [[StreamTableSource]] for simple CSV files with a

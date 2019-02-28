@@ -18,12 +18,13 @@
 
 package org.apache.flink.table.expressions
 
+import org.apache.flink.table.api.UnresolvedException
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{InternalType, RowType}
+import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
+
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.UnresolvedException
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
-import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
 /**
   * Flattening of composite types. All flattenings are resolved into

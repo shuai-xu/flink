@@ -18,18 +18,18 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.calcite.sql.SqlOperator
-import org.apache.calcite.sql.fun.SqlStdOperatorTable
-import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{TableConfig, Types}
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.codegen.CodeGenUtils.{compile, generateCallExpression, newName}
 import org.apache.flink.table.codegen.CodeGeneratorContext.BINARY_STRING
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
+import org.apache.flink.table.types.TypeConverters
 
+import org.apache.calcite.sql.SqlOperator
+import org.apache.calcite.sql.fun.SqlStdOperatorTable
+import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.junit.Assert._
-import org.junit.{Ignore, Test}
+import org.junit.Test
 
 class BinaryStringCallGenTest {
 

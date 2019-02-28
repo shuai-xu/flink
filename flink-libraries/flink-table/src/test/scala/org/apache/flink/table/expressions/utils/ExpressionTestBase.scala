@@ -18,14 +18,6 @@
 
 package org.apache.flink.table.expressions.utils
 
-import java.{io, util}
-import java.util.concurrent.CompletableFuture
-import com.google.common.collect.ImmutableList
-import org.apache.calcite.plan.hep.{HepMatchOrder, HepPlanner, HepProgramBuilder}
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.sql.`type`.SqlTypeName._
-import org.apache.calcite.sql2rel.RelDecorrelator
-import org.apache.calcite.tools.{Programs, RelBuilder}
 import org.apache.flink.api.common.TaskInfo
 import org.apache.flink.api.common.accumulators.{AbstractAccumulatorRegistry, Accumulator}
 import org.apache.flink.api.common.functions._
@@ -35,21 +27,30 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.functions.ScalarFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.{TableConfig, TableEnvironment}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.catalog.CatalogManager
 import org.apache.flink.table.codegen.{CodeGeneratorContext, Compiler, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser, If, IsNull, Literal}
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecCalc, BatchExecScan}
 import org.apache.flink.table.plan.rules.FlinkBatchExecRuleSets
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.createToInternalConverter
+import org.apache.flink.table.types.{DataType, DataTypes, RowType, TypeConverters}
 import org.apache.flink.types.Row
 
+import com.google.common.collect.ImmutableList
+import org.apache.calcite.plan.hep.{HepMatchOrder, HepPlanner, HepProgramBuilder}
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.sql.`type`.SqlTypeName._
+import org.apache.calcite.sql2rel.RelDecorrelator
+import org.apache.calcite.tools.{Programs, RelBuilder}
 import org.junit.Assert._
 import org.junit.{After, Before}
+
+import java.util.concurrent.CompletableFuture
+import java.{io, util}
 
 import scala.collection.mutable
 

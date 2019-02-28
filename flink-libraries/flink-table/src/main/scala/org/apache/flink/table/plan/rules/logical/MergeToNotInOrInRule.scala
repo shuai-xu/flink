@@ -18,6 +18,9 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.types.DataTypes
+
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptUtil}
 import org.apache.calcite.rel.core.Filter
@@ -25,8 +28,6 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlBinaryOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.calcite.FlinkTypeFactory
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

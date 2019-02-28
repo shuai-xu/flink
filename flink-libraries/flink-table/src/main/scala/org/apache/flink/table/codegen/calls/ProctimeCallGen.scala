@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.codegen.calls
 
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.codegen.{CodeGenUtils, CodeGeneratorContext, GeneratedExpression}
+import org.apache.flink.table.types.{DataTypes, InternalType}
 
 class ProctimeCallGen extends CallGenerator {
   override def generate(

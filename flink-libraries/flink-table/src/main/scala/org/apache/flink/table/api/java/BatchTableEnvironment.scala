@@ -17,24 +17,24 @@
  */
 package org.apache.flink.table.api.java
 
-import java.lang.{Iterable => JIterable}
-import java.util.{ArrayList => JArrayList, Collection => JCollection}
-
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.CollectionInputFormat
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.scala.getCallLocationName
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.expressions.ExpressionParser
-
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
-import scala.reflect.ClassTag
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.expressions.ExpressionParser
 import org.apache.flink.table.sources.RangeInputFormat
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
+
+import _root_.java.lang.{Iterable => JIterable}
+import _root_.java.util.{ArrayList => JArrayList, Collection => JCollection}
+
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
+import _root_.scala.reflect.ClassTag
 
 /**
   * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]].

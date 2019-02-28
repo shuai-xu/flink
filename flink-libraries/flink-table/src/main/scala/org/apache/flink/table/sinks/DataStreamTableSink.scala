@@ -21,7 +21,7 @@ package org.apache.flink.table.sinks
 import org.apache.flink.annotation.Internal
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{Table, TableException}
-import org.apache.flink.table.api.types.DataType
+import org.apache.flink.table.types.DataType
 
 /**
   * A [[DataStreamTableSink]] specifies how to emit a [[Table]] to an DataStream[T]

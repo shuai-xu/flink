@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.{GenericTypeInfo, RowTypeInfo}
 import org.apache.flink.api.scala._
@@ -27,18 +26,17 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableException, TableSchema}
-import org.apache.flink.table.sources.StreamTableSource
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, TypeConverters}
-import org.apache.flink.table.util._
-import org.apache.flink.table.api.Types
-import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingTestBase, TestingAppendSink}
+import org.apache.flink.table.api.{TableException, TableSchema, Types}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.runtime.utils.{CommonTestData, StreamingTestBase, TestingAppendSink}
+import org.apache.flink.table.sources.StreamTableSource
 import org.apache.flink.table.sources.wmstrategies.PunctuatedWatermarkAssigner
-import org.apache.flink.table.util.{TestFilterableTableSource, TestPartitionableTableSource, TestTableSourceWithTime}
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType, TypeConverters}
+import org.apache.flink.table.util.{TestFilterableTableSource, TestPartitionableTableSource, TestTableSourceWithTime, _}
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
+import org.apache.calcite.runtime.SqlFunctions.{internalToTimestamp => toTimestamp}
 import org.junit.Assert._
 import org.junit.Test
 

@@ -23,12 +23,11 @@ import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.types.{RowType, TypeConverters}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, JoinedRow}
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
@@ -38,6 +37,7 @@ import org.apache.flink.table.runtime.join.stream._
 import org.apache.flink.table.runtime.join.stream.bundle._
 import org.apache.flink.table.runtime.join.stream.state.JoinStateHandler
 import org.apache.flink.table.runtime.join.stream.state.`match`.JoinMatchStateHandler
+import org.apache.flink.table.types.{RowType, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
 import org.apache.calcite.plan._

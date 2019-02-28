@@ -21,7 +21,6 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
 import org.apache.flink.table.api.{BatchTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonScan
@@ -29,6 +28,7 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.physical.{FlinkPhysicalRel, PhysicalTableSourceScan}
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSourceUtil}
+import org.apache.flink.table.types.{DataTypes, TypeConverters}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode

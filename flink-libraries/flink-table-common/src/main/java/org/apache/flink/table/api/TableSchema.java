@@ -19,8 +19,8 @@
 package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.TimestampType;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.TimestampType;
 import org.apache.flink.util.Preconditions;
 
 import java.util.ArrayList;

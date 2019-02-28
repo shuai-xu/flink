@@ -18,22 +18,19 @@
 
 package org.apache.flink.table.sinks
 
-import java.lang.{Boolean => JBool}
-import java.util.TimeZone
-import java.util.{Date => JDate}
-import java.sql.Date
-import java.sql.Time
-import java.sql.Timestamp
-
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.streaming.api.datastream.{DataStream}
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext
-import org.apache.flink.types.Row
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
+import org.apache.flink.table.types.{DataType, DataTypes}
+import org.apache.flink.types.Row
 import org.apache.flink.util.StringUtils
+
+import java.lang.{Boolean => JBool}
+import java.sql.{Date, Time, Timestamp}
+import java.util.{TimeZone, Date => JDate}
 
 /**
   * A simple [[TableSink]] to output data to console.

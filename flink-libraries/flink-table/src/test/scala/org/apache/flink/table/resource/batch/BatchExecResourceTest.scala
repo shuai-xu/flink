@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.resource.batch
 
-import java.util.{Arrays => JArrays, Collection => JCollection}
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableSchema}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableSchema}
 import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
 import org.apache.flink.table.sinks.csv.CsvTableSink
 import org.apache.flink.table.tpc.{STATS_MODE, TpcHSchemaProvider, TpchTableStatsProvider}
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.{NodeResourceUtil, TableTestBase}
 
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Before, Test}
+
+import java.util.{Arrays => JArrays, Collection => JCollection}
 
 import _root_.scala.collection.JavaConversions._
 

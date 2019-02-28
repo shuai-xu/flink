@@ -18,7 +18,7 @@
 
 package org.apache.flink.api.java.io.jdbc;
 
-import org.apache.flink.table.api.types.DataTypes;
+import org.apache.flink.table.types.DataTypes;
 
 import org.junit.Test;
 

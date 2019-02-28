@@ -24,7 +24,6 @@ import org.apache.flink.core.fs.{FileSystem, Path}
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.table.api.{RichTableSchema, TableConfig, TableConfigOptions}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.BaseRow
@@ -33,17 +32,19 @@ import org.apache.flink.table.descriptors.ConnectorDescriptorValidator
 import org.apache.flink.table.factories.TableFactoryService
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.binaryRow
+import org.apache.flink.table.sinks.filesystem.FileSystemSinkITCase.globalResults
 import org.apache.flink.table.sinks.{BatchTableSink, TableSink}
+import org.apache.flink.table.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.junit.rules.TemporaryFolder
 import org.junit.{After, Before, Rule, Test}
 
-import scala.collection.Seq
 import scala.collection.JavaConversions._
+import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
-import FileSystemSinkITCase.globalResults
 
 class FileSystemSinkITCase extends BatchTestBase {
   val dataType = new BaseRowTypeInfo(INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO)

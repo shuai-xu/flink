@@ -24,11 +24,11 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.source.{RichParallelSourceFunction, SourceFunction}
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
+import org.apache.flink.table.types.{DataType, DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.typeutils.BaseRowSerializer
 import org.apache.flink.table.util.{TableProperties, TableSchemaUtil}
 

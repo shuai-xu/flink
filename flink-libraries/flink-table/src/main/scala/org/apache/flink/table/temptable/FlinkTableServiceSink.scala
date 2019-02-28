@@ -24,13 +24,12 @@ import org.apache.flink.service.ServiceRegistryFactory
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.{AppendStreamTableSink, BatchTableSink, TableSinkBase}
 import org.apache.flink.table.temptable.rpc.TableServiceClient
 import org.apache.flink.table.temptable.util.TableServiceUtil
+import org.apache.flink.table.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.typeutils.BaseRowSerializer
-import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.TableProperties
 
 /**

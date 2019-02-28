@@ -18,25 +18,26 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.calcite.avatica.util.DateTimeUtils
-import org.apache.commons.codec.binary.Base64
 import org.apache.flink.runtime.io.disk.iomanager.IOManager
 import org.apache.flink.runtime.memory.MemoryManager
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.functions.{FunctionContext, UserDefinedFunction}
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.CodeGeneratorContext._
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.dataformat.util.BaseRowUtil
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.functions.FunctionContextImpl
 import org.apache.flink.table.runtime.util.{ResettableExternalBuffer, RowIterator}
+import org.apache.flink.table.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowSerializer, BinaryRowSerializer}
 import org.apache.flink.table.util.collections._
 import org.apache.flink.types.Row
 import org.apache.flink.util.{InstantiationUtil, Preconditions}
+
+import org.apache.calcite.avatica.util.DateTimeUtils
+import org.apache.commons.codec.binary.Base64
 
 import scala.collection.mutable
 

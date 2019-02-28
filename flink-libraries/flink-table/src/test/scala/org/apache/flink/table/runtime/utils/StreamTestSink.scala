@@ -17,9 +17,6 @@
  */
 package org.apache.flink.table.runtime.utils
 
-import java.lang.{Boolean => JBoolean}
-import java.util.TimeZone
-import java.util.concurrent.atomic.AtomicInteger
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.io.OutputFormat
@@ -31,15 +28,19 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes}
 import org.apache.flink.table.connector.DefinedDistribution
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.runtime.conversion.DataStructureConverters
 import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
 import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, _}
+import org.apache.flink.table.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.types.Row
+
+import _root_.java.lang.{Boolean => JBoolean}
+import _root_.java.util.TimeZone
+import _root_.java.util.concurrent.atomic.AtomicInteger
 
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable

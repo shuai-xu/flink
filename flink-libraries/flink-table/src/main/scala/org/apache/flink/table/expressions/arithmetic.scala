@@ -17,16 +17,17 @@
  */
 package org.apache.flink.table.expressions
 
+import org.apache.flink.table.functions.sql.ScalarSqlFunctions
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.typeutils.TypeCheckUtils._
+import org.apache.flink.table.typeutils.TypeCoercion
+import org.apache.flink.table.validate._
+
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.SqlOperator
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
-import org.apache.flink.table.typeutils.TypeCheckUtils._
-import org.apache.flink.table.typeutils.TypeCoercion
-import org.apache.flink.table.validate._
 
 import scala.collection.JavaConversions._
 

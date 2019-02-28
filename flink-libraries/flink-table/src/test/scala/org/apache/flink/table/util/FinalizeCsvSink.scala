@@ -23,10 +23,10 @@ import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.sinks.csv.BaseRowCsvOutputFormat
 import org.apache.flink.table.sinks.{BatchTableSink, TableSinkBase}
+import org.apache.flink.table.types.RowType
 
 class FinalizeCsvSink(
     path: String,

@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.util
 
-import org.apache.flink.table.api.types.{RowType, DataType, DataTypes, TimestampType}
 import org.apache.flink.table.api.{Column, TableSchema}
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.types.{DataType, DataTypes, RowType, TimestampType}
 
 /**
   * Utils for TableSchema

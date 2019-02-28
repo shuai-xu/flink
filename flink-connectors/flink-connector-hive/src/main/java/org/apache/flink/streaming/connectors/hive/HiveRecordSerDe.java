@@ -18,10 +18,10 @@
 
 package org.apache.flink.streaming.connectors.hive;
 
-import org.apache.flink.table.api.types.DataTypes;
-import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.DecimalConverter;
+import org.apache.flink.table.types.DataTypes;
+import org.apache.flink.table.types.DecimalType;
 
 import org.apache.hadoop.hive.common.type.HiveChar;
 import org.apache.hadoop.hive.common.type.HiveVarchar;

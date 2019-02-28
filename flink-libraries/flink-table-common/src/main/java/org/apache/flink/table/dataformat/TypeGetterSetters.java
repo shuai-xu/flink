@@ -18,13 +18,13 @@
 package org.apache.flink.table.dataformat;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.table.api.types.ArrayType;
-import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.api.types.GenericType;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.MapType;
-import org.apache.flink.table.api.types.RowType;
-import org.apache.flink.table.api.types.Types;
+import org.apache.flink.table.types.ArrayType;
+import org.apache.flink.table.types.DecimalType;
+import org.apache.flink.table.types.GenericType;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.MapType;
+import org.apache.flink.table.types.RowType;
+import org.apache.flink.table.types.Types;
 
 /**
  * Provide type specialized getters and setters to reduce if/else and eliminate box and unbox.

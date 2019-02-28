@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.sources.parquet
 
-import java.util
-
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.TableSchema
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources._
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.util.Logging
+
+import org.apache.calcite.tools.RelBuilder
 import org.apache.parquet.filter2.predicate.FilterPredicate
+
+import java.util
 
 /**
   * A [[BatchTableSource]] for Parquet files.

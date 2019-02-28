@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import java.util.HashMap
-
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.catalog.CatalogTable
 import org.apache.flink.table.catalog.config.CatalogTableConfig
 import org.apache.flink.table.factories.utils.TestingTableSink
 import org.apache.flink.table.runtime.utils._
+import org.apache.flink.table.types.DataTypes
+
 import org.junit.Assert._
 import org.junit.Test
+
+import java.util.HashMap
 
 import scala.collection.mutable
 

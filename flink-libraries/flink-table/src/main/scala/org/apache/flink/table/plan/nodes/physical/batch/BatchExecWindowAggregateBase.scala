@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.functions.{AggregateFunction, DeclarativeAggregateFunction, UserDefinedFunction}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType, PrimitiveType, RowType}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -43,6 +42,7 @@ import org.apache.flink.table.plan.util.{AggregateNameUtil, AggregateUtil}
 import org.apache.flink.table.runtime.functions.DateTimeFunctions
 import org.apache.flink.table.runtime.util.RowIterator
 import org.apache.flink.table.runtime.window.grouping.{AbstractWindowsGrouping, HeapWindowsGrouping}
+import org.apache.flink.table.types.{DataType, DataTypes, InternalType, PrimitiveType, RowType}
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType

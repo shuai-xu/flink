@@ -26,7 +26,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.SafetyNetWrapperFileSystem;
 import org.apache.flink.core.fs.local.LocalFileSystem;
 import org.apache.flink.runtime.fs.hdfs.HadoopFileSystem;
-import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 

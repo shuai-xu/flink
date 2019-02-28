@@ -19,12 +19,12 @@ package org.apache.flink.table.runtime.join
 
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
-import org.apache.flink.table.api.types.{RowType}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
-import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.dataformat.{BaseRow, JoinedRow}
+import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.plan.util.FlinkRexUtil
+import org.apache.flink.table.types.RowType
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel.`type`.RelDataType

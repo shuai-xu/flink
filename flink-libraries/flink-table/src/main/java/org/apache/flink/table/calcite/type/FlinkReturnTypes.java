@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.calcite.type;
 
-import org.apache.flink.table.api.types.DecimalType;
 import org.apache.flink.table.dataformat.Decimal;
+import org.apache.flink.table.types.DecimalType;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlOperatorBinding;

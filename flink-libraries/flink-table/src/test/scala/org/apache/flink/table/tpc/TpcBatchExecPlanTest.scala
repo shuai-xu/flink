@@ -21,13 +21,13 @@ package org.apache.flink.table.tpc
 import org.apache.flink.core.fs.Path
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala.BatchTableEnvironment
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.dataformat.ColumnarRow
 import org.apache.flink.table.plan.rules.physical.batch.runtimefilter.InsertRuntimeFilterRule
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.plan.util.FlinkNodeOptUtil
 import org.apache.flink.table.sources.parquet.{ParquetTableSource, ParquetVectorizedColumnRowTableSource}
 import org.apache.flink.table.tpc.STATS_MODE.STATS_MODE
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.util.TableTestBase
 
 import org.apache.calcite.sql.SqlExplainLevel
@@ -36,8 +36,8 @@ import org.scalatest.prop.PropertyChecks
 
 import java.util.{Set => JSet}
 
-import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 abstract class TpcBatchExecPlanTest(
     caseName: String,

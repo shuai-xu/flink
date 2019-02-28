@@ -17,18 +17,19 @@
  */
 package org.apache.flink.table.dataview
 
-import java.util
 import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo, RowTypeInfo}
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.dataview._
-import org.apache.flink.table.api.types.{DataType, RowType, TypeConverters}
 import org.apache.flink.table.api.functions.AggregateFunction
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.dataformat.GenericRow
+import org.apache.flink.table.types.{DataType, RowType, TypeConverters}
 import org.apache.flink.table.typeutils._
+
+import java.util
 
 import scala.collection.mutable
 

@@ -17,14 +17,15 @@
  */
 package org.apache.flink.table.codegen.agg
 
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api.functions.DeclarativeAggregateFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
 import org.apache.flink.table.codegen.CodeGenUtils.primitiveTypeTermForType
-import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator._
+import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, GeneratedExpression}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.util.AggregateInfo
+import org.apache.flink.table.types.{DataType, InternalType}
+
+import org.apache.calcite.tools.RelBuilder
 
 /**
   * It is for code generate aggregation functions that are specified using expressions.

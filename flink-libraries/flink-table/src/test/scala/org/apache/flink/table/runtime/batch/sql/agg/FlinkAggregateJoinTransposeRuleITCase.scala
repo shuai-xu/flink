@@ -18,23 +18,20 @@
 
 package org.apache.flink.table.runtime.batch.sql.agg
 
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.api.{TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.CalciteConfig
-import org.apache.flink.table.plan.optimize._
 import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkBatchPrograms, FlinkGroupProgramBuilder, FlinkHepRuleSetProgramBuilder, HEP_RULES_EXECUTION_TYPE}
 import org.apache.flink.table.plan.rules.logical.{AggregateReduceGroupingRule, FlinkAggregateJoinTransposeRule}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.utils.CommonTestData
+import org.apache.flink.table.types.DataTypes
 
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.rules._
 import org.apache.calcite.tools.RuleSets
 import org.junit.{Before, Test}
-
-import _root_.scala.collection.JavaConverters._
 
 class FlinkAggregateJoinTransposeRuleITCase extends BatchTestBase {
 

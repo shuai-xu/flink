@@ -22,7 +22,6 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.operators.sort.QuickSort
 import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.types.{DataType, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.api.window.TimeWindow
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, Types}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
@@ -38,6 +37,7 @@ import org.apache.flink.table.plan.logical.{LogicalWindow, SlidingGroupWindow, T
 import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics
 import org.apache.flink.table.runtime.sort.BinaryKVInMemorySortBuffer
 import org.apache.flink.table.runtime.util.{BytesHashMap, BytesHashMapSpillMemorySegmentPool}
+import org.apache.flink.table.types.{DataType, InternalType, RowType, TypeConverters}
 import org.apache.flink.table.typeutils.BinaryRowSerializer
 import org.apache.flink.util.MutableObjectIterator
 

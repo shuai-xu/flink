@@ -18,17 +18,18 @@
 
 package org.apache.flink.table.codegen
 
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.TableException
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable, RexDistinctKeyVariable}
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.dataformat._
 import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, StreamRecordTimestampSqlFunction}
+import org.apache.flink.table.types.{DataTypes, GenericType, InternalType, RowType, TimestampType}
 import org.apache.flink.table.typeutils.TypeUtils
+
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.`type`.{ReturnTypes, SqlTypeName}
 
 import scala.collection.JavaConversions._
 

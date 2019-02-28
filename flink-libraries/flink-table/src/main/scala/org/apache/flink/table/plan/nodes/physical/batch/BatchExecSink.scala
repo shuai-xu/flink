@@ -21,10 +21,7 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import java.util
-
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.SinkCodeGenerator.generateRowConverterOperator
 import org.apache.flink.table.dataformat.BaseRow
@@ -33,11 +30,15 @@ import org.apache.flink.table.plan.nodes.exec.batch.BatchExecNodeVisitor
 import org.apache.flink.table.plan.nodes.exec.{BaseBatchExecNode, RowBatchExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, DataStreamTableSink, TableSink}
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.NodeResourceUtil
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
+
+import _root_.java.util
 
 /**
   * Flink RelNode to write data into an external sink defined by a [[TableSink]].

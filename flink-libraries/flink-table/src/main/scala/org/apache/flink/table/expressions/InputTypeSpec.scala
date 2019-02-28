@@ -18,9 +18,10 @@
 
 package org.apache.flink.table.expressions
 
-import scala.collection.mutable
-import org.apache.flink.table.api.types.InternalType
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.validate._
+
+import scala.collection.mutable
 
 /**
   * Expressions that have strict data type specification on its inputs.

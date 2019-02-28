@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.sources.parquet
 
-import java.io.File
-import java.lang.{Double => JDouble, Integer => JInt}
-import java.sql.Date
-import java.math.BigDecimal
-
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
-import org.apache.flink.table.dataformat.{Decimal, GenericRow}
 import org.apache.flink.table.dataformat.GenericRow.of
+import org.apache.flink.table.dataformat.{Decimal, GenericRow}
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.toInt
 import org.apache.flink.table.sinks.parquet.RowParquetOutputFormat
+import org.apache.flink.table.types.{DataTypes, InternalType}
+
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
+
+import java.io.File
+import java.lang.{Double => JDouble, Integer => JInt}
+import java.math.BigDecimal
+import java.sql.Date
 
 object CommonParquetTestData {
 

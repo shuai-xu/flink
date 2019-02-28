@@ -17,14 +17,14 @@
  */
 package org.apache.flink.table.runtime.functions.tablefunctions
 
-import org.apache.commons.lang3.StringUtils
 import org.apache.flink.table.api.functions.TableFunction
-import org.apache.flink.table.api.types.{DataType, DataTypes, RowType}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow}
+import org.apache.flink.table.types.{DataType, DataTypes, RowType}
+
+import org.apache.commons.lang3.StringUtils
 
 import scala.annotation.varargs
-import scala.collection.mutable
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 
 class MultiKeyValue extends TableFunction[BaseRow] {
 

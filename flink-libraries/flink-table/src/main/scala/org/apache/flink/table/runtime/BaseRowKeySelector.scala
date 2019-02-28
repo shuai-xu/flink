@@ -21,10 +21,10 @@ package org.apache.flink.table.runtime
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.util.BinaryRowUtil
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow}
+import org.apache.flink.table.types.{RowType, TypeConverters}
 import org.apache.flink.table.typeutils.TypeCheckUtils.validateEqualsHashCode
 import org.apache.flink.table.typeutils.{BaseRowSerializer, BaseRowTypeInfo}
 

@@ -19,8 +19,8 @@
 package org.apache.flink.streaming.connectors.kafka.v2.common;
 
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.TypeInfoWrappedDataType;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.TypeInfoWrappedDataType;
 
 import java.io.Serializable;
 import java.util.List;

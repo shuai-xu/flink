@@ -18,18 +18,19 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.api.{TableException, ValidationException}
+import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
+import org.apache.flink.table.expressions._
+import org.apache.flink.table.plan.logical.LogicalWindow
+import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.validate.BasicOperatorTable
+
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.logical.{LogicalFilter, LogicalProject}
 import org.apache.calcite.rex.{RexCall, RexNode}
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.{TableException, ValidationException}
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
-import org.apache.flink.table.expressions._
-import org.apache.flink.table.plan.logical.LogicalWindow
-import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
-import org.apache.flink.table.validate.BasicOperatorTable
 
 import scala.collection.JavaConversions._
 

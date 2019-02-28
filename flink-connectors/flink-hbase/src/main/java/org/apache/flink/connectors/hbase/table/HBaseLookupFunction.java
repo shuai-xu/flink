@@ -26,7 +26,7 @@ import org.apache.flink.connectors.hbase.util.HBaseTypeUtils;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.functions.FunctionContext;
 import org.apache.flink.table.api.functions.TableFunction;
-import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;

@@ -17,12 +17,13 @@
  */
 package org.apache.flink.table.expressions
 
-import org.apache.calcite.rex.RexNode
-import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.plan.TreeNode
 import org.apache.flink.table.plan.logical.LogicalExprVisitable
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.table.validate.{ValidationResult, ValidationSuccess}
+
+import org.apache.calcite.rex.RexNode
+import org.apache.calcite.tools.RelBuilder
 
 abstract class Expression extends TreeNode[Expression] with LogicalExprVisitable {
   /**

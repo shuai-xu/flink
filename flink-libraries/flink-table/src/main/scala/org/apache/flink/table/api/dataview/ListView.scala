@@ -18,12 +18,12 @@
 
 package org.apache.flink.table.api.dataview
 
+import org.apache.flink.api.common.typeinfo.TypeInfo
+import org.apache.flink.table.types.DataType
+import org.apache.flink.table.typeutils.ListViewTypeInfoFactory
+
 import java.lang.{Iterable => JIterable}
 import java.util
-
-import org.apache.flink.api.common.typeinfo.TypeInfo
-import org.apache.flink.table.api.types.DataType
-import org.apache.flink.table.typeutils.ListViewTypeInfoFactory
 
 /**
   * A [[ListView]] provides List functionality for accumulators used by user-defined aggregate

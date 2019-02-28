@@ -19,8 +19,8 @@ package org.apache.flink.table.codegen.expr
 
 import org.apache.flink.table.api.functions.DeclarativeAggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.expressions.{Expression, Literal, UnresolvedAggBufferReference}
+import org.apache.flink.table.types.{DataTypes, InternalType}
 
 /**
   * This count aggregate function returns the count of values

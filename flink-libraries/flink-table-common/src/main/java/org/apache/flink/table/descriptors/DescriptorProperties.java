@@ -25,7 +25,7 @@ import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.ValidationException;
-import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.utils.EncodingUtils;
 import org.apache.flink.table.utils.TypeStringUtils;
 import org.apache.flink.util.InstantiationUtil;

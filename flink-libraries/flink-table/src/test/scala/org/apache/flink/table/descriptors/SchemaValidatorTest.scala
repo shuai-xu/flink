@@ -18,18 +18,18 @@
 
 package org.apache.flink.table.descriptors
 
-import java.util.Optional
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.types.{DataType, DataTypes, TypeConverters, Types => InternalTypes}
 import org.apache.flink.table.api.{TableException, TableSchema, Types}
 import org.apache.flink.table.descriptors.RowtimeTest.CustomExtractor
 import org.apache.flink.table.sources.tsextractors.{ExistingField, StreamRecordTimestamp}
 import org.apache.flink.table.sources.wmstrategies.{BoundedOutOfOrderTimestamps, PreserveWatermarks}
-import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.types.{DataType, DataTypes, TypeConverters}
 import org.apache.flink.types.Row
 
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
+
+import java.util.Optional
 
 import scala.collection.JavaConverters._
 
@@ -50,9 +50,9 @@ class SchemaValidatorTest {
     props.putProperties(desc1.toProperties)
 
     val inputSchema = TableSchema.builder()
-      .field("csvField", InternalTypes.STRING)
-      .field("abcField", InternalTypes.STRING)
-      .field("myField", InternalTypes.BOOLEAN)
+      .field("csvField", DataTypes.STRING)
+      .field("abcField", DataTypes.STRING)
+      .field("myField", DataTypes.BOOLEAN)
       .build()
 
     // test proctime
@@ -107,9 +107,9 @@ class SchemaValidatorTest {
     props.putProperties(desc1.toProperties)
 
     val expectedTableSinkSchema = TableSchema.builder()
-      .field("csvField", InternalTypes.STRING) // aliased
-      .field("abcField", InternalTypes.STRING)
-      .field("myTime", InternalTypes.TIMESTAMP)
+      .field("csvField", DataTypes.STRING) // aliased
+      .field("abcField", DataTypes.STRING)
+      .field("myTime", DataTypes.TIMESTAMP)
       .build()
 
     assertEquals(expectedTableSinkSchema, SchemaValidator.deriveTableSinkSchema(props))
@@ -127,10 +127,10 @@ class SchemaValidatorTest {
     props.putProperties(desc1.toProperties)
 
     val inputSchema = TableSchema.builder()
-      .field("csvField", InternalTypes.STRING)
-      .field("abcField", InternalTypes.STRING)
-      .field("myField", InternalTypes.BOOLEAN)
-      .field("myTime", InternalTypes.TIMESTAMP)
+      .field("csvField", DataTypes.STRING)
+      .field("abcField", DataTypes.STRING)
+      .field("myField", DataTypes.BOOLEAN)
+      .field("myTime", DataTypes.TIMESTAMP)
       .build()
 
     // test proctime

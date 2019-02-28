@@ -23,13 +23,12 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
-import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isProctimeIndicatorType, isRowtimeIndicatorType}
 import org.apache.flink.table.codegen.CodeGeneratorContext.DEFAULT_COLLECTOR_TERM
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
@@ -39,6 +38,7 @@ import org.apache.flink.table.plan.util.TemporalJoinUtil.TEMPORAL_JOIN_CONDITION
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, RexDefaultVisitor, TemporalJoinUtil}
 import org.apache.flink.table.runtime.join.{TemporalProcessTimeJoin, TemporalRowtimeJoin}
 import org.apache.flink.table.runtime.{BaseRowKeySelector, BinaryRowKeySelector}
+import org.apache.flink.table.types.RowType
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.util.Preconditions.checkState
 

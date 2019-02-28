@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.api.stream.table
 
-import java.util.HashMap
-
 import org.apache.flink.table.api.TableSchema
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.catalog.CatalogTable
 import org.apache.flink.table.catalog.config.CatalogTableConfig
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.table.util.TableTestBase
+
 import org.junit.{Ignore, Test}
+
+import java.util.HashMap
 
 @Ignore("BLINK-18757509")
 class TableRegisterTest extends TableTestBase {

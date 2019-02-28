@@ -21,8 +21,8 @@ package org.apache.flink.table.typeutils;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.dataformat.BaseMap;
+import org.apache.flink.table.types.DataType;
 
 /**
  * TypeInfo for BaseMap.

@@ -28,7 +28,7 @@ import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 
 import org.junit.Assert._

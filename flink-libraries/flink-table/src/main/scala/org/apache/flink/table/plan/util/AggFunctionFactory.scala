@@ -17,25 +17,25 @@
  */
 package org.apache.flink.table.plan.util
 
+import org.apache.flink.table.api.TableException
+import org.apache.flink.table.api.functions.UserDefinedFunction
+import org.apache.flink.table.api.scala._
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.codegen.expr.RowNumberFunction
+import org.apache.flink.table.errorcode.TableErrors
+import org.apache.flink.table.functions.sql.{SqlCardinalityCountAggFunction, SqlConcatAggFunction, SqlFirstLastValueAggFunction, SqlIncrSumAggFunction, SqlMax2ndAggFunction}
+import org.apache.flink.table.functions.utils.AggSqlFunction
+import org.apache.flink.table.runtime.functions.aggfunctions.ApproximateCountDistinct._
+import org.apache.flink.table.runtime.functions.aggfunctions.CountDistinct._
+import org.apache.flink.table.runtime.functions.aggfunctions.{CardinalityCountAggFunction, _}
+import org.apache.flink.table.types.DataTypes._
+import org.apache.flink.table.types.{DataType, DecimalType, InternalType}
+import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.sql.fun._
 import org.apache.calcite.sql.{SqlAggFunction, SqlKind, SqlRankFunction}
-import org.apache.flink.table.api.functions.UserDefinedFunction
-import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes._
-import org.apache.flink.table.api.types.{DataType, DecimalType, InternalType}
-import org.apache.flink.table.api.TableException
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.runtime.functions.aggfunctions.ApproximateCountDistinct._
-import org.apache.flink.table.runtime.functions.aggfunctions.CountDistinct._
-import org.apache.flink.table.runtime.functions.aggfunctions._
-import org.apache.flink.table.codegen.expr.RowNumberFunction
-import org.apache.flink.table.functions.sql.{SqlCardinalityCountAggFunction, SqlConcatAggFunction, SqlFirstLastValueAggFunction, SqlIncrSumAggFunction, SqlMax2ndAggFunction}
-import org.apache.flink.table.functions.utils.AggSqlFunction
-import org.apache.flink.table.runtime.functions.aggfunctions.CardinalityCountAggFunction
-import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
 
 import scala.collection.JavaConversions._
 

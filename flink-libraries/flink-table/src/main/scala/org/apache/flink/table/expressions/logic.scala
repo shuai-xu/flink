@@ -17,12 +17,13 @@
  */
 package org.apache.flink.table.expressions
 
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.validate._
+
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.table.validate._
 
 abstract class BinaryPredicate extends BinaryExpression {
   override private[flink] def resultType = DataTypes.BOOLEAN

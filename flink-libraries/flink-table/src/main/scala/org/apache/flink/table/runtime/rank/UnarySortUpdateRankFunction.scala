@@ -17,12 +17,6 @@
  */
 package org.apache.flink.table.runtime.rank
 
-import java.util
-import java.util.function.Supplier
-import java.util.{ArrayList => JArrayList, Collection => JCollection, HashMap => JHashMap, List => JList, Map => JMap}
-
-import scala.collection.JavaConversions._
-import org.apache.calcite.sql.SqlKind
 import org.apache.flink.api.common.functions.Comparator
 import org.apache.flink.api.common.state.{MapStateDescriptor, SortedMapStateDescriptor}
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -30,17 +24,25 @@ import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.runtime.state.keyed.{KeyedMapState, KeyedSortedMapState}
 import org.apache.flink.table.api.dataview.Order
-import org.apache.flink.table.api.types.DataType
 import org.apache.flink.table.api.{TableConfig, TableException}
 import org.apache.flink.table.codegen.{CodeGenUtils, Compiler, FieldAccess, GeneratedFieldExtractor}
-import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.runtime.sort.RecordComparator
+import org.apache.flink.table.plan.util.RankRange
 import org.apache.flink.table.runtime.functions.ExecutionContext
+import org.apache.flink.table.runtime.functions.ProcessFunction.Context
+import org.apache.flink.table.runtime.sort.RecordComparator
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.typeutils.{AbstractRowSerializer, BaseRowTypeInfo, OrderedTypeUtils}
 import org.apache.flink.table.util.{LRUMap, Logging, StateUtil}
-import org.apache.flink.table.runtime.functions.ProcessFunction.Context
 import org.apache.flink.util.Collector
+
+import org.apache.calcite.sql.SqlKind
+
+import java.util
+import java.util.function.Supplier
+import java.util.{ArrayList => JArrayList, Collection => JCollection, HashMap => JHashMap, List => JList, Map => JMap}
+
+import scala.collection.JavaConversions._
 
 /**
   * A fast version of rank process function which hold sorted top n data in heap as well as

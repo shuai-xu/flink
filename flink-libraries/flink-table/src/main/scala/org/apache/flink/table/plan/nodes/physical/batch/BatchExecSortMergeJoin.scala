@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.nodes.physical.batch
 import org.apache.flink.runtime.operators.DamBehavior
 import org.apache.flink.streaming.api.transformations.{StreamTransformation, TwoInputTransformation}
 import org.apache.flink.table.api.BatchTableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedSorter, ProjectionCodeGenerator, SortCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
@@ -35,6 +34,7 @@ import org.apache.flink.table.plan.util.{JoinUtil, SortUtil}
 import org.apache.flink.table.runtime.aggregate.RelFieldCollations
 import org.apache.flink.table.runtime.join.batch.{MergeJoinOperator, OneSideSortMergeJoinOperator, SortMergeJoinOperator}
 import org.apache.flink.table.runtime.sort.BinaryExternalSorter
+import org.apache.flink.table.types.{DataTypes, RowType, TypeConverters}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.util.NodeResourceUtil
 import org.apache.flink.table.util.NodeResourceUtil.InferMode

@@ -22,11 +22,11 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
-import org.apache.flink.table.api.types.{DataTypes, RowType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.expressions.{Cast, Expression}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.schema.DataStreamTable
+import org.apache.flink.table.types.{DataTypes, RowType}
 
 import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode

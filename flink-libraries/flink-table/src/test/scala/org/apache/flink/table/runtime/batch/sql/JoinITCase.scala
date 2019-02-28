@@ -19,26 +19,26 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.common.ExecutionConfig
-
-import java.util
 import org.apache.flink.api.common.typeinfo.BasicArrayTypeInfo.STRING_ARRAY_TYPE_INFO
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.common.typeutils.TypeComparator
 import org.apache.flink.api.java.typeutils.{GenericTypeInfo, ObjectArrayTypeInfo, RowTypeInfo}
-import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.api.types.DataTypes
+import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
 import org.apache.flink.table.runtime.batch.sql.joins.JoinITCaseBase
 import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
 import org.apache.flink.table.sinks.CollectRowTableSink
+import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.{Assert, Before, Ignore, Test}
+
+import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.Seq

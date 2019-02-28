@@ -26,17 +26,18 @@ import org.apache.flink.api.java.typeutils.InputTypeConfigurable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.fs.{FileSystem, Path}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ProjectionCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.types.RowType
 import org.apache.flink.table.util.{Logging, LowerCaseKeyMap}
+
+import javax.annotation.Nullable
 
 import java.io.IOException
 import java.util.{TimeZone, UUID}
-import javax.annotation.Nullable
 
-import scala.collection.mutable
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.Try
 
 /**

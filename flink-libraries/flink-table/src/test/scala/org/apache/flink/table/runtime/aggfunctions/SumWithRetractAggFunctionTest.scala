@@ -18,10 +18,10 @@
 
 package org.apache.flink.table.runtime.aggfunctions
 
-import java.math.BigDecimal
-
 import org.apache.flink.table.api.functions.AggregateFunction
-import org.apache.flink.table.api.types.DecimalType
+import org.apache.flink.table.types.DecimalType
+
+import java.math.BigDecimal
 
 /**
   * Test case for built-in sum with retract aggregate function

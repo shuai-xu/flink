@@ -17,15 +17,16 @@
  */
 package org.apache.flink.table.api.java
 
-import _root_.java.lang.{Boolean => JBool}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
 import org.apache.flink.table.expressions.ExpressionParser
+import org.apache.flink.table.types.DataTypes
+
+import _root_.java.lang.{Boolean => JBool}
 
 /**
   * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]].

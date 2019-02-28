@@ -18,38 +18,40 @@
 
 package org.apache.flink.table.codegen
 
-import java.lang.{Long => JLong}
-import org.apache.calcite.rel.RelCollation
-import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rex._
-import org.apache.calcite.sql.fun.SqlStdOperatorTable._
-import org.apache.calcite.sql.SqlAggFunction
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.functions.Function
-import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
 import org.apache.flink.cep._
+import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableException}
-import org.apache.flink.table.api.types._
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.codegen.MatchCodeGenerator._
-import org.apache.flink.table.plan.schema.BaseRowSchema
-import org.apache.flink.table.plan.util.AggregateUtil
+import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.functions.sql.ProctimeSqlFunction
+import org.apache.flink.table.plan.schema.BaseRowSchema
+import org.apache.flink.table.plan.util.AggregateUtil
 import org.apache.flink.table.plan.util.MatchUtil.AggregationPatternVariableFinder
 import org.apache.flink.table.runtime.conversion.DataStructureConverters.genToInternal
 import org.apache.flink.table.runtime.functions.{AggsHandleFunction, ExecutionContextImpl}
+import org.apache.flink.table.types.{DataTypes, RowType, StringType}
 import org.apache.flink.table.typeutils.TypeUtils
 import org.apache.flink.table.utils.EncodingUtils
 import org.apache.flink.util.Collector
 import org.apache.flink.util.MathUtils.checkedDownCast
+
+import org.apache.calcite.rel.RelCollation
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
+import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlAggFunction
+import org.apache.calcite.sql.fun.SqlStdOperatorTable._
+import org.apache.calcite.tools.RelBuilder
+
+import java.lang.{Long => JLong}
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._

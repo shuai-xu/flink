@@ -22,11 +22,11 @@ import org.apache.flink.api.common.io.FileOutputFormat.OutputDirectoryMode
 import org.apache.flink.api.common.io.OutputFormat
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.{Path => FPath}
-import org.apache.flink.table.api.types.{AtomicType, DataType, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.csv.CsvOptions
 import org.apache.flink.table.sinks.csv.BaseRowCsvOutputFormat
 import org.apache.flink.table.sinks.filesystem.{FileSystemOptions, OutputFormatFactory}
+import org.apache.flink.table.types.{AtomicType, DataType, RowType, TypeInfoWrappedDataType}
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.util.FlinkException
 

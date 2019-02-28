@@ -23,8 +23,6 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.catalog.FlinkCatalogException;
 import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -34,6 +32,8 @@ import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.Partition;
 import org.apache.flink.table.sources.PartitionableTableSource;
 import org.apache.flink.table.sources.TableSource;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.util.TableSchemaUtil;
 
@@ -49,6 +49,13 @@ import org.apache.hadoop.mapred.JobConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import scala.Option;
 
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
@@ -58,13 +65,6 @@ import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TA
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY;
 import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Hive table source class use BaseRow as inner implementation.

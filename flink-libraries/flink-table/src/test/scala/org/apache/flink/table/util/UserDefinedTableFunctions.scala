@@ -17,15 +17,16 @@
  */
 package org.apache.flink.table.util
 
-import java.lang.Boolean
-import java.sql.Timestamp
-
 import org.apache.flink.api.java.tuple.Tuple3
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.api.functions.{FunctionContext, ScalarFunction, TableFunction}
-import org.apache.flink.table.api.types.{DataType, DataTypes}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
+
 import org.junit.Assert
+
+import java.lang.Boolean
+import java.sql.Timestamp
 
 import scala.annotation.varargs
 

@@ -22,12 +22,12 @@ limitations under the License.
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{}])
    :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb($2)], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
+   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c($2)], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Correlate(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
+Correlate(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -38,12 +38,12 @@ Correlate(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[left], requiredColumns=[{}])
    :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb($2)], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
+   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c($2)], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Correlate(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
+Correlate(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c($2)], correlate=[table(TableFunc1(c))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[LEFT])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -54,12 +54,12 @@ Correlate(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1
 LogicalProject(c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{}])
    :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb($2, '$')], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
+   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c($2, '$')], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Correlate(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb($2, '$')], correlate=[table(TableFunc1(c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
+Correlate(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c($2, '$')], correlate=[table(TableFunc1(c,'$'))], select=[c,s], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -70,12 +70,12 @@ Correlate(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1
 LogicalProject(c=[$2], name=[$3], len=[$4])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{}])
    :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc2$615dd7a932ef4d3c75a5128fb023f707($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], elementType=[class [Ljava.lang.Object;])
+   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc2$83458c14b49a2d154e488b544d05d2a2($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Correlate(invocation=[org$apache$flink$table$util$TableFunc2$615dd7a932ef4d3c75a5128fb023f707($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
+Correlate(invocation=[org$apache$flink$table$util$TableFunc2$83458c14b49a2d154e488b544d05d2a2($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -86,13 +86,13 @@ Correlate(invocation=[org$apache$flink$table$util$TableFunc2$615dd7a932ef4d3c75a
 LogicalProject(c=[$2], name=[$3], len=[$5], adult=[$4])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{}])
    :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$HierarchyTableFunction$a97ec8c79fad4e58f7b3d3d0d367a68b($2)], rowType=[RecordType(VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], elementType=[class [Ljava.lang.Object;])
+   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$HierarchyTableFunction$99adafd3279c7c2ff8a8262cb95525f5($2)], rowType=[RecordType(VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, name, len, adult])
-+- Correlate(invocation=[org$apache$flink$table$util$HierarchyTableFunction$a97ec8c79fad4e58f7b3d3d0d367a68b($2)], correlate=[table(HierarchyTableFunction(c))], select=[c,name,adult,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], joinType=[INNER])
++- Correlate(invocation=[org$apache$flink$table$util$HierarchyTableFunction$99adafd3279c7c2ff8a8262cb95525f5($2)], correlate=[table(HierarchyTableFunction(c))], select=[c,name,adult,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, BOOLEAN adult, INTEGER len)], joinType=[INNER])
    +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -103,13 +103,13 @@ Calc(select=[c, name, len, adult])
 LogicalProject(c=[$2], name=[$4], age=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{}])
    :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$PojoTableFunc$37c2a61dbe4e86a2a1eb2b447855b918($2)], rowType=[RecordType(INTEGER age, VARCHAR(65536) name)], elementType=[class [Ljava.lang.Object;])
+   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$PojoTableFunc$a739d707a0dc64987782c900edfcef07($2)], rowType=[RecordType(INTEGER age, VARCHAR(65536) name)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
 Calc(select=[c, name, age])
-+- Correlate(invocation=[org$apache$flink$table$util$PojoTableFunc$37c2a61dbe4e86a2a1eb2b447855b918($2)], correlate=[table(PojoTableFunc(c))], select=[c,age,name], rowType=[RecordType(VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
++- Correlate(invocation=[org$apache$flink$table$util$PojoTableFunc$a739d707a0dc64987782c900edfcef07($2)], correlate=[table(PojoTableFunc(c))], select=[c,age,name], rowType=[RecordType(VARCHAR(65536) c, INTEGER age, VARCHAR(65536) name)], joinType=[INNER])
    +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -121,12 +121,12 @@ LogicalFilter(condition=[>($2, 2)])
 +- LogicalProject(c=[$2], name=[$3], len=[$4])
    +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{}])
       :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-      +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc2$615dd7a932ef4d3c75a5128fb023f707($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], elementType=[class [Ljava.lang.Object;])
+      +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc2$83458c14b49a2d154e488b544d05d2a2($2)], rowType=[RecordType(VARCHAR(65536) name, INTEGER len)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Correlate(invocation=[org$apache$flink$table$util$TableFunc2$615dd7a932ef4d3c75a5128fb023f707($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER], condition=[>($1, 2)])
+Correlate(invocation=[org$apache$flink$table$util$TableFunc2$83458c14b49a2d154e488b544d05d2a2($2)], correlate=[table(TableFunc2(c))], select=[c,name,len], rowType=[RecordType(VARCHAR(65536) c, VARCHAR(65536) name, INTEGER len)], joinType=[INNER], condition=[>($1, 2)])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>
@@ -137,12 +137,12 @@ Correlate(invocation=[org$apache$flink$table$util$TableFunc2$615dd7a932ef4d3c75a
 LogicalProject(a=[$0], c=[$2], s=[$3])
 +- LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{}])
    :- LogicalTableScan(table=[[builtin, default, _DataStreamTable_0]])
-   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb(SUBSTRING($2, 2, CHAR_LENGTH($2)))], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
+   +- LogicalTableFunctionScan(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c(SUBSTRING($2, 2, CHAR_LENGTH($2)))], rowType=[RecordType(VARCHAR(65536) s)], elementType=[class [Ljava.lang.Object;])
 ]]>
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-Correlate(invocation=[org$apache$flink$table$util$TableFunc1$4cf19b69e9ec9920db1afce973dac2eb(SUBSTRING($2, 2, CHAR_LENGTH($2)))], correlate=[table(TableFunc1(SUBSTRING(c, 2, CHAR_LENGTH(c))))], select=[a,c,s], rowType=[RecordType(INTEGER a, VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
+Correlate(invocation=[org$apache$flink$table$util$TableFunc1$667277b3d034024d7ed13cf6016a032c(SUBSTRING($2, 2, CHAR_LENGTH($2)))], correlate=[table(TableFunc1(SUBSTRING(c, 2, CHAR_LENGTH(c))))], select=[a,c,s], rowType=[RecordType(INTEGER a, VARCHAR(65536) c, VARCHAR(65536) s)], joinType=[INNER])
 +- BoundedStreamScan(table=[[builtin, default, _DataStreamTable_0]], fields=[a, b, c])
 ]]>
     </Resource>

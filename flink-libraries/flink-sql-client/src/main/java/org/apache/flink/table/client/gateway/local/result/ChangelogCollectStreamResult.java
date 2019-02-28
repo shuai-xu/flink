@@ -20,8 +20,8 @@ package org.apache.flink.table.client.gateway.local.result;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.client.gateway.TypedResult;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 
 import java.net.InetAddress;

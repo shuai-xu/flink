@@ -23,7 +23,6 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.streaming.api.operators.TwoInputSelection;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.GeneratedJoinConditionFunction;
 import org.apache.flink.table.codegen.GeneratedProjection;
@@ -37,6 +36,7 @@ import org.apache.flink.table.runtime.AbstractStreamOperatorWithMetrics;
 import org.apache.flink.table.runtime.join.batch.hashtable.BinaryHashTable;
 import org.apache.flink.table.runtime.util.RowIterator;
 import org.apache.flink.table.runtime.util.StreamRecordCollector;
+import org.apache.flink.table.types.RowType;
 import org.apache.flink.table.typeutils.AbstractRowSerializer;
 import org.apache.flink.util.Collector;
 

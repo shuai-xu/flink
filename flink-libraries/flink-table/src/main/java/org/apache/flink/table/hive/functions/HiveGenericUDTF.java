@@ -20,8 +20,8 @@ package org.apache.flink.table.hive.functions;
 
 import org.apache.flink.table.api.functions.FunctionContext;
 import org.apache.flink.table.api.functions.TableFunction;
-import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.types.DataType;
 
 import org.apache.hadoop.hive.ql.exec.UDFArgumentException;
 import org.apache.hadoop.hive.ql.metadata.HiveException;

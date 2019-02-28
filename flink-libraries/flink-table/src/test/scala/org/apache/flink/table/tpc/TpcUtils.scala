@@ -18,16 +18,16 @@
 
 package org.apache.flink.table.tpc
 
-import java.io.File
-import java.text.DecimalFormat
-import java.util.{ArrayList => JArrayList, List => JList}
-import java.math.{BigDecimal => JBigDecimal}
-import java.util
-
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfigOptions}
-import org.apache.flink.table.api.types.InternalType
+import org.apache.flink.table.types.InternalType
 import org.apache.flink.types.Row
+
+import java.io.File
+import java.math.{BigDecimal => JBigDecimal}
+import java.text.DecimalFormat
+import java.util
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.collection.JavaConversions._
 

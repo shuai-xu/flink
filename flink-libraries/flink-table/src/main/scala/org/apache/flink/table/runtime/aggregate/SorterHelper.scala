@@ -17,16 +17,18 @@
  */
 package org.apache.flink.table.runtime.aggregate
 
-import java.util.Comparator
-import org.apache.calcite.rel.RelFieldCollation
 import org.apache.flink.api.common.functions.{Comparator => FlinkComparator}
 import org.apache.flink.api.common.typeutils.{TypeComparator, TypeSerializer}
-import org.apache.flink.table.api.types.{DataTypes, InternalType, RowType}
 import org.apache.flink.table.codegen.{CodeGenUtils, GeneratedSorter, SortCodeGenerator}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.sort.RecordComparator
+import org.apache.flink.table.types.{InternalType, RowType}
 import org.apache.flink.table.typeutils.TypeUtils
+
+import org.apache.calcite.rel.RelFieldCollation
+
+import java.util.Comparator
 
 /**
  * Class represents a collection of helper methods to build the sort logic.

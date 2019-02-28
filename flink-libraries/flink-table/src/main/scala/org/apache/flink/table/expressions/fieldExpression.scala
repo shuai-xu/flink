@@ -17,17 +17,17 @@
  */
 package org.apache.flink.table.expressions
 
-import org.apache.calcite.rex.{RexInputRef, RexNode}
-import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory.isTimeIndicatorType
-import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable}
+import org.apache.flink.table.calcite.{FlinkTypeFactory, RexAggBufferVariable, RexAggLocalVariable, _}
 import org.apache.flink.table.functions.sql.StreamRecordTimestampSqlFunction
-import org.apache.flink.table.calcite._
 import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{DataTypes, InternalType}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
+
+import org.apache.calcite.rex.{RexInputRef, RexNode}
+import org.apache.calcite.tools.RelBuilder
 
 trait NamedExpression extends Expression {
   private[flink] def name: String

@@ -18,25 +18,26 @@
 
 package org.apache.flink.table.runtime.stream.table
 
-import java.io.{ByteArrayOutputStream, File, PrintStream}
-import java.lang.{Boolean => JBool}
-import java.util.TimeZone
-
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.runtime.utils.{StreamTestData, StreamingTestBase}
-import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, UpsertStreamTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
+import org.apache.flink.table.sinks.{RetractStreamTableSink, TableSink, UpsertStreamTableSink}
+import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.table.util.MemoryTableSourceSinkUtil
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row
+
 import org.junit.Assert.{assertEquals, assertFalse, assertNull}
 import org.junit.Test
+
+import java.io.{ByteArrayOutputStream, File, PrintStream}
+import java.lang.{Boolean => JBool}
+import java.util.TimeZone
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

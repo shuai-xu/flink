@@ -21,7 +21,6 @@ package org.apache.flink.table.runtime;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.codegen.CodeGenUtils;
 import org.apache.flink.table.codegen.CodeGeneratorContext;
 import org.apache.flink.table.codegen.GeneratedHashFunc;
@@ -29,6 +28,7 @@ import org.apache.flink.table.codegen.HashCodeGenerator;
 import org.apache.flink.table.codegen.HashFunc;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
+import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.util.MathUtils;
 

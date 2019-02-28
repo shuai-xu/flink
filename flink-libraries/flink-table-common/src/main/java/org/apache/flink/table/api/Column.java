@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.api;
 
-import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.types.InternalType;
 
 /**
  * A column that represents a table's column with field name, type and nullability.

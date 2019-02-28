@@ -19,17 +19,17 @@
 package org.apache.flink.table.runtime.batch.table
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.Table
-import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.api.{Table, ValidationException}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.DataTypes
-import org.apache.flink.table.runtime.batch.sql.BatchTestBase
-import org.apache.flink.table.util.DateTimeTestUtil._
-import org.apache.flink.table.util._
 import org.apache.flink.table.expressions.utils.{Func1, Func18, RichFunc2}
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.utils.JavaUserDefinedTableFunctions.JavaTableFunc0
 import org.apache.flink.table.runtime.utils.UserDefinedFunctionTestUtils
+import org.apache.flink.table.types.DataTypes
+import org.apache.flink.table.util.DateTimeTestUtil._
+import org.apache.flink.table.util._
 import org.apache.flink.test.util.TestBaseUtils
+
 import org.junit.Assert._
 import org.junit.Test
 

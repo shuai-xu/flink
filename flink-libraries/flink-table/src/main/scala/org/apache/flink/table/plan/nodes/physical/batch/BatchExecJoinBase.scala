@@ -18,13 +18,13 @@
 package org.apache.flink.table.plan.nodes.physical.batch
 
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.types.RowType
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.plan.FlinkJoinRelType
 import org.apache.flink.table.plan.`trait`.{FlinkRelDistribution, FlinkRelDistributionTraitDef}
 import org.apache.flink.table.plan.nodes.exec.RowBatchExecNode
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil}
+import org.apache.flink.table.types.RowType
 
 import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelDistribution.Type._

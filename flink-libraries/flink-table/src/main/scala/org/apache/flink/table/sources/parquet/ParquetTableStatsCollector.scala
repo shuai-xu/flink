@@ -18,21 +18,15 @@
 
 package org.apache.flink.table.sources.parquet
 
-import java.io.IOException
-import java.lang.Long
-import java.math.BigDecimal
-import java.sql.Timestamp
-import java.util
-import java.util.concurrent.{Callable, Executors, TimeUnit}
+import org.apache.flink.core.fs.{FileStatus, FileSystem, Path}
+import org.apache.flink.runtime.util.Hardware
+import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
+import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.{internalToDate, internalToTime}
+import org.apache.flink.table.types.{DataTypes, DecimalType, InternalType}
+import org.apache.flink.table.util.Logging
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import org.apache.calcite.avatica.util.DateTimeUtils
-import org.apache.flink.core.fs.{FileStatus, FileSystem, Path}
-import org.apache.flink.runtime.util.Hardware
-import org.apache.flink.table.api.types.{DataTypes, DecimalType, InternalType}
-import org.apache.flink.table.plan.stats.{ColumnStats, TableStats}
-import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.{internalToDate, internalToTime}
-import org.apache.flink.table.util.Logging
 import org.apache.hadoop.conf.Configuration
 import org.apache.parquet.column.statistics._
 import org.apache.parquet.example.data.simple.NanoTime
@@ -40,6 +34,13 @@ import org.apache.parquet.filter2.compat.{FilterCompat, RowGroupFilter}
 import org.apache.parquet.filter2.predicate.FilterPredicate
 import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.ParquetFileReader
+
+import java.io.IOException
+import java.lang.Long
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.util
+import java.util.concurrent.{Callable, Executors, TimeUnit}
 
 import scala.collection.JavaConversions._
 

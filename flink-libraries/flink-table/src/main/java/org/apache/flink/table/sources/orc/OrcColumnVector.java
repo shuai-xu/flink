@@ -18,22 +18,22 @@
 
 package org.apache.flink.table.sources.orc;
 
-import org.apache.flink.table.api.types.BooleanType;
-import org.apache.flink.table.api.types.ByteArrayType;
-import org.apache.flink.table.api.types.ByteType;
-import org.apache.flink.table.api.types.DataType;
-import org.apache.flink.table.api.types.DateType;
-import org.apache.flink.table.api.types.DecimalType;
-import org.apache.flink.table.api.types.DoubleType;
-import org.apache.flink.table.api.types.FloatType;
-import org.apache.flink.table.api.types.IntType;
-import org.apache.flink.table.api.types.LongType;
-import org.apache.flink.table.api.types.ShortType;
-import org.apache.flink.table.api.types.StringType;
-import org.apache.flink.table.api.types.TimestampType;
 import org.apache.flink.table.dataformat.Decimal;
 import org.apache.flink.table.dataformat.vector.TypeGetVector;
 import org.apache.flink.table.dataformat.vector.VectorizedColumnBatch;
+import org.apache.flink.table.types.BooleanType;
+import org.apache.flink.table.types.ByteArrayType;
+import org.apache.flink.table.types.ByteType;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.DateType;
+import org.apache.flink.table.types.DecimalType;
+import org.apache.flink.table.types.DoubleType;
+import org.apache.flink.table.types.FloatType;
+import org.apache.flink.table.types.IntType;
+import org.apache.flink.table.types.LongType;
+import org.apache.flink.table.types.ShortType;
+import org.apache.flink.table.types.StringType;
+import org.apache.flink.table.types.TimestampType;
 
 import org.apache.orc.storage.ql.exec.vector.BytesColumnVector;
 import org.apache.orc.storage.ql.exec.vector.ColumnVector;

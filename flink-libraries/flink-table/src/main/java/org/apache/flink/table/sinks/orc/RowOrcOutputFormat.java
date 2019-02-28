@@ -24,10 +24,10 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.SafetyNetWrapperFileSystem;
 import org.apache.flink.core.fs.local.LocalFileSystem;
 import org.apache.flink.runtime.fs.hdfs.HadoopFileSystem;
-import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.sources.orc.OrcSchemaConverter;
 import org.apache.flink.table.sources.orc.OrcSerializer;
+import org.apache.flink.table.types.InternalType;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.hadoop.fs.Path;

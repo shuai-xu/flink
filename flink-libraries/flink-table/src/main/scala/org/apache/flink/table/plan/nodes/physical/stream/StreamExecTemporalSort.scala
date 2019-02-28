@@ -19,7 +19,6 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
@@ -31,6 +30,7 @@ import org.apache.flink.table.plan.util.SortUtil
 import org.apache.flink.table.runtime.NullBinaryRowKeySelector
 import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.table.runtime.sort.{OnlyRowTimeSortOperator, ProcTimeSortOperator, RowTimeSortOperator}
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.NodeResourceUtil
 

@@ -17,12 +17,13 @@
  */
 package org.apache.flink.table.runtime.functions.aggfunctions
 
-import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.types.{DataType, DataTypes, DecimalType, InternalType, RowType}
 import org.apache.flink.table.dataformat.{BinaryString, Decimal, GenericRow}
+import org.apache.flink.table.types.{DataType, DataTypes, DecimalType, InternalType, RowType}
 import org.apache.flink.table.typeutils.{BinaryStringTypeInfo, DecimalTypeInfo}
+
+import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 
 /**
   * The initial accumulator for last value aggregate function

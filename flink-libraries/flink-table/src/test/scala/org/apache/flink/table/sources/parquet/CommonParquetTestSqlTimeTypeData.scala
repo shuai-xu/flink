@@ -18,16 +18,15 @@
 
 package org.apache.flink.table.sources.parquet
 
+import org.apache.flink.core.fs.Path
+import org.apache.flink.table.dataformat.GenericRow
+import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.{toInt, toLong}
+import org.apache.flink.table.sinks.parquet.RowParquetOutputFormat
+import org.apache.flink.table.types.{DataTypes, InternalType}
+import org.apache.flink.table.util.DateTimeTestUtil._
+
 import java.io.File
 import java.lang.{Integer => JInt, Long => JLong}
-
-import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.types.{DataTypes, InternalType}
-import org.apache.flink.table.dataformat.GenericRow
-import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.toInt
-import org.apache.flink.table.runtime.functions.BuildInScalarFunctions.toLong
-import org.apache.flink.table.sinks.parquet.RowParquetOutputFormat
-import org.apache.flink.table.util.DateTimeTestUtil._
 
 object CommonParquetTestSqlTimeTypeData {
 

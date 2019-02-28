@@ -20,7 +20,6 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
@@ -36,6 +35,7 @@ import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, A
 import org.apache.flink.table.runtime.KeyedProcessOperator
 import org.apache.flink.table.runtime.aggregate.{GroupAggFunction, MiniBatchGroupAggFunction}
 import org.apache.flink.table.runtime.bundle.KeyedBundleOperator
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.typeutils._
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}

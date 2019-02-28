@@ -18,15 +18,16 @@
 package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{DOUBLE_TYPE_INFO, FLOAT_TYPE_INFO, INT_TYPE_INFO, SHORT_TYPE_INFO, STRING_TYPE_INFO}
-import org.apache.flink.api.scala._
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
-import org.apache.flink.table.api.types.DataType
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.functions.aggregate.CountAggFunction
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
+import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.DateTimeTestUtil._
 import org.apache.flink.types.Row
+
 import org.junit.{Before, Test}
 
 import scala.collection.Seq

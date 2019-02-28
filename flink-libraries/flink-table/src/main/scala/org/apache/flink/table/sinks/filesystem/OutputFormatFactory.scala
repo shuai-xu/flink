@@ -19,8 +19,8 @@
 package org.apache.flink.table.sinks.filesystem
 
 import org.apache.flink.api.common.io.OutputFormat
-import org.apache.flink.table.api.types.{DataType, RowType}
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.types.{DataType, RowType}
 
 /**
   * A factory that produces [[OutputFormat]]s, A new [[OutputFormatFactory]] is created on

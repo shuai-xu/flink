@@ -18,15 +18,16 @@
 
 package org.apache.flink.table.sinks.filesystem
 
-import org.apache.flink.table.api.Types
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{BIG_DEC_TYPE_INFO, BYTE_TYPE_INFO, DOUBLE_TYPE_INFO, FLOAT_TYPE_INFO, INT_TYPE_INFO, LONG_TYPE_INFO, SHORT_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo.BYTE_PRIMITIVE_ARRAY_TYPE_INFO
-import org.apache.flink.table.api.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.api.Types
 import org.apache.flink.table.dataformat.{BinaryString, Decimal}
-import org.apache.flink.table.typeutils.BaseRowTypeInfo
-import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTime, UTCTimestamp}
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.binaryRow
 import org.apache.flink.table.runtime.functions.BuildInScalarFunctions
+import org.apache.flink.table.types.{DataTypes, TypeConverters}
+import org.apache.flink.table.typeutils.BaseRowTypeInfo
+import org.apache.flink.table.util.DateTimeTestUtil.{UTCDate, UTCTime, UTCTimestamp}
+
 import org.junit.Test
 
 import java.util.TimeZone

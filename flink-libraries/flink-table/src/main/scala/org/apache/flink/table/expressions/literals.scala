@@ -17,8 +17,10 @@
  */
 package org.apache.flink.table.expressions
 
-import java.sql.{Date, Time, Timestamp}
-import java.util.{Calendar, TimeZone}
+import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.logical.LogicalExprVisitor
+import org.apache.flink.table.types.{AtomicType, DataTypes, DecimalType, InternalType}
+import org.apache.flink.util.TimeConvertUtils
 
 import org.apache.calcite.avatica.util.TimeUnit
 import org.apache.calcite.rex.RexNode
@@ -27,10 +29,9 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.parser.SqlParserPos
 import org.apache.calcite.tools.RelBuilder
 import org.apache.calcite.util.NlsString
-import org.apache.flink.table.api.types._
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.plan.logical.LogicalExprVisitor
-import org.apache.flink.util.TimeConvertUtils
+
+import java.sql.{Date, Time, Timestamp}
+import java.util.{Calendar, TimeZone}
 
 object Literal {
   private[flink] val GMT = TimeZone.getTimeZone("GMT")

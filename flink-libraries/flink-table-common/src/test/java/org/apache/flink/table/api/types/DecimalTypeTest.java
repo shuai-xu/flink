@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.api.types;
 
+import org.apache.flink.table.types.DecimalType;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;

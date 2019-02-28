@@ -26,13 +26,13 @@ import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => Scala
 import org.apache.flink.table.api.functions.AggregateFunction
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
-import org.apache.flink.table.api.types.TypeConverters
 import org.apache.flink.table.api.{SqlParserException, Table, TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.dataformat.util.BaseRowUtil
 import org.apache.flink.table.dataformat.{BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
 import org.apache.flink.table.plan.nodes.exec.BatchExecNode
 import org.apache.flink.table.plan.util.{FlinkNodeOptUtil, FlinkRelOptUtil}
+import org.apache.flink.table.types.TypeConverters
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 import org.apache.flink.table.util.NodeResourceUtil.InferMode
 import org.apache.flink.table.util.{DiffRepository, NodeResourceUtil}

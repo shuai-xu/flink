@@ -23,9 +23,9 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.PojoTypeInfo;
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.api.types.InternalType;
-import org.apache.flink.table.api.types.RowType;
-import org.apache.flink.table.api.types.TypeConverters;
+import org.apache.flink.table.types.InternalType;
+import org.apache.flink.table.types.RowType;
+import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 

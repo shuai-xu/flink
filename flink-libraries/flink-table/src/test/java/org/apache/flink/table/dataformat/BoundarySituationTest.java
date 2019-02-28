@@ -22,8 +22,8 @@ import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.io.disk.RandomAccessInputView;
 import org.apache.flink.runtime.io.disk.RandomAccessOutputView;
-import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.util.BinaryRowUtil;
+import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.typeutils.BinaryRowSerializer;
 
 import org.apache.commons.lang3.RandomStringUtils;
