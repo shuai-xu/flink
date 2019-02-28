@@ -59,7 +59,7 @@ public class IncrementalKeyedStateSnapshotTest {
 	}
 
 	/**
-	 * This test checks, that for a registered {@link IncrementalKeyedStateHandle} discards respect
+	 * This test checks, that for a registered {@link IncrementalKeyedStateSnapshot} discards respect
 	 * all shared state and only discard it one all references are released.
 	 */
 	@Test

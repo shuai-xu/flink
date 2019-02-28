@@ -18,7 +18,10 @@
 
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.concurrent.Executors;
+import org.apache.flink.runtime.state.filesystem.FileSegmentStateHandle;
 import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -107,7 +110,7 @@ public class SharedStateRegistry implements AutoCloseable {
 				// delete if this is a real duplicate
 				if (!Objects.equals(state, entry.stateHandle)) {
 					scheduledStateDeletion = state;
-					LOG.info("Identified duplicate state registration under key {}. New state {} was determined to " +
+					LOG.trace("Identified duplicate state registration under key {}. New state {} was determined to " +
 							"be an unnecessary copy of existing state {} and will be dropped.",
 						registrationKey,
 						state,
@@ -136,7 +139,6 @@ public class SharedStateRegistry implements AutoCloseable {
 		Preconditions.checkNotNull(registrationKey);
 
 		final Result result;
-		final StreamStateHandle scheduledStateDeletion;
 		SharedStateRegistry.SharedStateEntry entry;
 
 		synchronized (registeredStates) {
@@ -151,16 +153,19 @@ public class SharedStateRegistry implements AutoCloseable {
 			// Remove the state from the registry when it's not referenced any more.
 			if (entry.getReferenceCount() <= 0) {
 				registeredStates.remove(registrationKey);
-				scheduledStateDeletion = entry.getStateHandle();
+				StreamStateHandle stateHandle = entry.getStateHandle();
+				if (stateHandle instanceof FileSegmentStateHandle) {
+					scheduleAsyncDelete((FileSegmentStateHandle) stateHandle);
+				} else {
+					scheduleAsyncDelete(stateHandle);
+				}
 				result = new Result(null, 0);
 			} else {
-				scheduledStateDeletion = null;
 				result = new Result(entry);
 			}
 		}
 
 		LOG.trace("Unregistered shared state {} under key {}.", entry, registrationKey);
-		scheduleAsyncDelete(scheduledStateDeletion);
 		return result;
 	}
 
@@ -196,6 +201,23 @@ public class SharedStateRegistry implements AutoCloseable {
 		if (streamStateHandle != null && !isPlaceholder(streamStateHandle)) {
 			LOG.trace("Scheduled delete of state handle {}.", streamStateHandle);
 			AsyncDisposalRunnable asyncDisposalRunnable = new AsyncDisposalRunnable(streamStateHandle);
+			try {
+				asyncDisposalExecutor.execute(asyncDisposalRunnable);
+			} catch (RejectedExecutionException ex) {
+				// TODO This is a temporary fix for a problem during ZooKeeperCompletedCheckpointStore#shutdown:
+				// Disposal is issued in another async thread and the shutdown proceeds to close the I/O Executor pool.
+				// This leads to RejectedExecutionException once the async deletes are triggered by ZK. We need to
+				// wait for all pending ZK deletes before closing the I/O Executor pool. We can simply call #run()
+				// because we are already in the async ZK thread that disposes the handles.
+				asyncDisposalRunnable.run();
+			}
+		}
+	}
+
+	private void scheduleAsyncDelete(FileSegmentStateHandle fileSegmentStateHandle) {
+		if (fileSegmentStateHandle != null) {
+			LOG.trace("Scheduled delete of file segment state {}.", fileSegmentStateHandle);
+			AsyncDisposalSegmentRunnable asyncDisposalRunnable = new AsyncDisposalSegmentRunnable(fileSegmentStateHandle);
 			try {
 				asyncDisposalExecutor.execute(asyncDisposalRunnable);
 			} catch (RejectedExecutionException ex) {
@@ -318,6 +340,28 @@ public class SharedStateRegistry implements AutoCloseable {
 				toDispose.discardState();
 			} catch (Exception e) {
 				LOG.warn("A problem occurred during asynchronous disposal of a shared state object: {}", toDispose, e);
+			}
+		}
+	}
+
+	/**
+	 * Encapsulates the operation the delete state handles asynchronously.
+	 */
+	private static final class AsyncDisposalSegmentRunnable implements Runnable {
+
+		private final FileSegmentStateHandle toDispose;
+
+		public AsyncDisposalSegmentRunnable(FileSegmentStateHandle toDispose) {
+			this.toDispose = Preconditions.checkNotNull(toDispose);
+		}
+
+		@Override
+		public void run() {
+			try {
+				Path filePath = toDispose.getFilePath();
+				FileSystem.get(filePath.toUri()).delete(filePath, false);;
+			} catch (Exception e) {
+				LOG.warn("A problem occurred during asynchronous disposal of a shared state datum object: {}", toDispose, e);
 			}
 		}
 	}

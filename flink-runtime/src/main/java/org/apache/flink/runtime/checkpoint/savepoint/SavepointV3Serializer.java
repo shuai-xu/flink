@@ -34,6 +34,7 @@ import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.filesystem.FileSegmentStateHandle;
 import org.apache.flink.runtime.state.filesystem.FileStateHandle;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
 import org.apache.flink.util.Preconditions;
@@ -80,6 +81,7 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 	private static final byte INCREMENTAL_KEY_GROUPS_HANDLE = 5;
 	private static final byte KEY_GROUP_STATE_SNAPSHOT = 6;
 	private static final byte INCREMENTAL_KEYE_STATE_SNAPSHOT = 7;
+	private static final byte FILE_SEGMENT_STREAM_STATE_HANDLE = 8;
 
 	/** The singleton instance of the serializer */
 	public static final SavepointV3Serializer INSTANCE = new SavepointV3Serializer();
@@ -554,6 +556,13 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 		if (stateHandle == null) {
 			dos.writeByte(NULL_HANDLE);
 
+		} else if (stateHandle instanceof FileSegmentStateHandle) {
+			dos.writeByte(FILE_SEGMENT_STREAM_STATE_HANDLE);
+			FileSegmentStateHandle fileSegmentStateHandle = (FileSegmentStateHandle) stateHandle;
+			dos.writeLong(fileSegmentStateHandle.getStartPosition());
+			dos.writeLong(fileSegmentStateHandle.getEndPosition());
+			dos.writeUTF(fileSegmentStateHandle.getFilePath().toString());
+
 		} else if (stateHandle instanceof FileStateHandle) {
 			dos.writeByte(FILE_STREAM_STATE_HANDLE);
 			FileStateHandle fileStateHandle = (FileStateHandle) stateHandle;
@@ -588,6 +597,11 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 			byte[] data = new byte[numBytes];
 			dis.readFully(data);
 			return new ByteStreamStateHandle(handleName, data);
+		} else if (FILE_SEGMENT_STREAM_STATE_HANDLE == type) {
+			long startPosition = dis.readLong();
+			long endPosition = dis.readLong();
+			String pathString = dis.readUTF();
+			return new FileSegmentStateHandle(new Path(pathString), startPosition, endPosition);
 		} else {
 			throw new IOException("Unknown implementation of StreamStateHandle, code: " + type);
 		}

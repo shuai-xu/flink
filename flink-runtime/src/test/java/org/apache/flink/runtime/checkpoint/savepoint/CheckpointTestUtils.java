@@ -20,6 +20,7 @@ package org.apache.flink.runtime.checkpoint.savepoint;
 
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.ConfigConstants;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.checkpoint.MasterState;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
@@ -39,9 +40,16 @@ import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.OperatorStreamStateHandle;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.filesystem.FileSegmentStateHandle;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
 import org.apache.flink.util.StringUtils;
 
+import org.junit.rules.TemporaryFolder;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -65,7 +73,8 @@ public class CheckpointTestUtils {
 	public static Collection<OperatorState> createOperatorStatesV3(
 		Random random,
 		int numTaskStates,
-		int numSubtasksPerTask) {
+		int numSubtasksPerTask,
+		TemporaryFolder temporaryFolder) throws IOException {
 
 		List<OperatorState> taskStates = new ArrayList<>(numTaskStates);
 
@@ -79,6 +88,7 @@ public class CheckpointTestUtils {
 			boolean hasKeyedStream = random.nextInt(4) != 0;
 			boolean hasKeyedBackend = random.nextInt(4) != 0;
 			boolean isIncremental = random.nextInt(3) == 0;
+			boolean isSegment = random.nextInt(3) == 0;
 
 			for (int subtaskIdx = 0; subtaskIdx < numSubtasksPerTask; subtaskIdx++) {
 
@@ -112,7 +122,11 @@ public class CheckpointTestUtils {
 				KeyedStateHandle keyedStateBackend = null;
 				if (hasKeyedBackend) {
 					if (isIncremental) {
-						keyedStateBackend = createDummyIncrementalKeyedStateSnapshot(random);
+						if (isSegment) {
+							keyedStateBackend = createDummyIncrementalSegmentKeyedStateSnapshot(random, temporaryFolder);
+						} else {
+							keyedStateBackend = createDummyIncrementalKeyedStateSnapshot(random);
+						}
 					} else {
 						keyedStateBackend = createDummyKeyedStateBackend(random);
 					}
@@ -350,6 +364,24 @@ public class CheckpointTestUtils {
 			String.valueOf(createRandomUUID(rnd)).getBytes(ConfigConstants.DEFAULT_CHARSET));
 	}
 
+	public static StreamStateHandle createDummySegmentStreamStateHandle(Random rnd, TemporaryFolder temporaryFolder) throws IOException {
+		File file = temporaryFolder.newFile();
+
+		byte[] data = new byte[rnd.nextInt(1024) + 12];
+		rnd.nextBytes(data);
+
+		try (OutputStream out = new FileOutputStream(file)) {
+			out.write(data);
+		}
+
+		return new FileSegmentStateHandle(Path.fromLocalFile(file), file.length() / 3, file.length() - rnd.nextInt(5));
+	}
+
+	public static StreamStateHandle createDummySegmentStreamStateHandle(File file, long startPosition, long endPosition) {
+
+		return new FileSegmentStateHandle(Path.fromLocalFile(file), startPosition, endPosition);
+	}
+
 	public static KeyGroupsStateSnapshot createDummyKeyedStateBackend(Random rnd) {
 
 		Map<Integer, Tuple2<Long, Integer>> metaInfos = new HashMap<>();
@@ -364,6 +396,16 @@ public class CheckpointTestUtils {
 			createRandomStateSnapshotMap(rnd),
 			createRandomStateHandleMap(rnd),
 			createDummyStreamStateHandle(rnd));
+	}
+
+	public static IncrementalKeyedStateSnapshot createDummyIncrementalSegmentKeyedStateSnapshot(
+			Random rnd, TemporaryFolder temporaryFolder) throws IOException {
+		return new IncrementalKeyedStateSnapshot(
+			new KeyGroupRange(1, 1),
+			42L,
+			createRandomStateSnapshotMap(rnd),
+			createRandomStateHandleMap(rnd),
+			createDummySegmentStreamStateHandle(rnd, temporaryFolder));
 	}
 
 	public static Map<StateHandleID, Tuple2<String, StreamStateHandle>> createRandomStateSnapshotMap(Random rnd) {

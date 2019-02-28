@@ -25,7 +25,9 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.MasterState;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -41,6 +43,8 @@ import static org.junit.Assert.assertEquals;
  * Various tests for the version 3 format serializer of a checkpoint.
  */
 public class SavepointV3SerializerTest {
+	@Rule
+	public final TemporaryFolder tempFolder = new TemporaryFolder();
 
 	@Test
 	public void testCheckpointWithNoState() throws Exception {
@@ -85,7 +89,7 @@ public class SavepointV3SerializerTest {
 			final int numTasks = rnd.nextInt(maxTaskStates) + 1;
 			final int numSubtasks = rnd.nextInt(maxNumSubtasks) + 1;
 			final Collection<OperatorState> taskStates = 
-					CheckpointTestUtils.createOperatorStatesV3(rnd, numTasks, numSubtasks);
+					CheckpointTestUtils.createOperatorStatesV3(rnd, numTasks, numSubtasks, tempFolder);
 
 			final Collection<MasterState> masterStates = Collections.emptyList();
 
@@ -107,7 +111,7 @@ public class SavepointV3SerializerTest {
 			final int numTasks = rnd.nextInt(maxTaskStates) + 1;
 			final int numSubtasks = rnd.nextInt(maxNumSubtasks) + 1;
 			final Collection<OperatorState> taskStates =
-					CheckpointTestUtils.createOperatorStatesV3(rnd, numTasks, numSubtasks);
+					CheckpointTestUtils.createOperatorStatesV3(rnd, numTasks, numSubtasks, tempFolder);
 
 			final int numMasterStates = rnd.nextInt(maxNumMasterStates) + 1;
 			final Collection<MasterState> masterStates =

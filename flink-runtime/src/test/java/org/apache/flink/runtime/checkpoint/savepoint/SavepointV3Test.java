@@ -21,7 +21,9 @@ package org.apache.flink.runtime.checkpoint.savepoint;
 import org.apache.flink.runtime.checkpoint.MasterState;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.util.Collection;
 import java.util.Random;
@@ -31,6 +33,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class SavepointV3Test {
+
+	@Rule
+	public final TemporaryFolder tempFolder = new TemporaryFolder();
 
 	/**
 	 * Simple test of savepoint methods.
@@ -45,7 +50,7 @@ public class SavepointV3Test {
 		final int numMasterStates = 7;
 
 		Collection<OperatorState> taskStates =
-				CheckpointTestUtils.createOperatorStatesV3(rnd, numTaskStates, numSubtaskStates);
+				CheckpointTestUtils.createOperatorStatesV3(rnd, numTaskStates, numSubtaskStates, tempFolder);
 
 		Collection<MasterState> masterStates =
 				CheckpointTestUtils.createRandomMasterStates(rnd, numMasterStates);
