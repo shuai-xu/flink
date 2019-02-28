@@ -1282,8 +1282,6 @@ public class LocalExecutorITCase extends TestLogger {
 			"CREATE TABLE t(f1 INT, f2 VARCHAR) WITH (type='csv', path='" + url.getPath() + "', commentsPrefix='#')"
 		);
 
-		executor.setDefaultDatabase(session, "default");
-
 		final String query = "SELECT scalarUDF(f1), f2 FROM mydb.t";
 		final List<String> expectedResults = new ArrayList<>();
 		expectedResults.add("47,Hello World");
@@ -1303,6 +1301,7 @@ public class LocalExecutorITCase extends TestLogger {
 
 			TestBaseUtils.compareResultCollections(expectedResults, actualResults, Comparator.naturalOrder());
 		} finally {
+			executor.dropTable(session, "DROP TABLE t");
 			// try to drop database
 			executor.dropDatabase(session, "mydb");
 
