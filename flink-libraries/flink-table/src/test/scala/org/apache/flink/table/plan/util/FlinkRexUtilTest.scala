@@ -15,18 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
+
+import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 
 import org.apache.calcite.rex.{RexBuilder, RexUtil}
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
-import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.plan.util.FlinkRexUtil
-
-import java.math.BigDecimal
-
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.Test
+
+import java.math.BigDecimal
 
 class FlinkRexUtilTest {
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem())

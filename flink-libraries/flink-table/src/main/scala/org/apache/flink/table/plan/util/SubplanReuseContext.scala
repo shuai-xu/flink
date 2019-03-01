@@ -51,9 +51,12 @@ import scala.collection.JavaConversions._
   * }}}
   * Project1-Scan1 and Project2-Scan2 have same digest, so they are in a reusable sub-plan group.
   */
-class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
+class SubplanReuseContext(
+    disableTableSourceReuse: Boolean,
+    enableNonDeterministicOpReuse: Boolean,
+    roots: RelNode*) {
   // mapping a relNode to its digest
-  private val mapNodeToDigest = Maps.newIdentityHashMap[RelNode, String]()
+  private val digestCache = Maps.newIdentityHashMap[RelNode, String]()
   // mapping the digest to RelNodes
   private val mapDigestToReusableNodes = new util.HashMap[String, util.List[RelNode]]()
 
@@ -63,7 +66,9 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
   /**
     * Return the digest of the given rel node.
     */
-  def getRelDigest(node: RelNode): String = RelDigestWriterImpl.getDigest(node)
+  def getRelDigest(node: RelNode): String = {
+    RelDigestUtil.getDigestWithCache(node, !enableNonDeterministicOpReuse, digestCache)
+  }
 
   /**
     * Returns true if the given node can reuse other node, else false.
@@ -83,13 +88,8 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
     * Returns reusable nodes which have same digest.
     */
   private def getReusableNodes(node: RelNode): List[RelNode] = {
-    val digest = mapNodeToDigest.get(node)
-    if (digest == null) {
-      // the node is in the reused sub-plan (not the root node of the sub-plan)
-      List.empty[RelNode]
-    } else {
-      mapDigestToReusableNodes.get(digest).toList
-    }
+    val digest = getRelDigest(node)
+    mapDigestToReusableNodes.getOrDefault(digest, List.empty[RelNode]).toList
   }
 
   /**
@@ -125,7 +125,6 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
     override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
       if (visitedNodes.contains(node)) {
         // does not need to visit a node which is already visited.
-        // TODO same node should be reuse ???
         return
       }
       visitedNodes.add(node)
@@ -133,7 +132,6 @@ class SubplanReuseContext(disableTableSourceReuse: Boolean, roots: RelNode*) {
       // the same sub-plan should have same digest value,
       // uses `explain` with `RelDigestWriterImpl` to get the digest of a sub-plan.
       val digest = getRelDigest(node)
-      mapNodeToDigest.put(node, digest)
       val nodes = mapDigestToReusableNodes.getOrElseUpdate(digest, new util.ArrayList[RelNode]())
       nodes.add(node)
       // the node will be reused if there are more than one nodes with same digest,

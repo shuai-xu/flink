@@ -15,26 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.flink.table.plan.util
 
-import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
+import org.apache.flink.table.api.functions.ScalarFunction
 
-import org.apache.calcite.rel.RelNode
+import java.util.Random
 
-object SubplanReuseUtil {
+object RandomUdf extends ScalarFunction {
+  val random = new Random()
 
-  def reuseSubplan(rels: Seq[RelNode], tableConfig: TableConfig): Seq[RelNode] = {
-    if (!tableConfig.getConf.getBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED)) {
-      return rels
-    }
-    val disableTableSourceReuse = !tableConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_OPTIMIZER_REUSE_TABLE_SOURCE_ENABLED)
-    val enableNonDeterministicOpReuse = tableConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_OPTIMIZER_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED)
-    val context = new SubplanReuseContext(
-      disableTableSourceReuse, enableNonDeterministicOpReuse, rels: _*)
-    val reuseShuttle = new SubplanReuseShuttle(context)
-    rels.map(_.accept(reuseShuttle))
+  def eval(): Int = {
+    random.nextInt()
   }
 
+  def eval(v: Int): Int = {
+    v + random.nextInt()
+  }
+
+  override def isDeterministic: Boolean = false
 }

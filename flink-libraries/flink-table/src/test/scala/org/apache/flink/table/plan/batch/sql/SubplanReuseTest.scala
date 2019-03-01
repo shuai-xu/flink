@@ -20,12 +20,13 @@ package org.apache.flink.table.plan.batch.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
-import org.apache.flink.table.api.functions.{ScalarFunction, TableFunction}
+import org.apache.flink.table.api.functions.TableFunction
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.plan.optimize.program.FlinkBatchPrograms
 import org.apache.flink.table.plan.rules.logical.PushLimitIntoTableSourceScanRule
 import org.apache.flink.table.plan.stats.TableStats
+import org.apache.flink.table.plan.util.RandomUdf
 import org.apache.flink.table.runtime.functions.aggfunctions.{IntFirstValueAggFunction, LongLastValueAggFunction}
 import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.util.{BatchTableTestUtil, TableTestBase}
@@ -554,20 +555,6 @@ class SubplanReuseTest extends TableTestBase {
       """.stripMargin
     util.printSql(sqlQuery, explainLevel = SqlExplainLevel.ALL_ATTRIBUTES)
   }
-}
-
-object RandomUdf extends ScalarFunction {
-  val random = new Random()
-
-  def eval(): Int = {
-    random.nextInt()
-  }
-
-  def eval(v: Int): Int = {
-    v + random.nextInt()
-  }
-
-  override def isDeterministic: Boolean = false
 }
 
 class MyTableFunc extends TableFunction[String] {

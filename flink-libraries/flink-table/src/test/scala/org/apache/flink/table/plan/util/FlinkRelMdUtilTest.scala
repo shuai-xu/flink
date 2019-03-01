@@ -16,23 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
 import org.apache.flink.table.plan.metadata.FlinkRelMdHandlerTestBase
 import org.apache.flink.table.plan.nodes.calcite.LogicalWindowAggregate
-import org.apache.flink.table.plan.nodes.logical.{
-  FlinkLogicalExpand, FlinkLogicalRank,
-  FlinkLogicalWindowAggregate
-}
-import org.apache.flink.table.plan.nodes.physical.batch.{
-  BatchExecHashWindowAggregate,
-  BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase
-}
-import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule.{
-  buildExpandRowType,
-  createExpandProjects
-}
-import org.apache.flink.table.plan.util.FlinkRelMdUtil
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalExpand, FlinkLogicalRank, FlinkLogicalWindowAggregate}
+import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashWindowAggregate, BatchExecLocalHashWindowAggregate, BatchExecWindowAggregateBase}
+import org.apache.flink.table.plan.rules.logical.DecomposeGroupingSetsRule.{buildExpandRowType, createExpandProjects}
 
 import com.google.common.collect.{ImmutableList, ImmutableSet}
 import org.apache.calcite.rel.SingleRel

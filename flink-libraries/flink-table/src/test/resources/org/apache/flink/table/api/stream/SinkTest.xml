@@ -154,27 +154,21 @@ LogicalUnion(all=[true])
       <![CDATA[StreamExecCalc(select=[a AS a1, b AS b1], where=[<=(a, 10)], reuse_id=[1])
 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 
-StreamExecExchange(distribution=[hash[a]], reuse_id=[2])
-+- StreamExecCalc(select=[a])
-   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+StreamExecUnion(all=[true], union=[a1, b1], reuse_id=[2])
+:- Reused(reference_id=[1])
++- StreamExecCalc(select=[a, b1])
+   +- StreamExecJoin(where=[=(a1, a)], join=[a1, b1, a], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a1]])
+      :  +- Reused(reference_id=[1])
+      +- StreamExecExchange(distribution=[hash[a]])
+         +- StreamExecCalc(select=[a])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
 
 StreamExecSink(fields=[a1, b1])
-+- StreamExecUnion(all=[true], union=[a1, b1])
-   :- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a, b1])
-      +- StreamExecJoin(where=[=(a1, a)], join=[a1, b1, a], joinType=[InnerJoin])
-         :- StreamExecExchange(distribution=[hash[a1]])
-         :  +- Reused(reference_id=[1])
-         +- Reused(reference_id=[2])
++- Reused(reference_id=[2])
 
 StreamExecSink(fields=[a1, b1])
-+- StreamExecUnion(all=[true], union=[a1, b1])
-   :- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a, b1])
-      +- StreamExecJoin(where=[=(a1, a)], join=[a1, b1, a], joinType=[InnerJoin])
-         :- StreamExecExchange(distribution=[hash[a1]])
-         :  +- Reused(reference_id=[1])
-         +- Reused(reference_id=[2])
++- Reused(reference_id=[2])
 ]]>
     </Resource>
   </TestCase>
@@ -235,27 +229,21 @@ LogicalUnion(all=[true])
       <![CDATA[StreamExecCalc(select=[a, b], where=[<=(a, 10)], reuse_id=[1])
 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 
-StreamExecExchange(distribution=[hash[a]], reuse_id=[2])
-+- StreamExecCalc(select=[a])
-   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+StreamExecUnion(all=[true], union=[a, b], reuse_id=[2])
+:- Reused(reference_id=[1])
++- StreamExecCalc(select=[a0 AS a, b AS b1])
+   +- StreamExecJoin(where=[=(a0, a)], join=[a, b, a0], joinType=[InnerJoin])
+      :- StreamExecExchange(distribution=[hash[a]])
+      :  +- Reused(reference_id=[1])
+      +- StreamExecExchange(distribution=[hash[a]])
+         +- StreamExecCalc(select=[a])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
 
 StreamExecSink(fields=[a1, b1])
-+- StreamExecUnion(all=[true], union=[a, b])
-   :- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a0 AS a, b AS b1])
-      +- StreamExecJoin(where=[=(a0, a)], join=[a, b, a0], joinType=[InnerJoin])
-         :- StreamExecExchange(distribution=[hash[a]])
-         :  +- Reused(reference_id=[1])
-         +- Reused(reference_id=[2])
++- Reused(reference_id=[2])
 
 StreamExecSink(fields=[a1, b1])
-+- StreamExecUnion(all=[true], union=[a, b])
-   :- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a0 AS a, b AS b1])
-      +- StreamExecJoin(where=[=(a0, a)], join=[a, b, a0], joinType=[InnerJoin])
-         :- StreamExecExchange(distribution=[hash[a]])
-         :  +- Reused(reference_id=[1])
-         +- Reused(reference_id=[2])
++- Reused(reference_id=[2])
 ]]>
     </Resource>
   </TestCase>
@@ -638,6 +626,61 @@ StreamExecSink(fields=[a1, b, c1])
       +- StreamExecExchange(distribution=[hash[a1]])
          +- StreamExecCalc(select=[a1, b])
             +- Reused(reference_id=[3])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks5SQL[subplanReuseEnabled=false]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{}], total_sum=[SUM($0)])
++- LogicalProject(a=[$0])
+   +- LogicalTableScan(table=[[builtin, default, table1]])
+
+LogicalAggregate(group=[{}], total_min=[MIN($0)])
++- LogicalProject(a=[$0])
+   +- LogicalTableScan(table=[[builtin, default, table1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecCalc(select=[random_udf(a) AS a], reuse_id=[1])
++- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecGroupAggregate(select=[SUM(a) AS total_sum])
+   +- StreamExecExchange(distribution=[single])
+      +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecGroupAggregate(select=[MIN(a) AS total_min])
+   +- StreamExecExchange(distribution=[single])
+      +- Reused(reference_id=[1])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testMultiSinks5SQL[subplanReuseEnabled=true]">
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalAggregate(group=[{}], total_sum=[SUM($0)])
++- LogicalProject(a=[$0])
+   +- LogicalTableScan(table=[[builtin, default, table1]])
+
+LogicalAggregate(group=[{}], total_min=[MIN($0)])
++- LogicalProject(a=[$0])
+   +- LogicalTableScan(table=[[builtin, default, table1]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[StreamExecExchange(distribution=[single], reuse_id=[1])
++- StreamExecCalc(select=[random_udf(a) AS a])
+   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecSink(fields=[total_sum])
++- StreamExecGroupAggregate(select=[SUM(a) AS total_sum])
+   +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[total_min])
++- StreamExecGroupAggregate(select=[MIN(a) AS total_min])
+   +- Reused(reference_id=[1])
 ]]>
     </Resource>
   </TestCase>
@@ -1415,37 +1458,32 @@ LogicalFilter(condition=[<($0, 50)])
 ]]>
     </Resource>
     <Resource name="planAfter">
-      <![CDATA[StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
+      <![CDATA[StreamExecCalc(select=[a, total_c], reuse_id=[1])
++- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT c) AS total_c])
+   +- StreamExecExchange(distribution=[hash[a, b]])
+      +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,c], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c)], joinType=[INNER])
+         +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
+            +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+               +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+
+StreamExecCalc(select=[a, 0 AS total_c], reuse_id=[2])
++- StreamExecCalc(select=[a, b], where=[>=(b, UNIX_TIMESTAMP('${startTime}'))])
+   +- StreamExecCalc(select=[a, b])
+      +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 
 StreamExecSink(fields=[a, total_c])
 +- StreamExecUnion(all=[true], union=[a, total_c])
-   :- StreamExecCalc(select=[a, total_c])
-   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
-   :     +- StreamExecExchange(distribution=[hash[a, b]])
-   :        +- StreamExecCalc(select=[a, b, f0], where=[>(a, 50)])
-   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
-   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
-   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
-   :                    +- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a, 0 AS total_c])
-      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), >(a, 50))])
-         +- StreamExecCalc(select=[a, b])
-            +- Reused(reference_id=[1])
+   :- StreamExecCalc(select=[a, total_c], where=[>(a, 50)])
+   :  +- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a, CAST(total_c) AS total_c], where=[>(a, 50)])
+      +- Reused(reference_id=[2])
 
 StreamExecSink(fields=[a, total_c])
 +- StreamExecUnion(all=[true], union=[a, total_c])
-   :- StreamExecCalc(select=[a, total_c])
-   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
-   :     +- StreamExecExchange(distribution=[hash[a, b]])
-   :        +- StreamExecCalc(select=[a, b, f0], where=[<(a, 50)])
-   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
-   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
-   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
-   :                    +- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a, 0 AS total_c])
-      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <(a, 50))])
-         +- StreamExecCalc(select=[a, b])
-            +- Reused(reference_id=[1])
+   :- StreamExecCalc(select=[a, total_c], where=[<(a, 50)])
+   :  +- Reused(reference_id=[1])
+   +- StreamExecCalc(select=[a, CAST(total_c) AS total_c], where=[<(a, 50)])
+      +- Reused(reference_id=[2])
 ]]>
     </Resource>
   </TestCase>
@@ -1470,36 +1508,32 @@ LogicalFilter(condition=[<($0, 50)])
     <Resource name="planAfter">
       <![CDATA[StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], reuse_id=[1])
 
-StreamExecCalc(select=[a, b], reuse_id=[2])
-+- Reused(reference_id=[1])
+StreamExecCalc(select=[a, total_c], reuse_id=[2])
++- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT c) AS total_c])
+   +- StreamExecExchange(distribution=[hash[a, b]])
+      +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,c], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c)], joinType=[INNER])
+         +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
+            +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
+               +- Reused(reference_id=[1])
+
+StreamExecCalc(select=[a, 0 AS total_c], reuse_id=[3])
++- StreamExecCalc(select=[a, b], where=[>=(b, UNIX_TIMESTAMP('${startTime}'))])
+   +- StreamExecCalc(select=[a, b])
+      +- Reused(reference_id=[1])
 
 StreamExecSink(fields=[a, total_c])
 +- StreamExecUnion(all=[true], union=[a, total_c])
-   :- StreamExecCalc(select=[a, total_c])
-   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
-   :     +- StreamExecExchange(distribution=[hash[a, b]])
-   :        +- StreamExecCalc(select=[a, b, f0], where=[>(a, 50)])
-   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
-   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
-   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
-   :                    +- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a, 0 AS total_c])
-      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), >(a, 50))])
-         +- Reused(reference_id=[2])
+   :- StreamExecCalc(select=[a, total_c], where=[>(a, 50)])
+   :  +- Reused(reference_id=[2])
+   +- StreamExecCalc(select=[a, CAST(total_c) AS total_c], where=[>(a, 50)])
+      +- Reused(reference_id=[3])
 
 StreamExecSink(fields=[a, total_c])
 +- StreamExecUnion(all=[true], union=[a, total_c])
-   :- StreamExecCalc(select=[a, total_c])
-   :  +- StreamExecGroupAggregate(groupBy=[a, b], select=[a, b, COUNT(DISTINCT f0) AS total_c])
-   :     +- StreamExecExchange(distribution=[hash[a, b]])
-   :        +- StreamExecCalc(select=[a, b, f0], where=[<(a, 50)])
-   :           +- StreamExecCorrelate(invocation=[split($cor0.c)], correlate=[table(split($cor0.c))], select=[a,b,f0], rowType=[RecordType(INTEGER a, BIGINT b, VARCHAR(65536) f0)], joinType=[INNER])
-   :              +- StreamExecCalc(select=[a, -(b, MOD(b, 300)) AS b, c])
-   :                 +- StreamExecCalc(select=[a, b, c], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <>(c, ''))])
-   :                    +- Reused(reference_id=[1])
-   +- StreamExecCalc(select=[a, 0 AS total_c])
-      +- StreamExecCalc(select=[a, b], where=[AND(>=(b, UNIX_TIMESTAMP('${startTime}')), <(a, 50))])
-         +- Reused(reference_id=[2])
+   :- StreamExecCalc(select=[a, total_c], where=[<(a, 50)])
+   :  +- Reused(reference_id=[2])
+   +- StreamExecCalc(select=[a, CAST(total_c) AS total_c], where=[<(a, 50)])
+      +- Reused(reference_id=[3])
 ]]>
     </Resource>
   </TestCase>

@@ -21,6 +21,7 @@ package org.apache.flink.table.api.stream
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.plan.util.RandomUdf
 import org.apache.flink.table.runtime.utils.TemporalTableUtils.TestingTemporalTableSource
 import org.apache.flink.table.runtime.utils.{TestingRetractTableSink, TestingUpsertTableSink}
 import org.apache.flink.table.sinks.csv.CsvTableSink
@@ -522,6 +523,19 @@ class SinkTest(subplanReuseEnabled: Boolean)  extends TableTestBase {
     val table6 = util.tableEnv.sqlQuery("SELECT a1, b, c1 from table4, table5 where a1 = a3")
     table5.writeToSink(new CsvTableSink("/tmp/1"))
     table6.writeToSink(new CsvTableSink("/tmp/2"))
+    util.verifyPlan()
+  }
+
+  @Test
+  def testMultiSinks5SQL(): Unit = {
+    // test with non-deterministic udf
+    util.tableEnv.registerFunction("random_udf", RandomUdf)
+    val table1 = util.tableEnv.sqlQuery("SELECT random_udf(a) as a, c FROM SmallTable3")
+    util.tableEnv.registerTable("table1", table1)
+    val table2 = util.tableEnv.sqlQuery("select sum(a) as total_sum from table1")
+    val table3 = util.tableEnv.sqlQuery("select min(a) as total_min from table1")
+    table2.writeToSink(new CsvTableSink("/tmp/1"))
+    table3.writeToSink(new CsvTableSink("/tmp/2"))
     util.verifyPlan()
   }
 

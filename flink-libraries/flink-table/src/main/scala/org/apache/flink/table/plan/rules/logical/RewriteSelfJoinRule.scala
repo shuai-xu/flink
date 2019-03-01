@@ -18,10 +18,12 @@
 
 package org.apache.flink.table.plan.rules.logical
 
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkRelFactories}
 import org.apache.flink.table.plan.rules.logical.RewriteSelfJoinRule.{RankInfo, SequenceTracer}
-import org.apache.flink.table.plan.util.{ConstantRankRange, RelDigestWriterImpl}
+import org.apache.flink.table.plan.util.{ConstantRankRange, FlinkRelOptUtil, RelDigestUtil}
 
+import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptUtil}
@@ -36,10 +38,8 @@ import org.apache.calcite.rex._
 import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
-import org.apache.calcite.util.{ImmutableBitSet, Pair}
 import org.apache.calcite.util.mapping.Mappings
-
-import com.google.common.collect.ImmutableList
+import org.apache.calcite.util.{ImmutableBitSet, Pair}
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
@@ -302,8 +302,11 @@ abstract class RewriteSelfJoinRule extends RelOptRule(
   }
 
   protected def eqNode(rel1: RelNode, rel2: RelNode): Boolean = {
-    val digest1 = RelDigestWriterImpl.getDigest(getRealFactor(rel1))
-    val digest2 = RelDigestWriterImpl.getDigest(getRealFactor(rel2))
+    val tableConfig = FlinkRelOptUtil.getTableConfig(rel1)
+    val enableNonDeterministicOpReuse = tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED)
+    val digest1 = RelDigestUtil.getDigest(getRealFactor(rel1), !enableNonDeterministicOpReuse)
+    val digest2 = RelDigestUtil.getDigest(getRealFactor(rel2), !enableNonDeterministicOpReuse)
     digest1.equals(digest2)
   }
 

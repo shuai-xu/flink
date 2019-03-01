@@ -68,8 +68,12 @@ import scala.collection.JavaConversions._
   * on `HashAggregate(groupBy=[a], select=[a, Final_SUM(sum$0) AS b])` as digest,
   * we will get incorrect result. So rewrite `explain_` method of `RelWriterImpl` to
   * add row-type to digest value.
+  *
+  * NOTES: in some cases, non-deterministic operator can't not be reused by digest, so adds
+  * unique id for non-deterministic operator into its digest to distinguish different rel with
+  * same explain terms. This writer is stateless, and may get different result for same rel object.
   */
-class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
+class RelDigestWriterImpl(sw: StringWriter, addUniqueIdForNonDeterministicOp: Boolean)
   extends RelWriterImpl(new PrintWriter(sw), SqlExplainLevel.DIGEST_ATTRIBUTES, false) {
 
   override def explain_(rel: RelNode, values: util.List[Pair[String, AnyRef]]): Unit = {
@@ -80,7 +84,15 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
       inputs.foreach(_.explain(this))
       return
     }
+    val s = explainRel(rel, values)
+    pw.println(s)
+    inputs.foreach(_.explain(this))
+  }
 
+  /**
+    * Returns explain result for given rel.
+    */
+  protected def explainRel(rel: RelNode, values: util.List[Pair[String, AnyRef]]): String = {
     val s = new StringBuilder
     s.append(rel.getRelTypeName)
     var j = 0
@@ -98,16 +110,12 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
     s.append("rowType=[").append(rel.getRowType.toString).append("]")
     // if the given rel contains non-deterministic `SqlOperator`,
     // add a unique id to distinguish each other
-    if (!tableConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_OPTIMIZER_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED) &&
-        !isDeterministicOperator(rel)) {
+    if (addUniqueIdForNonDeterministicOp && !isDeterministicOperator(rel)) {
       s.append(",nonDeterministicId=[")
-        .append(RelDigestWriterImpl.nonDeterministicIdCounter.incrementAndGet()).append("]")
+        .append(RelDigestUtil.nonDeterministicIdCounter.incrementAndGet()).append("]")
     }
     s.append(")")
-
-    pw.println(s)
-    inputs.foreach(_.explain(this))
+    s.toString()
   }
 
   /**
@@ -146,13 +154,78 @@ class RelDigestWriterImpl(sw: StringWriter, tableConfig: TableConfig)
 
 }
 
-object RelDigestWriterImpl {
+/**
+  * A RelDigestWriterImpl that will cache explain result for each rel in given rel tree.
+  * NOTES: Different from RelDigestWriterImpl, this writer is stateful and always returns
+  * same result for same rel object whether the rel tree contains non-deterministic operator.
+  */
+class CachedRelDigestWriterImpl(
+    sw: StringWriter,
+    addUniqueIdForNonDeterministicOp: Boolean,
+    digestCache: util.IdentityHashMap[RelNode, String])
+  extends RelDigestWriterImpl(sw, addUniqueIdForNonDeterministicOp) {
+
+  require(digestCache != null)
+
+  override def explain_(rel: RelNode, values: util.List[Pair[String, AnyRef]]): Unit = {
+    val cachedDigest = digestCache.get(rel)
+    if (cachedDigest != null) {
+      pw.println(cachedDigest)
+      return
+    }
+
+    val inputs = rel.getInputs
+    val mq = rel.getCluster.getMetadataQuery
+    if (!mq.isVisibleInExplain(rel, getDetailLevel)) {
+      // render children in place of this, at same level
+      inputs.foreach(_.explain(this))
+      return
+    }
+    val s = explainRel(rel, values)
+    pw.println(s)
+    inputs.foreach(_.explain(this))
+
+    val digest = if (inputs.isEmpty) s else s"$s\n${inputs.map(digestCache.get).mkString("\n")}"
+    digestCache.put(rel, digest)
+  }
+}
+
+object RelDigestUtil {
   private[flink] val nonDeterministicIdCounter = new AtomicInteger(0)
 
-  def getDigest(rel: RelNode): String = {
+  /**
+    * Gets the digest for a rel tree.
+    *
+    * @param rel rel node tree
+    * @param addUniqueIdForNonDeterministicOp whether add unique id for non-deterministic operator.
+    * @return The digest of given rel tree.
+    */
+  def getDigest(
+      rel: RelNode,
+      addUniqueIdForNonDeterministicOp: Boolean): String = {
     val sw = new StringWriter
-    val tableConfig = FlinkRelOptUtil.getTableConfig(rel)
-    rel.explain(new RelDigestWriterImpl(sw, tableConfig))
+    rel.explain(new RelDigestWriterImpl(sw, addUniqueIdForNonDeterministicOp))
+    sw.toString
+  }
+
+  /**
+    * Gets the digest for a rel tree.
+    *
+    * <p>NOTES: this method will cache explain result for each rel in given rel tree,
+    * and always returns same result for same rel object whether the rel tree contains
+    * non-deterministic operator.
+    *
+    * @param rel rel node tree
+    * @param addUniqueIdForNonDeterministicOp whether add unique id for non-deterministic operator.
+    * @param digestCache cache digest of each rel in the given tree.
+    * @return The digest of given rel tree.
+    */
+  def getDigestWithCache(
+      rel: RelNode,
+      addUniqueIdForNonDeterministicOp: Boolean,
+      digestCache: util.IdentityHashMap[RelNode, String]): String = {
+    val sw = new StringWriter
+    rel.explain(new CachedRelDigestWriterImpl(sw, addUniqueIdForNonDeterministicOp, digestCache))
     sw.toString
   }
 }

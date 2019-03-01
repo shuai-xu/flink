@@ -18,19 +18,16 @@
 
 package org.apache.flink.table.plan.optimize
 
-import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment}
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.rules.logical.WindowPropertiesRules
-import org.apache.flink.table.plan.schema.RelTable
-import org.apache.flink.table.plan.util.{DefaultRelShuttle, SubplanReuseContext, SubplanReuseShuttle}
+import org.apache.flink.table.plan.util.{DefaultRelShuttle, ExpandTableScanShuttle, SubplanReuseContext, SubplanReuseShuttle}
 import org.apache.flink.util.Preconditions
 
 import com.google.common.collect.Sets
-import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel._
-import org.apache.calcite.rel.core.{Aggregate, Project, Snapshot, TableFunctionScan, TableScan, Union}
-import org.apache.calcite.rel.logical.LogicalTableScan
+import org.apache.calcite.rel.core.{Aggregate, Project, Snapshot, TableFunctionScan, Union}
 import org.apache.calcite.rex.RexNode
 
 import java.util
@@ -373,45 +370,29 @@ object RelNodeBlockPlanBuilder {
       Seq(new RelNodeBlock(sinkNodes.head, tEnv))
     } else {
       // merge multiple RelNode trees to RelNode dag
-      val relNodeDag = reuseRelNodes(sinkNodes)
+      val relNodeDag = reuseRelNodes(sinkNodes, tEnv.getConfig)
       val builder = new RelNodeBlockPlanBuilder(tEnv)
       builder.buildRelNodeBlockPlan(relNodeDag)
     }
   }
 
   /**
-    * Reuse common subPlan in different RelNode tree, generate a RelNode dag
+    * Reuse common sub-plan in different RelNode tree, generate a RelNode dag
     *
     * @param relNodes RelNode trees
     * @return RelNode dag which reuse common subPlan in each tree
     */
-  private def reuseRelNodes(relNodes: Seq[RelNode]): Seq[RelNode] = {
-
-    class ExpandTableScanShuttle extends RelShuttleImpl {
-
-      /**
-        * Converts [[LogicalTableScan]] the result [[RelNode]] tree by calling [[RelTable]]#toRel
-        */
-      override def visit(scan: TableScan): RelNode = {
-
-        scan match {
-          case scan: LogicalTableScan =>
-            val relTable = scan.getTable.unwrap(classOf[RelTable])
-            if (relTable != null) {
-              val relNode = relTable.toRel(RelOptUtil.getContext(scan.getCluster), scan.getTable)
-              relNode.accept(this)
-            } else {
-              scan
-            }
-          case _ => scan
-        }
-      }
-    }
+  private def reuseRelNodes(relNodes: Seq[RelNode], tableConfig: TableConfig): Seq[RelNode] = {
     // expand RelTable in TableScan
     val shuttle = new ExpandTableScanShuttle
     val convertedRelNodes = relNodes.map(_.accept(shuttle))
-    // reuse subPlan with same digest in input RelNode trees
-    val context = new SubplanReuseContext(false, convertedRelNodes: _*)
+    val enableNonDeterministicOpReuse = tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED)
+    // reuse sub-plan with same digest in input RelNode trees.
+    val context = new SubplanReuseContext(
+      disableTableSourceReuse = false,
+      enableNonDeterministicOpReuse,
+      convertedRelNodes: _*)
     val reuseShuttle = new SubplanReuseShuttle(context)
     convertedRelNodes.map(_.accept(reuseShuttle))
   }

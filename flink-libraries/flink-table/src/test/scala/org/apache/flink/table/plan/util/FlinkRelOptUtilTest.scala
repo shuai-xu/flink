@@ -16,26 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.util
+package org.apache.flink.table.plan.util
 
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
-import org.apache.flink.table.runtime.utils.CommonTestData
 import org.apache.flink.table.plan.util.FlinkRelOptUtil._
+import org.apache.flink.table.runtime.utils.CommonTestData
 
 import org.apache.calcite.rex.{RexBuilder, RexLiteral, RexNode, RexUtil}
 import org.apache.calcite.sql.`type`.SqlTypeName._
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable._
 import org.apache.calcite.util.{DateString, TimeString, TimestampString}
+import org.junit.Assert._
+import org.junit.Test
 
 import java.math.BigDecimal
 import java.sql.{Date, Time, Timestamp}
-
-import org.junit.Assert._
-import org.junit.Test
 
 class FlinkRelOptUtilTest {
   val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem())

@@ -17,9 +17,13 @@
  */
 package org.apache.flink.table.plan.util
 
-import java.util
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.api.TableException
+
+import org.apache.calcite.rel.RelNode
+
+import java.util
+
+import scala.collection.JavaConversions._
 
 /**
   * Rewrite reusable sub-plans with different rel objects to same rel object.
@@ -42,9 +46,9 @@ import org.apache.flink.table.api.TableException
 class SubplanReuseShuttle(context: SubplanReuseContext) extends DefaultRelShuttle {
   private val mapDigestToNewNode = new util.HashMap[String, RelNode]()
 
-  override def visit(node: RelNode): RelNode = {
-    val canReuseOtherNode = context.reuseOtherNode(node)
-    val digest = context.getRelDigest(node)
+  override def visit(rel: RelNode): RelNode = {
+    val canReuseOtherNode = context.reuseOtherNode(rel)
+    val digest = context.getRelDigest(rel)
     if (canReuseOtherNode) {
       val newNode = mapDigestToNewNode.get(digest)
       if (newNode == null) {
@@ -52,9 +56,23 @@ class SubplanReuseShuttle(context: SubplanReuseContext) extends DefaultRelShuttl
       }
       newNode
     } else {
-      val newNode = super.visit(node)
+      val newNode = visitInputs(rel)
       mapDigestToNewNode.put(digest, newNode)
       newNode
     }
+  }
+
+  /**
+    * Parent rel need not change, just replaces inputs if any inputs change.
+    */
+  private def visitInputs(rel: RelNode): RelNode = {
+    rel.getInputs.zipWithIndex.foreach {
+      case (input, index) =>
+        val newInput = input.accept(this)
+        if (input ne newInput) {
+          rel.replaceInput(index, newInput)
+        }
+    }
+    rel
   }
 }

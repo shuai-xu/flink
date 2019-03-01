@@ -22,12 +22,14 @@ limitations under the License.
 LogicalProject(category=[$0], shopId=[$1], sum_num=[$2], max_num=[$3], rank_num=[$4])
 +- LogicalFilter(condition=[<=($4, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], sum_num=[$2], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST, $3 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[builtin, default, MyView]])
+      +- LogicalAggregate(group=[{0, 1}], sum_num=[SUM($2)], max_num=[MAX($2)], avg_num=[AVG($2)], cnt_num=[COUNT($2)])
+         +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
 
 LogicalProject(category=[$0], shopId=[$1], avg_num=[$2], cnt_num=[$3], rank_num=[$4])
 +- LogicalFilter(condition=[<=($4, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], avg_num=[$4], cnt_num=[$5], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $4 DESC NULLS LAST, $5 NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[builtin, default, MyView]])
+      +- LogicalAggregate(group=[{0, 1}], sum_num=[SUM($2)], max_num=[MAX($2)], avg_num=[AVG($2)], cnt_num=[COUNT($2)])
+         +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
 
 == Optimized Logical Plan ==
 StreamExecCalc(select=[category, shopId, CASE(=($f3, 0), null, sum_num) AS sum_num, max_num, CAST(/(CAST(CASE(=($f3, 0), null, sum_num)), $f3)) AS avg_num, $f3 AS cnt_num], updateAsRetraction=[true], accMode=[AccRetract], reuse_id=[1])
@@ -112,12 +114,14 @@ StreamExecSink(fields=[category, shopId, avg_num, cnt_num, rank_num], updateAsRe
 LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[$3])
 +- LogicalFilter(condition=[<=($3, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], cnt_num=[$2], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $2 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[builtin, default, MyView]])
+      +- LogicalAggregate(group=[{0, 1}], cnt_num=[COUNT($2)], max_num=[MAX($2)])
+         +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
 
 LogicalProject(category=[$0], shopId=[$1], max_num=[$2], rank_num=[$3])
 +- LogicalFilter(condition=[<=($3, 2)])
    +- LogicalProject(category=[$0], shopId=[$1], max_num=[$3], rank_num=[ROW_NUMBER() OVER (PARTITION BY $0 ORDER BY $3 DESC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)])
-      +- LogicalTableScan(table=[[builtin, default, MyView]])
+      +- LogicalAggregate(group=[{0, 1}], cnt_num=[COUNT($2)], max_num=[MAX($2)])
+         +- LogicalTableScan(table=[[builtin, default, _DataStreamTable_1]])
 
 == Optimized Logical Plan ==
 StreamExecGroupAggregate(groupBy=[category, shopId], select=[category, shopId, COUNT(num) AS cnt_num, MAX(num) AS max_num], updateAsRetraction=[false], accMode=[Acc], reuse_id=[1])
