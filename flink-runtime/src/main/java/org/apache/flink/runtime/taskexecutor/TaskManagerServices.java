@@ -362,11 +362,12 @@ public class TaskManagerServices {
 				throw new RuntimeException("No supported memory type detected.");
 			}
 		}
-		final long floatingMemorySize = taskManagerServicesConfiguration.getFloatingManagedMemory() << 20;
+		long floatingMemoryMB = taskManagerServicesConfiguration.getFloatingManagedMemory();
+		final long floatingMemorySize = floatingMemoryMB << 20;
 		if (preAllocateMemory) {
-			LOG.info("Using {} MB for floating managed memory." , floatingMemorySize);
+			LOG.info("Using {} MB for floating managed memory." , floatingMemoryMB);
 		} else {
-			LOG.info("Limiting floating managed memory to {} MB, memory will be allocated lazily." , floatingMemorySize);
+			LOG.info("Limiting floating managed memory to {} MB, memory will be allocated lazily." , floatingMemoryMB);
 		}
 		// now start the memory manager
 		final MemoryManager memoryManager;
