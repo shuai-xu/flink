@@ -47,6 +47,8 @@ import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
+import org.apache.flink.shaded.guava18.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -73,7 +75,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -212,8 +216,10 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 		containerRegisterTimeout = Time.seconds(flinkConfig.getLong(YarnConfigOptions.CONTAINER_REGISTER_TIMEOUT));
 
-		this.executor = Executors.newScheduledThreadPool(
-			flinkConfig.getInteger(YarnConfigOptions.CONTAINER_LAUNCHER_NUMBER));
+		this.executor = new ThreadPoolExecutor(0, flinkConfig.getInteger(YarnConfigOptions.CONTAINER_LAUNCHER_NUMBER),
+			60L, TimeUnit.SECONDS, new SynchronousQueue<>(), new ThreadFactoryBuilder()
+			.setNameFormat("ContainerLauncher #%d")
+			.build());
 
 		this.yarnVcoreRatio = flinkConfig.getInteger(YarnConfigOptions.YARN_VCORE_RATIO);
 

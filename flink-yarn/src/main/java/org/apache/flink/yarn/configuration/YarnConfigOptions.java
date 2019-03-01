@@ -164,7 +164,7 @@ public class YarnConfigOptions {
 	 */
 	public static final ConfigOption<Integer> CONTAINER_LAUNCHER_NUMBER =
 			key("yarn.container-launcher-number")
-					.defaultValue(10);
+					.defaultValue(100);
 
 	/**
 	 * The register timeout for a container before released by resource manager. In seconds.

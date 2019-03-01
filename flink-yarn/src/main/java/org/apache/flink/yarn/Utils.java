@@ -64,6 +64,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.flink.yarn.YarnConfigKeys.ENV_FLINK_CLASSPATH;
 
@@ -82,6 +83,9 @@ public final class Utils {
 
 	/** Yarn site xml file name populated in YARN container for secure IT run. */
 	public static final String YARN_SITE_FILE_NAME = "yarn-site.xml";
+
+	/** Cached local resource meta. */
+	private static final Map<Path, Tuple2<Long, Long>> CACHED_LOCAL_RESOURCE_META_MAP = new ConcurrentHashMap<>();
 
 	/**
 	 * Define the name of flink shuffle service, it has the following usages:
@@ -301,13 +305,21 @@ public final class Utils {
 		LocalResourceVisibility visibility,
 		LocalResourceType resourceType) throws IOException {
 
-		FileStatus jarStat = fs.getFileStatus(remoteRsrcPath);
-		return registerLocalResource(remoteRsrcPath, jarStat.getLen(), jarStat.getModificationTime(), visibility, resourceType);
+		Tuple2<Long, Long> jarStat = getCachedFileStatus(fs, remoteRsrcPath);
+		return registerLocalResource(remoteRsrcPath, jarStat.f0, jarStat.f1, visibility, resourceType);
 	}
 
 	private static LocalResource registerLocalResource(FileSystem fs, Path remoteRsrcPath) throws IOException {
-		FileStatus jarStat = fs.getFileStatus(remoteRsrcPath);
-		return registerLocalResource(remoteRsrcPath, jarStat.getLen(), jarStat.getModificationTime(), LocalResourceVisibility.APPLICATION);
+		Tuple2<Long, Long> jarStat = getCachedFileStatus(fs, remoteRsrcPath);
+		return registerLocalResource(remoteRsrcPath, jarStat.f0, jarStat.f1, LocalResourceVisibility.APPLICATION);
+	}
+
+	private static Tuple2<Long, Long> getCachedFileStatus(FileSystem fs, Path path) throws IOException {
+		if (!CACHED_LOCAL_RESOURCE_META_MAP.containsKey(path)) {
+			FileStatus jarStat = fs.getFileStatus(path);
+			CACHED_LOCAL_RESOURCE_META_MAP.put(path, new Tuple2<>(jarStat.getLen(), jarStat.getModificationTime()));
+		}
+		return CACHED_LOCAL_RESOURCE_META_MAP.get(path);
 	}
 
 	public static void setTokensFor(ContainerLaunchContext amContainer, List<Path> paths, Configuration conf) throws IOException {
