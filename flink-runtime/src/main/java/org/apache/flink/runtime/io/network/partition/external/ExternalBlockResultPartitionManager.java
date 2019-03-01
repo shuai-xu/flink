@@ -26,6 +26,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionProvider;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartitionView;
 import org.apache.flink.runtime.taskmanager.DispatcherThreadFactory;
+import org.apache.hadoop.io.ReadaheadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +45,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.apache.flink.runtime.io.network.partition.external.OsCachePolicy.READ_AHEAD;
 
 public class ExternalBlockResultPartitionManager implements ResultPartitionProvider {
 	private static final Logger LOG = LoggerFactory.getLogger(ExternalBlockResultPartitionManager.class);
@@ -70,6 +73,8 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 
 	private final AtomicBoolean isStopped = new AtomicBoolean(false);
 
+	private final ReadaheadPool readaheadPool;
+
 	public ExternalBlockResultPartitionManager(
 		ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration) throws Exception {
 
@@ -83,6 +88,9 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 			MemoryType.OFF_HEAP);
 
 		constructThreadPools();
+
+		this.readaheadPool = READ_AHEAD.equals(shuffleServiceConfiguration.getOsCachePolicy())
+			? ReadaheadPool.getInstance() : null;
 
 		this.resultPartitionRecyclerExecutorService = Executors.newSingleThreadScheduledExecutor();
 		this.resultPartitionRecyclerExecutorService.scheduleWithFixedDelay(
@@ -112,7 +120,9 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 			resultPartitionMeta = new ExternalBlockResultPartitionMeta(
 				resultPartitionId,
 				shuffleServiceConfiguration.getFileSystem(),
-				fileInfo);
+				fileInfo,
+				shuffleServiceConfiguration.getOsCachePolicy(),
+				shuffleServiceConfiguration.getMaxReadAheadLengthInBytes());
 			ExternalBlockResultPartitionMeta prevResultPartitionMeta =
 				resultPartitionMetaMap.putIfAbsent(resultPartitionId, resultPartitionMeta);
 			if (prevResultPartitionMeta != null) {
@@ -127,7 +137,8 @@ public class ExternalBlockResultPartitionManager implements ResultPartitionProvi
 			resultPartitionId,
 			bufferPool,
 			shuffleServiceConfiguration.getWaitCreditDelay(),
-			availabilityListener);
+			availabilityListener,
+			readaheadPool);
 
 		resultPartitionMeta.notifySubpartitionStartConsuming(index);
 

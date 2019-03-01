@@ -37,7 +37,7 @@ public class SynchronousBufferFileReader extends SynchronousFileIOChannel implem
 	private boolean hasReachedEndOfFile;
 
 	private final boolean withHeader;
-	private long currentPosition; // Used only when withHeader == false.
+	protected long currentPosition; // Used only when withHeader == false.
 
 	public SynchronousBufferFileReader(ID channelID, boolean writeEnabled) throws IOException {
 		this(channelID, writeEnabled, true);

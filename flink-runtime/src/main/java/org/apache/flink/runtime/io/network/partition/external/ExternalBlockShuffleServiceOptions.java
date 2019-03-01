@@ -199,6 +199,33 @@ public class ExternalBlockShuffleServiceOptions {
 		.defaultValue("org.apache.flink.runtime.io.network.partition.external.CreditBasedSubpartitionViewComparator")
 		.withDescription("The comparator to decide the next subpartition to serve.");
 
+	/**
+	 * This configuration enables shuffle service to manage OS caches more efficiently according to
+	 * the access pattern of shuffle data.
+	 * (1) read-ahead   : tell OS that a limited size of data behind current read position will be accessed.
+	 * (2) sequential   : tell OS that the chunk of a subpartition will be accessed in sequential order.
+	 * (3) no-reuse     : tell OS that the chunk of a subpartition will be accessed only once.
+	 * (4) no-treatment : no special treatment.
+	 * Notice that all the policies except no-treatment will tell OS that the chunk of a subpartition
+	 * won't be accesses in the near future.
+	 */
+	public static final ConfigOption<String> OS_CACHE_POLICY =
+		key("flink.shuffle-service.os-cache-policy")
+		.defaultValue(OsCachePolicy.NO_TREATMENT.toString())
+		.withDescription("The OS cache policy while reading shuffle data, supported policies are " +
+			OsCachePolicy.getSupportedOsCachePolicies() + ".");
+
+	/**
+	 * Since read-ahead policy will tell OS that a limited size of data behind current read position
+	 * will be accessed. This configuration specifies the data length as the granularity to perform each operation.
+	 */
+	public static final ConfigOption<Long> MAX_READ_AHEAD_LENGTH_IN_BYTES =
+		key("flink.shuffle-service.os-cache-policy.read-ahead.max-read-ahead-length-in-bytes")
+		.defaultValue(4L * 1024 * 1024)
+		.withDescription("The max length to read ahead in order to accelerate shuffle read. " +
+			"This configuration is valid only when " + OS_CACHE_POLICY.key() + " is configured as " +
+			OsCachePolicy.READ_AHEAD.toString() + ".");
+
 	// ------------------------- Configurations for internal use ------------------------
 	public static final ConfigOption<String> LOCAL_RESULT_PARTITION_RESOLVER_CLASS =
 		key("flink.shuffle-service.internal.local-result-partition-resolver-class")

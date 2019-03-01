@@ -33,6 +33,7 @@ import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.partition.BlockingShuffleType;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
+import org.apache.flink.runtime.io.network.partition.external.OsCachePolicy;
 import org.apache.flink.runtime.io.network.partition.external.PersistentFileType;
 import org.apache.flink.runtime.io.network.partition.external.YarnLocalResultPartitionResolver;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
@@ -98,6 +99,8 @@ public class YarnShuffleServiceITCaseBase extends TestLogger {
 
 	protected static final int NUM_CONSUMERS = 3;
 
+	protected static OsCachePolicy osCachePolicy = OsCachePolicy.READ_AHEAD;
+
 	@ClassRule
 	public static final TemporaryFolder TEMP_FOLDER = new TemporaryFolder();
 
@@ -150,7 +153,8 @@ public class YarnShuffleServiceITCaseBase extends TestLogger {
 					USER,
 					APP_ID,
 					port,
-					NUM_THREAD);
+					NUM_THREAD,
+					osCachePolicy);
 
 				mockYarnShuffleService.start();
 				break;

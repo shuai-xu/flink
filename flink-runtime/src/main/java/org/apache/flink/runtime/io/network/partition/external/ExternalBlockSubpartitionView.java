@@ -30,6 +30,7 @@ import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartition;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartitionView;
+import org.apache.hadoop.io.ReadaheadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,6 +114,8 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 	@GuardedBy("lock")
 	private volatile int currentCredit = 0;
 
+	private final ReadaheadPool readaheadPool;
+
 	public ExternalBlockSubpartitionView(
 			ExternalBlockResultPartitionMeta externalResultPartitionMeta,
 			int subpartitionIndex,
@@ -120,7 +123,8 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 			ResultPartitionID resultPartitionId,
 			FixedLengthBufferPool bufferPool,
 			long waitCreditTimeoutInMills,
-			BufferAvailabilityListener listener) {
+			BufferAvailabilityListener listener,
+			ReadaheadPool readaheadPool) {
 
 		this.externalResultPartitionMeta = checkNotNull(externalResultPartitionMeta);
 		this.subpartitionIndex = subpartitionIndex;
@@ -129,6 +133,7 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 		this.bufferPool = checkNotNull(bufferPool);
 		this.waitCreditTimeoutInMills = waitCreditTimeoutInMills;
 		this.listener = checkNotNull(listener);
+		this.readaheadPool = readaheadPool;
 	}
 
 	@Override
@@ -282,9 +287,21 @@ public class ExternalBlockSubpartitionView implements ResultSubpartitionView, Ru
 			currRemainLength = nextMeta.getLength();
 			if (currRemainLength > 0) {
 				FileIOChannel.ID fileChannelID = new FileIOChannel.ID(nextMeta.getDataFile().getPath());
-				nextFsIn = new SynchronousBufferFileReader(fileChannelID, false, false);
+				switch (externalResultPartitionMeta.getOsCachePolicy()) {
+					case READ_AHEAD:
+						nextFsIn = new FadvisedReadAheadSynchronousBufferFileReader(
+							fileChannelID, false, nextMeta.getOffset(), nextMeta.getLength(),
+							externalResultPartitionMeta.getMaxReadAheadLength(), readaheadPool);
+						break;
+					case NO_TREATMENT:
+						nextFsIn = new SynchronousBufferFileReader(fileChannelID, false, false);
+						break;
+					default:
+						nextFsIn = new FadvisedSynchronousBufferFileReader(
+							fileChannelID, false, externalResultPartitionMeta.getOsCachePolicy(),
+							nextMeta.getOffset(), nextMeta.getLength());
+				}
 				nextFsIn.seekToPosition(nextMeta.getOffset());
-
 				break;
 			}
 		}

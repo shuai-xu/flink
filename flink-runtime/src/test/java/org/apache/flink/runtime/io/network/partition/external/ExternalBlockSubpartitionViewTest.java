@@ -142,7 +142,8 @@ public class ExternalBlockSubpartitionViewTest {
 				meta.getResultPartitionID(),
 				bufferPool,
 				0,
-				viewReader);
+				viewReader,
+				null);
 			viewReader.setView(view);
 
 			view.notifyCreditAdded(2);
@@ -178,7 +179,8 @@ public class ExternalBlockSubpartitionViewTest {
 				meta.getResultPartitionID(),
 				bufferPool,
 				0,
-				viewReader);
+				viewReader,
+				null);
 			viewReader.setView(view);
 
 			view.notifyCreditAdded(2);
@@ -225,7 +227,8 @@ public class ExternalBlockSubpartitionViewTest {
 				meta.getResultPartitionID(),
 				bufferPool,
 				0,
-				viewReader);
+				viewReader,
+				null);
 			viewReader.setView(view);
 
 			Random random = new Random();
@@ -284,7 +287,8 @@ public class ExternalBlockSubpartitionViewTest {
 				meta.getResultPartitionID(),
 				bufferPool,
 				0,
-				availabilityListener));
+				availabilityListener,
+				null));
 
 			// Remove the data files directly
 			int numFilesToRemove = (fileType == PersistentFileType.HASH_PARTITION_FILE ? TOTAL_BYTES_EACH_SUBPARTITION.length : MERGED_FILE_TOTAL_FILES);
@@ -385,7 +389,8 @@ public class ExternalBlockSubpartitionViewTest {
 		}
 
 		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs,
-			new ExternalBlockResultPartitionManagerTest.MockResultPartitionFileInfo(root, root, 0, 0));
+			new ExternalBlockResultPartitionManagerTest.MockResultPartitionFileInfo(root, root, 0, 0),
+			OsCachePolicy.NO_TREATMENT, 0);
 	}
 
 	private ExternalBlockResultPartitionMeta createHashFilesAndMeta(int[] bytesEachSubpartition) throws Exception {
@@ -439,7 +444,8 @@ public class ExternalBlockSubpartitionViewTest {
 		}
 
 		return new ExternalBlockResultPartitionMeta(new ResultPartitionID(), fs,
-			new ExternalBlockResultPartitionManagerTest.MockResultPartitionFileInfo(root, root, 0, 0));
+			new ExternalBlockResultPartitionManagerTest.MockResultPartitionFileInfo(root, root, 0, 0),
+			OsCachePolicy.NO_TREATMENT, 0);
 	}
 
 	private void setupCheckForSubpartition(int subpartitionIndex) {

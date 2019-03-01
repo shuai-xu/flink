@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.io.disk.iomanager;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
@@ -41,6 +42,9 @@ public abstract class AbstractFileIOChannel implements FileIOChannel {
 	/** A file channel for NIO access to the file. */
 	protected final FileChannel fileChannel;
 
+	/** The FileDescriptor of the underlying channel. */
+	protected final FileDescriptor fd;
+
 	private NioBufferedFileInputStream inputStream;
 	private NioBufferedFileOutputStream outputStream;
 
@@ -60,6 +64,7 @@ public abstract class AbstractFileIOChannel implements FileIOChannel {
 			@SuppressWarnings("resource")
 			RandomAccessFile file = new RandomAccessFile(id.getPath(), writeEnabled ? "rw" : "r");
 			this.fileChannel = file.getChannel();
+			this.fd = file.getFD();
 		}
 		catch (IOException e) {
 			throw new IOException("Channel to path '" + channelID.getPath() + "' could not be opened.", e);
@@ -85,6 +90,10 @@ public abstract class AbstractFileIOChannel implements FileIOChannel {
 	@Override
 	public final FileIOChannel.ID getChannelID() {
 		return this.id;
+	}
+
+	public final FileDescriptor getFd() {
+		return this.fd;
 	}
 	
 	@Override

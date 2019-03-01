@@ -94,6 +94,10 @@ public class ExternalBlockShuffleServiceConfiguration {
 	/** The class of the comparator to sort subpartition requests, if null, use FIFO queue. */
 	private final Class<?> subpartitionViewComparatorClass;
 
+	private final OsCachePolicy osCachePolicy;
+
+	private final Long maxReadAheadLengthInBytes;
+
 	private ExternalBlockShuffleServiceConfiguration(
 		Configuration configuration,
 		NettyConfig nettyConfig,
@@ -108,7 +112,9 @@ public class ExternalBlockShuffleServiceConfiguration {
 		Long defaultUnconsumedPartitionTTL,
 		Long defaultUnfinishedPartitionTTL,
 		Long diskScanIntervalInMS,
-		Class<?> subpartitionViewComparatorClass) {
+		Class<?> subpartitionViewComparatorClass,
+		OsCachePolicy osCachePolicy,
+		Long maxReadAheadLengthInBytes) {
 
 		this.configuration = configuration;
 		this.nettyConfig = nettyConfig;
@@ -124,6 +130,8 @@ public class ExternalBlockShuffleServiceConfiguration {
 		this.defaultUnfinishedPartitionTTL = defaultUnfinishedPartitionTTL;
 		this.diskScanIntervalInMS = diskScanIntervalInMS;
 		this.subpartitionViewComparatorClass = subpartitionViewComparatorClass;
+		this.osCachePolicy = osCachePolicy;
+		this.maxReadAheadLengthInBytes = maxReadAheadLengthInBytes;
 	}
 
 	// ---------------------------------- Getters -----------------------------------------------------
@@ -194,6 +202,14 @@ public class ExternalBlockShuffleServiceConfiguration {
 				return null;
 			}
 		}
+	}
+
+	OsCachePolicy getOsCachePolicy() {
+		return osCachePolicy;
+	}
+
+	Long getMaxReadAheadLengthInBytes() {
+		return maxReadAheadLengthInBytes;
 	}
 
 	private static NettyConfig createNettyConfig(Configuration configuration) {
@@ -307,6 +323,11 @@ public class ExternalBlockShuffleServiceConfiguration {
 		long waitCreditDelay = configuration.getLong(
 			ExternalBlockShuffleServiceOptions.WAIT_CREDIT_DELAY_IN_MS);
 
+		// 7. Get configurations related to os cache.
+		OsCachePolicy osCachePolicy = OsCachePolicy.getOsCachePolicyFromConfiguration(configuration, LOG);
+		Long maxReadAheadLengthInBytes = configuration.getLong(
+			ExternalBlockShuffleServiceOptions.MAX_READ_AHEAD_LENGTH_IN_BYTES);
+
 		return new ExternalBlockShuffleServiceConfiguration(
 			configuration,
 			nettyConfig,
@@ -321,7 +342,9 @@ public class ExternalBlockShuffleServiceConfiguration {
 			defaultUnconsumedPartitionTTL,
 			defaultUnfinishedPartitionTTL,
 			diskScanIntervalInMS,
-			subpartitionViewComparatorClass);
+			subpartitionViewComparatorClass,
+			osCachePolicy,
+			maxReadAheadLengthInBytes);
 	}
 
 	@Override
@@ -339,7 +362,9 @@ public class ExternalBlockShuffleServiceConfiguration {
 			.append("PartialConsumedPartitionTTL: ").append(defaultPartialConsumedPartitionTTL).append(", ")
 			.append("UnconsumedPartitionTTL: ").append(defaultUnconsumedPartitionTTL).append(", ")
 			.append("UnfinishedPartitionTTL: ").append(defaultUnfinishedPartitionTTL).append(", ")
-			.append("DiskScanIntervalInMS: ").append(diskScanIntervalInMS).append(",");
+			.append("DiskScanIntervalInMS: ").append(diskScanIntervalInMS).append(",")
+			.append("OsCachePolicy: ").append(osCachePolicy).append(", ")
+			.append("MaxReadAheadLengthInBytes: ").append(maxReadAheadLengthInBytes).append(", ");
 		dirToDiskType.forEach((dir, diskType) -> {
 			stringBuilder.append("[").append(diskType).append("]").append(dir)
 				.append(": ").append(diskTypeToIOThreadNum.get(diskType)).append(", ");

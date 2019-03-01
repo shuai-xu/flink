@@ -49,6 +49,10 @@ class ExternalBlockResultPartitionMeta {
 	/** File system of data and index file for this partition */
 	private final FileSystem fileSystem;
 
+	private final OsCachePolicy osCachePolicy;
+
+	private final long maxReadAheadLength;
+
 	/** Make sure result partition meta will be initialized only once. */
 	@GuardedBy("this")
 	private volatile boolean hasInitialized = false;
@@ -97,11 +101,15 @@ class ExternalBlockResultPartitionMeta {
 	ExternalBlockResultPartitionMeta(
 		ResultPartitionID resultPartitionID,
 		FileSystem fileSystem,
-		LocalResultPartitionResolver.ResultPartitionFileInfo fileInfo) {
+		LocalResultPartitionResolver.ResultPartitionFileInfo fileInfo,
+		OsCachePolicy osCachePolicy,
+		long maxReadAheadLength) {
 
 		this.resultPartitionID = resultPartitionID;
 		this.fileSystem = fileSystem;
 		this.fileInfo = fileInfo;
+		this.osCachePolicy = osCachePolicy;
+		this.maxReadAheadLength = maxReadAheadLength;
 	}
 
 	boolean hasInitialized() {
@@ -133,6 +141,14 @@ class ExternalBlockResultPartitionMeta {
 
 	public String getResultPartitionDir() {
 		return fileInfo.getPartitionDir();
+	}
+
+	public OsCachePolicy getOsCachePolicy() {
+		return osCachePolicy;
+	}
+
+	public long getMaxReadAheadLength() {
+		return maxReadAheadLength;
 	}
 
 	public synchronized List<ExternalSubpartitionMeta> getSubpartitionMeta(int subpartitionIndex) {

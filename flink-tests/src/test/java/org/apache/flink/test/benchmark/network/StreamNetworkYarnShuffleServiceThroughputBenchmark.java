@@ -25,6 +25,7 @@ import org.apache.flink.core.testutils.CheckedThread;
 import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
+import org.apache.flink.runtime.io.network.partition.external.OsCachePolicy;
 import org.apache.flink.runtime.io.network.partition.external.YarnLocalResultPartitionResolver;
 import org.apache.flink.streaming.runtime.io.StreamRecordWriter;
 import org.apache.flink.test.util.MockYarnShuffleService;
@@ -154,7 +155,8 @@ public class StreamNetworkYarnShuffleServiceThroughputBenchmark<T extends IORead
 			user,
 			appId,
 			shufflePort,
-			10);
+			10,
+			OsCachePolicy.NO_TREATMENT);
 
 		yarnShuffleService.start();
 	}

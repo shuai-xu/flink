@@ -58,6 +58,16 @@
             <td>The preferred number of netty IO threads. If it's positive, the netty memory size will be min(configured value, 4M * flink.shuffle-service.server-thread-number), otherwise the netty memory size will be min(1/2 * flink.shuffle-service.direct-memory-limit-in-mb, 4M * flink.shuffle-service.server-thread-number).</td>
         </tr>
         <tr>
+            <td><h5>flink.shuffle-service.os-cache-policy</h5></td>
+            <td style="word-wrap: break-word;">"no-treatment"</td>
+            <td>The OS cache policy while reading shuffle data, supported policies are no-treatment,read-ahead,sequential,no-reuse.</td>
+        </tr>
+        <tr>
+            <td><h5>flink.shuffle-service.os-cache-policy.read-ahead.max-read-ahead-length-in-bytes</h5></td>
+            <td style="word-wrap: break-word;">4194304</td>
+            <td>The max length to read ahead in order to accelerate shuffle read. This configuration is valid only when flink.shuffle-service.os-cache-policy is configured as read-ahead.</td>
+        </tr>
+        <tr>
             <td><h5>flink.shuffle-service.partial-consumed-partition-ttl-in-seconds</h5></td>
             <td style="word-wrap: break-word;">43200</td>
             <td>The time interval to delete the partially consumed shuffle data directories since they become inactive.</td>

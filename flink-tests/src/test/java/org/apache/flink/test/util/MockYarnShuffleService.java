@@ -21,6 +21,7 @@ package org.apache.flink.test.util;
 import org.apache.flink.network.yarn.YarnShuffleService;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleService;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
+import org.apache.flink.runtime.io.network.partition.external.OsCachePolicy;
 
 /**
  * A mock shuffle service server.
@@ -37,7 +38,8 @@ public class MockYarnShuffleService {
 
 	private ExternalBlockShuffleService shuffleService = null;
 
-	public MockYarnShuffleService(String externalDir, String user, String appId, int port, int threadNum) {
+	public MockYarnShuffleService(
+		String externalDir, String user, String appId, int port, int threadNum, OsCachePolicy osCachePolicy) {
 		this.user = user;
 		this.appId = appId;
 		this.port = port;
@@ -47,6 +49,10 @@ public class MockYarnShuffleService {
 		hadoopConf.setInt(ExternalBlockShuffleServiceOptions.FLINK_SHUFFLE_SERVICE_PORT_KEY.key(), port);
 		hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE.key(), "test: " + threadNum);
 		hadoopConf.setLong(ExternalBlockShuffleServiceOptions.DISK_SCAN_INTERVAL_IN_MS.key(), 100);
+		hadoopConf.setStrings(ExternalBlockShuffleServiceOptions.OS_CACHE_POLICY.key(), osCachePolicy.toString());
+		if (osCachePolicy.equals(OsCachePolicy.READ_AHEAD)) {
+			hadoopConf.setLong(ExternalBlockShuffleServiceOptions.MAX_READ_AHEAD_LENGTH_IN_BYTES.key(), 128 * 1024);
+		}
 	}
 
 	public int getPort() {

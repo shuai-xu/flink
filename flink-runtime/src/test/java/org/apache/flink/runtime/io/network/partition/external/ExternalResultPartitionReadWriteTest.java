@@ -290,7 +290,9 @@ public class ExternalResultPartitionReadWriteTest {
 					partitionID.getProducerId().toString(),
 					partitionID.getPartitionId().toString()),
 				3600,
-				3600));
+				3600),
+			OsCachePolicy.NO_TREATMENT,
+			0);
 
 		FixedLengthBufferPool bufferPool = new FixedLengthBufferPool(10, PAGE_SIZE, MemoryType.OFF_HEAP);
 		ExecutorService producerThreadPool = Executors.newFixedThreadPool(
@@ -315,7 +317,8 @@ public class ExternalResultPartitionReadWriteTest {
 				partitionID,
 				bufferPool,
 				0,
-				consumer);
+				consumer,
+				null);
 
 			consumer.setSubpartitionView(subpartitionView);
 

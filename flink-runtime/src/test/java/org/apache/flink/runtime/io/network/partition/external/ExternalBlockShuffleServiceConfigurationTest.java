@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.io.network.partition.external;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -222,5 +223,54 @@ public class ExternalBlockShuffleServiceConfigurationTest {
 		assertEquals(new Long(44000), externalBlockShuffleServiceConfiguration.getDefaultUnfinishedPartitionTTL());
 		assertEquals(new Long(40000), externalBlockShuffleServiceConfiguration.getDiskScanIntervalInMS());
 		assertEquals(new Long(22), externalBlockShuffleServiceConfiguration.getWaitCreditDelay());
+	}
+
+	@Test
+	public void testOsCachePolicy() throws Exception {
+		if (!NativeIO.isAvailable()) {
+			for (OsCachePolicy policy : OsCachePolicy.values()) {
+				Configuration configuration = new Configuration();
+				configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+					"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [NEW_DISK]/dump4/local-dir/, /dump5/local-dir/");
+				configuration.setInteger(ExternalBlockShuffleServiceOptions.DEFAULT_IO_THREAD_NUM_PER_DISK, 11);
+				configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, NEW_DISK: 4");
+				configuration.setString(ExternalBlockShuffleServiceOptions.OS_CACHE_POLICY.key(), policy.toString());
+				ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration =
+					ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+				assertEquals(OsCachePolicy.NO_TREATMENT, externalBlockShuffleServiceConfiguration.getOsCachePolicy());
+			}
+			{
+				Configuration configuration = new Configuration();
+				configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+					"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [NEW_DISK]/dump4/local-dir/, /dump5/local-dir/");
+				configuration.setInteger(ExternalBlockShuffleServiceOptions.DEFAULT_IO_THREAD_NUM_PER_DISK, 11);
+				configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, NEW_DISK: 4");
+				ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration =
+					ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+				assertEquals(OsCachePolicy.NO_TREATMENT, externalBlockShuffleServiceConfiguration.getOsCachePolicy());
+			}
+		} else {
+			for (OsCachePolicy policy : OsCachePolicy.values()) {
+				Configuration configuration = new Configuration();
+				configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+					"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [NEW_DISK]/dump4/local-dir/, /dump5/local-dir/");
+				configuration.setInteger(ExternalBlockShuffleServiceOptions.DEFAULT_IO_THREAD_NUM_PER_DISK, 11);
+				configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, NEW_DISK: 4");
+				configuration.setString(ExternalBlockShuffleServiceOptions.OS_CACHE_POLICY.key(), policy.toString());
+				ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration =
+					ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+				assertEquals(policy, externalBlockShuffleServiceConfiguration.getOsCachePolicy());
+			}
+			{
+				Configuration configuration = new Configuration();
+				configuration.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS,
+					"/dump1/local-dir/, /dump2/local-dir/, [SSD]/dump3/local-dir/, [NEW_DISK]/dump4/local-dir/, /dump5/local-dir/");
+				configuration.setInteger(ExternalBlockShuffleServiceOptions.DEFAULT_IO_THREAD_NUM_PER_DISK, 11);
+				configuration.setString(ExternalBlockShuffleServiceOptions.IO_THREAD_NUM_FOR_DISK_TYPE, "SSD: 13, NEW_DISK: 4");
+				ExternalBlockShuffleServiceConfiguration externalBlockShuffleServiceConfiguration =
+					ExternalBlockShuffleServiceConfiguration.fromConfiguration(configuration);
+				assertEquals(OsCachePolicy.NO_TREATMENT, externalBlockShuffleServiceConfiguration.getOsCachePolicy());
+			}
+		}
 	}
 }
