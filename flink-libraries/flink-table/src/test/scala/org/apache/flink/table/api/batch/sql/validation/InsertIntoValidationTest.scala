@@ -75,5 +75,6 @@ class InsertIntoValidationTest extends TableTestBase {
 
     // must fail because partial insert is not supported yet.
     util.tableEnv.sqlUpdate(sql)
+    util.verifyExplain()
   }
 }

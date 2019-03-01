@@ -48,11 +48,13 @@ import org.apache.flink.table.plan.optimize.Optimizer
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.stats.{FlinkStatistic, TableStats}
 import org.apache.flink.table.plan.util.SubplanReuseUtil
+import org.apache.flink.table.sinks.OperationType.OperationType
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.table.temptable.FlinkTableServiceManager
 import org.apache.flink.table.types.{DataType, DateType, GenericType, InternalType, RowType, TimestampType}
 import org.apache.flink.table.typeutils.TypeUtils
+import org.apache.flink.table.validate.{ChainedFunctionCatalog, ExternalFunctionCatalog}
 import org.apache.flink.table.util.PlanUtil.dumpExecNodes
 import org.apache.flink.table.validate.{BuiltInFunctionCatalog, ChainedFunctionCatalog, ExternalFunctionCatalog, FunctionCatalog}
 
@@ -1237,7 +1239,7 @@ abstract class TableEnvironment(
 
   /**
     * Evaluates a SQL statement such as INSERT, UPDATE or DELETE; or a DDL statement;
-    * NOTE: Currently only SQL INSERT statements are supported.
+    * NOTE: Currently only SQL INSERT and SQL DELETE statements are supported.
     *
     * All tables referenced by the query must be registered in the TableEnvironment.
     * A [[Table]] is automatically registered when its [[toString]] method is called, for example
@@ -1271,17 +1273,6 @@ abstract class TableEnvironment(
             return
           case _ => // do nothing
         }
-        // validate the insert sql
-        val validated = flinkPlanner.validate(insert)
-        // transform to a relational tree
-        val relational:LogicalTableModify = flinkPlanner.rel(validated).rel
-            .asInstanceOf[LogicalTableModify]
-
-        // get query result as Table
-        val queryResult = new Table(this, LogicalRelNode(relational.getInput(0)))
-
-        // get name of sink table
-        val targetTable = relational.getTable
 
         // set emit configs
         val emit = insert.getEmit
@@ -1294,15 +1285,37 @@ abstract class TableEnvironment(
           }
         }
 
-        // insert query result into sink table
-        insertInto(
-            queryResult,
-            targetTable.unwrap(classOf[schema.Table]),
-            StringUtils.join(targetTable.getQualifiedName, ","))
+        // validate the insert sql
+        val validated = flinkPlanner.validate(insert)
+        sqlNodeUpdate(validated, OperationType.INSERT)
+      case delete: SqlDelete =>
+        // validate the delete sql
+        val validated = flinkPlanner.validate(delete)
+        sqlNodeUpdate(validated, OperationType.DELETE)
       case _ =>
         throw new TableException(
-          "Unsupported SQL query! sqlUpdate() only accepts SQL statements of type INSERT.")
+          "Unsupported SQL query! " +
+              "sqlUpdate() only accepts SQL statements of type INSERT and DELETE.")
     }
+  }
+
+  private def sqlNodeUpdate(validated: SqlNode, operationType: OperationType): Unit = {
+    // transform to a relational tree
+    val relational:LogicalTableModify = flinkPlanner.rel(validated).rel
+        .asInstanceOf[LogicalTableModify]
+    // get query result as Table
+    val queryResult = new Table(this, LogicalRelNode(relational.getInput(0)))
+    // get name of sink table
+    val targetTable = relational.getTable
+    val targetTableNames = targetTable match {
+      case relOptTable: FlinkRelOptTable => relOptTable.names
+      case _ => targetTable.getQualifiedName
+    }
+    writeTo(
+      queryResult,
+      targetTable.unwrap(classOf[schema.Table]),
+      StringUtils.join(targetTableNames, ","),
+      operationType)
   }
 
   /**
@@ -1368,7 +1381,7 @@ abstract class TableEnvironment(
     }
 
     val inCatalog = catalogManager
-      .getDefaultCatalog()
+      .getDefaultCatalog
       .tableExists(new ObjectPath(catalogManager.getDefaultDatabaseName, sinkTableName))
 
     if (!inCatalog && sinkTableName.equals("console")) {
@@ -1383,14 +1396,15 @@ abstract class TableEnvironment(
         throw new TableException(TableErrors.INST.sqlTableNotRegistered(sinkTableName))
       }
       val targetTable = getTable(sinkTableName).get
-      insertInto(table, targetTable, sinkTableName)
+      writeTo(table, targetTable, sinkTableName, OperationType.INSERT)
     }
   }
 
-  private def insertInto(
+  private def writeTo(
       sourceTable: Table,
       targetTable: schema.Table,
-      targetTableName: String) = {
+      targetTableName: String,
+      operationType: OperationType): Unit = {
     val tableSink = targetTable match {
       case s: CatalogCalciteTable => s.tableSink
       case s: TableSinkTable[_] => s.tableSink
@@ -1398,7 +1412,14 @@ abstract class TableEnvironment(
         s.tableSinkTable.get.tableSink
       case _ =>
         throw new TableException(TableErrors.INST.sqlNotTableSinkError(targetTableName))
-
+    }
+    assert(operationType != null, "operationType should not be null.")
+    if (operationType != OperationType.INSERT) {
+      tableSink match {
+        case sink: UpdateDeleteTableSink => sink.setOperationType(operationType)
+        case _ => throw new UnsupportedOperationException(
+          tableSink.getClass + " do not support " + operationType)
+      }
     }
 
     // validate schema of source table and table sink

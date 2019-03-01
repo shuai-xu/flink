@@ -30,6 +30,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
   */
 object FlinkBatchPrograms {
 
+  val DELETE_DML_ADD_PROJECT = "delete_dml_add_project"
   val SUBQUERY_REWRITE = "subquery_rewrite"
   val CORRELATE_REWRITE = "correlate_rewrite"
   val DECORRELATE = "decorrelate"
@@ -45,6 +46,9 @@ object FlinkBatchPrograms {
 
   def buildPrograms(config: Configuration): FlinkChainedPrograms[BatchOptimizeContext] = {
     val programs = new FlinkChainedPrograms[BatchOptimizeContext]()
+
+    // add project before delete table sink.
+    programs.addLast(DELETE_DML_ADD_PROJECT, new FlinkDeleteDMLAddProjectProgram)
 
     programs.addLast(
       // rewrite sub-queries to joins

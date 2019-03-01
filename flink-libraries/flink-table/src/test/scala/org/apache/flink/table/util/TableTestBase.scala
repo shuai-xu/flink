@@ -239,7 +239,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val relNode = table.getRelNode
     val optimized = tableEnv.optimize(relNode)
     val actualPlan = SystemUtils.LINE_SEPARATOR +
-      FlinkRelOptUtil.toString(optimized, withRetractTraits = true)
+        FlinkRelOptUtil.toString(optimized, withRetractTraits = true)
     assertEqualsOrExpand("plan", actualPlan, expand = false)
   }
 
@@ -300,7 +300,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     }
 
     val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
-      .buildPlanIfNeeded(tableEnv.sinkNodes)
+        .buildPlanIfNeeded(tableEnv.sinkNodes)
     val sinkExecNodes = tableEnv.compileToExecNode(optSinkNodes: _*)
 
     tableEnv.sinkNodes.clear()
@@ -501,7 +501,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     val relNode = resultTable.getRelNode
     if (printPlanBefore) {
       val planBefore = SystemUtils.LINE_SEPARATOR +
-        FlinkRelOptUtil.toString(relNode, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
+          FlinkRelOptUtil.toString(relNode, SqlExplainLevel.EXPPLAN_ATTRIBUTES)
       assertEqualsOrExpand("planBefore", planBefore)
     }
 
@@ -530,7 +530,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
     }
 
     val optSinkNodes = tableEnv.tableServiceManager.cachePlanBuilder
-      .buildPlanIfNeeded(tableEnv.sinkNodes)
+        .buildPlanIfNeeded(tableEnv.sinkNodes)
     if (!printResource) {
       excludeResourceProcessors
     }
@@ -595,16 +595,16 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
         val optimizedNode = optimizedNodes.head
 
         if (printRunningUnit) {
-            val ruList = tableEnv.getRUKeeper.getRunningUnits.map(x => x.toString)
-            ruList.sorted
-            val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
-            assertEqualsOrExpand("runningUnit", ruString)
+          val ruList = tableEnv.getRUKeeper.getRunningUnits.map(x => x.toString)
+          ruList.sorted
+          val ruString = SystemUtils.LINE_SEPARATOR + String.join("\n", ruList)
+          assertEqualsOrExpand("runningUnit", ruString)
         }
 
         FlinkNodeOptUtil.treeToString(
-            optimizedNode,
-            detailLevel = explainLevel,
-            withResource = printResource)
+          optimizedNode,
+          detailLevel = explainLevel,
+          withResource = printResource)
       case _ =>
         FlinkRelOptUtil.toString(optimized, detailLevel = explainLevel)
     }
@@ -619,7 +619,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil {
 }
 
 class NullableBatchTableTestUtil(fieldsNullable: Boolean, test: TableTestBase)
-  extends BatchTableTestUtil(test) {
+    extends BatchTableTestUtil(test) {
 
   override def addTable[T: TypeInformation](name: String, fields: Expression*): Table = {
     val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
@@ -638,9 +638,9 @@ class NullableBatchTableTestUtil(fieldsNullable: Boolean, test: TableTestBase)
 }
 
 class TestBatchTableSource(tableSchema: TableSchema,
-                           limitPushDown: Boolean = false,
-                           stats: TableStats = null)
-  extends BatchTableSource[Row] with LimitableTableSource {
+    limitPushDown: Boolean = false,
+    stats: TableStats = null)
+    extends BatchTableSource[Row] with LimitableTableSource {
 
   override def getReturnType: DataType =
     DataTypes.createRowType(

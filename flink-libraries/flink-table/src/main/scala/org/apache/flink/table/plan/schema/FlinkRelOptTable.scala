@@ -55,7 +55,7 @@ import scala.collection.JavaConversions._
 class FlinkRelOptTable protected(
     schema: RelOptSchema,
     rowType: RelDataType,
-    names: JList[String],
+    val names: JList[String],
     table: FlinkTable) extends AbstractPreparingTable {
 
   // Default value of rowCount if there is no available stats.
