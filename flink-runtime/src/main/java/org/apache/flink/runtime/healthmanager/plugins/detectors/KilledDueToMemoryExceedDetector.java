@@ -70,6 +70,10 @@ public class KilledDueToMemoryExceedDetector implements Detector {
 		LOGGER.debug("Start detecting.");
 		long now = System.currentTimeMillis();
 
+		if (lastDetectTime < monitor.getJobStartExecutionTime()) {
+			lastDetectTime = monitor.getJobStartExecutionTime();
+		}
+
 		Map<String, List<Exception>> tmExceptions = restServerClient.getTaskManagerExceptions(lastDetectTime, now);
 		lastDetectTime = now;
 
