@@ -49,12 +49,10 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 import org.apache.flink.util.AbstractID;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -92,8 +90,7 @@ public class ParallelismScaler implements Resolver {
 	private HealthMonitor monitor;
 	private MetricProvider metricProvider;
 
-	private double upScaleTpsRatio;
-	private double downScaleTpsRatio;
+	private double scaleTpsRatio;
 	private long timeout;
 	private long checkInterval;
 	private int maxPartitionPerTask;
@@ -153,8 +150,9 @@ public class ParallelismScaler implements Resolver {
 		this.jobID = monitor.getJobID();
 		this.metricProvider = monitor.getMetricProvider();
 
-		this.upScaleTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO);
-		this.downScaleTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO);
+		double maxTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO);
+		double minTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO);
+		this.scaleTpsRatio = (maxTpsRatio + minTpsRatio) / 2;
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT);
 		this.checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
@@ -470,8 +468,7 @@ public class ParallelismScaler implements Resolver {
 			return false;
 		}
 
-		needScaleUpForDelay = highDelaySymptom != null && delayIncreasingSymptom != null &&
-			CollectionUtils.intersection(highDelaySymptom.getJobVertexIDs(), delayIncreasingSymptom.getJobVertexIDs()).size() > 0;
+		needScaleUpForDelay = highDelaySymptom != null || delayIncreasingSymptom != null;
 		needScaleUpForBackpressure = backPressureSymptom != null;
 		needScaleDown = overParallelizedSymptom != null && backPressureSymptom == null;
 
@@ -680,20 +677,25 @@ public class ParallelismScaler implements Resolver {
 			backPressureVertices.addAll(backPressureSymptom.getJobVertexIDs());
 			for (JobVertexID vertexID : backPressureVertices) {
 				subDagRootsToUpScale.add(vertex2SubDagRoot.get(vertexID));
-				subDagTargetTpsRatio.put(vertex2SubDagRoot.get(vertexID), upScaleTpsRatio);
+				subDagTargetTpsRatio.put(vertex2SubDagRoot.get(vertexID), scaleTpsRatio);
 			}
 		}
 
 		if (needScaleUpForDelay) {
-			Collection<JobVertexID> verticesToUpScale = CollectionUtils.intersection(
-				highDelaySymptom.getJobVertexIDs(), delayIncreasingSymptom.getJobVertexIDs());
+			Set<JobVertexID> verticesToUpScale = new HashSet<>();
+			if (highDelaySymptom != null) {
+				verticesToUpScale.addAll(highDelaySymptom.getJobVertexIDs());
+			}
+			if (delayIncreasingSymptom != null) {
+				verticesToUpScale.addAll(delayIncreasingSymptom.getJobVertexIDs());
+			}
 			for (JobVertexID vertexId : verticesToUpScale) {
 				subDagRootsToUpScale.add(vertex2SubDagRoot.get(vertexId));
 
 				TaskMetrics metric = taskMetrics.get(vertexId);
 
 				// init ratio to make sure we can cache up the delay.
-				double ratio = 1 / (1 - metric.delayIncreasingRate) * upScaleTpsRatio;
+				double ratio = 1 / (1 - metric.delayIncreasingRate) * scaleTpsRatio;
 
 				if (metric.isParallelSource) {
 					double maxTps = 1.0 / Math.max(metric.partitionLatency, metric.taskLatencyPerRecord - metric.waitOutputPerRecord) * metric.partitionCount;
@@ -774,7 +776,7 @@ public class ParallelismScaler implements Resolver {
 		for (JobVertexID vertexID : vertexToDownScale) {
 			if (!targetParallelisms.containsKey(vertexID)) {
 				if (taskMetrics.get(vertexID).getWorkload() > 0) {
-					targetParallelisms.put(vertexID, (int) Math.floor(taskMetrics.get(vertexID).getWorkload() * downScaleTpsRatio));
+					targetParallelisms.put(vertexID, (int) Math.ceil(taskMetrics.get(vertexID).getWorkload() * scaleTpsRatio));
 				}
 			}
 		}
@@ -847,6 +849,12 @@ public class ParallelismScaler implements Resolver {
 					if (partitionCount > 0 && maxParallelism > partitionCount) {
 						maxParallelism = (int) partitionCount;
 					}
+				}
+
+				if (1.0 * targetParallelism / vertexConfig.getParallelism() <= reservedParallelismRatio &&
+						1.0 * vertexConfig.getParallelism() / targetParallelism <= reservedParallelismRatio) {
+					LOGGER.debug("Do not need to scale since the target parallelism within in reserved ratio");
+					targetParallelism = vertexConfig.getParallelism();
 				}
 
 			}

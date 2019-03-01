@@ -127,7 +127,7 @@ public class ParallelismScalerTest {
 		vertexToRoot.put(vertexID, vertexID);
 		Whitebox.setInternalState(scaler, "vertex2SubDagRoot", vertexToRoot);
 		Whitebox.setInternalState(scaler, "subDagRoot2UpstreamVertices", new HashMap<>());
-		Whitebox.setInternalState(scaler, "upScaleTpsRatio", 4);
+		Whitebox.setInternalState(scaler, "scaleTpsRatio", 4);
 
 		Whitebox.setInternalState(scaler, "needScaleUpForDelay", true);
 
@@ -203,7 +203,7 @@ public class ParallelismScalerTest {
 		assertTrue(Math.abs(40 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
 
 		// not parallel source and target ratio less than ratio.
-		Whitebox.setInternalState(scaler, "upScaleTpsRatio", 11);
+		Whitebox.setInternalState(scaler, "scaleTpsRatio", 11);
 		taskMetrics = new ParallelismScaler.TaskMetrics(
 				vertexID,
 				false,
@@ -329,7 +329,7 @@ public class ParallelismScalerTest {
 	public void testGetTargetParallelism() {
 		ParallelismScaler scaler = new ParallelismScaler();
 		Whitebox.setInternalState(scaler, "reservedParallelismRatio", 1.2);
-		Whitebox.setInternalState(scaler, "downScaleTpsRatio", 2);
+		Whitebox.setInternalState(scaler, "scaleTpsRatio", 2);
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
 		JobVertexID vertex3 = new JobVertexID();

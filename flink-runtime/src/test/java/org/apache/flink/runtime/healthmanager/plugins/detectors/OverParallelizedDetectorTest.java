@@ -26,6 +26,7 @@ import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
 import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexOverParallelized;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -54,6 +55,7 @@ public class OverParallelizedDetectorTest extends DetectorTestBase {
 	@Test
 	public void testDetectNotOverParallelized() throws Exception {
 
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 4.0);
 		// initial job vertex config.
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
@@ -139,6 +141,7 @@ public class OverParallelizedDetectorTest extends DetectorTestBase {
 	@Test
 	public void testDetect() throws Exception {
 
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 4.0);
 		// initial job vertex config.
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
