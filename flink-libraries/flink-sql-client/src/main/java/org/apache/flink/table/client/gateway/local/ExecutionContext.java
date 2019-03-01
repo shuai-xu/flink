@@ -408,33 +408,18 @@ public class ExecutionContext<T> {
 		}
 
 		private void registerFunctions() {
-			if (tableEnv instanceof StreamTableEnvironment) {
-				StreamTableEnvironment streamTableEnvironment = (StreamTableEnvironment) tableEnv;
-				functions.forEach((k, v) -> {
-					if (v instanceof ScalarFunction) {
-						streamTableEnvironment.registerFunction(k, (ScalarFunction) v);
-					} else if (v instanceof AggregateFunction) {
-						streamTableEnvironment.registerFunction(k, (AggregateFunction<?, ?>) v);
-					} else if (v instanceof TableFunction) {
-						streamTableEnvironment.registerFunction(k, (TableFunction<?>) v);
-					} else {
-						throw new SqlExecutionException("Unsupported function type: " + v.getClass().getName());
-					}
-				});
-			} else {
-				BatchTableEnvironment batchTableEnvironment = (BatchTableEnvironment) tableEnv;
-				functions.forEach((k, v) -> {
-					if (v instanceof ScalarFunction) {
-						batchTableEnvironment.registerFunction(k, (ScalarFunction) v);
-					} else if (v instanceof AggregateFunction) {
-						batchTableEnvironment.registerFunction(k, (AggregateFunction<?, ?>) v);
-					} else if (v instanceof TableFunction) {
-						batchTableEnvironment.registerFunction(k, (TableFunction<?>) v);
-					} else {
-						throw new SqlExecutionException("Unsupported function type: " + v.getClass().getName());
-					}
-				});
-			}
+			// TODO: move this to tableEnvironment.registerFunction(name, UDF) API
+			functions.forEach((k, v) -> {
+				if (v instanceof ScalarFunction) {
+					tableEnv.registerFunction(k, (ScalarFunction) v);
+				} else if (v instanceof AggregateFunction) {
+					tableEnv.registerFunction(k, (AggregateFunction<?, ?>) v);
+				} else if (v instanceof TableFunction) {
+					tableEnv.registerFunction(k, (TableFunction<?>) v);
+				} else {
+					throw new SqlExecutionException("Unsupported function type: " + v.getClass().getName());
+				}
+			});
 		}
 
 		private void registerView(ViewEntry viewEntry) {

@@ -43,10 +43,7 @@ import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.functions.AggregateFunction;
 import org.apache.flink.table.api.functions.FunctionService;
-import org.apache.flink.table.api.functions.ScalarFunction;
-import org.apache.flink.table.api.functions.TableFunction;
 import org.apache.flink.table.api.functions.UserDefinedFunction;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.config.Environment;
@@ -480,21 +477,7 @@ public class LocalExecutor implements Executor {
 					String funcName = sqlCreateFunction.getFunctionName().toString();
 					String funcDef = sqlCreateFunction.getClassName();
 
-					UserDefinedFunction func = createUserDefinedFunction(context.getClassLoader(), funcName, funcDef);
-
-					if (func instanceof TableFunction) {
-						TableFunction<?> tableFunction = (TableFunction) func;
-						tEnv.registerFunction(funcName, tableFunction);
-					} else if (func instanceof AggregateFunction) {
-						AggregateFunction<?, ?> aggregateFunction = (AggregateFunction) func;
-						tEnv.registerFunction(funcName, aggregateFunction);
-					} else if (func instanceof ScalarFunction) {
-						ScalarFunction scalarFunction = (ScalarFunction) func;
-						tEnv.registerFunction(funcName, scalarFunction);
-					} else {
-						// TODO: Support Hive UDX
-						throw new RuntimeException("Couldn't match the type of UDF class: " + funcDef);
-					}
+					tEnv.registerFunction(funcName, createUserDefinedFunction(context.getClassLoader(), funcName, funcDef));
 				});
 		} catch (Exception e) {
 			throw new SqlExecutionException("Could not create a udx from ddl: " + ddl, e);

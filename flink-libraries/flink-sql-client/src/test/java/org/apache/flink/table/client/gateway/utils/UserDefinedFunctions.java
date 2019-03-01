@@ -104,4 +104,71 @@ public class UserDefinedFunctions {
 			return new RowType(DataTypes.STRING, DataTypes.LONG);
 		}
 	}
+
+	// ------ UDF to Function DDL ------
+
+	/**
+	 * The scalar function for SQL Client test.
+	 */
+	public static class TestScalarUDF extends ScalarFunction {
+
+		private int offset;
+
+		public TestScalarUDF() {
+			this.offset = 5;
+		}
+
+		public TestScalarUDF(Integer offset) {
+			this.offset = offset;
+		}
+
+		public String eval(Integer i) {
+			return String.valueOf(i + offset);
+		}
+	}
+
+	/**
+	 * The aggregate function for SQL Client test.
+	 */
+	public static class TestAggregateUDF extends AggregateFunction<Long, Long> {
+
+		@Override
+		public Long createAccumulator() {
+			return 0L;
+		}
+
+		@Override
+		public Long getValue(Long accumulator) {
+			return 100L;
+		}
+
+		public void accumulate(Long acc, Long value) {
+			// do nothing
+		}
+
+		@Override
+		public DataType getResultType() {
+			return DataTypes.LONG;
+		}
+	}
+
+	/**
+	 * The table function for SQL Client test.
+	 */
+	public static class TestTableUDF extends TableFunction<Row> {
+
+		public void eval(String str) {
+			for (String s : str.split(" ")) {
+				Row r = new Row(2);
+				r.setField(0, s);
+				r.setField(1, s.length());
+				collect(r);
+			}
+		}
+
+		@Override
+		public DataType getResultType(Object[] arguments, Class[] argTypes) {
+			return new RowType(DataTypes.STRING, DataTypes.LONG);
+		}
+	}
 }

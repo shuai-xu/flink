@@ -39,6 +39,7 @@ import org.apache.flink.table.client.gateway.SessionContext;
 import org.apache.flink.table.client.gateway.SqlExecutionException;
 import org.apache.flink.table.client.gateway.TypedResult;
 import org.apache.flink.table.client.gateway.utils.EnvironmentFileUtil;
+import org.apache.flink.table.client.gateway.utils.UserDefinedFunctions;
 import org.apache.flink.table.types.DataTypes;
 import org.apache.flink.table.types.InternalType;
 import org.apache.flink.test.util.MiniClusterResource;
@@ -458,7 +459,7 @@ public class LocalExecutorITCase extends TestLogger {
 	}
 
 	@Test(timeout = 30_000L)
-	public void testDropTable() throws Exception {
+	public void testTable() throws Exception {
 		final Executor executor = createDefaultExecutor(clusterClient);
 		final SessionContext session = new SessionContext("test-session", new Environment());
 
@@ -905,8 +906,7 @@ public class LocalExecutorITCase extends TestLogger {
 		// Create a scalar function
 		executor.createFunction(
 			session,
-			"CREATE FUNCTION scalarDDL "
-				+ "AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF'");
+			String.format("CREATE FUNCTION scalarDDL AS '%s'", UserDefinedFunctions.ScalarUDF.class.getName()));
 		// Create a view
 		executor.createView(
 			session,
@@ -955,8 +955,7 @@ public class LocalExecutorITCase extends TestLogger {
 		// Create a scalar function
 		executor.createFunction(
 			session,
-			"CREATE FUNCTION scalarDDL "
-				+ "AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF'");
+			String.format("CREATE FUNCTION scalarDDL AS '%s'", UserDefinedFunctions.ScalarUDF.class.getName()));
 		// Create a view
 		executor.createView(
 			session,
@@ -984,7 +983,7 @@ public class LocalExecutorITCase extends TestLogger {
 	}
 
 	@Test(timeout = 30_000L)
-	public void testDropView() throws Exception {
+	public void testView() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
 		final Map<String, String> replaceVars = new HashMap<>();
@@ -1002,8 +1001,7 @@ public class LocalExecutorITCase extends TestLogger {
 		// Create a view
 		executor.createFunction(
 			session,
-			"CREATE FUNCTION scalarDDL "
-				+ "AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$ScalarUDF'");
+			String.format("CREATE FUNCTION scalarDDL AS '%s'", UserDefinedFunctions.ScalarUDF.class.getName()));
 		executor.createView(
 			session,
 			"CREATE VIEW V1 AS SELECT scalarDDL(IntegerField1) FROM TableNumber1");
@@ -1024,7 +1022,7 @@ public class LocalExecutorITCase extends TestLogger {
 	// TODO: re-enable this test
 	@Ignore
 	@Test(timeout = 30_000L)
-	public void testDropFunction() throws Exception {
+	public void testFunction() throws Exception {
 		final URL url = getClass().getClassLoader().getResource("test-data.csv");
 		Objects.requireNonNull(url);
 		final Map<String, String> replaceVars = new HashMap<>();
@@ -1058,6 +1056,42 @@ public class LocalExecutorITCase extends TestLogger {
 		//} catch (Exception ex) {
 		//	// expected
 		//}
+	}
+
+	@Test(timeout = 30_000L)
+	public void testUDFInvocation() throws Exception {
+		final URL url = getClass().getClassLoader().getResource("test-data.csv");
+		Objects.requireNonNull(url);
+		final Map<String, String> replaceVars = new HashMap<>();
+		replaceVars.put("$VAR_SOURCE_PATH1", url.getPath());
+		replaceVars.put("$VAR_EXECUTION_TYPE", "batch");
+		replaceVars.put("$VAR_RESULT_MODE", "table");
+		replaceVars.put("$VAR_UPDATE_MODE", "");
+		replaceVars.put("$VAR_MAX_ROWS", "100");
+
+		final Executor executor = createModifiedExecutor(clusterClient, replaceVars);
+		final SessionContext session = new SessionContext("test-session", new Environment());
+
+		executor.createFunction(
+			session,
+			String.format("CREATE FUNCTION testScalarDDL AS '%s'", UserDefinedFunctions.TestScalarUDF.class.getName()));
+
+		executor.executeQuery(session, "SELECT testScalarDDL(IntegerField1) FROM TableNumber1");
+
+		// TODO: enable this. There are some errors currently with 'TableNumber1' table
+//		executor.createFunction(
+//			session,
+//			"CREATE FUNCTION testTableDDL "
+//				+ "AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$TestTableUDF'");
+//
+//		executor.executeQuery(session, "SELECT testTableDDL(StringField1) FROM TableNumber1");
+//
+//		executor.createFunction(
+//			session,
+//			"CREATE FUNCTION testAggDDL "
+//				+ "AS 'org.apache.flink.table.client.gateway.utils.UserDefinedFunctions$TestAggregateUDF'");
+//
+//		executor.executeQuery(session, "SELECT scalarDDL(IntegerField1) FROM TableNumber1");
 	}
 
 	@Test(timeout = 30_000L)

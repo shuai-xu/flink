@@ -923,20 +923,21 @@ object UserDefinedFunctionUtils {
       }
     }
 
+    // TODO: Initiate Hive UDF
     // Check hive and covert to flink udf
-    func match {
-      case _: UDF =>
-        func = new HiveSimpleUDF(new HiveFunctionWrapper[UDF](functionDef))
-      case _: GenericUDF =>
-        func = new HiveGenericUDF(new HiveFunctionWrapper[GenericUDF](functionDef))
-      case _: UDAF =>
-        func = new HiveUDAFFunction(new HiveFunctionWrapper[UDAF](functionDef))
-      case _: GenericUDAFResolver2 =>
-        func = new HiveUDAFFunction(new HiveFunctionWrapper[GenericUDAFResolver2](functionDef))
-      case _: GenericUDTF =>
-        func = new HiveGenericUDTF(new HiveFunctionWrapper[GenericUDTF](functionDef))
-      case _ =>
-    }
+//    func match {
+//      case _: UDF =>
+//        func = new HiveSimpleUDF(new HiveFunctionWrapper[UDF](functionDef))
+//      case _: GenericUDF =>
+//        func = new HiveGenericUDF(new HiveFunctionWrapper[GenericUDF](functionDef))
+//      case _: UDAF =>
+//        func = new HiveUDAFFunction(new HiveFunctionWrapper[UDAF](functionDef))
+//      case _: GenericUDAFResolver2 =>
+//        func = new HiveUDAFFunction(new HiveFunctionWrapper[GenericUDAFResolver2](functionDef))
+//      case _: GenericUDTF =>
+//        func = new HiveGenericUDTF(new HiveFunctionWrapper[GenericUDTF](functionDef))
+//      case _ =>
+//    }
     func
   }
 

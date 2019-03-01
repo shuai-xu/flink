@@ -496,8 +496,16 @@ abstract class TableEnvironment(
   }
 
   /**
-    * Registers a UDF class under a unique name. The UDF class must have a default public
-    * constructor in order to be instantiated in runtime.
+    * Registers a UDF class under a unique name.
+    *
+    * The UDF must have a default public constructor in order to be instantiated at runtime,
+    * it cannot be Java singleton or Scala object class.
+    *
+    * To guarantee the UDF can be properly initiated, it's recommended that users explicitly return
+    * generic classes involved. That means users should implement
+    *
+    *   - getResultType() in [[TableFunction]]
+    *   - getResultType() and getAccumulatorType() in [[AggregateFunction]]
     */
   def registerFunction(functionName: String, udf: UserDefinedFunction): Unit = {
     chainedFunctionCatalog.registerFunction(functionName, new CatalogFunction(udf.getClass.getName))

@@ -45,7 +45,7 @@ object FunctionCatalogUtils {
       catalogFunc.asInstanceOf[FlinkTempFunction].getSqlFunction
     } else {
       functionInstance = UserDefinedFunctionUtils.createUserDefinedFunction(
-        getClass.getClassLoader,
+        Thread.currentThread().getContextClassLoader,
         name,
         catalogFunc.getClazzName
       ).asInstanceOf[UserDefinedFunction]
