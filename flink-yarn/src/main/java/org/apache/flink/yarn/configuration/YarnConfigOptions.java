@@ -137,6 +137,17 @@ public class YarnConfigOptions {
 			" allowed ports.");
 
 	/**
+	 * This configuration option defines Application Master (and JobManager) can only run
+	 * on nodes with the specific node label.
+	 * By default it will use default node label of YARN cluster.
+	 */
+	public static final ConfigOption<String> APPLICATION_MASTER_NODE_LABEL =
+		key("yarn.application-master.node-label")
+			.noDefaultValue()
+			.withDescription("This configuration option defines Application Master (and JobManager) can only run" +
+				" on nodes with the specific node label. By default it will use default node label of YARN cluster.");
+
+	/**
 	 * A comma-separated list of strings to use as YARN application tags.
 	 */
 	public static final ConfigOption<String> APPLICATION_TAGS =

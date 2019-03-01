@@ -18,6 +18,11 @@
             <td>Number of ApplicationMaster restarts. Note that that the entire Flink cluster will restart and the YARN Client will lose the connection. Also, the JobManager address will change and you’ll need to set the JM host:port manually. It is recommended to leave this option at 1.</td>
         </tr>
         <tr>
+            <td><h5>yarn.application-master.node-label</h5></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td>This configuration option defines Application Master (and JobManager) can only run on nodes with the specific node label. By default it will use default node label of YARN cluster.</td>
+        </tr>
+        <tr>
             <td><h5>yarn.application-master.port</h5></td>
             <td style="word-wrap: break-word;">"0"</td>
             <td>With this configuration option, users can specify a port, a range of ports or a list of ports for the Application Master (and JobManager) RPC port. By default we recommend using the default value (0) to let the operating system choose an appropriate port. In particular when multiple AMs are running on the same physical host, fixed port assignments prevent the AM from starting. For example when running Flink on YARN on an environment with a restrictive firewall, this option allows specifying a range of allowed ports.</td>

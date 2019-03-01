@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -1158,7 +1159,19 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		appContext.setApplicationName(customApplicationName);
 		appContext.setApplicationType("Apache Flink");
 		appContext.setAMContainerSpec(amContainer);
-		appContext.setResource(capability);
+
+		// Set up AM resource request
+		ResourceRequest amReq = Records.newRecord(ResourceRequest.class);
+		amReq.setResourceName(ResourceRequest.ANY);
+		amReq.setCapability(capability);
+		amReq.setNumContainers(1);
+		amReq.setRelaxLocality(true);
+		String nodeLabel = flinkConfiguration.getString(YarnConfigOptions.APPLICATION_MASTER_NODE_LABEL);
+		if (nodeLabel != null) {
+			amReq.setNodeLabelExpression(nodeLabel);
+		}
+		appContext.setAMContainerResourceRequest(amReq);
+
 		if (yarnQueue != null) {
 			appContext.setQueue(yarnQueue);
 		}
