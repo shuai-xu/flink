@@ -83,7 +83,7 @@ The ultimate goal for `HiveCatalog` is that:
 
 To query Hive data with `HiveCatalog`, users have to use Flink's `batch` mode by either using `BatchTableEnvironment` in Table APIs or setting `execution.type` as `batch` in Flink SQL Cli.
 
-Note that currently `HiveCatalog` only offers capabilities of reading Hive metastore metadata, including databases, tables, table partitions, simple data types, and table and column stats. Other meta-objects read and write capabilities are under either experiment or active development.
+Note that currently `HiveCatalog` offers capabilities of reading and writing Hive metastore metadata, including databases, tables, views, table partitions, simple data types, and table and column stats. Other meta-objects read and write capabilities are under either experiment or active development.
 
 Also note that currently only registering `HiveCatalog` through Table APIs allows users to customize their `HiveConf` with additional Hive connection parameters. Users need to make sure Flink can connect to their Hive metastore within their environment.
 
@@ -91,7 +91,13 @@ Its config entry value in SQL CLI yaml file is "hive".
 
 ## GenericHiveMetastoreCatalog
 
-// TODO: [BLINK-19044450] Add doc for GenericHiveMetastoreCatalog
+Previously, Flink meta-objects are only stored in memory and are per session based. That means users have to recreate all the meta-objects everytime they start a new session.
+
+To solve this user pain point, We developed `GenericHiveMetastoreCatalog` to persist users' all streaming and batch meta-objects by using Hive Metastore as a pure storage. Because Hive Metastore is only used for storage in this case, Hive itself may not understand Flink's meta-objects stored in the metastore.
+
+Note that currently `GenericHiveMetastoreCatalog` offers capabilities of reading and writing Flink metadata, including databases, tables, views, and functions. Other meta-objects read and write capabilities are under either experiment or active development.
+
+Its config entry value in SQL CLI yaml file is "generic_hive_metastore".
 
 ## User-configured Catalog
 
