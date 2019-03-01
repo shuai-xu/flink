@@ -108,14 +108,16 @@ public class TaskManagerExecutionVertexCache implements Closeable {
 						JobVertexID jobVertexID = accessExecutionJobVertex.getJobVertexId();
 						for (AccessExecutionVertex executionVertex : accessExecutionJobVertex.getTaskVertices()) {
 							final AccessExecution execution = executionVertex.getCurrentExecutionAttempt();
-							final ResourceID currentTaskTaskmanagerId = execution.getAssignedResourceLocation().getResourceID();
-							List<ExecutionVertexIDInfo> tmExecutionVertexIds = tmId2ExcutionVertixIds.get(currentTaskTaskmanagerId);
-							if (tmExecutionVertexIds == null){
-								tmExecutionVertexIds = new ArrayList<>();
+							if (null != execution.getAssignedResourceLocation()) {
+								final ResourceID currentTaskTaskmanagerId = execution.getAssignedResourceLocation().getResourceID();
+								List<ExecutionVertexIDInfo> tmExecutionVertexIds = tmId2ExcutionVertixIds.get(currentTaskTaskmanagerId);
+								if (tmExecutionVertexIds == null) {
+									tmExecutionVertexIds = new ArrayList<>();
+								}
+								ExecutionVertexIDInfo executionVertexId = new ExecutionVertexIDInfo(jobVertexID, execution.getParallelSubtaskIndex());
+								tmExecutionVertexIds.add(executionVertexId);
+								tmId2ExcutionVertixIds.put(currentTaskTaskmanagerId, tmExecutionVertexIds);
 							}
-							ExecutionVertexIDInfo executionVertexId = new ExecutionVertexIDInfo(jobVertexID, execution.getParallelSubtaskIndex());
-							tmExecutionVertexIds.add(executionVertexId);
-							tmId2ExcutionVertixIds.put(currentTaskTaskmanagerId, tmExecutionVertexIds);
 						}
 					}
 				}
