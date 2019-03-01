@@ -30,9 +30,12 @@ import org.apache.flink.runtime.state.TaskStateManager;
  * Stream environment that allows to wait for checkpoint acknowledgement.
  */
 public class AcknowledgeStreamMockEnvironment extends StreamMockEnvironment {
-	private final OneShotLatch checkpointLatch = new OneShotLatch();
 	private volatile long checkpointId;
 	private volatile TaskStateSnapshot checkpointStateHandles;
+
+	private final OneShotLatch startLatch = new OneShotLatch();
+
+	private final OneShotLatch completeLatch = new OneShotLatch();
 
 	public AcknowledgeStreamMockEnvironment(
 		Configuration jobConfig,
@@ -62,13 +65,23 @@ public class AcknowledgeStreamMockEnvironment extends StreamMockEnvironment {
 		CheckpointMetrics checkpointMetrics,
 		TaskStateSnapshot checkpointStateHandles) {
 
+		try {
+			this.startLatch.await();
+		} catch (Exception e) {
+			throw new RuntimeException("Could not wait for the start of checkpoint.", e);
+		}
+
 		this.checkpointId = checkpointId;
 		this.checkpointStateHandles = checkpointStateHandles;
-		checkpointLatch.trigger();
+		this.completeLatch.trigger();
 	}
 
-	public OneShotLatch getCheckpointLatch() {
-		return checkpointLatch;
+	public OneShotLatch getStartLatch() {
+		return startLatch;
+	}
+
+	public OneShotLatch getCompleteLatch() {
+		return completeLatch;
 	}
 
 	public TaskStateSnapshot getCheckpointStateHandles() {

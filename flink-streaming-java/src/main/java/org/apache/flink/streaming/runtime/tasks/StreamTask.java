@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.tasks;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.TaskInfo;
+import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.fs.CloseableRegistry;
@@ -71,6 +72,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -183,6 +185,12 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 	private final List<StreamRecordWriter<StreamRecord<?>>> streamRecordWriters;
 
+	/** The asynchronous parts of pending checkpoints. */
+	private final TreeMap<Long, AsyncCheckpointRunnable> asyncCheckpointOperations;
+
+	/** The allowed max concurrent checkpoints number in task side. */
+	private final int maxConcurrentCheckpoints;
+
 	// ------------------------------------------------------------------------
 
 	/**
@@ -218,6 +226,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 		List<StreamConfig> chainedNodeConfigs = streamTaskConfig.getChainedHeadNodeConfigs();
 		this.configuration = chainedNodeConfigs.size() == 0 ? new StreamConfig(new Configuration()) : chainedNodeConfigs.get(0);
+		this.maxConcurrentCheckpoints = configuration.getConfiguration().getInteger(CheckpointingOptions.CHECKPOINTS_MAX_CONCURRENT_NUM,
+			CheckpointingOptions.CHECKPOINTS_MAX_CONCURRENT_NUM.defaultValue());
+		this.asyncCheckpointOperations = new TreeMap<>();
 	}
 
 	// ------------------------------------------------------------------------
@@ -800,6 +811,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 		return timerService;
 	}
 
+	@VisibleForTesting
+	public Map<Long, AsyncCheckpointRunnable> getAsyncCheckpointOperations() {
+		return Collections.unmodifiableMap(asyncCheckpointOperations);
+	}
+
 	/**
 	 * Handles an exception thrown by another thread (e.g. a TriggerTask),
 	 * other than the one executing the main task by failing the task entirely.
@@ -850,6 +866,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 		private final AtomicReference<CheckpointingOperation.AsyncCheckpointState> asyncCheckpointState = new AtomicReference<>(
 			CheckpointingOperation.AsyncCheckpointState.RUNNING);
 
+		private volatile boolean cancelled;
+
 		AsyncCheckpointRunnable(
 			StreamTask<?, ?> owner,
 			Map<OperatorID, OperatorSnapshotFutures> operatorSnapshotsInProgress,
@@ -862,6 +880,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			this.checkpointMetaData = Preconditions.checkNotNull(checkpointMetaData);
 			this.checkpointMetrics = Preconditions.checkNotNull(checkpointMetrics);
 			this.asyncStartNanos = asyncStartNanos;
+			this.cancelled = false;
 		}
 
 		@Override
@@ -916,6 +935,12 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			} finally {
 				owner.cancelables.unregisterCloseable(this);
 				FileSystemSafetyNet.closeSafetyNetAndGuardedResourcesForThread();
+
+				if (owner.maxConcurrentCheckpoints > 0) {
+					synchronized (owner.asyncCheckpointOperations) {
+						owner.asyncCheckpointOperations.remove(checkpointMetaData.getCheckpointId());
+					}
+				}
 			}
 		}
 
@@ -1006,6 +1031,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			}
 		}
 
+		private void markCancel() {
+			cancelled = true;
+		}
+
+		public boolean isCancelled() {
+			return cancelled;
+		}
+
 		private void cleanup() throws Exception {
 			LOG.debug(
 				"Cleanup AsyncCheckpointRunnable for checkpoint {} of {}.",
@@ -1057,6 +1090,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 		private long startSyncPartNano;
 		private long startAsyncPartNano;
+		private final boolean needToCancelCheckpoints;
 
 		// ------------------------
 
@@ -1078,9 +1112,30 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 			Collections.reverse(operators);
 			this.allOperators = operators.toArray(new StreamOperator[0]);
 			this.operatorSnapshotsInProgress = new HashMap<>(allOperators.length);
+			this.needToCancelCheckpoints = owner.maxConcurrentCheckpoints > 0;
 		}
 
 		public void executeCheckpointing() throws Exception {
+
+			if (needToCancelCheckpoints) {
+				synchronized (owner.asyncCheckpointOperations) {
+					while (owner.asyncCheckpointOperations.size() >= owner.maxConcurrentCheckpoints) {
+						Map.Entry<Long, AsyncCheckpointRunnable> checkpointEntry = owner.asyncCheckpointOperations.pollFirstEntry();
+						long checkpointID = checkpointEntry.getKey();
+						AsyncCheckpointRunnable asyncCheckpointOperation = checkpointEntry.getValue();
+
+						Preconditions.checkState(checkpointID < checkpointMetaData.getCheckpointId(),
+							"Unexpected checkpoint " + checkpointID +
+								" to discard before executing checkpoint " + checkpointMetaData.getCheckpointId());
+
+						LOG.info("{} - Cancel the asynchronous part of previous checkpoint {} before executing checkpoint {}.",
+							owner.getName(), checkpointID, checkpointMetaData.getCheckpointId());
+						asyncCheckpointOperation.markCancel();
+						asyncCheckpointOperation.close();
+					}
+				}
+			}
+
 			startSyncPartNano = System.nanoTime();
 
 			try {
@@ -1105,6 +1160,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 					checkpointMetrics,
 					startAsyncPartNano);
 
+				if (needToCancelCheckpoints) {
+					synchronized (owner.asyncCheckpointOperations) {
+						owner.asyncCheckpointOperations.put(checkpointMetaData.getCheckpointId(), asyncCheckpointRunnable);
+					}
+				}
 				owner.cancelables.registerCloseable(asyncCheckpointRunnable);
 				owner.asyncOperationsThreadPool.submit(asyncCheckpointRunnable);
 
@@ -1124,6 +1184,12 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 						} catch (Exception e) {
 							LOG.warn("Could not properly cancel an operator snapshot result.", e);
 						}
+					}
+				}
+
+				if (needToCancelCheckpoints) {
+					synchronized (owner.asyncCheckpointOperations) {
+						owner.asyncCheckpointOperations.remove(checkpointMetaData.getCheckpointId());
 					}
 				}
 

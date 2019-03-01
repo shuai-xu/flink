@@ -89,6 +89,8 @@ import scala.concurrent.duration.Deadline;
 import scala.concurrent.duration.FiniteDuration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -526,8 +528,9 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 		taskStateManager.setWaitForReportLatch(waitForAcknowledgeLatch);
 
-		// reset number of restore calls
+		// reset number of restore/snapshot calls
 		TestingStreamOperator.numberRestoreCalls = 0;
+		TestingStreamOperator.numberSnapshotCalls = 0;
 
 		testHarness.invoke();
 		testHarness.waitForTaskRunning(deadline.timeLeft().toMillis());
@@ -576,6 +579,57 @@ public class OneInputStreamTaskTest extends TestLogger {
 		assertEquals(numberChainedTasks, TestingStreamOperator.numberRestoreCalls);
 
 		TestingStreamOperator.numberRestoreCalls = 0;
+	}
+
+	/**
+	 * Tests that the stream task can cancel pending checkpoints when a new
+	 * checkpoint request arrives.
+	 */
+	@Test
+	public void testCancelPendingCheckpoints() throws Exception {
+		final Deadline deadline = new FiniteDuration(2, TimeUnit.MINUTES).fromNow();
+		final OneInputStreamTaskTestHarness<String, String> testHarness = new OneInputStreamTaskTestHarness<String, String>(OneInputStreamTask::new, BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
+		IdentityKeySelector<String> keySelector = new IdentityKeySelector<>();
+		testHarness.configureForKeyedStream(keySelector, BasicTypeInfo.STRING_TYPE_INFO);
+
+		int numberChainedTasks = 11;
+
+		configureChainedTestingStreamOperator(testHarness, testHarness.getStreamConfig(), numberChainedTasks);
+
+		AcknowledgeStreamMockEnvironment env = new AcknowledgeStreamMockEnvironment(
+			testHarness.jobConfig,
+			testHarness.taskConfig,
+			testHarness.executionConfig,
+			testHarness.memorySize,
+			new MockInputSplitProvider(),
+			testHarness.bufferSize,
+			new TestTaskStateManager());
+
+		testHarness.invoke(env);
+		testHarness.waitForTaskRunning(deadline.timeLeft().toMillis());
+
+		final OneInputStreamTask<String, String> streamTask = testHarness.getTask();
+
+		CheckpointMetaData checkpointMetaData = new CheckpointMetaData(1L, 1L);
+		streamTask.triggerCheckpoint(checkpointMetaData, CheckpointOptions.forCheckpointWithDefaultLocation());
+		Map<Long, StreamTask.AsyncCheckpointRunnable> asyncCheckpointOperations = streamTask.getAsyncCheckpointOperations();
+		assertEquals(1, asyncCheckpointOperations.size());
+		assertEquals(1L, (long) asyncCheckpointOperations.keySet().iterator().next());
+		StreamTask.AsyncCheckpointRunnable runnable = streamTask.getAsyncCheckpointOperations().get(checkpointMetaData.getCheckpointId());
+		assertNotNull(runnable);
+		assertFalse(runnable.isCancelled());
+
+		checkpointMetaData = new CheckpointMetaData(2L, 2L);
+		streamTask.triggerCheckpoint(checkpointMetaData, CheckpointOptions.forCheckpointWithDefaultLocation());
+		asyncCheckpointOperations = streamTask.getAsyncCheckpointOperations();
+		assertEquals(1, asyncCheckpointOperations.size());
+		assertEquals(2L, (long) asyncCheckpointOperations.keySet().iterator().next());
+		assertTrue(runnable.isCancelled());
+
+		env.getStartLatch().trigger();
+
+		testHarness.endInput();
+		testHarness.waitForTaskCompletion(deadline.timeLeft().toMillis());
 	}
 
 	@Test

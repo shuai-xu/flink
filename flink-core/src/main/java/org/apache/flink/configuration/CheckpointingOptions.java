@@ -89,6 +89,15 @@ public class CheckpointingOptions {
 		.key("taskmanager.state.local.root-dirs")
 		.noDefaultValue();
 
+	/**
+	 * The option configures the number of concurrent checkpoints could run within state backend.
+	 */
+	public static final ConfigOption<Integer> CHECKPOINTS_MAX_CONCURRENT_NUM = ConfigOptions
+		.key("state.backend.checkpoints.concurrent-num")
+		.defaultValue(1)
+		.withDescription("The max concurrent number of checkpoints could run within state backend. " +
+			"If set less than 0, means no limit.");
+
 	// ------------------------------------------------------------------------
 	//  Options specific to the file-system-based state backends
 	// ------------------------------------------------------------------------
