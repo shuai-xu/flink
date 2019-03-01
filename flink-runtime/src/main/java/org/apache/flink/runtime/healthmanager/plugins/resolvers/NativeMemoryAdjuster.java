@@ -31,6 +31,7 @@ import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobNativeMem
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighNativeMemory;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowMemory;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexTmKilledDueToMemoryExceed;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -66,6 +67,7 @@ public class NativeMemoryAdjuster implements Resolver {
 
 	private JobStable jobStable;
 	private JobVertexHighNativeMemory jobVertexHighNativeMemory;
+	private JobVertexTmKilledDueToMemoryExceed jobVertexTmKilledDueToMemoryExceed;
 	private JobVertexLowMemory jobVertexLowMemory;
 
 	@Override
@@ -109,7 +111,7 @@ public class NativeMemoryAdjuster implements Resolver {
 			targetNative.putAll(scaleDownVertexNativeMemory(jobConfig));
 		}
 
-		if (jobVertexHighNativeMemory != null || vertexToScaleUpMaxUtilities != null) {
+		if (jobVertexHighNativeMemory != null || jobVertexTmKilledDueToMemoryExceed != null || vertexToScaleUpMaxUtilities != null) {
 			targetNative.putAll(scaleUpVertexNativeMemory(jobConfig));
 		}
 
@@ -144,6 +146,7 @@ public class NativeMemoryAdjuster implements Resolver {
 		if (!adjustJobNativeMemory.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if ((jobVertexHighNativeMemory != null && jobVertexHighNativeMemory.isSevere()) ||
+				jobVertexTmKilledDueToMemoryExceed != null ||
 				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
 				adjustJobNativeMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
@@ -163,6 +166,7 @@ public class NativeMemoryAdjuster implements Resolver {
 		jobStable = null;
 		jobVertexHighNativeMemory = null;
 		jobVertexLowMemory = null;
+		jobVertexTmKilledDueToMemoryExceed = null;
 
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobStable) {
@@ -175,9 +179,19 @@ public class NativeMemoryAdjuster implements Resolver {
 				continue;
 			}
 
+			if (symptom instanceof  JobVertexTmKilledDueToMemoryExceed) {
+				jobVertexTmKilledDueToMemoryExceed = (JobVertexTmKilledDueToMemoryExceed) symptom;
+				continue;
+			}
+
 			if (symptom instanceof JobVertexLowMemory) {
 				jobVertexLowMemory = (JobVertexLowMemory) symptom;
 			}
+		}
+
+		if (jobVertexTmKilledDueToMemoryExceed != null) {
+			LOGGER.debug("Task manager killed due to memory exceed detected, should rescale.");
+			return true;
 		}
 
 		if (jobVertexHighNativeMemory != null && jobVertexHighNativeMemory.isCritical()) {
@@ -200,9 +214,21 @@ public class NativeMemoryAdjuster implements Resolver {
 
 	@VisibleForTesting
 	public Map<JobVertexID, Integer> scaleUpVertexNativeMemory(RestServerClient.JobConfig jobConfig) {
-		for (Map.Entry<JobVertexID, Double> entry : jobVertexHighNativeMemory.getUtilities().entrySet()) {
-			if (!vertexToScaleUpMaxUtilities.containsKey(entry.getKey()) || vertexToScaleUpMaxUtilities.get(entry.getKey()) < entry.getValue()) {
-				vertexToScaleUpMaxUtilities.put(entry.getKey(), entry.getValue());
+		if (jobVertexHighNativeMemory != null) {
+			for (Map.Entry<JobVertexID, Double> entry : jobVertexHighNativeMemory.getUtilities().entrySet()) {
+				if (!vertexToScaleUpMaxUtilities.containsKey(entry.getKey()) || vertexToScaleUpMaxUtilities.get(
+					entry.getKey()) < entry.getValue()) {
+					vertexToScaleUpMaxUtilities.put(entry.getKey(), entry.getValue());
+				}
+			}
+		}
+
+		if (jobVertexTmKilledDueToMemoryExceed != null) {
+			for (Map.Entry<JobVertexID, Double> entry : jobVertexTmKilledDueToMemoryExceed.getUtilities().entrySet()) {
+				if (!vertexToScaleUpMaxUtilities.containsKey(entry.getKey()) || vertexToScaleUpMaxUtilities.get(
+					entry.getKey()) < entry.getValue()) {
+					vertexToScaleUpMaxUtilities.put(entry.getKey(), entry.getValue());
+				}
 			}
 		}
 

@@ -26,6 +26,7 @@ import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighNativeMemory;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowMemory;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexTmKilledDueToMemoryExceed;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import org.junit.Test;
@@ -58,11 +59,17 @@ public class NativeMemoryAdjusterTest {
 			new JobID(), Collections.emptyMap(), true, false);
 		JobVertexHighNativeMemory jobVertexHighNativeMemoryCritical = new JobVertexHighNativeMemory(
 			new JobID(), Collections.emptyMap(), true, true);
+		JobVertexTmKilledDueToMemoryExceed jobVertexTmKilledDueToMemoryExceed =
+			new JobVertexTmKilledDueToMemoryExceed(new JobID(), Collections.emptyMap());
 		JobVertexLowMemory jobVertexLowMemory = new JobVertexLowMemory(new JobID());
 
 		List<Symptom> symptomList = new ArrayList<>();
 
 		symptomList.add(jobVertexHighNativeMemoryCritical);
+		assertTrue(nativeMemoryAdjuster.diagnose(symptomList));
+
+		symptomList.clear();
+		symptomList.add(jobVertexTmKilledDueToMemoryExceed);
 		assertTrue(nativeMemoryAdjuster.diagnose(symptomList));
 
 		symptomList.clear();
@@ -92,7 +99,11 @@ public class NativeMemoryAdjusterTest {
 		symptomList.add(jobStableLongTime);
 		assertTrue(nativeMemoryAdjuster.diagnose(symptomList));
 
+		symptomList.add(jobVertexTmKilledDueToMemoryExceed);
+		assertTrue(nativeMemoryAdjuster.diagnose(symptomList));
+
 		assertEquals(jobStableLongTime, Whitebox.getInternalState(nativeMemoryAdjuster, "jobStable"));
+		assertEquals(jobVertexTmKilledDueToMemoryExceed, Whitebox.getInternalState(nativeMemoryAdjuster, "jobVertexTmKilledDueToMemoryExceed"));
 		assertEquals(jobVertexHighNativeMemory, Whitebox.getInternalState(nativeMemoryAdjuster, "jobVertexHighNativeMemory"));
 		assertEquals(jobVertexLowMemory, Whitebox.getInternalState(nativeMemoryAdjuster, "jobVertexLowMemory"));
 	}
@@ -102,21 +113,28 @@ public class NativeMemoryAdjusterTest {
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
 		JobVertexID vertex3 = new JobVertexID();
+		JobVertexID vertex4 = new JobVertexID();
 
-		Map<JobVertexID, Double> currentMaxUtility = new HashMap<>();
-		currentMaxUtility.put(vertex1, 1.5);
-		currentMaxUtility.put(vertex2, 1.2);
+		Map<JobVertexID, Double> memoryHighMaxUtility = new HashMap<>();
+		memoryHighMaxUtility.put(vertex1, 1.5);
+		memoryHighMaxUtility.put(vertex2, 1.2);
 		JobVertexHighNativeMemory jobVertexHighNativeMemory = new JobVertexHighNativeMemory(
-			new JobID(), currentMaxUtility, false, false);
+			new JobID(), memoryHighMaxUtility, false, false);
 
 		Map<JobVertexID, Double> previousMaxUtility = new HashMap<>();
 		previousMaxUtility.put(vertex2, 1.5);
 		previousMaxUtility.put(vertex3, 1.5);
 
+		Map<JobVertexID, Double> tmKilledMaxUtility = new HashMap<>();
+		tmKilledMaxUtility.put(vertex4, 2.0);
+		JobVertexTmKilledDueToMemoryExceed jobVertexTmKilledDueToMemoryExceed =
+			new JobVertexTmKilledDueToMemoryExceed(new JobID(), tmKilledMaxUtility);
+
 		NativeMemoryAdjuster nativeMemoryAdjuster = new NativeMemoryAdjuster();
 		Whitebox.setInternalState(nativeMemoryAdjuster, "scaleUpRatio", 1.0);
 		Whitebox.setInternalState(nativeMemoryAdjuster, "jobVertexHighNativeMemory", jobVertexHighNativeMemory);
 		Whitebox.setInternalState(nativeMemoryAdjuster, "vertexToScaleUpMaxUtilities", previousMaxUtility);
+		Whitebox.setInternalState(nativeMemoryAdjuster, "jobVertexTmKilledDueToMemoryExceed", jobVertexTmKilledDueToMemoryExceed);
 
 		RestServerClient.VertexConfig vertexConfig1 = new RestServerClient.VertexConfig(
 			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(100).build());
@@ -124,19 +142,23 @@ public class NativeMemoryAdjusterTest {
 			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(100).build());
 		RestServerClient.VertexConfig vertexConfig3 = new RestServerClient.VertexConfig(
 			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(100).build());
+		RestServerClient.VertexConfig vertexConfig4 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(100).build());
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
 		vertexConfigs.put(vertex1, vertexConfig1);
 		vertexConfigs.put(vertex2, vertexConfig2);
 		vertexConfigs.put(vertex3, vertexConfig3);
+		vertexConfigs.put(vertex4, vertexConfig4);
 		RestServerClient.JobConfig jobConfig = Mockito.mock(RestServerClient.JobConfig.class);
 		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
 
 		Map<JobVertexID, Integer> results = nativeMemoryAdjuster.scaleUpVertexNativeMemory(jobConfig);
 		assertNotNull(results);
-		assertEquals(3, results.size());
+		assertEquals(4, results.size());
 		assertEquals(Integer.valueOf(150), results.get(vertex1));
 		assertEquals(Integer.valueOf(150), results.get(vertex2));
 		assertEquals(Integer.valueOf(150), results.get(vertex3));
+		assertEquals(Integer.valueOf(200), results.get(vertex4));
 	}
 
 	@Test

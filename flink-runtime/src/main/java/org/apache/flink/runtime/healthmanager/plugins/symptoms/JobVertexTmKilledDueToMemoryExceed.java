@@ -21,28 +21,19 @@ package org.apache.flink.runtime.healthmanager.plugins.symptoms;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.util.Preconditions;
 
 import java.util.Map;
 
 /**
- * Symptom indicating job vertices native memory overuse.
+ * Symptom indicating job vertices container killed due to memory exceed.
  */
-public class JobVertexHighNativeMemory implements Symptom {
-
+public class JobVertexTmKilledDueToMemoryExceed implements Symptom {
 	private JobID jobID;
 	Map<JobVertexID, Double> utilities;
-	private boolean severe;
-	private boolean critical;
 
-	public JobVertexHighNativeMemory(JobID jobID, Map<JobVertexID, Double> utilities, boolean severe, boolean critical) {
+	public JobVertexTmKilledDueToMemoryExceed(JobID jobID, Map<JobVertexID, Double> utilities) {
 		this.jobID = jobID;
 		this.utilities = utilities;
-		this.severe = severe;
-		this.critical = critical;
-		if (critical) {
-			Preconditions.checkArgument(severe);
-		}
 	}
 
 	public JobID getJobID() {
@@ -51,13 +42,5 @@ public class JobVertexHighNativeMemory implements Symptom {
 
 	public Map<JobVertexID, Double> getUtilities() {
 		return utilities;
-	}
-
-	public boolean isSevere() {
-		return severe;
-	}
-
-	public boolean isCritical() {
-		return critical;
 	}
 }
