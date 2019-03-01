@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.clusterframework.types;
 
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.resources.Resource;
 
@@ -26,6 +27,7 @@ import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -74,6 +76,9 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	/** The hash code of this {@link ResourceProfile}. */
 	private volatile int hashResult;
 
+	/** Resource constraints.*/
+	private final ResourceConstraints resourceConstraints;
+
 	// ------------------------------------------------------------------------
 
 	/**
@@ -92,7 +97,8 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 			int directMemoryInMB,
 			int nativeMemoryInMB,
 			int networkMemoryInMB,
-			Map<String, Resource> extendedResources) {
+			Map<String, Resource> extendedResources,
+			ResourceConstraints resourceConstraints) {
 		this.cpuCores = cpuCores;
 		this.heapMemoryInMB = heapMemoryInMB;
 		this.directMemoryInMB = directMemoryInMB;
@@ -101,7 +107,18 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 		if (extendedResources != null) {
 			this.extendedResources.putAll(extendedResources);
 		}
+		this.resourceConstraints = resourceConstraints;
 		updateHashCode();
+	}
+
+	public ResourceProfile(
+		double cpuCores,
+		int heapMemoryInMB,
+		int directMemoryInMB,
+		int nativeMemoryInMB,
+		int networkMemoryInMB,
+		Map<String, Resource> extendedResources) {
+		this(cpuCores, heapMemoryInMB, directMemoryInMB, nativeMemoryInMB, networkMemoryInMB, extendedResources, null);
 	}
 
 	/**
@@ -125,10 +142,15 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 				other.directMemoryInMB,
 				other.nativeMemoryInMB,
 				other.networkMemoryInMB,
-				other.extendedResources);
+				other.extendedResources,
+				other.resourceConstraints);
 	}
 
 	// ------------------------------------------------------------------------
+
+	public ResourceConstraints getResourceConstraints() {
+		return resourceConstraints;
+	}
 
 	/**
 	 * Get the cpu cores needed.
@@ -233,6 +255,16 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 	 * @return true if the requirement is matched, otherwise false
 	 */
 	public boolean isMatching(ResourceProfile required) {
+		// Currently, a slot can be used only if the required ResourceConstraints strictly
+		// match the slot's ResourceConstraints.
+		if (resourceConstraints != null) {
+			if(!resourceConstraints.equals(required.getResourceConstraints())) {
+				return false;
+			}
+		} else if (required.getResourceConstraints() != null) {
+			return false;
+		}
+
 		if (cpuCores >= required.getCpuCores() &&
 				heapMemoryInMB >= required.getHeapMemoryInMB() &&
 				directMemoryInMB >= required.getDirectMemoryInMB() &&
@@ -285,11 +317,40 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 				// In this case just use hash code to get a consistent comparison result.
 				return this.hashCode() > other.hashCode() ? 1 : -1;
 			}
-			return cmp;
 		} else {
 			// At least one of them has no extended resource.
-			return extendedResources.size() - other.extendedResources.size();
+			cmp = extendedResources.size() - other.extendedResources.size();
 		}
+		if (cmp == 0) {
+			if (resourceConstraints == null && other.getResourceConstraints() != null) {
+				return 1;
+			} else if (resourceConstraints != null && other.getResourceConstraints() == null) {
+				return -1;
+			} else if (resourceConstraints != null && other.resourceConstraints != null) {
+				Iterator<Map.Entry<String, String>> thisIterator =
+					resourceConstraints.getConstraints().entrySet().iterator();
+				Iterator<Map.Entry<String, String>> otherIterator =
+					other.resourceConstraints.getConstraints().entrySet().iterator();
+				// seems meaningless, are there other more appropriate ways to compare two resource constraints?
+				while (thisIterator.hasNext() && otherIterator.hasNext()) {
+					Map.Entry<String, String> thisConstraint = thisIterator.next();
+					Map.Entry<String, String> otherConstraint = otherIterator.next();
+					if ((cmp = thisConstraint.getKey().compareTo(otherConstraint.getKey())) != 0) {
+						return cmp;
+					}
+					if ((cmp = thisConstraint.getValue().compareTo(otherConstraint.getValue())) != 0) {
+						return cmp;
+					}
+				}
+				if (thisIterator.hasNext()) {
+					return -1;
+				}
+				if (otherIterator.hasNext()) {
+					return 1;
+				}
+			}
+		}
+		return cmp;
 	}
 
 	/**
@@ -328,7 +389,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 			directMemoryInMB - another.directMemoryInMB,
 			nativeMemoryInMB - another.nativeMemoryInMB,
 			networkMemoryInMB - another.networkMemoryInMB,
-			newExtendedResource);
+			newExtendedResource, resourceConstraints);
 	}
 
 	public ResourceProfile merge(ResourceProfile another) {
@@ -369,7 +430,7 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 			this.getDirectMemoryInMB() * multiplier,
 			this.getNativeMemoryInMB() * multiplier,
 			this.getNetworkMemoryInMB() * multiplier,
-			newExtendedResource);
+			newExtendedResource, this.resourceConstraints);
 	}
 
 	// ------------------------------------------------------------------------
@@ -387,6 +448,9 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 		result = 31 * result + nativeMemoryInMB;
 		result = 31 * result + networkMemoryInMB;
 		result = 31 * result + extendedResources.hashCode();
+		if (resourceConstraints != null) {
+			result = 31 * result + resourceConstraints.hashCode();
+		}
 		this.hashResult = result;
 	}
 
@@ -405,7 +469,10 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 					this.directMemoryInMB == that.directMemoryInMB &&
 					this.nativeMemoryInMB == that.nativeMemoryInMB &&
 					this.networkMemoryInMB == that.networkMemoryInMB &&
-					Objects.equals(extendedResources, that.extendedResources);
+					Objects.equals(extendedResources, that.extendedResources) &&
+					((this.resourceConstraints != null
+						&& this.resourceConstraints.equals(that.resourceConstraints)) ||
+						(this.resourceConstraints == null && that.resourceConstraints == null));
 		}
 		return false;
 	}
@@ -420,12 +487,18 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 			}
 			strExtendedResource = resources.toString();
 		}
+
+		String constraintsStr = null;
+		if (resourceConstraints != null) {
+			constraintsStr = resourceConstraints.toString();
+		}
 		return "ResourceProfile{" +
 			"cpuCores=" + cpuCores +
 			", heapMemoryInMB=" + heapMemoryInMB +
 			", directMemoryInMB=" + directMemoryInMB +
 			", nativeMemoryInMB=" + nativeMemoryInMB +
 			", networkMemoryInMB=" + networkMemoryInMB + strExtendedResource +
+			", ResourceConstraints=" + constraintsStr +
 			'}';
 	}
 
@@ -439,5 +512,20 @@ public class ResourceProfile implements Serializable, Comparable<ResourceProfile
 				resourceSpec.getNativeMemory(),
 				networkMemory,
 				copiedExtendedResources);
+	}
+
+	public static ResourceProfile fromResourceSpec(ResourceSpec resourceSpec,
+												   ResourceConstraints resourceConstraints,
+												   int networkMemory) {
+		Map<String, Resource> copiedExtendedResources = new HashMap<>(resourceSpec.getExtendedResources());
+
+		return new ResourceProfile(
+			resourceSpec.getCpuCores(),
+			resourceSpec.getHeapMemory(),
+			resourceSpec.getDirectMemory(),
+			resourceSpec.getNativeMemory(),
+			networkMemory,
+			copiedExtendedResources,
+			resourceConstraints);
 	}
 }

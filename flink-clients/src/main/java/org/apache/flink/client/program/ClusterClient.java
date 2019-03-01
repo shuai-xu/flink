@@ -911,7 +911,7 @@ public abstract class ClusterClient<T> {
 	public static JobGraph getJobGraph(Configuration flinkConfig, FlinkPlan optPlan, List<URL> jarFiles, List<URL> classpaths, List<URI> libjars, List<URI> files, SavepointRestoreSettings savepointSettings) {
 		JobGraph job;
 		if (optPlan instanceof StreamingPlan) {
-			job = ((StreamingPlan) optPlan).getJobGraph();
+			job = ((StreamingPlan) optPlan).getJobGraph(flinkConfig);
 			job.setSavepointRestoreSettings(savepointSettings);
 		} else {
 			JobGraphGenerator gen = new JobGraphGenerator(flinkConfig);

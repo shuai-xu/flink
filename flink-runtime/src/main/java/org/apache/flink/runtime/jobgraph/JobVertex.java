@@ -20,6 +20,7 @@ package org.apache.flink.runtime.jobgraph;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.InputSplitSource;
@@ -89,6 +90,9 @@ public class JobVertex implements java.io.Serializable {
 
 	/** The preferred resource of the vertex */
 	private ResourceSpec preferredResources = ResourceSpec.DEFAULT;
+
+	/** Resource constraints. */
+	private ResourceConstraints resourceConstraints = null;
 
 	/** Custom configuration passed to the assigned task at runtime. */
 	private Configuration configuration;
@@ -384,6 +388,22 @@ public class JobVertex implements java.io.Serializable {
 	public void setResources(ResourceSpec minResources, ResourceSpec preferredResources) {
 		this.minResources = checkNotNull(minResources);
 		this.preferredResources = checkNotNull(preferredResources);
+	}
+
+	/**
+	 * * Get ResourceConstraints of this JobVertex.
+	 * @return The ResourceConstraints of this JobVertex.
+	 */
+	public ResourceConstraints getResourceConstraints() {
+		return resourceConstraints;
+	}
+
+	/**
+	 * Set ResourceConstraints of this JobVertex.
+	 * @param resourceConstraints The ResourceConstraints to be used.
+	 */
+	public void setResourceConstraints(ResourceConstraints resourceConstraints) {
+		this.resourceConstraints = resourceConstraints;
 	}
 
 	public Map<OperatorID, InputSplitSource<?>> getInputSplitSources() {

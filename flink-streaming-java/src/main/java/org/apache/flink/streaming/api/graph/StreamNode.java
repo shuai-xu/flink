@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.graph;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.OutputFormat;
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -51,6 +52,7 @@ public class StreamNode implements Serializable {
 	private int maxParallelism;
 	private ResourceSpec minResources = ResourceSpec.DEFAULT;
 	private ResourceSpec preferredResources = ResourceSpec.DEFAULT;
+	private ResourceConstraints resourceConstraints = null;
 	private Long bufferTimeout = null;
 	private final String operatorName;
 	private String slotSharingGroup;
@@ -205,6 +207,14 @@ public class StreamNode implements Serializable {
 	public void setResources(ResourceSpec minResources, ResourceSpec preferredResources) {
 		this.minResources = minResources;
 		this.preferredResources = preferredResources;
+	}
+
+	public ResourceConstraints getResourceConstraints() {
+		return resourceConstraints;
+	}
+
+	public void setResourceConstraints(ResourceConstraints resourceConstraints) {
+		this.resourceConstraints = resourceConstraints;
 	}
 
 	public Long getBufferTimeout() {

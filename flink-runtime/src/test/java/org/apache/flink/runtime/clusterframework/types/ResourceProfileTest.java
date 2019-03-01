@@ -18,7 +18,9 @@
 
 package org.apache.flink.runtime.clusterframework.types;
 
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.operators.StrictlyMatchingResourceConstraints;
 import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.resources.GPUResource;
 import org.apache.flink.api.common.resources.Resource;
@@ -229,21 +231,6 @@ public class ResourceProfileTest {
 	}
 
 	@Test
-	public void testGet() throws Exception {
-		ResourceSpec rs = ResourceSpec.newBuilder().
-				setCpuCores(1.0).
-				setHeapMemoryInMB(100).
-				setGPUResource(1.6).
-				build();
-		ResourceProfile rp = ResourceProfile.fromResourceSpec(rs, 50);
-
-		assertEquals(1.0, rp.getCpuCores(), 0.000001);
-		assertEquals(150, rp.getMemoryInMB());
-		assertEquals(100, rp.getOperatorsMemoryInMB());
-		assertEquals(1.6, rp.getExtendedResources().get(ResourceSpec.GPU_NAME).getValue(), 0.000001);
-	}
-
-	@Test
 	public void testMinus() {
 		ResourceProfile rs1 = new ResourceProfile(
 			3,
@@ -425,5 +412,131 @@ public class ResourceProfileTest {
 				this.put("extend_2", new GPUResource(306 * 4));
 			}}), result
 		);
+	}
+
+	@Test
+	public void testMatchRequirementWithResourceConstraints() throws Exception {
+		ResourceConstraints rc1 = new StrictlyMatchingResourceConstraints();
+		rc1.addConstraint("k1", "v1");
+		ResourceConstraints rc2 = new StrictlyMatchingResourceConstraints();
+		rc2.addConstraint("k1", "v1");
+		ResourceConstraints rc3 = new StrictlyMatchingResourceConstraints();
+		rc3.addConstraint("k2", "v2");
+
+		ResourceProfile rp1 = new ResourceProfile(1.0, 100, 100, 100, 0, Collections.EMPTY_MAP, rc1);
+		ResourceProfile rp2 = new ResourceProfile(1.0, 200, 200, 200, 0, Collections.EMPTY_MAP, rc2);
+		ResourceProfile rp3 = new ResourceProfile(2.0, 100, 100, 100, 0, Collections.EMPTY_MAP, rc3);
+		ResourceProfile rp4 = new ResourceProfile(2.0, 100, 100, 100, 0, Collections.EMPTY_MAP);
+
+		assertFalse(rp1.isMatching(rp2));
+		assertTrue(rp2.isMatching(rp1));
+
+		assertFalse(rp1.isMatching(rp3));
+		assertFalse(rp3.isMatching(rp1));
+
+		assertFalse(rp2.isMatching(rp3));
+		assertFalse(rp3.isMatching(rp2));
+
+		assertFalse(rp4.isMatching(rp3));
+		assertFalse(rp3.isMatching(rp4));
+
+		ResourceSpec rs1 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setGPUResource(2.2).
+			build();
+		ResourceSpec rs2 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setGPUResource(1.1).
+			build();
+		ResourceSpec rs3 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setGPUResource(1.1).
+			build();
+
+		assertTrue(ResourceProfile.fromResourceSpec(rs1, rc1,0).isMatching(ResourceProfile.fromResourceSpec(rs2, rc2,0)));
+		assertFalse(ResourceProfile.fromResourceSpec(rs1, rc1, 0).isMatching(ResourceProfile.fromResourceSpec(rs3, rc3,0)));
+	}
+
+	@Test
+	public void testEqualsWithResourceConstraints() throws Exception {
+		ResourceConstraints rc1 = new StrictlyMatchingResourceConstraints();
+		rc1.addConstraint("k1", "v1");
+		ResourceConstraints rc2 = new StrictlyMatchingResourceConstraints();
+		rc2.addConstraint("k1", "v1");
+		ResourceConstraints rc3 = new StrictlyMatchingResourceConstraints();
+		rc3.addConstraint("k2", "v2");
+
+		ResourceSpec rs1 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
+		ResourceSpec rs2 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
+		ResourceSpec rs3 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
+		ResourceSpec rs4 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
+
+		assertTrue(ResourceProfile.fromResourceSpec(rs1, rc1, 0).equals(ResourceProfile.fromResourceSpec(rs2, rc2, 0)));
+		assertFalse(ResourceProfile.fromResourceSpec(rs1, rc1, 0).equals(ResourceProfile.fromResourceSpec(rs3, rc3, 0)));
+		assertFalse(ResourceProfile.fromResourceSpec(rs3, rc1, 0).equals(ResourceProfile.fromResourceSpec(rs4, 0)));
+
+		ResourceSpec rs5 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setGPUResource(2.2).
+			build();
+		ResourceSpec rs6 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setGPUResource(2.2).
+			build();
+		assertFalse(ResourceProfile.fromResourceSpec(rs5, rc1, 0).equals(ResourceProfile.fromResourceSpec(rs6, rc3, 0)));
+
+		ResourceSpec rs7 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setGPUResource(2.2).
+			build();
+		assertTrue(ResourceProfile.fromResourceSpec(rs5, rc1, 100).equals(ResourceProfile.fromResourceSpec(rs7, rc2, 100)));
+	}
+
+	@Test
+	public void testCompareToWithResourceConstraints() throws Exception {
+		ResourceConstraints rc1 = new StrictlyMatchingResourceConstraints();
+		rc1.addConstraint("k1", "v1");
+		ResourceConstraints rc2 = new StrictlyMatchingResourceConstraints();
+		rc2.addConstraint("k1", "v1");
+		ResourceConstraints rc3 = new StrictlyMatchingResourceConstraints();
+		rc3.addConstraint("k2", "v2");
+
+		ResourceSpec rs1 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
+		ResourceSpec rs2 = ResourceSpec.newBuilder().setCpuCores(1.0).setHeapMemoryInMB(100).build();
+		assertEquals(0, ResourceProfile.fromResourceSpec(rs1, rc1, 0).compareTo(ResourceProfile.fromResourceSpec(rs2, rc2, 0)));
+
+		ResourceSpec rs3 = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			build();
+		assertEquals(-1, ResourceProfile.fromResourceSpec(rs1,  rc1, 0).compareTo(ResourceProfile.fromResourceSpec(rs3, 0)));
+		assertEquals(1, ResourceProfile.fromResourceSpec(rs3, rc3, 0).compareTo(ResourceProfile.fromResourceSpec(rs1, rc1, 0)));
+	}
+
+	@Test
+	public void testGet() throws Exception {
+		ResourceSpec rs = ResourceSpec.newBuilder().
+			setCpuCores(1.0).
+			setHeapMemoryInMB(100).
+			setGPUResource(1.6).
+			build();
+		ResourceConstraints rc1 = new StrictlyMatchingResourceConstraints();
+		rc1.addConstraint("k1", "v1");
+		ResourceConstraints rc2 = new StrictlyMatchingResourceConstraints();
+		rc2.addConstraint("k1", "v1");
+
+		ResourceProfile rp = ResourceProfile.fromResourceSpec(rs, rc1, 50);
+
+		assertEquals(1.0, rp.getCpuCores(), 0.000001);
+		assertEquals(150, rp.getMemoryInMB());
+		assertEquals(100, rp.getOperatorsMemoryInMB());
+		assertEquals(1.6, rp.getExtendedResources().get(ResourceSpec.GPU_NAME).getValue(), 0.000001);
+		assertTrue(rc2.equals(rp.getResourceConstraints()));
 	}
 }

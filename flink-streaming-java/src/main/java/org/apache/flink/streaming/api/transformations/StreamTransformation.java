@@ -21,6 +21,7 @@ package org.apache.flink.streaming.api.transformations;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.InvalidTypesException;
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.MissingTypeInfo;
@@ -143,6 +144,11 @@ public abstract class StreamTransformation<T> {
 	 *  dynamic resource resize in future plan.
 	 */
 	private ResourceSpec preferredResources = ResourceSpec.DEFAULT;
+
+	/**
+	 * Resource constraints for stream transformation.
+	 */
+	private ResourceConstraints resourceConstraints = null;
 
 	/**
 	 * User-specified ID for this transformation. This is used to assign the
@@ -269,6 +275,28 @@ public abstract class StreamTransformation<T> {
 	public void setResources(ResourceSpec minResources, ResourceSpec preferredResources) {
 		this.minResources = checkNotNull(minResources);
 		this.preferredResources = checkNotNull(preferredResources);
+	}
+
+	/**
+	 * Set the resource constraints of this transformation.
+	 * @param resourceConstraints The ResourceConstraints to be used by this transformation.
+	 */
+	public void setResourceConstraints(ResourceConstraints resourceConstraints) {
+		if (resourceConstraints != null) {
+			// Through clone, a new instance is created, which guarantees each transformation
+			// holds a different ResourceConstraints instance. So modification of one transformation's
+			// ResourceConstraints does not affect other transformations.
+			resourceConstraints = resourceConstraints.clone();
+		}
+		this.resourceConstraints = resourceConstraints;
+	}
+
+	/**
+	 * Get the resource constraints of this transformation.
+	 * @return The resource constraints of this transformation.
+	 */
+	public ResourceConstraints getResourceConstraints() {
+		return this.resourceConstraints;
 	}
 
 	/**

@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.datastream;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.CoreOptions;
@@ -167,6 +168,11 @@ public class DataStreamSink<T> {
 
 		transformation.setResources(resources, resources);
 
+		return this;
+	}
+
+	public DataStreamSink<T> setResourceConstraints(ResourceConstraints constraints) {
+		transformation.setResourceConstraints(constraints);
 		return this;
 	}
 

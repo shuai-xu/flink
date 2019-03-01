@@ -19,6 +19,7 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -369,6 +370,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		int slotNumber = calculateSlotNumber(resourceProfile);
 		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(flinkConfig, resourceProfile, slotNumber);
 		int priority = generatePriority(tmResource);
+
 		Resource containerResource = generateContainerResource(tmResource);
 
 		int spareSlots = priorityToSpareSlots.getOrDefault(priority, 0);
@@ -378,7 +380,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			if (slotNumber > 1) {
 				priorityToSpareSlots.put(priority, slotNumber - 1);
 			}
-			requestYarnContainer(containerResource, Priority.newInstance(priority));
+			requestYarnContainer(containerResource, Priority.newInstance(priority),
+				tmResource.getTaskResourceProfile().getResourceConstraints());
 		}
 	}
 
@@ -410,7 +413,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			log.info("Container {} did not register in {}, will stop it and request a new one if needed.", containerId, containerRegisterTimeout);
 			if (stopWorker(node)) {
 				Priority priority = node.getContainer().getPriority();
-				requestYarnContainer(getOrigContainerResource(priority.getPriority()), priority);
+				requestYarnContainer(getOrigContainerResource(priority.getPriority()), priority,
+					getResourceConstraints(priority.getPriority()));
 			}
 		}
 	}
@@ -551,7 +555,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 								if (workerNodeMap.remove(resourceId) != null) {
 									requestYarnContainer(
 										getOrigContainerResource(container.getPriority().getPriority()),
-										container.getPriority());
+										container.getPriority(),
+										getResourceConstraints(container.getPriority().getPriority()));
 								} else {
 									log.info("The container {} has already been stopped.", container);
 								}
@@ -628,7 +633,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		return new Tuple2<>(host, Integer.valueOf(port));
 	}
 
-	private void requestYarnContainer(Resource resource, Priority priority) {
+	//TODO: update abstract request with constraints
+	private void requestYarnContainer(Resource resource, Priority priority, ResourceConstraints constraints) {
 		String errMsg = String.format("Container trying to request with priority %s exceeds total resource limit, give up requesting.", priority);
 		if (checkAllocateNewResourceExceedTotalResourceLimit(
 			resource.getVirtualCores() / yarnVcoreRatio, resource.getMemory(), errMsg)) {
@@ -796,7 +802,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			int pendingSlotRequests = getNumberPendingSlotRequests();
 			int pendingSlotAllocation = pendingNumber.get() * tmResource.getSlotNum();
 			if (pendingSlotRequests > pendingSlotAllocation) {
-				requestYarnContainer(resource, priority);
+				requestYarnContainer(resource, priority, tmResource.getTaskResourceProfile().getResourceConstraints());
 			} else {
 				log.info("Skip request yarn container, there are enough pending slot allocation for slot requests." +
 					" Priority {}. Resource {}. Pending slot allocation {}. Pending slot requests {}.",
@@ -887,5 +893,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	private Resource getOrigContainerResource(int priority) {
 		TaskManagerResource tmResource = getTaskManagerResource(priority);
 		return generateContainerResource(tmResource);
+	}
+
+	private ResourceConstraints getResourceConstraints(int priority) {
+		return getTaskManagerResource(priority).getTaskResourceProfile().getResourceConstraints();
 	}
 }

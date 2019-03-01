@@ -116,6 +116,7 @@ under the License.
 							</transformers>
 							<artifactSet>
 								<includes>
+									<include>com.google.re2j:*</include>
 									<include>com.google.guava:*</include>
 									<include>com.google.protobuf:*</include>
 									<include>com.google.code.findbugs:*</include>

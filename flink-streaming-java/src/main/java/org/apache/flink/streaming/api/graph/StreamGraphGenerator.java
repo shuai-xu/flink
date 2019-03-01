@@ -339,6 +339,10 @@ public class StreamGraphGenerator {
 			streamGraph.setResources(transform.getId(), transform.getMinResources(), transform.getPreferredResources());
 		}
 
+		if (transform.getResourceConstraints() != null) {
+			streamGraph.setResourceConstraints(transform.getId(), transform.getResourceConstraints());
+		}
+
 		if (transform.getCustomConfiguration().keySet().size() > 0) {
 			streamGraph.addCustomConfiguration(transform.getId(), transform.getCustomConfiguration());
 		}

@@ -23,6 +23,8 @@ import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.OutputFormat;
+import org.apache.flink.api.common.operators.ResourceConstraints;
+import org.apache.flink.api.common.operators.ResourceConstraintsConfig;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -129,7 +131,11 @@ public class StreamingJobGraphGenerator {
 	// ------------------------------------------------------------------------
 
 	public static JobGraph createJobGraph(StreamGraph streamGraph) {
-		return new StreamingJobGraphGenerator(streamGraph).createJobGraph();
+		return createJobGraph(streamGraph, null);
+	}
+
+	public static JobGraph createJobGraph(StreamGraph streamGraph, Configuration flinkConf) {
+		return new StreamingJobGraphGenerator(streamGraph).createJobGraph(flinkConf);
 	}
 
 	// ------------------------------------------------------------------------
@@ -168,7 +174,22 @@ public class StreamingJobGraphGenerator {
 		this.jobGraph = new JobGraph(streamGraph.getJobName());
 	}
 
-	private JobGraph createJobGraph() {
+	private void setDefaultResourceConstraints(Configuration flinkConf) {
+		if (flinkConf != null) {
+			ResourceConstraintsConfig resourceConstraintsConfig = new ResourceConstraintsConfig(flinkConf);
+			ResourceConstraints constraints = resourceConstraintsConfig.getDefaultResourceConstraints();
+			if (constraints != null) {
+				for (StreamNode streamNode : streamGraph.getStreamNodes()) {
+					if (streamNode.getResourceConstraints() == null) {
+						streamNode.setResourceConstraints(constraints.clone());
+					}
+				}
+				LOG.info(constraints.toString());
+			}
+		}
+	}
+
+	private JobGraph createJobGraph(Configuration flinkConf) {
 
 		// add custom configuration to the job graph
 		jobGraph.addCustomConfiguration(streamGraph.getCustomConfiguration());
@@ -182,6 +203,8 @@ public class StreamingJobGraphGenerator {
 		for (StreamGraphHasher hasher : legacyStreamGraphHashers) {
 			legacyHashes.add(hasher.traverseStreamGraphAndGenerateHashes(streamGraph));
 		}
+
+		setDefaultResourceConstraints(flinkConf);
 
 		setChaining(hashes, legacyHashes);
 
@@ -833,6 +856,12 @@ public class StreamingJobGraphGenerator {
 				continue;
 			}
 
+			// set resource constraints for start node
+			StreamNode targetNode = streamGraph.getStreamNode(outEdge.getTargetId());
+			StreamNode startNode = streamGraph.getStreamNode(startNodeId);
+			startNode.setResourceConstraints(mergeResourceConstraints(
+				startNode.getResourceConstraints(), targetNode.getResourceConstraints()));
+
 			chainedOutputs.add(outEdge);
 
 			createChain(
@@ -1046,6 +1075,8 @@ public class StreamingJobGraphGenerator {
 		} else {
 			jobVertex.setInvokableClass(startStreamNode.getJobVertexClass());
 		}
+
+		jobVertex.setResourceConstraints(streamGraph.getStreamNode(startNodeId).getResourceConstraints());
 
 		int parallelism = startStreamNode.getParallelism();
 		if (parallelism > 0) {
@@ -1752,7 +1783,8 @@ public class StreamingJobGraphGenerator {
 				&& (edge.getPartitioner() instanceof ForwardPartitioner ||
 					(downStreamNode.getParallelism() == 1 && chainEagerlyEnabled))
 				&& downStreamNode.getParallelism() == upstreamNode.getParallelism()
-				&& edge.getDataExchangeMode() != DataExchangeMode.BATCH;
+				&& edge.getDataExchangeMode() != DataExchangeMode.BATCH
+				&& isResourceConstraintsCompatible(upstreamNode, downStreamNode);
 		}
 	}
 
@@ -1842,5 +1874,30 @@ public class StreamingJobGraphGenerator {
 		public int last() {
 			return sequence;
 		}
+	}
+
+	/**
+	 * The function assumes that the two Resource Constraints are Compatible with each other.
+	 * @param first The first Resource Constraints.
+	 * @param second The second Resource Constraints.
+	 * @return The merged Resource Constraints.
+	 */
+	private ResourceConstraints mergeResourceConstraints(ResourceConstraints first, ResourceConstraints second) {
+		if (first == null && second == null) {
+			return null;
+		} else if (first != null) {
+			return first.merge(second);
+		} else {
+			return second.merge(first);
+		}
+	}
+
+	private static boolean isResourceConstraintsCompatible(StreamNode startNode, StreamNode targetNode) {
+		return (startNode.getResourceConstraints() == null &&
+			targetNode.getResourceConstraints() == null)
+			|| (startNode.getResourceConstraints() != null &&
+			startNode.getResourceConstraints().isCompatibleWith(targetNode.getResourceConstraints()))
+			|| (targetNode.getResourceConstraints() != null &&
+			targetNode.getResourceConstraints().isCompatibleWith(startNode.getResourceConstraints()));
 	}
 }

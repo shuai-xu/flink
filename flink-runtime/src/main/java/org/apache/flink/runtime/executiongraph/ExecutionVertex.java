@@ -501,7 +501,8 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 
 			return ResourceProfile.fromResourceSpec(
 				getJobVertex().getJobVertex().getMinResources()
-					.merge(additionalResourceSpec), networkMemory);
+					.merge(additionalResourceSpec),
+				getJobVertex().getJobVertex().getResourceConstraints(), networkMemory);
 		}
 	}
 

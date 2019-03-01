@@ -21,6 +21,7 @@ package org.apache.flink.optimizer.plan;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
 /**
@@ -28,8 +29,9 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
  * 
  */
 public abstract class StreamingPlan implements FlinkPlan {
-
 	public abstract JobGraph getJobGraph();
+
+	public abstract JobGraph getJobGraph(Configuration flinConf);
 
 	public abstract String getStreamingPlanAsJSON();
 

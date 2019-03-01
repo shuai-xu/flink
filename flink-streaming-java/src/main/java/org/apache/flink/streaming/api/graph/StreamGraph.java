@@ -23,6 +23,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.OutputFormat;
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -631,6 +632,12 @@ public class StreamGraph extends StreamingPlan {
 		}
 	}
 
+	public void setResourceConstraints(int vertexID, ResourceConstraints resourceConstraints) {
+		if (getStreamNode(vertexID) != null) {
+			getStreamNode(vertexID).setResourceConstraints(resourceConstraints);
+		}
+	}
+
 	public void setOneInputStateKey(Integer vertexID, KeySelector<?, ?> keySelector, TypeSerializer<?> keySerializer) {
 		StreamNode node = getStreamNode(vertexID);
 		node.setStatePartitioner1(keySelector);
@@ -820,15 +827,19 @@ public class StreamGraph extends StreamingPlan {
 	 */
 	@SuppressWarnings("deprecation")
 	public JobGraph getJobGraph() {
+		return getJobGraph(null);
+	}
+
+	public JobGraph getJobGraph(Configuration flinkConf) {
 		// temporarily forbid checkpointing for iterative jobs
 		if (isIterative() && checkpointConfig.isCheckpointingEnabled() && !checkpointConfig.isForceCheckpointing()) {
 			throw new UnsupportedOperationException(
-					"Checkpointing is currently not supported by default for iterative jobs, as we cannot guarantee exactly once semantics. "
-							+ "State checkpoints happen normally, but records in-transit during the snapshot will be lost upon failure. "
-							+ "\nThe user can force enable state checkpoints with the reduced guarantees by calling: env.enableCheckpointing(interval,true)");
+				"Checkpointing is currently not supported by default for iterative jobs, as we cannot guarantee exactly once semantics. "
+					+ "State checkpoints happen normally, but records in-transit during the snapshot will be lost upon failure. "
+					+ "\nThe user can force enable state checkpoints with the reduced guarantees by calling: env.enableCheckpointing(interval,true)");
 		}
 
-		return StreamingJobGraphGenerator.createJobGraph(this);
+		return StreamingJobGraphGenerator.createJobGraph(this, flinkConf);
 	}
 
 	@Override

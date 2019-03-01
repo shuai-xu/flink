@@ -232,7 +232,8 @@ public class TaskManagerResource {
 		}
 		return new ResourceProfile(taskResourceProfile.getCpuCores(), userHeap,
 			taskResourceProfile.getDirectMemoryInMB(), taskResourceProfile.getNativeMemoryInMB(),
-			taskResourceProfile.getNetworkMemoryInMB(), taskResourceProfile.getExtendedResources());
+			taskResourceProfile.getNetworkMemoryInMB(), taskResourceProfile.getExtendedResources(),
+			taskResourceProfile.getResourceConstraints());
 	}
 
 	public double getContainerCpuCores() {

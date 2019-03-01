@@ -22,7 +22,7 @@ import org.apache.flink.annotation.{Internal, Public, PublicEvolving}
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.functions.{FilterFunction, FlatMapFunction, MapFunction, Partitioner}
 import org.apache.flink.api.common.io.OutputFormat
-import org.apache.flink.api.common.operators.ResourceSpec
+import org.apache.flink.api.common.operators.{ResourceConstraints, ResourceSpec}
 import org.apache.flink.api.common.serialization.SerializationSchema
 import org.apache.flink.api.common.state.MapStateDescriptor
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -298,6 +298,17 @@ class DataStream[T](stream: JavaStream[T]) {
     case _ => throw new UnsupportedOperationException("Only supported for operators.")
       this
   }
+
+  @PublicEvolving
+  def setResourceConstraints(resourceConstraints: ResourceConstraints) : DataStream[T] =
+    stream match {
+      case stream : SingleOutputStreamOperator[T] => asScalaStream(
+        stream.setResourceConstraints(resourceConstraints))
+      case _ =>
+        throw new UnsupportedOperationException("Operator does not support " +
+          "configuring custom resources constraints.")
+        this
+    }
 
   /**
    * Turns off chaining for this operator so thread co-location will not be

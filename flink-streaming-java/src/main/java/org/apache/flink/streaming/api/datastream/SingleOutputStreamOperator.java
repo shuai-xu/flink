@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.datastream;
 import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.functions.InvalidTypesException;
+import org.apache.flink.api.common.operators.ResourceConstraints;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -212,6 +213,16 @@ public class SingleOutputStreamOperator<T> extends DataStream<T> {
 
 		transformation.setResources(resources, resources);
 
+		return this;
+	}
+
+	/**
+	 * Set the ResourceConstraints of the transformation.
+	 * @param constraints ResourceConstraints to be used.
+	 * @return This operator for chained method call.
+	 */
+	public SingleOutputStreamOperator<T> setResourceConstraints(ResourceConstraints constraints) {
+		transformation.setResourceConstraints(constraints);
 		return this;
 	}
 
