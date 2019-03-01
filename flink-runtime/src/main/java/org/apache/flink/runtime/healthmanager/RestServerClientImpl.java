@@ -462,6 +462,15 @@ public class RestServerClientImpl implements RestServerClient {
 		return result;
 	}
 
+	@Override
+	public CheckpointStatistics getLatestCheckPointStates(JobID jobId) throws Exception {
+		final CheckpointingStatisticsHeaders header = CheckpointingStatisticsHeaders.getInstance();
+		final JobMessageParameters param = header.getUnresolvedMessageParameters();
+		param.jobPathParameter.resolve(jobId);
+		CheckpointStatistics.CompletedCheckpointStatistics latestCheckpoints = sendRequest(header, param, EmptyRequestBody.getInstance()).get().getLatestCheckpoints().getCompletedCheckpointStatistics();
+		return latestCheckpoints;
+	}
+
 	private Map<String, Map<String, Tuple2<Long, Double>>> updateMetricFromComponentsMetricCollection(ComponentsMetricCollectionResponseBody cmc,
 																									Map<String, Map<String, Tuple2<Long, Double>>> result){
 		Collection<ComponentMetric> componentMetrics = cmc.getComponentMetrics();

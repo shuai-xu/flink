@@ -42,7 +42,7 @@ public class HealthMonitorOptions {
 	 * min parallelism per workload.
 	 */
 	public static final ConfigOption<Double> PARALLELISM_MIN_RATIO =
-			ConfigOptions.key("parallelism.scale.ratio.min").defaultValue(2.0);
+			ConfigOptions.key("parallelism.scale.ratio.min").defaultValue(3.0);
 
 	/**
 	 * parallelism check interval.
@@ -56,6 +56,11 @@ public class HealthMonitorOptions {
 	public static final ConfigOption<Long> PARALLELISM_SCALE_STABLE_TIME =
 		ConfigOptions.key("parallelism.scale.stable-time.ms").defaultValue(6 * 60 * 1000L);
 
+	/**
+	 * interval threshold to last checkpoint while scaling down.
+	 */
+	public static final ConfigOption<Long> PARALLELISM_SCALE_CHECKPOINT_THRESHOLD =
+			ConfigOptions.key("parallelism.scale.checkpoint.threshold.ms").defaultValue(30 * 1000L);
 	/**
 	 * parallel source max partition per task.
 	 */

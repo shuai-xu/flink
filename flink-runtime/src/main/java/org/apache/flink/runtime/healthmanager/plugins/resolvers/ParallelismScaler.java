@@ -46,6 +46,7 @@ import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions
 import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
 import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 import org.apache.flink.util.AbstractID;
 
@@ -100,6 +101,7 @@ public class ParallelismScaler implements Resolver {
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
+	private long checkpointIntervalThreshold;
 
 	// metric subscriptions
 
@@ -150,9 +152,7 @@ public class ParallelismScaler implements Resolver {
 		this.jobID = monitor.getJobID();
 		this.metricProvider = monitor.getMetricProvider();
 
-		double maxTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO);
-		double minTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO);
-		this.scaleTpsRatio = (maxTpsRatio + minTpsRatio) / 2;
+		this.scaleTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO);
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT);
 		this.checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
 		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
@@ -161,6 +161,7 @@ public class ParallelismScaler implements Resolver {
 		this.reservedParallelismRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESERVED_PARALLELISM_RATIO);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STABLE_TIME);
 		this.stateSizeThreshold = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STATE_SIZE_THRESHOLD);
+		this.checkpointIntervalThreshold =  monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_CHECKPOINT_THRESHOLD);
 
 		inputTpsSubs = new HashMap<>();
 		outputTpsSubs = new HashMap<>();
@@ -338,24 +339,33 @@ public class ParallelismScaler implements Resolver {
 		}
 
 		// Step-4. calculate sub dags to scale up.
+		Map<JobVertexID, TaskCheckpointStatistics> taskCheckpointInfo = null;
+		CheckpointStatistics completedCheckpointStats = null;
+		long lastCheckpointTime = 0;
+		try {
+			completedCheckpointStats = monitor.getRestServerClient().getLatestCheckPointStates(monitor.getJobID());
+			if (completedCheckpointStats != null) {
+				taskCheckpointInfo = completedCheckpointStats.getCheckpointStatisticsPerTask();
+				lastCheckpointTime = completedCheckpointStats.getLatestAckTimestamp();
+			}
+		} catch (Exception e) {
+			// fail to get checkpoint info.
+		}
 
 		Map<JobVertexID, Double> subDagScaleUpRatio = getSubDagScaleUpRatio(taskMetrics);
 
 		// Step-4.2.  get scale down vertex.
-		Set<JobVertexID> vertexToDownScale = getVertexToScaleDown();
+		Set<JobVertexID> vertexToDownScale = new HashSet<>();
+		if (System.currentTimeMillis() - lastCheckpointTime < checkpointIntervalThreshold) {
+			vertexToDownScale = getVertexToScaleDown();
+		}
 
         // Step-5. set parallelisms
 
 		Map<JobVertexID, Integer> targetParallelisms = getVertexTargetParallelisms(subDagScaleUpRatio, vertexToDownScale, taskMetrics);
 		LOGGER.debug("Target parallelism for vertices before applying constraints: {}.", targetParallelisms);
 
-		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = null;
-		try {
-			checkpointInfo = monitor.getRestServerClient().getJobVertexCheckPointStates(monitor.getJobID());
-		} catch (Exception e) {
-			// fail to get checkpoint info.
-		}
-		Map<JobVertexID, Integer> minParallelisms = getVertexMinParallelisms(monitor.getJobConfig(), checkpointInfo);
+		Map<JobVertexID, Integer> minParallelisms = getVertexMinParallelisms(monitor.getJobConfig(), taskCheckpointInfo);
 		LOGGER.debug("Min parallelism for vertices: {}", minParallelisms);
 
 		updateTargetParallelismsSubjectToConstraints(targetParallelisms, minParallelisms, monitor.getJobConfig());
@@ -805,7 +815,7 @@ public class ParallelismScaler implements Resolver {
 				TaskCheckpointStatistics taskCheckpointStatistics = checkpointInfo.get(vertexId);
 				minParallelisms.put(
 						vertexId,
-						Math.max(minParallelisms.get(vertexId), (int) Math.ceil(1.0 * taskCheckpointStatistics.getStateSize() / stateSizeThreshold)));
+						Math.max(minParallelisms.get(vertexId), (int) Math.ceil(1.0 * taskCheckpointStatistics.getFullStateSize() / stateSizeThreshold)));
 			}
 		}
 		return minParallelisms;

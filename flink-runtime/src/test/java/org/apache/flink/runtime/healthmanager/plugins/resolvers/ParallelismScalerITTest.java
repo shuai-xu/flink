@@ -79,7 +79,6 @@ public class ParallelismScalerITTest {
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000L);
-		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 2.0);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 2.0);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES,
@@ -232,7 +231,6 @@ public class ParallelismScalerITTest {
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setString("healthmonitor.back-pressure.threshold.ms", "0");
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000);
-		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 2.0);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 2.0);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, BackPressureDetector.class.getCanonicalName() + "," +
@@ -486,8 +484,7 @@ public class ParallelismScalerITTest {
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000);
-		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 1.5);
-		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 0.5);
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 1);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, OverParallelizedDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());

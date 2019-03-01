@@ -28,6 +28,7 @@ import org.apache.flink.runtime.client.JobStatusMessage;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
 import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 import org.apache.flink.util.AbstractID;
 
@@ -131,6 +132,11 @@ public interface RestServerClient {
 	 * get all JobVertex state size.
 	 */
 	Map<JobVertexID, TaskCheckpointStatistics> getJobVertexCheckPointStates(JobID jobId) throws Exception;
+
+	/**
+	 * get latest checkpoint state.
+	 */
+	CheckpointStatistics getLatestCheckPointStates(JobID jobId) throws Exception;
 
 	/**
 	 * Configuration of a vertex.
