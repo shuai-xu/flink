@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.checkpoint.PrioritizedOperatorSubtaskState;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
 import org.apache.flink.runtime.execution.Environment;
@@ -56,9 +57,11 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * This class is the main implementation of a {@link StreamTaskStateInitializer}. This class obtains the state to create
@@ -87,6 +90,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 	/** This object is the factory for everything related to state backends and checkpointing. */
 	private final StateBackend stateBackend;
 
+	private final Set<InternalTimeServiceManager<?, ?>> internalTimeServiceManagers;
+
 	public StreamTaskStateInitializerImpl(
 		Environment environment,
 		StateBackend stateBackend,
@@ -96,6 +101,17 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 		this.taskStateManager = Preconditions.checkNotNull(environment.getTaskStateManager());
 		this.stateBackend = Preconditions.checkNotNull(stateBackend);
 		this.processingTimeService = processingTimeService;
+
+		this.internalTimeServiceManagers = new HashSet<>();
+
+		MetricGroup timerMetricGroup = environment.getMetricGroup().addGroup("TimerCount");
+		timerMetricGroup.gauge("Processing", () -> internalTimeServiceManagers.stream()
+			.mapToInt(internalTimeServiceManager -> internalTimeServiceManager.numProcessingTimeTimers()).sum());
+		timerMetricGroup.gauge("Event", () -> internalTimeServiceManagers.stream()
+			.mapToInt(internalTimeServiceManager -> internalTimeServiceManager.numEventTimeTimers()).sum());
+		timerMetricGroup.gauge("Total", () -> internalTimeServiceManagers.stream()
+			.mapToInt(internalTimeServiceManager -> internalTimeServiceManager.numProcessingTimeTimers() + internalTimeServiceManager.numEventTimeTimers())
+			.sum());
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -222,6 +238,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 				streamProvider.getStream(),
 				keyGroupIdx, environment.getUserClassLoader());
 		}
+
+		internalTimeServiceManagers.add(timeServiceManager);
 
 		return timeServiceManager;
 	}

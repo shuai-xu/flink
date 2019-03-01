@@ -19,7 +19,6 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.runtime.state.KeyGroupsList;
@@ -136,9 +135,6 @@ public class InternalTimeServiceManager<K, N> {
 		serializationProxy.read(stream);
 	}
 
-	////////////////////			Methods used ONLY IN TESTS				////////////////////
-
-	@VisibleForTesting
 	public int numProcessingTimeTimers() {
 		int count = 0;
 		for (HeapInternalTimerService<?, ?> timerService : timerServices.values()) {
@@ -147,7 +143,6 @@ public class InternalTimeServiceManager<K, N> {
 		return count;
 	}
 
-	@VisibleForTesting
 	public int numEventTimeTimers() {
 		int count = 0;
 		for (HeapInternalTimerService<?, ?> timerService : timerServices.values()) {
