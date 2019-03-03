@@ -19,8 +19,6 @@
 package org.apache.flink.runtime.healthmanager.plugins.detectors;
 
 import org.apache.flink.api.common.JobID;
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
@@ -52,15 +50,11 @@ public class DelayIncreasingDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DelayIncreasingDetector.class);
 
-	public static final ConfigOption<Long> DELAY_INCREASING_THRESHOLD =
-		ConfigOptions.key("healthmonitor.delay-increasing.threshold.msps").defaultValue(0L);
-
 	private JobID jobID;
 	private HealthMonitor healthMonitor;
 	private MetricProvider metricProvider;
 
 	private long delayIncreasingCheckInterval;
-	private double delayIncreasingThreshold;
 
 	private Map<JobVertexID, TaskMetricSubscription> delayRateSubs;
 
@@ -71,13 +65,12 @@ public class DelayIncreasingDetector implements Detector {
 		metricProvider = monitor.getMetricProvider();
 
 		delayIncreasingCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
-		delayIncreasingThreshold = monitor.getConfig().getLong(DELAY_INCREASING_THRESHOLD);
 
 		delayRateSubs = new HashMap<>();
 		for (JobVertexID vertexId : monitor.getJobConfig().getVertexConfigs().keySet()) {
 			if (monitor.getJobConfig().getInputNodes().get(vertexId).size() == 0) {
 				TaskMetricSubscription delaySub = metricProvider.subscribeTaskMetric(
-						jobID, vertexId, SOURCE_DELAY, MetricAggType.AVG, delayIncreasingCheckInterval, TimelineAggType.RATE);
+						jobID, vertexId, SOURCE_DELAY, MetricAggType.MAX, delayIncreasingCheckInterval, TimelineAggType.DELTA_MIN);
 				delayRateSubs.put(vertexId, delaySub);
 			}
 		}
@@ -107,7 +100,8 @@ public class DelayIncreasingDetector implements Detector {
 				continue;
 			}
 
-			if (delayRateSub.getValue().f1 > delayIncreasingThreshold) {
+			// delay keep increasing.
+			if (delayRateSub.getValue().f1 > 0) {
 				jobVertexIDs.add(vertexId);
 			}
 		}

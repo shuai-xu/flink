@@ -76,6 +76,12 @@ public abstract class TimelineAggregator {
 				return new LatestTimelineAggregator(interval);
 			case EARLIEST:
 				return new EarliestTimelineAggregator(interval);
+			case DELTA_AVG:
+				return new DeltaAvgTimelineAggregator(interval);
+			case DELTA_MIN:
+				return new DeltaMinTimelineAggregator(interval);
+			case DELTA_MAX:
+				return new DeltaMaxTimelineAggregator(interval);
 			default:
 				throw new NotImplementedException("Agg type:" + timelineAggType);
 		}

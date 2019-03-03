@@ -713,7 +713,7 @@ public class ParallelismScaler implements Resolver {
 					// limit target tps to be max tps.
 					if (maxTps / metric.getInputTps() < ratio) {
 						ratio = maxTps / metric.getInputTps();
-					} else if (highDelaySymptom.getSevereJobVertexIDs().contains(vertexId)) {
+					} else if (highDelaySymptom != null && highDelaySymptom.getSevereJobVertexIDs().contains(vertexId)) {
 						ratio = maxTps / metric.getInputTps();
 					}
 				}

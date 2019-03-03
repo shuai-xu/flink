@@ -28,5 +28,8 @@ public enum TimelineAggType {
 	RATE,
 	RANGE,
 	LATEST,
-	EARLIEST
+	EARLIEST,
+	DELTA_MIN,
+	DELTA_MAX,
+	DELTA_AVG  // 两次value之间的delta
 }

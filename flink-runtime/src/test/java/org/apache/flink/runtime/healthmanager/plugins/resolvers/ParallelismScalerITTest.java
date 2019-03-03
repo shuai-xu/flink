@@ -39,6 +39,7 @@ import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
@@ -484,6 +485,7 @@ public class ParallelismScalerITTest {
 		Configuration config = new Configuration();
 		config.setString("healthmonitor.health.check.interval.ms", "3000");
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000);
+		config.setDouble(HealthMonitorOptions.PARALLELISM_MAX_RATIO, 1.5);
 		config.setDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO, 1);
 		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL, 60000);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, OverParallelizedDetector.class.getCanonicalName() + "," +
@@ -599,6 +601,11 @@ public class ParallelismScalerITTest {
 		// mock slow scheduling.
 		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
 			.thenReturn(jobStatus).thenReturn(jobStatus2).thenReturn(jobStatus3);
+
+		CheckpointStatistics checkpointStatistics = Mockito.mock(CheckpointStatistics.class);
+		Mockito.when(checkpointStatistics.getLatestAckTimestamp()).thenReturn(now);
+		Mockito.when(restServerClient.getLatestCheckPointStates(Mockito.eq(jobID)))
+				.thenReturn(checkpointStatistics);
 
 		HealthMonitor monitor = new HealthMonitor(
 			jobID,
