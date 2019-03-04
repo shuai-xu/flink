@@ -197,6 +197,55 @@ public class AvailableSlotsTest extends TestLogger {
 			allocatedSlots));
 	}
 
+	@Test
+	public void testSlotStrictlyMatchWhenPollSlotConvergedInTaskManagers() {
+		SlotPool.AvailableSlots availableSlots = new SlotPool.AvailableSlots();
+		SlotPool.AllocatedSlots allocatedSlots = new SlotPool.AllocatedSlots();
+
+		final ResourceID resource1 = new ResourceID("resource1");
+
+		final AllocatedSlot slot11 = createAllocatedSlot(resource1);
+		final AllocatedSlot slot12 = createAllocatedSlot(resource1);
+		final AllocatedSlot slot13 = createAllocatedSlot(resource1);
+
+		availableSlots.add(slot11, 1L);
+		availableSlots.add(slot12, 1L);
+		availableSlots.add(slot13, 1L);
+
+		assertNull(availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(new ResourceProfile(1.0, 500)),
+			allocatedSlots));
+		assertNull(availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(new ResourceProfile(1.0, 520)),
+			allocatedSlots));
+
+		AllocatedSlot polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(new ResourceProfile(1.0, 512)),
+			allocatedSlots).getSlot();
+		assertEquals(resource1, polledSlot.getTaskManagerId());
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(new ResourceProfile(1.0, 512)),
+			allocatedSlots).getSlot();
+		assertEquals(resource1, polledSlot.getTaskManagerId());
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+		polledSlot = availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(new ResourceProfile(1.0, 512)),
+			allocatedSlots).getSlot();
+		assertEquals(resource1, polledSlot.getTaskManagerId());
+		allocatedSlots.add(new SlotRequestId(), polledSlot);
+
+		assertNull(availableSlots.pollSlotConvergedInTaskManagers(
+			LocationPreferenceSchedulingStrategy.getInstance(),
+			SlotProfile.noLocality(new ResourceProfile(1.0, 512)),
+			allocatedSlots));
+	}
+
 	static AllocatedSlot createAllocatedSlot(final ResourceID resourceId) {
 		TaskManagerLocation mockTaskManagerLocation = mock(TaskManagerLocation.class);
 		when(mockTaskManagerLocation.getResourceID()).thenReturn(resourceId);

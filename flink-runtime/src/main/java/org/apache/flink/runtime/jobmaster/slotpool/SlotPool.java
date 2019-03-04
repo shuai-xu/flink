@@ -1963,7 +1963,7 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 				resourceID -> availableSlotsByTaskManager.get(resourceID).stream()).map(
 				allocatedSlot -> availableSlots.get(allocatedSlot.getAllocationId()));
 
-			return poll(schedulingStrategy, slotProfile, sortedCandidates);
+			return poll(schedulingStrategy, slotProfile, sortedCandidates, true);
 		}
 
 		/**
@@ -1982,21 +1982,24 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 			}
 			Collection<SlotAndTimestamp> slotAndTimestamps = availableSlots.values();
 
-			return poll(schedulingStrategy, slotProfile, slotAndTimestamps.stream());
+			return poll(schedulingStrategy, slotProfile, slotAndTimestamps.stream(), false);
 		}
 
 		private SlotAndLocality poll(
 			SchedulingStrategy schedulingStrategy,
 			SlotProfile slotProfile,
-			Stream<SlotAndTimestamp> candidates) {
+			Stream<SlotAndTimestamp> candidates,
+			boolean matchSlotStrictly) {
 
 			SlotAndLocality matchingSlotAndLocality = schedulingStrategy.findMatchWithLocality(
 				slotProfile,
 				candidates,
 				SlotAndTimestamp::slot,
 				(SlotAndTimestamp slot) -> {
-					return slot.slot().getResourceProfile().isMatching(slotProfile.getResourceProfile()) &&
-						(!enableSlotTagMatching || slot.slot().getTags().equals(slotProfile.getTags()));
+					boolean resourceMatched = matchSlotStrictly ?
+						slot.slot().getResourceProfile().equals(slotProfile.getResourceProfile()) :
+						slot.slot().getResourceProfile().isMatching(slotProfile.getResourceProfile());
+					return resourceMatched && (!enableSlotTagMatching || slot.slot().getTags().equals(slotProfile.getTags()));
 				},
 				(SlotAndTimestamp slotAndTimestamp, Locality locality) -> {
 					AllocatedSlot slot = slotAndTimestamp.slot();
