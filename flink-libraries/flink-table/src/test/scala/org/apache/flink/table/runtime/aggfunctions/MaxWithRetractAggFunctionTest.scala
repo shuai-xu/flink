@@ -25,6 +25,7 @@ import org.apache.flink.table.types.DecimalType
 
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 import java.math.BigDecimal
+import java.sql.{Date, Time, Timestamp}
 
 /**
   * Test case for built-in max with retraction aggregate function
@@ -242,6 +243,93 @@ class StringMaxWithRetractAggFunctionTest
 
   override def aggregator: AggregateFunction[BinaryString, GenericRow] =
     new StringMaxWithRetractAggFunction()
+
+  override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
+}
+
+class TimestampMaxWithRetractAggFunctionTest
+  extends AggFunctionTestBase[JLong, GenericRow] {
+
+  override def inputValueSets: Seq[Seq[_]] = Seq(
+    Seq(
+      new Timestamp(0).getTime,
+      new Timestamp(1000).getTime,
+      new Timestamp(100).getTime,
+      null.asInstanceOf[Timestamp],
+      new Timestamp(10).getTime
+    ),
+    Seq(
+      null.asInstanceOf[JLong],
+      null.asInstanceOf[JLong],
+      null.asInstanceOf[JLong]
+    )
+  )
+
+  override def expectedResults: Seq[JLong] = Seq(
+    new Timestamp(1000).getTime,
+    null.asInstanceOf[JLong]
+  )
+
+  override def aggregator: AggregateFunction[JLong, GenericRow] =
+    new TimestampMaxWithRetractAggFunction()
+
+  override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
+}
+
+class DateMaxWithRetractAggFunctionTest
+  extends AggFunctionTestBase[JInt, GenericRow] {
+
+  override def inputValueSets: Seq[Seq[_]] = Seq(
+    Seq(
+      new Date(0).getTime.intValue(),
+      new Date(1000).getTime.intValue(),
+      new Date(100).getTime.intValue(),
+      null.asInstanceOf[JInt],
+      new Date(10).getTime.intValue()
+    ),
+    Seq(
+      null.asInstanceOf[JInt],
+      null.asInstanceOf[JInt],
+      null.asInstanceOf[JInt]
+    )
+  )
+
+  override def expectedResults: Seq[JInt] = Seq(
+    new Date(1000).getTime.intValue(),
+    null.asInstanceOf[JInt]
+  )
+
+  override def aggregator: AggregateFunction[JInt, GenericRow] =
+    new DateMaxWithRetractAggFunction()
+
+  override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
+}
+
+class TimeMaxWithRetractAggFunctionTest
+  extends AggFunctionTestBase[JInt, GenericRow] {
+
+  override def inputValueSets: Seq[Seq[_]] = Seq(
+    Seq(
+      new Time(0).getTime.intValue(),
+      new Time(1000).getTime.intValue(),
+      new Time(100).getTime.intValue(),
+      null.asInstanceOf[JInt],
+      new Time(10).getTime.intValue()
+    ),
+    Seq(
+      null.asInstanceOf[JInt],
+      null.asInstanceOf[JInt],
+      null.asInstanceOf[JInt]
+    )
+  )
+
+  override def expectedResults: Seq[JInt] = Seq(
+    new Time(1000).getTime.intValue(),
+    null.asInstanceOf[JInt]
+  )
+
+  override def aggregator: AggregateFunction[JInt, GenericRow] =
+    new TimeMaxWithRetractAggFunction()
 
   override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
 }

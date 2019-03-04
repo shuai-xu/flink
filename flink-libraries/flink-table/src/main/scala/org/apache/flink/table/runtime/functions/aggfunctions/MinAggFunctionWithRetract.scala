@@ -332,3 +332,31 @@ class StringMinWithRetractAggFunction extends MinWithRetractAggFunction[BinarySt
   override def getInternalValueType: InternalType = BinaryStringTypeInfo.INSTANCE.toInternalType
   override def getValueType: DataType = BinaryStringTypeInfo.INSTANCE
 }
+
+/**
+  * Built-in Timestamp Min with retraction aggregate function
+  */
+class TimestampMinWithRetractAggFunction extends MinWithRetractAggFunction[JLong] {
+  override def getInitValue: JLong = 0L
+  override def getInternalValueType: InternalType = DataTypes.LONG
+  override def getResultType: DataType = DataTypes.TIMESTAMP
+}
+
+/**
+  * Built-in Date Min with retraction aggregate function
+  */
+class DateMinWithRetractAggFunction extends MinWithRetractAggFunction[JInt] {
+  override def getInitValue: JInt = 0
+  override def getInternalValueType: InternalType = DataTypes.INT
+  override def getResultType: DataType = DataTypes.DATE
+}
+
+/**
+  * Built-in Time Min with retraction aggregate function
+  */
+class TimeMinWithRetractAggFunction extends MinWithRetractAggFunction[JInt] {
+  override def getInitValue: JInt = 0
+  override def getInternalValueType: InternalType = DataTypes.INT
+  override def getResultType: DataType = DataTypes.TIME
+}
+

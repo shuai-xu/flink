@@ -277,6 +277,12 @@ class AggFunctionFactory(
           new StringMinWithRetractAggFunction
         case d: DecimalType =>
           new DecimalMinWithRetractAggFunction(d)
+        case TIME =>
+          new TimeMinWithRetractAggFunction
+        case DATE =>
+          new DateMinWithRetractAggFunction
+        case TIMESTAMP =>
+          new TimestampMinWithRetractAggFunction
         case t: DataType =>
           throw new TableException(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Min with retract", t.toString))
@@ -368,6 +374,12 @@ class AggFunctionFactory(
           new StringMaxWithRetractAggFunction
         case d: DecimalType =>
           new DecimalMaxWithRetractAggFunction(d)
+        case TIME =>
+          new TimeMaxWithRetractAggFunction
+        case DATE =>
+          new DateMaxWithRetractAggFunction
+        case TIMESTAMP =>
+          new TimestampMaxWithRetractAggFunction
         case t: DataType =>
           throw new TableException(
             TableErrors.INST.sqlAggFunctionDataTypeNotSupported("Max with retract", t.toString))

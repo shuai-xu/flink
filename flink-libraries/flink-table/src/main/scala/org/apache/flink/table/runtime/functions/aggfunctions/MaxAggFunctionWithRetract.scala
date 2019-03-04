@@ -336,3 +336,30 @@ class StringMaxWithRetractAggFunction extends MaxWithRetractAggFunction[BinarySt
     BinaryStringTypeInfo.INSTANCE)
   override def getValueType: DataType = BinaryStringTypeInfo.INSTANCE
 }
+
+/**
+  * Built-in Timestamp Max with retraction aggregate function
+  */
+class TimestampMaxWithRetractAggFunction extends MaxWithRetractAggFunction[JLong] {
+  override def getInitValue: JLong = 0L
+  override def getInternalValueType: InternalType = DataTypes.LONG
+  override def getResultType: DataType = DataTypes.TIMESTAMP
+}
+
+/**
+  * Built-in Date Max with retraction aggregate function
+  */
+class DateMaxWithRetractAggFunction extends MaxWithRetractAggFunction[JInt] {
+  override def getInitValue: JInt = 0
+  override def getInternalValueType: InternalType = DataTypes.INT
+  override def getResultType: DataType = DataTypes.DATE
+}
+
+/**
+  * Built-in Time Max with retraction aggregate function
+  */
+class TimeMaxWithRetractAggFunction extends MaxWithRetractAggFunction[JInt] {
+  override def getInitValue: JInt = 0
+  override def getInternalValueType: InternalType = DataTypes.INT
+  override def getResultType: DataType = DataTypes.TIME
+}

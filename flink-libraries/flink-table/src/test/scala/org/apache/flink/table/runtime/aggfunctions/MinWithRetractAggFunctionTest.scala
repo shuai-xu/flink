@@ -25,6 +25,7 @@ import org.apache.flink.table.types.DecimalType
 
 import java.lang.{Boolean => JBoolean, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInt, Long => JLong, Short => JShort}
 import java.math.BigDecimal
+import java.sql.{Date, Time, Timestamp}
 
 /**
   * Test case for built-in Min with retraction aggregate function
@@ -242,6 +243,99 @@ class StringMinWithRetractAggFunctionTest
 
   override def aggregator: AggregateFunction[BinaryString, GenericRow] =
     new StringMinWithRetractAggFunction()
+
+  override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
+}
+
+class TimestampMinWithRetractAggFunctionTest
+  extends AggFunctionTestBase[JLong, GenericRow] {
+
+  override def inputValueSets: Seq[Seq[_]] = Seq(
+    Seq(
+      new Timestamp(0).getTime,
+      new Timestamp(1000).getTime,
+      new Timestamp(100).getTime,
+      null.asInstanceOf[JLong],
+      new Timestamp(10).getTime
+    ),
+    Seq(
+      null,
+      null,
+      null,
+      null,
+      null
+    )
+  )
+
+  override def expectedResults: Seq[JLong] = Seq(
+    new Timestamp(0).getTime,
+    null
+  )
+
+  override def aggregator: AggregateFunction[JLong, GenericRow] =
+    new TimestampMinWithRetractAggFunction()
+
+  override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
+}
+
+class DateMinWithRetractAggFunctionTest
+  extends AggFunctionTestBase[JInt, GenericRow] {
+
+  override def inputValueSets: Seq[Seq[_]] = Seq(
+    Seq(
+      new Date(0).getTime.intValue(),
+      new Date(1000).getTime.intValue(),
+      new Date(100).getTime.intValue(),
+      null.asInstanceOf[JInt],
+      new Date(10).getTime.intValue()
+    ),
+    Seq(
+      null,
+      null,
+      null,
+      null,
+      null
+    )
+  )
+
+  override def expectedResults: Seq[JInt] = Seq(
+    new Date(0).getTime.intValue(),
+    null
+  )
+
+  override def aggregator: AggregateFunction[JInt, GenericRow] =
+    new DateMinWithRetractAggFunction()
+
+  override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
+}
+
+class TimeMinWithRetractAggFunctionTest
+  extends AggFunctionTestBase[JInt, GenericRow] {
+
+  override def inputValueSets: Seq[Seq[_]] = Seq(
+    Seq(
+      new Time(0).getTime.intValue(),
+      new Time(1000).getTime.intValue(),
+      new Time(100).getTime.intValue(),
+      null.asInstanceOf[JInt],
+      new Time(10).getTime.intValue()
+    ),
+    Seq(
+      null,
+      null,
+      null,
+      null,
+      null
+    )
+  )
+
+  override def expectedResults: Seq[JInt] = Seq(
+    new Time(0).getTime.intValue(),
+    null
+  )
+
+  override def aggregator: AggregateFunction[JInt, GenericRow] =
+    new TimeMinWithRetractAggFunction()
 
   override def retractFunc = aggregator.getClass.getMethod("retract", accType, classOf[Any])
 }
