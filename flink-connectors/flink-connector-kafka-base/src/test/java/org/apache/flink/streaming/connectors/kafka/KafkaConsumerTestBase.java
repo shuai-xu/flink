@@ -60,6 +60,8 @@ import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.graph.StreamingJobGraphGenerator;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSinkMetrics;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 import org.apache.flink.streaming.connectors.kafka.testutils.DataGenerators;
 import org.apache.flink.streaming.connectors.kafka.testutils.FailingIdentityMapper;
 import org.apache.flink.streaming.connectors.kafka.testutils.PartitionValidatingMapper;
@@ -1717,7 +1719,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 	 *
 	 * @throws Exception
 	 */
-	public void runMetricsTest() throws Throwable {
+	public void runMetricsTest(boolean timestampAvailable) throws Throwable {
 
 		// create a stream with 5 topics
 		final String topic = "metricsStream";
@@ -1816,8 +1818,20 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			}
 
 			// check if producer metrics are also available.
+			String consumerMetricGroup = KafkaSourceMetrics.KAFKA_CONSUMER_METRICS_GROUP;
 			Set<ObjectName> producerMetrics = mBeanServer.queryNames(new ObjectName("*KafkaProducer*:*"), null);
 			Assert.assertTrue("No producer metrics found", producerMetrics.size() > 30);
+			assertNonZeroCount(mBeanServer, consumerMetricGroup + ".numBytesIn");
+			assertNonZeroCount(mBeanServer, consumerMetricGroup + ".numRecordsIn");
+			assertTrue(getMetric(mBeanServer, consumerMetricGroup + ".idleTime", "Value") >= 0);
+			if (timestampAvailable) {
+				assertTrue(getMetric(mBeanServer, consumerMetricGroup + ".currentFetchLatency", "Value") >= 0);
+				assertTrue(getMetric(mBeanServer, consumerMetricGroup + ".currentLatency", "Value") >= 0);
+			}
+
+			String producerMetricGroup = KafkaSinkMetrics.KAFKA_PRODUCER_GROUP;
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".numBytesOut");
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".numRecordsOut");
 
 			LOG.info("Found all JMX metrics. Cancelling job.");
 		} finally {
@@ -1832,6 +1846,20 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 		}
 
 		deleteTestTopic(topic);
+	}
+
+	private void assertNonZeroCount(MBeanServer mBeanServer, String metricName) throws Exception {
+		Set<ObjectName> metrics = mBeanServer.queryNames(new ObjectName("*" + metricName + ":*"), null);
+		assertFalse(metrics.isEmpty());
+		for (ObjectName name : metrics) {
+			assertTrue((long) mBeanServer.getAttribute(name, "Count") > 0);
+		}
+	}
+
+	private double getMetric(MBeanServer mBeanServer, String metricName, String attribute) throws Exception {
+		Set<ObjectName> metrics = mBeanServer.queryNames(new ObjectName("*" + metricName + ":*"), null);
+		assertEquals(1, metrics.size());
+		return ((Number) (mBeanServer.getAttribute(metrics.iterator().next(), attribute))).doubleValue();
 	}
 
 	private static class FixedNumberDeserializationSchema implements DeserializationSchema<Tuple2<Integer, Integer>> {

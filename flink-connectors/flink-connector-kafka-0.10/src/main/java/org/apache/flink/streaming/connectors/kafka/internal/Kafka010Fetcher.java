@@ -24,6 +24,7 @@ import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionState;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
 import org.apache.flink.util.SerializedValue;
@@ -59,7 +60,7 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 			Properties kafkaProperties,
 			long pollTimeout,
 			MetricGroup subtaskMetricGroup,
-			MetricGroup consumerMetricGroup,
+			KafkaSourceMetrics kafkaSourceMetrics,
 			boolean useMetrics) throws Exception {
 		super(
 				sourceContext,
@@ -75,7 +76,7 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 				kafkaProperties,
 				pollTimeout,
 				subtaskMetricGroup,
-				consumerMetricGroup,
+				kafkaSourceMetrics,
 				useMetrics);
 	}
 
@@ -88,6 +89,23 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 
 		// we attach the Kafka 0.10 timestamp here
 		emitRecordWithTimestamp(record, partition, offset, consumerRecord.timestamp());
+	}
+
+	@Override
+	protected void updateMetrics(ConsumerRecord<byte[], byte[]> consumerRecord, long fetchedTime) {
+		long now = System.currentTimeMillis();
+		long size = length(consumerRecord.key()) + length(consumerRecord.value());
+		kafkaSourceMetrics.numBytesInPerSec.markEvent(size);
+		kafkaSourceMetrics.numRecordsInPerSec.markEvent();
+		kafkaSourceMetrics.recordSize.update(size);
+		kafkaSourceMetrics.updateLastRecordProcessTime(now);
+		if (consumerRecord.timestamp() != ConsumerRecord.NO_TIMESTAMP) {
+			kafkaSourceMetrics.fetchLatency.update(fetchedTime - consumerRecord.timestamp());
+			kafkaSourceMetrics.latency.update(now - consumerRecord.timestamp());
+			TopicPartition tp = new TopicPartition(consumerRecord.topic(), consumerRecord.partition());
+			kafkaSourceMetrics.updateLastProcessTime(tp, consumerRecord.timestamp());
+			kafkaSourceMetrics.updateLastFetchTime(tp, fetchedTime);
+		}
 	}
 
 	/**

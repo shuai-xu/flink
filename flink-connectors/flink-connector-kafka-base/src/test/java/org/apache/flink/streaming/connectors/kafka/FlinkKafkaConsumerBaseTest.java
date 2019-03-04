@@ -52,6 +52,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.AbstractPartitionDi
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaCommitCallback;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicsDescriptor;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 import org.apache.flink.streaming.connectors.kafka.testutils.TestPartitionDiscoverer;
 import org.apache.flink.streaming.connectors.kafka.testutils.TestSourceContext;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
@@ -664,7 +665,7 @@ public class FlinkKafkaConsumerBaseTest {
 				SerializedValue<AssignerWithPunctuatedWatermarks<T>> watermarksPunctuated,
 				StreamingRuntimeContext runtimeContext,
 				OffsetCommitMode offsetCommitMode,
-				MetricGroup consumerMetricGroup,
+				KafkaSourceMetrics kafkaSourceMetrics,
 				boolean useMetrics) throws Exception {
 			return this.testFetcher;
 		}
@@ -771,8 +772,7 @@ public class FlinkKafkaConsumerBaseTest {
 					new TestProcessingTimeService(),
 					0,
 					MockFetcher.class.getClassLoader(),
-					new UnregisteredMetricsGroup(),
-					false);
+					new KafkaSourceMetrics(new UnregisteredMetricsGroup()));
 
 			this.stateSnapshotsToReturn.addAll(Arrays.asList(stateSnapshotsToReturn));
 		}

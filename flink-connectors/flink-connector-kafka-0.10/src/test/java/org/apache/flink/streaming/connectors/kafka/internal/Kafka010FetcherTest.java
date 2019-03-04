@@ -27,6 +27,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaCommitCallback;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionStateSentinel;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 import org.apache.flink.streaming.runtime.tasks.TestProcessingTimeService;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchemaWrapper;
@@ -131,7 +132,7 @@ public class Kafka010FetcherTest {
 				new Properties(),
 				0L,
 				new UnregisteredMetricsGroup(),
-				new UnregisteredMetricsGroup(),
+				new KafkaSourceMetrics(new UnregisteredMetricsGroup()),
 				false);
 
 		// ----- run the fetcher -----
@@ -269,7 +270,7 @@ public class Kafka010FetcherTest {
 				new Properties(),
 				0L,
 				new UnregisteredMetricsGroup(),
-				new UnregisteredMetricsGroup(),
+				new KafkaSourceMetrics(new UnregisteredMetricsGroup()),
 				false);
 
 		// ----- run the fetcher -----
@@ -385,7 +386,7 @@ public class Kafka010FetcherTest {
 				new Properties(),
 				0L,
 				new UnregisteredMetricsGroup(),
-				new UnregisteredMetricsGroup(),
+				new KafkaSourceMetrics(new UnregisteredMetricsGroup()),
 				false);
 
 		// ----- run the fetcher -----

@@ -27,6 +27,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaCommitCallback
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionState;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionStateSentinel;
 import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaMetricWrapper;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -91,14 +92,14 @@ public class KafkaConsumerThread extends Thread {
 	private final boolean useMetrics;
 
 	/**
-	 * @deprecated We should only be publishing to the {{@link #consumerMetricGroup}}.
+	 * @deprecated We should only be publishing to the {{@link #kafkaSourceMetrics}}.
 	 *             This is kept to retain compatibility for metrics.
 	 **/
 	@Deprecated
 	private final MetricGroup subtaskMetricGroup;
 
 	/** We get this from the outside to publish metrics. */
-	private final MetricGroup consumerMetricGroup;
+	private final KafkaSourceMetrics kafkaSourceMetrics;
 
 	/** Reference to the Kafka consumer, once it is created. */
 	private volatile KafkaConsumer<byte[], byte[]> consumer;
@@ -134,7 +135,7 @@ public class KafkaConsumerThread extends Thread {
 			String threadName,
 			long pollTimeout,
 			boolean useMetrics,
-			MetricGroup consumerMetricGroup,
+			KafkaSourceMetrics kafkaSourceMetrics,
 			MetricGroup subtaskMetricGroup) {
 
 		super(threadName);
@@ -143,7 +144,7 @@ public class KafkaConsumerThread extends Thread {
 		this.log = checkNotNull(log);
 		this.handover = checkNotNull(handover);
 		this.kafkaProperties = checkNotNull(kafkaProperties);
-		this.consumerMetricGroup = checkNotNull(consumerMetricGroup);
+		this.kafkaSourceMetrics = checkNotNull(kafkaSourceMetrics);
 		this.subtaskMetricGroup = checkNotNull(subtaskMetricGroup);
 		this.consumerCallBridge = checkNotNull(consumerCallBridge);
 
@@ -196,7 +197,9 @@ public class KafkaConsumerThread extends Thread {
 				} else {
 					// we have Kafka metrics, register them
 					for (Map.Entry<MetricName, ? extends Metric> metric: metrics.entrySet()) {
-						consumerMetricGroup.gauge(metric.getKey().name(), new KafkaMetricWrapper(metric.getValue()));
+						kafkaSourceMetrics
+								.metricGroup()
+								.gauge(metric.getKey().name(), new KafkaMetricWrapper(metric.getValue()));
 
 						// TODO this metric is kept for compatibility purposes; should remove in the future
 						subtaskMetricGroup.gauge(metric.getKey().name(), new KafkaMetricWrapper(metric.getValue()));

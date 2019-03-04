@@ -27,6 +27,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaCommitCallback
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionState;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionStateSentinel;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
 import org.apache.flink.util.SerializedValue;
@@ -88,7 +89,7 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 			Properties kafkaProperties,
 			long pollTimeout,
 			MetricGroup subtaskMetricGroup,
-			MetricGroup consumerMetricGroup,
+			KafkaSourceMetrics kafkaSourceMetrics,
 			boolean useMetrics) throws Exception {
 		super(
 				sourceContext,
@@ -99,8 +100,7 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 				processingTimeProvider,
 				autoWatermarkInterval,
 				userCodeClassLoader,
-				consumerMetricGroup,
-				useMetrics);
+				kafkaSourceMetrics);
 
 		this.deserializer = deserializer;
 		this.handover = new Handover();
@@ -114,7 +114,7 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 				getFetcherName() + " for " + taskNameWithSubtasks,
 				pollTimeout,
 				useMetrics,
-				consumerMetricGroup,
+				kafkaSourceMetrics,
 				subtaskMetricGroup);
 	}
 
@@ -198,6 +198,8 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 							break;
 						}
 
+						// Update metrics.
+						updateMetrics(record, records.fetchedTime());
 						// emit the actual record. this also updates offset state atomically
 						// and deals with timestamps and watermark generation
 						emitRecord(value, partition, record.offset(), record);

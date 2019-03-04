@@ -103,7 +103,7 @@ public class Kafka09ITCase extends KafkaConsumerTestBase {
 
 	@Test(timeout = 60000)
 	public void testMetrics() throws Throwable {
-		runMetricsTest();
+		runMetricsTest(false);
 	}
 
 	// --- startup mode ---

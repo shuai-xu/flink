@@ -25,10 +25,13 @@ import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.connectors.kafka.config.OffsetCommitMode;
-import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaConsumerMetricConstants;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaTopicPartitionMetrics;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.util.SerializedValue;
+
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import javax.annotation.Nonnull;
 
@@ -39,12 +42,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaConsumerMetricConstants.COMMITTED_OFFSETS_METRICS_GAUGE;
-import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaConsumerMetricConstants.CURRENT_OFFSETS_METRICS_GAUGE;
-import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaConsumerMetricConstants.LEGACY_COMMITTED_OFFSETS_METRICS_GROUP;
-import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaConsumerMetricConstants.LEGACY_CURRENT_OFFSETS_METRICS_GROUP;
-import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaConsumerMetricConstants.OFFSETS_BY_PARTITION_METRICS_GROUP;
-import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaConsumerMetricConstants.OFFSETS_BY_TOPIC_METRICS_GROUP;
+import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaTopicPartitionMetrics.COMMITTED_OFFSETS_METRICS_GAUGE;
+import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaTopicPartitionMetrics.CURRENT_OFFSETS_METRICS_GAUGE;
+import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaTopicPartitionMetrics.LEGACY_COMMITTED_OFFSETS_METRICS_GROUP;
+import static org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaTopicPartitionMetrics.LEGACY_CURRENT_OFFSETS_METRICS_GROUP;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -116,17 +117,9 @@ public abstract class AbstractFetcher<T, KPH> {
 	// ------------------------------------------------------------------------
 
 	/**
-	 * Flag indicating whether or not metrics should be exposed.
-	 * If {@code true}, offset metrics (e.g. current offset, committed offset) and
-	 * Kafka-shipped metrics will be registered.
+	 * The metrics of kafka source.
 	 */
-	private final boolean useMetrics;
-
-	/**
-	 * The metric group which all metrics for the consumer should be registered to.
-	 * This metric group is defined under the user scope {@link KafkaConsumerMetricConstants#KAFKA_CONSUMER_METRICS_GROUP}.
-	 */
-	private final MetricGroup consumerMetricGroup;
+	protected final KafkaSourceMetrics kafkaSourceMetrics;
 
 	@Deprecated
 	private final MetricGroup legacyCurrentOffsetsMetricGroup;
@@ -143,14 +136,15 @@ public abstract class AbstractFetcher<T, KPH> {
 			ProcessingTimeService processingTimeProvider,
 			long autoWatermarkInterval,
 			ClassLoader userCodeClassLoader,
-			MetricGroup consumerMetricGroup,
-			boolean useMetrics) throws Exception {
+			KafkaSourceMetrics kafkaSourceMetrics) throws Exception {
 		this.sourceContext = checkNotNull(sourceContext);
 		this.checkpointLock = sourceContext.getCheckpointLock();
 		this.userCodeClassLoader = checkNotNull(userCodeClassLoader);
+		this.kafkaSourceMetrics = checkNotNull(kafkaSourceMetrics);
 
-		this.useMetrics = useMetrics;
-		this.consumerMetricGroup = checkNotNull(consumerMetricGroup);
+		checkNotNull(kafkaSourceMetrics);
+		MetricGroup consumerMetricGroup = kafkaSourceMetrics.metricGroup();
+
 		this.legacyCurrentOffsetsMetricGroup = consumerMetricGroup.addGroup(LEGACY_CURRENT_OFFSETS_METRICS_GROUP);
 		this.legacyCommittedOffsetsMetricGroup = consumerMetricGroup.addGroup(LEGACY_COMMITTED_OFFSETS_METRICS_GROUP);
 
@@ -197,9 +191,7 @@ public abstract class AbstractFetcher<T, KPH> {
 		}
 
 		// register metrics for the initial seed partitions
-		if (useMetrics) {
-			registerOffsetMetrics(consumerMetricGroup, subscribedPartitionStates);
-		}
+		registerOffsetMetrics(subscribedPartitionStates);
 
 		// if we have periodic watermarks, kick off the interval scheduler
 		if (timestampWatermarkMode == PERIODIC_WATERMARKS) {
@@ -236,9 +228,7 @@ public abstract class AbstractFetcher<T, KPH> {
 				watermarksPunctuated,
 				userCodeClassLoader);
 
-		if (useMetrics) {
-			registerOffsetMetrics(consumerMetricGroup, newPartitionStates);
-		}
+		registerOffsetMetrics(newPartitionStates);
 
 		for (KafkaTopicPartitionState<KPH> newPartitionState : newPartitionStates) {
 			subscribedPartitionStates.add(newPartitionState);
@@ -598,29 +588,38 @@ public abstract class AbstractFetcher<T, KPH> {
 
 	// ------------------------- Metrics ----------------------------------
 
+	protected void updateMetrics(ConsumerRecord<byte[], byte[]> consumerRecord, long fetchedTime) throws Exception {
+		long now = System.currentTimeMillis();
+		long size = length(consumerRecord.key()) + length(consumerRecord.value());
+		kafkaSourceMetrics.numBytesInPerSec.markEvent(size);
+		kafkaSourceMetrics.numRecordsInPerSec.markEvent();
+		kafkaSourceMetrics.recordSize.update(size);
+		kafkaSourceMetrics.updateLastRecordProcessTime(now);
+	}
+
+	protected int length(byte[] bytes) {
+		return bytes == null ? 0 : bytes.length;
+	}
+
 	/**
 	 * For each partition, register a new metric group to expose current offsets and committed offsets.
-	 * Per-partition metric groups can be scoped by user variables {@link KafkaConsumerMetricConstants#OFFSETS_BY_TOPIC_METRICS_GROUP}
-	 * and {@link KafkaConsumerMetricConstants#OFFSETS_BY_PARTITION_METRICS_GROUP}.
+	 * Per-partition metric groups can be scoped by user variables {@link KafkaTopicPartitionMetrics#OFFSETS_BY_TOPIC_METRICS_GROUP}
+	 * and {@link KafkaTopicPartitionMetrics#OFFSETS_BY_PARTITION_METRICS_GROUP}.
 	 *
 	 * <p>Note: this method also registers gauges for deprecated offset metrics, to maintain backwards compatibility.
 	 *
-	 * @param consumerMetricGroup The consumer metric group
 	 * @param partitionOffsetStates The partition offset state holders, whose values will be used to update metrics
 	 */
-	private void registerOffsetMetrics(
-			MetricGroup consumerMetricGroup,
-			List<KafkaTopicPartitionState<KPH>> partitionOffsetStates) {
+	private void registerOffsetMetrics(List<KafkaTopicPartitionState<KPH>> partitionOffsetStates) {
 
 		for (KafkaTopicPartitionState<KPH> ktp : partitionOffsetStates) {
-			MetricGroup topicPartitionGroup = consumerMetricGroup
-				.addGroup(OFFSETS_BY_TOPIC_METRICS_GROUP)
-				.addGroup(ktp.getTopic())
-				.addGroup(OFFSETS_BY_PARTITION_METRICS_GROUP)
-				.addGroup(Integer.toString(ktp.getPartition()));
+			KafkaTopicPartitionMetrics partitionMetrics = new KafkaTopicPartitionMetrics(
+					kafkaSourceMetrics.metricGroup(),
+					ktp.getTopic(),
+					ktp.getPartition());
 
-			topicPartitionGroup.gauge(CURRENT_OFFSETS_METRICS_GAUGE, new OffsetGauge(ktp, OffsetGaugeType.CURRENT_OFFSET));
-			topicPartitionGroup.gauge(COMMITTED_OFFSETS_METRICS_GAUGE, new OffsetGauge(ktp, OffsetGaugeType.COMMITTED_OFFSET));
+			partitionMetrics.setGauge(CURRENT_OFFSETS_METRICS_GAUGE, new OffsetGauge(ktp, OffsetGaugeType.CURRENT_OFFSET));
+			partitionMetrics.setGauge(COMMITTED_OFFSETS_METRICS_GAUGE, new OffsetGauge(ktp, OffsetGaugeType.COMMITTED_OFFSET));
 
 			legacyCurrentOffsetsMetricGroup.gauge(getLegacyOffsetsMetricsGaugeName(ktp), new OffsetGauge(ktp, OffsetGaugeType.CURRENT_OFFSET));
 			legacyCommittedOffsetsMetricGroup.gauge(getLegacyOffsetsMetricsGaugeName(ktp), new OffsetGauge(ktp, OffsetGaugeType.COMMITTED_OFFSET));

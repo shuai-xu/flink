@@ -26,6 +26,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaCommitCallback
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionState;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionStateSentinel;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -726,7 +727,7 @@ public class KafkaConsumerThreadTest {
 					"test-kafka-consumer-thread",
 					0,
 					false,
-					new UnregisteredMetricsGroup(),
+					new KafkaSourceMetrics(new UnregisteredMetricsGroup()),
 					new UnregisteredMetricsGroup());
 
 			this.mockConsumer = mockConsumer;

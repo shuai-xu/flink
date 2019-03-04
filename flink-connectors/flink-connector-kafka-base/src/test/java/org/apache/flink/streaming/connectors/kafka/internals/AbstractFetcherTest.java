@@ -22,6 +22,7 @@ import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSourceMetrics;
 import org.apache.flink.streaming.connectors.kafka.testutils.TestSourceContext;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.TestProcessingTimeService;
@@ -424,8 +425,7 @@ public class AbstractFetcherTest {
 				processingTimeProvider,
 				autoWatermarkInterval,
 				TestFetcher.class.getClassLoader(),
-				new UnregisteredMetricsGroup(),
-				false);
+				new KafkaSourceMetrics(new UnregisteredMetricsGroup()));
 		}
 
 		@Override

@@ -28,7 +28,9 @@ import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
+import org.apache.flink.streaming.connectors.kafka.internals.MetricRecordingCallback;
 import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaMetricWrapper;
+import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaSinkMetrics;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaDelegatePartitioner;
 import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
 import org.apache.flink.streaming.util.serialization.KeyedSerializationSchema;
@@ -119,9 +121,6 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 	/** KafkaProducer instance. */
 	protected transient KafkaProducer<byte[], byte[]> producer;
 
-	/** The callback than handles error propagation or logging callbacks. */
-	protected transient Callback callback;
-
 	/** Errors encountered in the async producer are stored here. */
 	protected transient volatile Exception asyncException;
 
@@ -130,6 +129,9 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 
 	/** Number of unacknowledged records. */
 	protected long pendingRecords;
+
+	/** The metrics for kafka sinks. */
+	protected KafkaSinkMetrics kafkaSinkMetrics;
 
 	/**
 	 * The main constructor for creating a FlinkKafkaProducer.
@@ -227,6 +229,9 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 		LOG.info("Starting FlinkKafkaProducer ({}/{}) to produce into default topic {}",
 				ctx.getIndexOfThisSubtask() + 1, ctx.getNumberOfParallelSubtasks(), defaultTopicId);
 
+		// initialize metrics
+		this.kafkaSinkMetrics = new KafkaSinkMetrics(getRuntimeContext().getMetricGroup());
+
 		// register Kafka metrics to Flink accumulators
 		if (!Boolean.parseBoolean(producerConfig.getProperty(KEY_DISABLE_METRICS, "false"))) {
 			Map<MetricName, ? extends Metric> metrics = this.producer.metrics();
@@ -235,7 +240,7 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 				// MapR's Kafka implementation returns null here.
 				LOG.info("Producer implementation does not support metrics");
 			} else {
-				final MetricGroup kafkaMetricGroup = getRuntimeContext().getMetricGroup().addGroup("KafkaProducer");
+				final MetricGroup kafkaMetricGroup = kafkaSinkMetrics.metricGroup();
 				for (Map.Entry<MetricName, ? extends Metric> metric: metrics.entrySet()) {
 					kafkaMetricGroup.gauge(metric.getKey().name(), new KafkaMetricWrapper(metric.getValue()));
 				}
@@ -245,29 +250,6 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 		if (flushOnCheckpoint && !((StreamingRuntimeContext) this.getRuntimeContext()).isCheckpointingEnabled()) {
 			LOG.warn("Flushing on checkpoint is enabled, but checkpointing is not enabled. Disabling flushing.");
 			flushOnCheckpoint = false;
-		}
-
-		if (logFailuresOnly) {
-			callback = new Callback() {
-				@Override
-				public void onCompletion(RecordMetadata metadata, Exception e) {
-					if (e != null) {
-						LOG.error("Error while sending record to Kafka: " + e.getMessage(), e);
-					}
-					acknowledgeMessage();
-				}
-			};
-		}
-		else {
-			callback = new Callback() {
-				@Override
-				public void onCompletion(RecordMetadata metadata, Exception exception) {
-					if (exception != null && asyncException == null) {
-						asyncException = exception;
-					}
-					acknowledgeMessage();
-				}
-			};
 		}
 	}
 
@@ -306,7 +288,7 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 				pendingRecords++;
 			}
 		}
-		producer.send(record, callback);
+		producer.send(record, getCallback(length(serializedKey) + length(serializedValue)));
 	}
 
 	@Override
@@ -419,10 +401,44 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 		return partitions;
 	}
 
+	protected Callback getCallback(int size) {
+		return new ErrorHandlingCallback(kafkaSinkMetrics, size);
+	}
+
+	protected int length(byte[] bytes) {
+		return bytes == null ? 0 : bytes.length;
+	}
+
 	@VisibleForTesting
 	protected long numPendingRecords() {
 		synchronized (pendingRecordsLock) {
 			return pendingRecords;
 		}
 	}
+
+	// --------------------------- producer callback class ----------------------
+
+	/**
+	 * A callback class that records the update the metrics and handles exceptions.
+	 */
+	private class ErrorHandlingCallback extends MetricRecordingCallback {
+
+		ErrorHandlingCallback(KafkaSinkMetrics kafkaSinkMetrics, int size) {
+			super(kafkaSinkMetrics, size);
+		}
+
+		@Override
+		public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+			super.onCompletion(recordMetadata, e);
+			if (e != null) {
+				if (logFailuresOnly) {
+					LOG.error("Error while sending record to Kafka: " + e.getMessage(), e);
+				} else {
+					asyncException = e;
+				}
+			}
+			acknowledgeMessage();
+		}
+	}
+
 }

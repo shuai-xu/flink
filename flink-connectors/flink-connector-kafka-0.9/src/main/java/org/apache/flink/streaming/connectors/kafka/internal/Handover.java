@@ -29,7 +29,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import java.io.Closeable;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -90,7 +89,7 @@ public final class Handover implements Closeable {
 
 				// this statement cannot be reached since the above method always throws an exception
 				// this is only here to silence the compiler and any warnings
-				return new ConsumerRecordsAndPositions(ConsumerRecords.empty(), Collections.emptyMap());
+				throw new IllegalStateException("Should never reach here.");
 			}
 		}
 	}
@@ -103,9 +102,6 @@ public final class Handover implements Closeable {
 	 * <p>This behavior is similar to a "size one" blocking queue.
 	 *
 	 * @param element The next element to hand over.
-	 * @param positions The consumer positions at the point when the next element is handed over.
-	 *                  This is used to help the fetchers decide whether it should stop when a
-	 *                  stopping offset is specified.
 	 *
 	 * @throws InterruptedException
 	 *                 Thrown, if the thread is interrupted while blocking for the Handover to be empty.
@@ -121,6 +117,7 @@ public final class Handover implements Closeable {
 			throws InterruptedException, WakeupException, ClosedException {
 
 		checkNotNull(element);
+		final long fetchedTime = System.currentTimeMillis();
 
 		synchronized (lock) {
 			while (next != null && !wakeupProducer) {
@@ -135,7 +132,7 @@ public final class Handover implements Closeable {
 			}
 			// if there is no error, then this is open and can accept this element
 			else if (error == null) {
-				next = new ConsumerRecordsAndPositions(element, positions);
+				next = new ConsumerRecordsAndPositions(element, positions, fetchedTime);
 				lock.notifyAll();
 			}
 			// an error marks this as closed for the producer
@@ -238,12 +235,15 @@ public final class Handover implements Closeable {
 	public static final class ConsumerRecordsAndPositions {
 		private final ConsumerRecords<byte[], byte[]> records;
 		private final Map<TopicPartition, Long> positions;
+		private final long fetchedTime;
 
 		private ConsumerRecordsAndPositions(
 			ConsumerRecords<byte[], byte[]> records,
-			Map<TopicPartition, Long> positions) {
+			Map<TopicPartition, Long> positions,
+			long fetchedTime) {
 			this.records = records;
 			this.positions = positions;
+			this.fetchedTime = fetchedTime;
 		}
 
 		public ConsumerRecords<byte[], byte[]> records() {
@@ -260,6 +260,10 @@ public final class Handover implements Closeable {
 
 		public Long position(TopicPartition tp) {
 			return positions.get(tp);
+		}
+
+		public long fetchedTime() {
+			return fetchedTime;
 		}
 	}
 }
