@@ -79,7 +79,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -229,7 +229,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		containerRegisterTimeout = Time.seconds(flinkConfig.getLong(YarnConfigOptions.CONTAINER_REGISTER_TIMEOUT));
 
 		this.executor = new ThreadPoolExecutor(0, flinkConfig.getInteger(YarnConfigOptions.CONTAINER_LAUNCHER_NUMBER),
-			60L, TimeUnit.SECONDS, new SynchronousQueue<>(), new ThreadFactoryBuilder()
+			60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new ThreadFactoryBuilder()
 			.setNameFormat("ContainerLauncher #%d")
 			.build());
 
