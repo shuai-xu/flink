@@ -151,8 +151,10 @@ public class HeapMemoryAdjuster implements Resolver {
 			long now = System.currentTimeMillis();
 			if (jobVertexHeapOOM != null ||
 				(jobVertexFrequentFullGC != null && jobVertexFrequentFullGC.isSevere()) ||
-				(jobVertexLongTimeFullGC != null && jobVertexLongTimeFullGC.isSevere()) ||
-				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
+				(jobVertexLongTimeFullGC != null && jobVertexLongTimeFullGC.isSevere())) {
+				adjustJobHeapMemory.setActionMode(Action.ActionMode.IMMEDIATE);
+			} else if (opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay) {
+				LOGGER.debug("Upgrade opportunistic action to immediate action.");
 				adjustJobHeapMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
 				if (opportunisticActionDelayStart < 0) {

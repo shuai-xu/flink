@@ -146,11 +146,10 @@ public class AdjustJobConfig implements Action {
 	@Override
 	public String toString() {
 		String adjustments = currentParallelism.keySet().stream().map(vertexId -> "{JobVertexID:" + vertexId + ", "
-			+ "actionMode: " + actionMode + ", "
 			+ "parallelism: " + currentParallelism.get(vertexId) + " -> " + targetParallelism.get(vertexId) + ", "
 			+ "resource: " + currentResource.get(vertexId) + " -> " + targetResource.get(vertexId) + "}").collect(
 			Collectors.joining(", "));
-		return "AdjustJobConfig{" + adjustments + "}";
+		return "AdjustJobConfig{actionMode: " + actionMode + ", adjustments: " + adjustments + "}";
 	}
 
 	public RestServerClient.JobConfig getAppliedJobConfig(RestServerClient.JobConfig originJobConfig) {

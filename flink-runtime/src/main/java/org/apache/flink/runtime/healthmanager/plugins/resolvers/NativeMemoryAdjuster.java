@@ -146,8 +146,10 @@ public class NativeMemoryAdjuster implements Resolver {
 		if (!adjustJobNativeMemory.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if ((jobVertexHighNativeMemory != null && jobVertexHighNativeMemory.isSevere()) ||
-				jobVertexTmKilledDueToMemoryExceed != null ||
-				(opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay)) {
+				jobVertexTmKilledDueToMemoryExceed != null) {
+				adjustJobNativeMemory.setActionMode(Action.ActionMode.IMMEDIATE);
+			} else if (opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay) {
+				LOGGER.debug("Upgrade opportunistic action to immediate action.");
 				adjustJobNativeMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
 				if (opportunisticActionDelayStart < 0) {

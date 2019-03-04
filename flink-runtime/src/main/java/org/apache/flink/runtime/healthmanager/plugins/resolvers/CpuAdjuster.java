@@ -143,6 +143,7 @@ public class CpuAdjuster implements Resolver {
 		if (!adjustJobCpu.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if (opportunisticActionDelayStart > 0 && now - opportunisticActionDelayStart > opportunisticActionDelay) {
+				LOGGER.debug("Upgrade opportunistic action to immediate action.");
 				adjustJobCpu.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
 				if (opportunisticActionDelayStart < 0) {
