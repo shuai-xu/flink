@@ -102,6 +102,8 @@ class ExplainTest extends TableTestBase {
       .toTable(util.tableEnv, 'id2, 'num2.rowtime, 'cnt, 'name, 'goods)
     util.tableEnv.registerTableWithWatermark("table2", table2, "num2", 0)
 
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_EXEC_MINI_BATCH_WINDOW_ENABLED, true)
     util.tableEnv.getConfig.getConf.setLong(
       TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 3000L)
 

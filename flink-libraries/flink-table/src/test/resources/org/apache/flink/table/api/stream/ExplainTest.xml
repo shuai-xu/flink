@@ -1885,7 +1885,7 @@ StreamExecSink(fields=[id1, TMP_1], updateAsRetraction=[false], accMode=[Acc])
 									ship_strategy : FORWARD
 
 									 : Operator
-										content : window: (TumblingGroupWindow('w, 'num1, 8000.millis)), groupBy: (id1), select: (id1, CONCAT_AGG($f3, text) AS TMP_0)
+										content : minibatch-window: (TumblingGroupWindow('w, 'num1, 8000.millis)), groupBy: (id1), select: (id1, CONCAT_AGG($f3, text) AS TMP_0)
 										ship_strategy : HASH
 
 										 : Operator
@@ -1897,7 +1897,7 @@ StreamExecSink(fields=[id1, TMP_1], updateAsRetraction=[false], accMode=[Acc])
 												ship_strategy : FORWARD
 
 												 : Operator
-													content : window: (SlidingGroupWindow('w, 'num1, 12000.millis, 6000.millis)), groupBy: (id1), select: (id1, CONCAT_AGG($f3, text) AS TMP_1)
+													content : minibatch-window: (SlidingGroupWindow('w, 'num1, 12000.millis, 6000.millis)), groupBy: (id1), select: (id1, CONCAT_AGG($f3, text) AS TMP_1)
 													ship_strategy : HASH
 
 													 : Operator

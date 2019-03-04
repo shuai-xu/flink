@@ -32,6 +32,8 @@ class MiniBatchIntervalInferTest extends TableTestBase {
     "MyTable1", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
   streamUtil.addTable[(Int, String, Long)](
     "MyTable2", 'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
+  streamUtil.tableEnv.getConfig.getConf
+  .setBoolean(TableConfigOptions.SQL_EXEC_MINI_BATCH_WINDOW_ENABLED, true)
 
   @Test
   def testMiniBatchOnly(): Unit = {

@@ -35,10 +35,14 @@ abstract class StreamingWithMiniBatchTestBase(miniBatch: MiniBatchMode, state: S
     val tableConfig = tEnv.getConfig
     miniBatch match {
       case MiniBatchOn =>
+        tableConfig.getConf.setBoolean(
+          TableConfigOptions.SQL_EXEC_MINI_BATCH_WINDOW_ENABLED, true)
         tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, true)
         tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
         tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 3L)
       case MiniBatchOff =>
+        tableConfig.getConf.setBoolean(
+          TableConfigOptions.SQL_EXEC_MINI_BATCH_WINDOW_ENABLED, false)
         tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
         tableConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
     }

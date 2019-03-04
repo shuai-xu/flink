@@ -19,23 +19,29 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{ConcatDistinctAggFunction, WeightedAvg}
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.StateBackendMode
-import org.apache.flink.table.runtime.utils.TimeTestUtil.{EventTimeSourceFunction, TimestampAndWatermarkWithOffset}
+import org.apache.flink.table.runtime.utils.TimeTestUtil.TimestampAndWatermarkWithOffset
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.types.{DataType, DataTypes}
 import org.apache.flink.types.Row
-
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 import java.math.BigDecimal
-import java.util.TimeZone
 
+/**
+  * Integrate tests for group window aggregate in SQL API.
+  *
+  * Note: if any case in the file can support minibatch window, please move to
+  * [[MiniBatchGroupWindowITCase]].
+  *
+  * For the requirements which windows support minibatch, please see
+  * [[org.apache.flink.table.plan.nodes.physical.stream.StreamExecGroupWindowAggregate]].
+  */
 @RunWith(classOf[Parameterized])
 class GroupWindowITCase(mode: StateBackendMode)
   extends StreamingWithStateTestBase(mode) {
@@ -248,150 +254,4 @@ class GroupWindowITCase(mode: StateBackendMode)
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 
-  @Test
-  def testDistinctAggOnRowTimeTumbleWindow(): Unit = {
-
-    val t = failingDataSource(StreamTestData.get5TupleData).assignAscendingTimestamps(x => x._2)
-            .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'rowtime.rowtime)
-    tEnv.registerTable("MyTable", t)
-
-    val sqlQuery =
-      """
-        |SELECT a,
-        |   SUM(DISTINCT e),
-        |   MIN(DISTINCT e),
-        |   COUNT(DISTINCT e)
-        |FROM MyTable
-        |GROUP BY a, TUMBLE(rowtime, INTERVAL '5' SECOND)
-      """.stripMargin
-
-    val results = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
-    val sink = new TestingAppendSink
-    results.addSink(sink)
-    env.execute()
-
-    val expected = List(
-      "1,1,1,1",
-      "2,3,1,2",
-      "3,5,2,2",
-      "4,3,1,2",
-      "5,6,1,3")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-  }
-
-
-  @Test
-  def testHopStartEndWithHaving(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-
-    val sqlQueryHopStartEndWithHaving =
-      """
-        |SELECT
-        |  c AS k,
-        |  COUNT(a) AS v,
-        |  HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE) AS windowStart,
-        |  HOP_END(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE) AS windowEnd
-        |FROM T1
-        |GROUP BY HOP(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE), c
-        |HAVING
-        |  SUM(b) > 1 AND
-        |    QUARTER(HOP_START(rowtime, INTERVAL '1' MINUTE, INTERVAL '1' MINUTE)) = 1
-      """.stripMargin
-    val data = Seq(
-      Left(14000005L, (1, 1L, "Hi")),
-      Left(14000000L, (2, 1L, "Hello")),
-      Left(14000002L, (3, 1L, "Hello")),
-      Right(14000010L),
-      Left(8640000000L, (4, 1L, "Hello")), // data for the quarter to validate having filter
-      Left(8640000001L, (4, 1L, "Hello")),
-      Right(8640000010L)
-    )
-    val t1 = env.addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
-             .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
-    tEnv.registerTable("T1", t1)
-    val resultHopStartEndWithHaving = tEnv
-                                      .sqlQuery(sqlQueryHopStartEndWithHaving)
-                                      .toAppendStream[Row]
-    val sink = new TestingAppendSink
-    resultHopStartEndWithHaving.addSink(sink)
-    env.execute()
-    val expected = List(
-      "Hello,2,1970-01-01 03:53:00.0,1970-01-01 03:54:00.0"
-    )
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-  }
-
-  @Test
-  def testEventTimeSlidingWindowWithTimeZone(): Unit = {
-    val stream = failingDataSource(data)
-      .assignTimestampsAndWatermarks(
-        new TimestampAndWatermarkWithOffset
-          [(Long, Int, Double, Float, BigDecimal, String, String)](0L))
-    val table = stream.toTable(tEnv, 'ts.rowtime, 'int, 'double, 'float, 'bigdec, 'string, 'name)
-    tEnv.registerTable("T1", table)
-    tEnv.getConfig.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
-
-    val sql =
-      """
-        |SELECT
-        |  string,
-        |  HOP_START(ts, INTERVAL '12' HOUR, INTERVAL '1' DAY),
-        |  HOP_ROWTIME(ts, INTERVAL '12' HOUR, INTERVAL '1' DAY),
-        |  COUNT(`int`),
-        |  COUNT(DISTINCT `float`)
-        |FROM T1
-        |GROUP BY string, HOP(ts, INTERVAL '12' HOUR, INTERVAL '1' DAY)
-      """.stripMargin
-
-    val sink = new TestingAppendSink(tEnv.getConfig.getTimeZone)
-    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-    val expected = Seq(
-      "Hallo,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,1,1",
-      "Hallo,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
-      "Hello world,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,2,2",
-      "Hello world,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,2,2",
-      "Hello,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,4,3",
-      "Hello,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,4,3",
-      "Hi,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,1,1",
-      "Hi,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
-      "null,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,1,1",
-      "null,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-
-  }
-
-  @Test
-  def testEventTimeTumblingWindowWithTimeZone(): Unit = {
-    val stream = failingDataSource(data)
-      .assignTimestampsAndWatermarks(
-        new TimestampAndWatermarkWithOffset
-          [(Long, Int, Double, Float, BigDecimal, String, String)](0L))
-    val table = stream.toTable(tEnv, 'ts.rowtime, 'int, 'double, 'float, 'bigdec, 'string, 'name)
-    tEnv.registerTable("T1", table)
-    tEnv.getConfig.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
-
-    val sql =
-      """
-        |SELECT
-        |  string,
-        |  TUMBLE_START(ts, INTERVAL '1' DAY),
-        |  TUMBLE_ROWTIME(ts, INTERVAL '1' DAY),
-        |  COUNT(`int`),
-        |  COUNT(DISTINCT `float`)
-        |FROM T1
-        |GROUP BY string, TUMBLE(ts, INTERVAL '1' DAY)
-      """.stripMargin
-
-    val sink = new TestingAppendSink(tEnv.getConfig.getTimeZone)
-    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
-    env.execute()
-    val expected = Seq(
-      "Hallo,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
-      "Hello world,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,2,2",
-      "Hello,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,4,3",
-      "Hi,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
-      "null,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1")
-    assertEquals(expected.sorted, sink.getAppendResults.sorted)
-  }
 }
