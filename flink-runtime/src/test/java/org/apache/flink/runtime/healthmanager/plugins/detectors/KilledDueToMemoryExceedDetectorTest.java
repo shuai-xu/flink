@@ -47,25 +47,41 @@ public class KilledDueToMemoryExceedDetectorTest extends DetectorTestBase {
 	public void testDetectKilledDueToMemoryExceed() throws Exception {
 		String tmId1 = "tmId1";
 		String tmId2 = "tmId2";
+		String tmId3 = "tmId3";
+		String tmId4 = "tmId4";
 		JobVertexID vertex1 = new JobVertexID();
 		JobVertexID vertex2 = new JobVertexID();
+		JobVertexID vertex3 = new JobVertexID();
+		JobVertexID vertex4 = new JobVertexID();
 
 		RestServerClient.VertexConfig vertexConfig1 = new RestServerClient.VertexConfig(
-			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(1024).build());
+			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(256).build());
 		RestServerClient.VertexConfig vertexConfig2 = new RestServerClient.VertexConfig(
-			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(1024).build());
+			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(256).build());
+		RestServerClient.VertexConfig vertexConfig3 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(256).build());
+		RestServerClient.VertexConfig vertexConfig4 = new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setNativeMemoryInMB(256).build());
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
 		vertexConfigs.put(vertex1, vertexConfig1);
 		vertexConfigs.put(vertex2, vertexConfig2);
+		vertexConfigs.put(vertex3, vertexConfig3);
+		vertexConfigs.put(vertex4, vertexConfig4);
 		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
 
 		Map<String, List<ExecutionVertexID>> taskManagerTasks = new HashMap<>();
 		taskManagerTasks.put(tmId1, Lists.newArrayList(new ExecutionVertexID(vertex1, 0), new ExecutionVertexID(vertex1, 1)));
 		taskManagerTasks.put(tmId2, Lists.newArrayList(new ExecutionVertexID(vertex2, 0), new ExecutionVertexID(vertex2, 1)));
+		taskManagerTasks.put(tmId3, Lists.newArrayList(new ExecutionVertexID(vertex3, 0), new ExecutionVertexID(vertex3, 1)));
+		taskManagerTasks.put(tmId4, Lists.newArrayList(new ExecutionVertexID(vertex4, 0), new ExecutionVertexID(vertex4, 1)));
 		Mockito.when(restClient.getAllTaskManagerTasks()).thenReturn(taskManagerTasks);
 
 		Map<String, List<Exception>> tmExceptions = new HashMap<>();
 		tmExceptions.put(tmId1, Lists.newArrayList(new Exception("Container Killed due to memory exceeds 2 times")));
+		tmExceptions.put(tmId2, Lists.newArrayList(new Exception("Container [xxx] is running beyond physical memory limits."
+			+ " Current usage: 1.0 GB of 512.0 MB physical memory used;")));
+		tmExceptions.put(tmId3, Lists.newArrayList(new Exception("QosContainersMonitor killing, reason: machine memory is too heavy, memory usage: xxx")));
+		tmExceptions.put(tmId4, Lists.newArrayList(new Exception("nothing related to memory resource")));
 		Mockito.when(restClient.getTaskManagerExceptions(Mockito.anyLong(), Mockito.anyLong())).thenReturn(tmExceptions);
 
 		KilledDueToMemoryExceedDetector killedDueToMemoryExceedDetector = new KilledDueToMemoryExceedDetector();
@@ -76,7 +92,9 @@ public class KilledDueToMemoryExceedDetectorTest extends DetectorTestBase {
 		assertNotNull(symptom);
 		assertTrue(symptom instanceof JobVertexTmKilledDueToMemoryExceed);
 		JobVertexTmKilledDueToMemoryExceed jobVertexTmKilledDueToMemoryExceed = (JobVertexTmKilledDueToMemoryExceed) symptom;
-		assertEquals(1, jobVertexTmKilledDueToMemoryExceed.getUtilities().size());
+		assertEquals(3, jobVertexTmKilledDueToMemoryExceed.getUtilities().size());
 		assertEquals(Double.valueOf(2.0), jobVertexTmKilledDueToMemoryExceed.getUtilities().get(vertex1));
+		assertEquals(Double.valueOf(2.0), jobVertexTmKilledDueToMemoryExceed.getUtilities().get(vertex2));
+		assertEquals(Double.valueOf(1.0), jobVertexTmKilledDueToMemoryExceed.getUtilities().get(vertex3));
 	}
 }

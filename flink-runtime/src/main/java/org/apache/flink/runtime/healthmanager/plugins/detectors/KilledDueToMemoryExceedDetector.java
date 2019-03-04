@@ -41,7 +41,9 @@ import java.util.stream.Collectors;
  */
 public class KilledDueToMemoryExceedDetector implements Detector {
 	private static final Logger LOGGER = LoggerFactory.getLogger(KilledDueToMemoryExceedDetector.class);
-	private static final String TARGET_ERR_MSG = "Container Killed due to memory exceeds ";
+	private static final String ERR_MSG_MEMORY_EXCEED_YARN_V3 = "Container Killed due to memory exceeds ";
+	private static final String ERR_MSG_MEMORY_EXCEED_YARN_V2 = "is running beyond physical memory limits. Current usage: ";
+	private static final String ERR_MSG_MACHINE_MEMORY_HEAVY_YARN_V3 = "QosContainersMonitor killing, reason: machine memory is too heavy";
 
 	private JobID jobID;
 	private HealthMonitor monitor;
@@ -84,11 +86,10 @@ public class KilledDueToMemoryExceedDetector implements Detector {
 			for (Map.Entry<String, List<Exception>> entry : tmExceptions.entrySet()) {
 				String tmId = entry.getKey();
 				for (Exception exception : entry.getValue()) {
-					if (!exception.getMessage().contains(TARGET_ERR_MSG)) {
+					double exceedTime = getExceedTime(exception.getLocalizedMessage());
+					if (exceedTime < 0.0) {
 						continue;
 					}
-
-					double exceedTime = getExceedTime(exception.getLocalizedMessage());
 					List<JobVertexID> vertices = tmTasks.get(tmId);
 
 					LOGGER.debug("TM {} with tasks {} killed due to memory exceed {} times.",
@@ -131,7 +132,53 @@ public class KilledDueToMemoryExceedDetector implements Detector {
 	}
 
 	private double getExceedTime(String msg) {
-		msg = msg.substring(msg.indexOf(TARGET_ERR_MSG) + TARGET_ERR_MSG.length());
-		return Double.valueOf(msg.split(" ")[0]);
+
+		if (msg.contains(ERR_MSG_MEMORY_EXCEED_YARN_V3)) {
+			msg = msg.substring(msg.indexOf(ERR_MSG_MEMORY_EXCEED_YARN_V3) + ERR_MSG_MEMORY_EXCEED_YARN_V3.length());
+			return Double.valueOf(msg.split(" ")[0]);
+		}
+
+		if (msg.contains(ERR_MSG_MACHINE_MEMORY_HEAVY_YARN_V3)) {
+			return 1.0;
+		}
+
+		if (msg.contains(ERR_MSG_MEMORY_EXCEED_YARN_V2)) {
+			msg = msg.substring(msg.indexOf(ERR_MSG_MEMORY_EXCEED_YARN_V2) + ERR_MSG_MEMORY_EXCEED_YARN_V2.length());
+			String[] tokens = msg.split(" ");
+
+			int unit;
+
+			double usage = Double.valueOf(tokens[0]);
+			switch (tokens[1].charAt(0)) {
+				case 'E' : unit = 6; break;
+				case 'P' : unit = 5; break;
+				case 'T' : unit = 4; break;
+				case 'G' : unit = 3; break;
+				case 'M' : unit = 2; break;
+				case 'K' : unit = 1; break;
+				default: unit = 0;
+			}
+			while (unit-- > 0) {
+				usage *= 1024;
+			}
+
+			double capacity = Double.valueOf(tokens[3]);
+			switch (tokens[4].charAt(0)) {
+				case 'E' : unit = 6; break;
+				case 'P' : unit = 5; break;
+				case 'T' : unit = 4; break;
+				case 'G' : unit = 3; break;
+				case 'M' : unit = 2; break;
+				case 'K' : unit = 1; break;
+				default: unit = 0;
+			}
+			while (unit-- > 0) {
+				capacity *= 1024;
+			}
+
+			return usage / capacity;
+		}
+
+		return -1.0;
 	}
 }
