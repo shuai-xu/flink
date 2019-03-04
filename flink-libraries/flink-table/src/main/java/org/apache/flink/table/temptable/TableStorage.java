@@ -20,7 +20,10 @@ package org.apache.flink.table.temptable;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.io.network.partition.external.PersistentFileType;
 import org.apache.flink.service.LifeCycleAware;
+import org.apache.flink.table.runtime.functions.aggfunctions.cardinality.MurmurHash;
+import org.apache.flink.table.temptable.util.BytesUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,9 +35,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
@@ -48,7 +49,7 @@ public class TableStorage implements LifeCycleAware {
 
 	private static final Logger logger = LoggerFactory.getLogger(TableStorage.class);
 
-	private int maxSegmentSize;
+	private long maxSegmentSize;
 
 	private String storagePath;
 
@@ -59,7 +60,8 @@ public class TableStorage implements LifeCycleAware {
 		String tableServiceId = config.getString(TableServiceOptions.TABLE_SERVICE_ID, UUID.randomUUID().toString());
 		String rootPath = config.getString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, System.getProperty("user.dir"));
 		storagePath = rootPath + File.separator + "tableservice_" + tableServiceId;
-		maxSegmentSize = config.getInteger(TableServiceOptions.TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE);
+		// todo max segment size is set to Long.MAX_VALUE for the moment, so there will be only one file for one table partition.
+		maxSegmentSize = Long.MAX_VALUE;
 		deleteAll(storagePath);
 		createDirs(storagePath);
 		partitionSegmentTracker = new ConcurrentHashMap<>();
@@ -102,29 +104,6 @@ public class TableStorage implements LifeCycleAware {
 		}
 	}
 
-	public List<Integer> getTablePartitions(String tableName) {
-		String path = storagePath + File.separator + tableName;
-		File file = new File(path);
-		if (!file.exists()) {
-			return Collections.emptyList();
-		}
-
-		if (!file.isDirectory()) {
-			logger.error(path + " is not a valid table storage path");
-			throw new RuntimeException(path + " is not a valid table storage path");
-		}
-		File[] subFiles = file.listFiles();
-
-		List<Integer> partitions = new ArrayList<>();
-		if (subFiles != null) {
-			for (File subFile : subFiles) {
-				partitions.add(Integer.valueOf(subFile.getName()));
-			}
-		}
-
-		return partitions;
-	}
-
 	/**
 	 * create the file if not exists.
 	 */
@@ -143,7 +122,7 @@ public class TableStorage implements LifeCycleAware {
 		NavigableMap<Long, File> offsetMap = partitionSegmentTracker.computeIfAbsent(baseDirPath, d -> new ConcurrentSkipListMap<>());
 		Map.Entry<Long, File> lastEntry = offsetMap.lastEntry();
 		if (lastEntry == null) {
-			lastFile = new File(baseDirPath + File.separator + 0);
+			lastFile = new File(baseDirPath + File.separator + 0 + ".data");
 			lastFileOffset = 0L;
 			offsetMap.put(0L, lastFile);
 		} else {
@@ -160,6 +139,95 @@ public class TableStorage implements LifeCycleAware {
 				offsetMap.put(lastFileOffset, lastFile);
 			}
 		}
+	}
+
+	public void delete(String tableName, int partitionId) {
+		logger.debug("delete table, tableName: " + tableName + ", partitionId: " + partitionId);
+		String baseDirPath = getPartitionDirPath(tableName, partitionId);
+		deleteAll(baseDirPath);
+	}
+
+	public void finishPartition(String tableName, int partitionId) {
+		String baseDirPath = getPartitionDirPath(tableName, partitionId);
+
+		// add finish file
+		String finishFilePath = baseDirPath + File.separator + "finished";
+		byte[] finishData = generateFinishData();
+
+		File finishFile = new File(finishFilePath);
+		if (finishFile.exists()) {
+			finishFile.delete();
+		}
+		try {
+			finishFile.createNewFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		writeFile(finishFile, finishData, 0, finishData.length);
+
+		// add index file
+		// todo mock, there may be more files
+		String indexFilePath = baseDirPath + File.separator + "0.index";
+		byte[] indexData = generateIndexData(baseDirPath);
+
+		File indexFile = new File(indexFilePath);
+		if (indexFile.exists()) {
+			indexFile.delete();
+		}
+		try {
+			indexFile.createNewFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		writeFile(indexFile, indexData, 0, indexData.length);
+	}
+
+	private byte[] generateIndexData(String baseDirPath) {
+		String dataFilePath = baseDirPath + File.separator + "0.data";
+		long fileLength = new File(dataFilePath).length();
+		byte[] indexData = new byte[Integer.BYTES * 2 + Long.BYTES * 2];
+		byte[] size = BytesUtil.intToBytes(1);
+		byte[] partitionId = BytesUtil.intToBytes(0);
+		byte[] startOffset = BytesUtil.longToBytes(0L);
+		byte[] length = BytesUtil.longToBytes(fileLength);
+		int offset = 0;
+		System.arraycopy(size, 0, indexData, offset, Integer.BYTES);
+		offset += Integer.BYTES;
+		System.arraycopy(partitionId, 0, indexData, offset, Integer.BYTES);
+		offset += Integer.BYTES;
+		System.arraycopy(startOffset, 0, indexData, offset, Long.BYTES);
+		offset += Long.BYTES;
+		System.arraycopy(length, 0, indexData, offset, Long.BYTES);
+		offset += Long.BYTES;
+		return indexData;
+	}
+
+	private byte[] generateFinishData() {
+		byte[] fileTypeBytes = null;
+		try {
+			fileTypeBytes = PersistentFileType.HASH_PARTITION_FILE.toString().getBytes("utf-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+
+		int totalLength = Integer.BYTES + Integer.BYTES + fileTypeBytes.length + Integer.BYTES + Integer.BYTES;
+		int offset = 0;
+		byte[] data = new byte[totalLength];
+		byte[] versionBytes = BytesUtil.intToBytes(1);
+		byte[] fileTypeLengthBytes = BytesUtil.intToBytes(fileTypeBytes.length);
+		byte[] spillCountBytes = BytesUtil.intToBytes(1);
+		byte[] subpartitionNumBytes = BytesUtil.intToBytes(1);
+		System.arraycopy(versionBytes, 0, data, offset, Integer.BYTES);
+		offset += Integer.BYTES;
+		System.arraycopy(fileTypeLengthBytes, 0, data, offset, Integer.BYTES);
+		offset += Integer.BYTES;
+		System.arraycopy(fileTypeBytes, 0, data, offset, fileTypeBytes.length);
+		offset += fileTypeBytes.length;
+		System.arraycopy(spillCountBytes, 0, data, offset, Integer.BYTES);
+		offset += Integer.BYTES;
+		System.arraycopy(subpartitionNumBytes, 0, data, offset, Integer.BYTES);
+		offset += Integer.BYTES;
+		return data;
 	}
 
 	private void writeFile(File file, byte[] content, int offset, int len) {
@@ -187,9 +255,7 @@ public class TableStorage implements LifeCycleAware {
 		}
 	}
 
-	/**
-	 * todo rework on mmap.
-	 */
+	@VisibleForTesting
 	public int read(String tableName, int partitionId, int offset, int readCount, byte[] buffer) {
 		String baseDirPath = getPartitionDirPath(tableName, partitionId);
 		if (!partitionSegmentTracker.containsKey(baseDirPath)) {
@@ -263,6 +329,7 @@ public class TableStorage implements LifeCycleAware {
 
 	@VisibleForTesting
 	String getPartitionDirPath(String tableName, int partitionId) {
-		return storagePath + File.separator + tableName + File.separator + partitionId;
+		long tableHashId = MurmurHash.hash(tableName) & Integer.MAX_VALUE;
+		return storagePath + File.separator + tableHashId + File.separator + partitionId;
 	}
 }

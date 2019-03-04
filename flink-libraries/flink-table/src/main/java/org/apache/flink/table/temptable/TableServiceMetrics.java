@@ -31,15 +31,7 @@ public class TableServiceMetrics {
 
 	public static final String WRITE_TOTAL_BYTES_METRIC = "tableServiceWriteTotalBytes";
 
-	public static final String READ_TOTAL_BYTES_METRIC = "tableServiceReadTotalBytes";
-
-	public static final String READ_BPS_METRIC = "tableServiceReadBps";
-
 	public static final String WRITE_BPS_METRIC = "tableServiceWriteBps";
-
-	private Meter readBpsMetrics;
-
-	private Counter readTotalBytesMetrics;
 
 	private Meter writeBpsMetrics;
 
@@ -51,12 +43,6 @@ public class TableServiceMetrics {
 		this.metricGroup = metricGroup;
 		writeTotalBytesMetrics = metricGroup.counter(WRITE_TOTAL_BYTES_METRIC, new SimpleCounter());
 		writeBpsMetrics = metricGroup.meter(WRITE_BPS_METRIC, new MeterView(writeTotalBytesMetrics, 10));
-		readTotalBytesMetrics = metricGroup.counter(READ_TOTAL_BYTES_METRIC, new SimpleCounter());
-		readBpsMetrics = metricGroup.meter(READ_BPS_METRIC, new MeterView(readTotalBytesMetrics, 10));
-	}
-
-	public Counter getReadTotalBytesMetrics() {
-		return readTotalBytesMetrics;
 	}
 
 	public Counter getWriteTotalBytesMetrics() {

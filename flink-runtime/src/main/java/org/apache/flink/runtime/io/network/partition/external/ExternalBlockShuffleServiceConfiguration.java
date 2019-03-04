@@ -136,7 +136,7 @@ public class ExternalBlockShuffleServiceConfiguration {
 
 	// ---------------------------------- Getters -----------------------------------------------------
 
-	Configuration getConfiguration() {
+	public Configuration getConfiguration() {
 		return configuration;
 	}
 

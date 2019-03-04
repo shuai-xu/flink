@@ -34,16 +34,16 @@ import org.apache.flink.table.temptable.{FlinkTableServiceFactory, FlinkTableSer
 import org.apache.flink.table.types.DataType
 import org.apache.flink.table.util.{CollectionBatchExecTable, TableProperties}
 import org.apache.flink.test.util.TestBaseUtils
-
 import org.apache.calcite.rel.{AbstractRelNode, BiRel, RelNode, SingleRel}
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{After, Before, Ignore, Test}
-
+import org.junit.{After, Before, Test}
 import java.io.IOException
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
+
+import org.apache.flink.table.util.NodeResourceUtil.InferMode
 
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
@@ -87,7 +87,6 @@ class CacheCsvTableFactory extends BatchTableSourceFactory[BaseRow]
     java.util.Collections.emptyList()
 }
 
-@Ignore
 @RunWith(classOf[Parameterized])
 class CacheAwareRelNodePlanBuilderTest(
   factory: TableFactory,
@@ -101,6 +100,8 @@ class CacheAwareRelNodePlanBuilderTest(
   @Before
   def init(): Unit = {
     conf.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_REUSE_SUB_PLAN_ENABLED, true)
+    conf.getConf.setString(TableConfigOptions.SQL_RESOURCE_INFER_MODE,
+      InferMode.NONE.toString)
     conf.setTableServiceFactoryDescriptor(
       new FlinkTableServiceFactoryDescriptor(factory, properties))
 
@@ -405,7 +406,79 @@ class CacheAwareRelNodePlanBuilderTest(
   }
 
   @Test
-  def testInvalidateCache(): Unit = {
+  def testInvalidateCacheBeforeCacheGenerated(): Unit = {
+    val t1 = table1
+      .join(table2)
+      .where('Artist1 === 'Artist2)
+      .select('Artist1, 'Album2, 'Song1)
+
+    t1.cache()
+
+    assertTrue(tableEnv.sinkNodes.size == 1)
+
+    t1.invalidateCache()
+
+    // no table service sink
+    assertTrue(tableEnv.sinkNodes.size == 0)
+
+    writeToCollectSink(t1.where('Artist1 === "The Doors"))
+
+    assertTrue(tableEnv.sinkNodes.size == 1)
+
+    val plan = compile()
+
+    // only collect sink
+    assertTrue(plan.size == 1)
+  }
+
+  @Test
+  def testInvalidateCacheAfterCacheGenerated(): Unit = {
+    val t1 = table1
+      .join(table2)
+      .where('Artist1 === 'Artist2)
+      .select('Artist1, 'Album2, 'Song1)
+    t1.cache()
+
+    writeToCollectSink(t1.where('Artist1 === "The Doors"))
+
+    mockExecute(tableEnv)
+
+    val t2 = t1.filter('Song1 === "Welcome to the Jungle")
+    writeToCollectSink(t2.where('Artist1 === "The Doors"))
+
+    t1.invalidateCache()
+
+    val plan = compile()
+    assertTrue(plan.size == 1)
+
+    // plan without cache is expected to be used
+    val expectedPre = List(
+      classOf[BatchExecSink[_]],
+      classOf[BatchExecCalc],
+      classOf[BatchExecJoinBase],
+      classOf[BatchExecExchange],
+      classOf[BatchExecCalc],
+      classOf[BatchExecScan],
+      classOf[BatchExecCalc],
+      classOf[BatchExecScan]
+    )
+
+    val expectedMid = List(
+      classOf[BatchExecScan],
+      classOf[BatchExecCalc],
+      classOf[BatchExecExchange],
+      classOf[BatchExecJoinBase],
+      classOf[BatchExecScan],
+      classOf[BatchExecCalc],
+      classOf[BatchExecCalc],
+      classOf[BatchExecSink[_]]
+    )
+
+    verifyLogicalNodeTree(plan(0), expectedPre, expectedMid)
+  }
+
+  @Test
+  def testTableServiceRestart(): Unit = {
     val t1 = table1
       .join(table2)
       .where('Artist1 === 'Artist2)

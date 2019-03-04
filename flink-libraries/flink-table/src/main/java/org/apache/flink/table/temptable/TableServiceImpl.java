@@ -19,12 +19,16 @@
 package org.apache.flink.table.temptable;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.service.LifeCycleAware;
 import org.apache.flink.service.ServiceContext;
+import org.apache.flink.table.temptable.util.TableServiceUtil;
+import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,6 +44,10 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 
 	private TableServiceMetrics tableServiceMetrics;
 
+	private TableMetaManager tableMetaManager;
+
+	private boolean isLeader;
+
 	public TableServiceImpl(ServiceContext serviceContext) {
 		this.serviceContext = serviceContext;
 	}
@@ -50,6 +58,10 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 		tableStorage = new TableStorage();
 		tableStorage.open(config);
 		tableServiceMetrics = new TableServiceMetrics(serviceContext.getMetricGroup());
+		isLeader = serviceContext.getIndexOfCurrentInstance() == 0;
+		if (isLeader) {
+			tableMetaManager = new TableMetaManager();
+		}
 		logger.info("FlinkTableService end open.");
 	}
 
@@ -65,7 +77,12 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 	@Override
 	public List<Integer> getPartitions(String tableName) {
 		logger.debug("FlinkTableService receive getPartitionCount request");
-		return tableStorage.getTablePartitions(tableName);
+		List<ResultPartitionID> list = tableMetaManager.getResultPartitions(tableName);
+		List<Integer> result = new ArrayList<>();
+		for (ResultPartitionID partitionID : list) {
+			result.add((int) partitionID.getPartitionId().getUpperPart());
+		}
+		return result;
 	}
 
 	@Override
@@ -85,24 +102,41 @@ public class TableServiceImpl implements LifeCycleAware, TableService {
 	}
 
 	@Override
-	public byte[] read(String tableName, int partitionId, int offset, int readCount) {
-		logger.debug("FlinkTableService receive read request");
-		byte [] buffer = new byte[readCount];
-
-		int nRead = tableStorage.read(tableName, partitionId, offset, readCount, buffer);
-		if (nRead <= 0) {
-			return new byte[0];
-		} else {
-			tableServiceMetrics.getReadTotalBytesMetrics().inc(nRead);
-			byte[] result = new byte[nRead];
-			System.arraycopy(buffer, 0, result, 0, nRead);
-			return result;
+	public void delete(String tableName, int partitionId) throws Exception {
+		try {
+			logger.debug("FlinkTableService receive delete request");
+			tableStorage.delete(tableName, partitionId);
+		} catch (Exception e) {
+			logger.debug("FlinkTableService receive delete request, but error occurs: " + e);
+			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	public void initializePartition(String tableName, int partitionId) throws Exception {
-		logger.debug("FlinkTableService receive acquire request");
+		logger.debug("FlinkTableService receive initial partition request");
 		tableStorage.initializePartition(tableName, partitionId);
+	}
+
+	@Override
+	public void registerPartition(String tableName, int partitionId) throws Exception {
+		logger.debug("FlinkTableService receive register partition request");
+		Preconditions.checkState(
+			isLeader,
+			"Only leader can handle register partition request, this should not happen");
+		ResultPartitionID resultPartitionID = TableServiceUtil.tablePartitionToResultPartition(tableName, partitionId);
+		tableMetaManager.addResultPartition(tableName, resultPartitionID);
+	}
+
+	@Override
+	public void unregisterPartition(String tableName) throws Exception {
+		logger.debug("FlinkTableService receive remove partitions request");
+		tableMetaManager.removeTablePartitions(tableName);
+	}
+
+	@Override
+	public void finishPartition(String tableName, int partitionId) throws Exception {
+		logger.debug("FlinkTableService receive finish partition request");
+		tableStorage.finishPartition(tableName, partitionId);
 	}
 }

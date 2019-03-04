@@ -19,14 +19,21 @@
 package org.apache.flink.table.temptable;
 
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.service.ServiceRegistry;
+import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleService;
+import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleServiceOptions;
+import org.apache.flink.service.ServiceInstance;
 import org.apache.flink.service.UserDefinedService;
 import org.apache.flink.table.temptable.rpc.TableServiceServer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.Inet4Address;
+import java.net.Socket;
 import java.net.UnknownHostException;
 
 /**
@@ -44,20 +51,31 @@ public class FlinkTableService extends UserDefinedService {
 
 	private TableServiceImpl manager;
 
-	private ServiceRegistry registry;
-
 	private String tableServiceId;
+
+	private ExternalBlockShuffleService shuffleService;
+
+	private String registryIP;
+
+	private int registryPort;
 
 	@Override
 	public void open(Configuration config) throws Exception {
 		tableServiceId = config.getString(TableServiceOptions.TABLE_SERVICE_ID);
+		registryIP = config.getString(TableServiceOptions.TABLE_SERVICE_REGISTRY_ADDRESS);
+		registryPort = config.getInteger(TableServiceOptions.TABLE_SERVICE_REGISTRY_PORT);
+		config.setString(
+			ExternalBlockShuffleServiceOptions.LOCAL_RESULT_PARTITION_RESOLVER_CLASS,
+			DefaultExternalResultPartitionResolver.class.getCanonicalName());
+		String rootPath = config.getString(TableServiceOptions.TABLE_SERVICE_STORAGE_ROOT_PATH, System.getProperty("user.dir"));
+		String storagePath = rootPath + File.separator + "tableservice_" + tableServiceId + File.separator;
+		config.setString(ExternalBlockShuffleServiceOptions.LOCAL_DIRS, storagePath);
 		logger.info("start table service with id:" + tableServiceId);
-		registry = getServiceContext().getRegistry();
-		registry.open(config);
 		manager = new TableServiceImpl(getServiceContext());
 		manager.open(config);
 		setUpServer();
 		addInstance();
+		shuffleService = new ExternalBlockShuffleService(config);
 	}
 
 	@Override
@@ -65,9 +83,8 @@ public class FlinkTableService extends UserDefinedService {
 		if (server != null) {
 			server.stop();
 		}
-		if (registry != null) {
-			removeInstance();
-			registry.close();
+		if (shuffleService != null) {
+			shuffleService.stop();
 		}
 
 		manager.close();
@@ -97,19 +114,48 @@ public class FlinkTableService extends UserDefinedService {
 	}
 
 	private void addInstance() {
-		int subIndex = getServiceContext().getIndexOfCurrentInstance();
-		int parallelism = getServiceContext().getNumberOfInstances();
-		registry.addInstance(tableServiceId, subIndex + "_" + parallelism, serviceIP, servicePort, null);
-	}
-
-	private void removeInstance() {
-		int subIndex = getServiceContext().getIndexOfCurrentInstance();
-		int parallelism = getServiceContext().getNumberOfInstances();
-		registry.removeInstance(tableServiceId,  subIndex + "_" + parallelism);
+		int instanceId = getServiceContext().getIndexOfCurrentInstance();
+		ServiceInstance serviceInstance = new ServiceInstance(instanceId, serviceIP, servicePort);
+		Socket socket = null;
+		ObjectOutputStream outputStream = null;
+		try {
+			socket = new Socket(registryIP, registryPort);
+			outputStream = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+			outputStream.writeObject(serviceInstance);
+			outputStream.flush();
+		} catch (IOException e) {
+			logger.error("add instance fails", e);
+		} finally {
+			if (outputStream != null) {
+				try {
+					outputStream.close();
+				} catch (IOException e) {
+					logger.error(e.getMessage(), e);
+					throw new RuntimeException(e);
+				}
+			}
+			if (socket != null) {
+				try {
+					socket.close();
+				} catch (IOException e) {
+					logger.error(e.getMessage(), e);
+					throw new RuntimeException(e);
+				}
+			}
+		}
+		logger.info("add Instance success");
 	}
 
 	@Override
 	public void start() {
+
+		try {
+			shuffleService.start();
+		} catch (IOException e) {
+			logger.error("error occurs while start shuffle service: " + e);
+			throw new RuntimeException("ShuffleService start fails");
+		}
+
 		logger.info("TableService begin serving");
 		try {
 			server.start();

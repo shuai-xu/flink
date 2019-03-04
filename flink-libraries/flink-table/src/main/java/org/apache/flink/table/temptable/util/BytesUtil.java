@@ -57,6 +57,19 @@ public final class BytesUtil {
 		return buffer;
 	}
 
+	public static byte[] longToBytes(long x) {
+		byte[] buffer = new byte[8];
+		buffer[0] = (byte) ((x >> 56) & 0xff);
+		buffer[1] = (byte) ((x >> 48) & 0xff);
+		buffer[2] = (byte) ((x >> 40) & 0xff);
+		buffer[3] = (byte) ((x >> 32) & 0xff);
+		buffer[4] = (byte) ((x >> 24) & 0xff);
+		buffer[5] = (byte) ((x >> 16) & 0xff);
+		buffer[6] = (byte) ((x >> 8) & 0xff);
+		buffer[7] = (byte) (x & 0xff);
+		return buffer;
+	}
+
 	public static byte[] intsToBytes(Collection<Integer> ints) {
 		if (ints == null || ints.isEmpty()) {
 			return new byte[0];

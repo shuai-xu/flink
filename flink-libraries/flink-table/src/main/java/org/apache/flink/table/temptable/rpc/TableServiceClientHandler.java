@@ -47,8 +47,6 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 
 	private int writeResult;
 
-	private byte[] readResult;
-
 	private byte lastRequest;
 
 	private String errorMsg;
@@ -78,14 +76,23 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 				case TableServiceMessage.GET_PARTITIONS:
 					handleGetPartitionsResult(responseBytes);
 					break;
-				case TableServiceMessage.READ:
-					handleReadResult(responseBytes);
-					break;
 				case TableServiceMessage.WRITE:
 					handleWriteResult(responseBytes);
 					break;
+				case TableServiceMessage.DELETE_PARTITION:
+					handleVoidResult();
+					break;
 				case TableServiceMessage.INITIALIZE_PARTITION:
-					handleInitializePartitionResult(responseBytes);
+					handleVoidResult();
+					break;
+				case TableServiceMessage.REGISTER_PARTITION:
+					handleVoidResult();
+					break;
+				case TableServiceMessage.UNREGISTER_PARTITIONS:
+					handleVoidResult();
+					break;
+				case TableServiceMessage.FINISH_PARTITION:
+					handleVoidResult();
 					break;
 				default:
 					LOG.error("Unsupported call: " + lastRequest);
@@ -113,14 +120,6 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 		this.hasError = false;
 	}
 
-	private void handleReadResult(byte[] response) {
-		int offset = TableServiceMessage.RESPONSE_STATUS_LENGTH;
-		byte[] result = new byte[response.length - TableServiceMessage.RESPONSE_STATUS_LENGTH];
-		System.arraycopy(response, offset, result, 0, response.length - 1);
-		this.readResult = result;
-		this.hasError = false;
-	}
-
 	private void handleWriteResult(byte[] response) {
 		int offset = TableServiceMessage.RESPONSE_STATUS_LENGTH;
 		int result = BytesUtil.bytesToInt(response, offset);
@@ -128,7 +127,7 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 		this.hasError = false;
 	}
 
-	private void handleInitializePartitionResult(byte[] response) {
+	private void handleVoidResult() {
 		this.hasError = false;
 	}
 
@@ -150,6 +149,25 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 			throw new TableServiceException(new RuntimeException(errorMsg));
 		}
 		return getPartitionsResult == null ? Collections.emptyList() : getPartitionsResult;
+	}
+
+	public synchronized void unregisterPartitions(String tableName) throws Exception {
+		ensureConnectionReady();
+		byte[] tableNameInBytes = tableName.getBytes("UTF-8");
+
+		int totalLength = Integer.BYTES + Byte.BYTES + tableNameInBytes.length;
+		ByteBuf buffer = Unpooled.wrappedBuffer(
+			BytesUtil.intToBytes(totalLength),
+			TableServiceMessage.UNREGISTER_PARTITIONS_BYTES,
+			tableNameInBytes
+		);
+		context.writeAndFlush(buffer);
+		lastRequest = TableServiceMessage.UNREGISTER_PARTITIONS;
+		wait();
+		if (hasError) {
+			hasError = false;
+			throw new TableServiceException(new RuntimeException(errorMsg));
+		}
 	}
 
 	public synchronized int write(String tableName, int partitionId, byte[] content) throws Exception {
@@ -178,51 +196,63 @@ public class TableServiceClientHandler extends ChannelInboundHandlerAdapter {
 		return writeResult;
 	}
 
-	public synchronized byte[] read(String tableName, int partitionId, int offset, int readCount) throws Exception {
-		ensureConnectionReady();
-		byte[] tableNameInBytes = tableName.getBytes("UTF-8");
-		int totalLength = Integer.BYTES + Byte.BYTES + Integer.BYTES + tableNameInBytes.length + Integer.BYTES * 3;
-
-		ByteBuf buffer = Unpooled.wrappedBuffer(
-			BytesUtil.intToBytes(totalLength),
-			TableServiceMessage.READ_BYTES,
-			BytesUtil.intToBytes(tableNameInBytes.length),
-			tableNameInBytes,
-			BytesUtil.intToBytes(partitionId),
-			BytesUtil.intToBytes(offset),
-			BytesUtil.intToBytes(readCount)
-		);
-
-		context.writeAndFlush(buffer);
-		lastRequest = TableServiceMessage.READ;
-		wait();
-		if (hasError) {
-			hasError = false;
-			throw new TableServiceException(new RuntimeException(errorMsg));
-		}
-		return readResult;
+	public synchronized void initializePartition(String tableName, int partitionId) throws Exception {
+		sendVoidResponseRequest(
+			tableName,
+			partitionId,
+			TableServiceMessage.INITIALIZE_PARTITION_BYTES,
+			TableServiceMessage.INITIALIZE_PARTITION);
 	}
 
-	public synchronized void initializePartition(String tableName, int partitionId) throws Exception {
+	public synchronized void deletePartition(String tableName, int partitionId) throws Exception {
+		sendVoidResponseRequest(
+			tableName,
+			partitionId,
+			TableServiceMessage.DELETE_PARTITION_BYTES,
+			TableServiceMessage.DELETE_PARTITION);
+	}
+
+	public synchronized void registerPartition(String tableName, int partitionId) throws Exception {
+		sendVoidResponseRequest(
+			tableName,
+			partitionId,
+			TableServiceMessage.REGISTER_PARTITION_BYTES,
+			TableServiceMessage.REGISTER_PARTITION);
+	}
+
+	public synchronized void finishPartition(String tableName, int partitionId) throws Exception {
+		sendVoidResponseRequest(
+			tableName,
+			partitionId,
+			TableServiceMessage.FINISH_PARTITION_BYTES,
+			TableServiceMessage.FINISH_PARTITION);
+	}
+
+	private void sendVoidResponseRequest(String tableName, int partitionId, byte[] messageTypeBytes, byte messageType) throws Exception {
 		ensureConnectionReady();
-		byte[] tableNameInBytes = tableName.getBytes("UTF-8");
-		int totalLength = Integer.BYTES + Byte.BYTES + Integer.BYTES + tableNameInBytes.length + Integer.BYTES;
-
-		ByteBuf buffer = Unpooled.wrappedBuffer(
-			BytesUtil.intToBytes(totalLength),
-			TableServiceMessage.INITIALIZE_PARTITION_BYTES,
-			BytesUtil.intToBytes(tableNameInBytes.length),
-			tableNameInBytes,
-			BytesUtil.intToBytes(partitionId)
-		);
-
+		ByteBuf buffer = createVoidResponseRequest(tableName, partitionId, messageTypeBytes);
 		context.writeAndFlush(buffer);
-		lastRequest = TableServiceMessage.INITIALIZE_PARTITION;
+		lastRequest = messageType;
 		wait();
 		if (hasError) {
 			hasError = false;
 			throw new RuntimeException(errorMsg);
 		}
+	}
+
+	private ByteBuf createVoidResponseRequest(String tableName, int partitionId, byte[] messageTypeBytes) throws Exception {
+		byte[] tableNameInBytes = tableName.getBytes("UTF-8");
+		int totalLength = Integer.BYTES + Byte.BYTES + Integer.BYTES + tableNameInBytes.length + Integer.BYTES;
+
+		ByteBuf buffer = Unpooled.wrappedBuffer(
+			BytesUtil.intToBytes(totalLength),
+			messageTypeBytes,
+			BytesUtil.intToBytes(tableNameInBytes.length),
+			tableNameInBytes,
+			BytesUtil.intToBytes(partitionId)
+		);
+
+		return buffer;
 	}
 
 	private void handleError(byte[] response) {

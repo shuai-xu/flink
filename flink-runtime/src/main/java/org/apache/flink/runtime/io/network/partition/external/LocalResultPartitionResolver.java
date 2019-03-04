@@ -31,7 +31,7 @@ import java.util.Set;
 public abstract class LocalResultPartitionResolver {
 	protected ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration;
 
-	LocalResultPartitionResolver(ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration) {
+	protected LocalResultPartitionResolver(ExternalBlockShuffleServiceConfiguration shuffleServiceConfiguration) {
 		this.shuffleServiceConfiguration = shuffleServiceConfiguration;
 	}
 
@@ -42,14 +42,14 @@ public abstract class LocalResultPartitionResolver {
 	 * @return Tuple2.f0 is the configured root directory at which the result partition locates,
 	 * 		Tuple2.f1 is the full directory path of the result partition.
 	 */
-	abstract ResultPartitionFileInfo getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException;
+	protected abstract ResultPartitionFileInfo getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException;
 
 	/**
 	 * Recycles result partition's directory and its meta information.
 	 *
 	 * @param resultPartitionID
 	 */
-	abstract void recycleResultPartition(ResultPartitionID resultPartitionID);
+	protected abstract void recycleResultPartition(ResultPartitionID resultPartitionID);
 
 	/**
 	 * Notifies an application's initialization.
@@ -57,7 +57,7 @@ public abstract class LocalResultPartitionResolver {
 	 * @param user User name of the application.
 	 * @param appId Id of the application.
 	 */
-	abstract void initializeApplication(String user, String appId);
+	protected abstract void initializeApplication(String user, String appId);
 
 	/**
 	 * Notifies an application is stopped, so it's meta information can be safely deleted.
@@ -65,17 +65,17 @@ public abstract class LocalResultPartitionResolver {
 	 * @param appId Id of the application.
 	 * @return Result partitions of this application.
 	 */
-	abstract Set<ResultPartitionID> stopApplication(String appId);
+	protected abstract Set<ResultPartitionID> stopApplication(String appId);
 
 	/**
 	 * Notifies LocalResultPartitionResolver to stop elegantly.
 	 */
-	abstract void stop();
+	protected abstract void stop();
 
 	/**
 	 * The information for the files of the external result partition.
 	 */
-	interface ResultPartitionFileInfo {
+	public interface ResultPartitionFileInfo {
 		/**
 		 * The root directory of the result partition.
 		 *

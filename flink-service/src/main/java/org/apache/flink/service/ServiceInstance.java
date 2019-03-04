@@ -19,7 +19,6 @@
 package org.apache.flink.service;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -27,26 +26,19 @@ import java.util.Objects;
  */
 public class ServiceInstance implements Serializable {
 
-	private final String serviceName;
+	private final int instanceId;
 
-	private final String instanceId;
+	private final String serviceIp;
 
-	private String serviceIp;
+	private final int servicePort;
 
-	private int servicePort;
-
-	private byte[] customData;
-
-	public ServiceInstance(String serviceName, String instanceId) {
-		this.serviceName = serviceName;
+	public ServiceInstance(int instanceId, String serviceIp, int servicePort) {
 		this.instanceId = instanceId;
+		this.serviceIp = serviceIp;
+		this.servicePort = servicePort;
 	}
 
-	public String getServiceName() {
-		return serviceName;
-	}
-
-	public String getInstanceId() {
+	public int getInstanceId() {
 		return instanceId;
 	}
 
@@ -54,27 +46,8 @@ public class ServiceInstance implements Serializable {
 		return serviceIp;
 	}
 
-	public ServiceInstance setServiceIp(String serviceIp) {
-		this.serviceIp = serviceIp;
-		return this;
-	}
-
 	public int getServicePort() {
 		return servicePort;
-	}
-
-	public ServiceInstance setServicePort(int servicePort) {
-		this.servicePort = servicePort;
-		return this;
-	}
-
-	public byte[] getCustomData() {
-		return customData;
-	}
-
-	public ServiceInstance setCustomData(byte[] customData) {
-		this.customData = customData;
-		return this;
 	}
 
 	@Override
@@ -86,23 +59,20 @@ public class ServiceInstance implements Serializable {
 			return false;
 		}
 		ServiceInstance that = (ServiceInstance) o;
-		return Objects.equals(serviceName, that.serviceName) &&
-			Objects.equals(instanceId, that.instanceId);
+		return instanceId == that.instanceId;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(serviceName, instanceId);
+		return Objects.hash(instanceId);
 	}
 
 	@Override
 	public String toString() {
 		return "ServiceInstance{" +
-			"serviceName='" + serviceName + '\'' +
-			", instanceId='" + instanceId + '\'' +
+			"instanceId=" + instanceId +
 			", serviceIp='" + serviceIp + '\'' +
 			", servicePort=" + servicePort +
-			", customData=" + Arrays.toString(customData) +
 			'}';
 	}
 }

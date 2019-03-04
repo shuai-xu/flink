@@ -25,9 +25,8 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
-import org.junit.{Assert, Ignore, Test}
+import org.junit.{Assert, Test}
 
-@Ignore
 class TableServiceExceptionTest extends BatchTestBase {
 
   @Test
@@ -61,16 +60,7 @@ class TableServiceExceptionTest extends BatchTestBase {
 
     filteredTable.collect().size
 
-    val cachedName = tEnv.tableServiceManager.getCachedTableName(filteredTable.logicalPlan).get
-
-
-    val baseDir = new File(rootPath)
-
-    val currentTableServiceDir = searchDir(baseDir, cachedName)
-
-    // delete exist cache
-    deleteAll(currentTableServiceDir)
-    Assert.assertTrue(!currentTableServiceDir.exists())
+    tEnv.tableServiceManager.unregisterPartitions(filteredTable)
 
     val result = filteredTable.select('a + 1 as 'a)
 
@@ -80,29 +70,9 @@ class TableServiceExceptionTest extends BatchTestBase {
     Assert.assertTrue(res.size == 4)
 
     // cache has been re-computed by original plan.
-    Assert.assertTrue(currentTableServiceDir.exists())
     Assert.assertEquals(List(2, 3, 4, 5).mkString("\n"), res.map(_.toString).mkString("\n"))
 
     tEnv.close()
-  }
-
-  private def deleteAll(dir: File): Unit = {
-    if (dir.isFile) {
-      dir.delete()
-    } else {
-      dir.listFiles().foreach(deleteAll(_))
-      dir.delete()
-    }
-  }
-
-  private def searchDir(base: File, tableName: String): File = {
-    base.listFiles.find(
-      subDir => if (subDir.isDirectory) {
-        subDir.listFiles().exists(f => f.isDirectory && f.getName == tableName)
-      } else {
-        false
-      }
-    ).get
   }
 
 }

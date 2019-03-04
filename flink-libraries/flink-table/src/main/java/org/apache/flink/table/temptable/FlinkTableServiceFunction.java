@@ -23,8 +23,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.service.ServiceContext;
 import org.apache.flink.service.ServiceDescriptor;
-import org.apache.flink.service.ServiceRegistry;
-import org.apache.flink.service.ServiceRegistryFactory;
 import org.apache.flink.service.UserDefinedService;
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
@@ -45,8 +43,6 @@ public class FlinkTableServiceFunction extends RichParallelSourceFunction<BaseRo
 	private static final Logger logger = LoggerFactory.getLogger(FlinkTableServiceFunction.class);
 
 	private ServiceDescriptor serviceDescriptor;
-
-	private String tableServiceId;
 
 	private UserDefinedService service;
 
@@ -84,14 +80,8 @@ public class FlinkTableServiceFunction extends RichParallelSourceFunction<BaseRo
 	@Override
 	public void open(Configuration parameters) throws Exception {
 		super.open(parameters);
-		tableServiceId = serviceDescriptor.getConfiguration().getString(TableServiceOptions.TABLE_SERVICE_ID);
 		service = (UserDefinedService) Class.forName(serviceDescriptor.getServiceClassName()).newInstance();
 		service.setServiceContext(new ServiceContext() {
-			@Override
-			public ServiceRegistry getRegistry() {
-				return ServiceRegistryFactory.getRegistry();
-			}
-
 			@Override
 			public MetricGroup getMetricGroup() {
 				return getRuntimeContext().getMetricGroup();
@@ -132,4 +122,5 @@ public class FlinkTableServiceFunction extends RichParallelSourceFunction<BaseRo
 		}
 		logger.info("TableService " + getRuntimeContext().getTaskNameWithSubtasks() + " stopped");
 	}
+
 }

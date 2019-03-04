@@ -129,7 +129,7 @@ abstract class TableEnvironment(
   private[flink] val tableNamePrefix = "_TempTable_"
 
   // sink nodes collection
-  private[flink] val sinkNodes = new mutable.MutableList[SinkNode]
+  private[flink] var sinkNodes = new mutable.MutableList[SinkNode]
 
   private[flink] val transformations = new ArrayBuffer[StreamTransformation[_]]
 

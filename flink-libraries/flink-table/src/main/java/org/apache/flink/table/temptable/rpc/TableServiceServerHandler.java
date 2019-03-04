@@ -40,10 +40,6 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 
 	private TableService tableService;
 
-	public TableService getTableService() {
-		return tableService;
-	}
-
 	public void setTableService(TableService tableService) {
 		this.tableService = tableService;
 	}
@@ -58,14 +54,23 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 			case TableServiceMessage.GET_PARTITIONS:
 				getPartitions(ctx, request);
 				break;
-			case TableServiceMessage.READ:
-				read(ctx, request);
-				break;
 			case TableServiceMessage.WRITE:
 				write(ctx, request);
 				break;
+			case TableServiceMessage.DELETE_PARTITION:
+				delete(ctx, request);
+				break;
 			case TableServiceMessage.INITIALIZE_PARTITION:
 				initializePartition(ctx, request);
+				break;
+			case TableServiceMessage.REGISTER_PARTITION:
+				registerPartition(ctx, request);
+				break;
+			case TableServiceMessage.UNREGISTER_PARTITIONS:
+				unregisterPartition(ctx, request);
+				break;
+			case TableServiceMessage.FINISH_PARTITION:
+				finishPartition(ctx, request);
 				break;
 			default:
 				LOG.error("Unsupported call: " + call);
@@ -90,29 +95,6 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
-	private void read(ChannelHandlerContext ctx, byte[] request) {
-		int offset = 1;
-		try {
-			int tableNameLength = BytesUtil.bytesToInt(request, offset);
-			offset += Integer.BYTES;
-			String tableName = new String(request, offset, tableNameLength, "UTF-8");
-			offset += tableNameLength;
-			int partitionId = BytesUtil.bytesToInt(request, offset);
-			offset += Integer.BYTES;
-			int readOffset = BytesUtil.bytesToInt(request, offset);
-			offset += Integer.BYTES;
-			int readCount = BytesUtil.bytesToInt(request, offset);
-			offset += Integer.BYTES;
-			byte[] result = tableService.read(tableName, partitionId, readOffset, readCount);
-			sendReadResponse(ctx, result);
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
-			LOG.error(e.getMessage(), e);
-			sendError(ctx, e.getMessage());
-		}
-
-	}
-
 	private void write(ChannelHandlerContext ctx, byte[] request) {
 		int offset = 1;
 		try {
@@ -133,6 +115,23 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
+	private void delete(ChannelHandlerContext ctx, byte[] request) {
+		int offset = 1;
+		try {
+			int tableNameLength = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			String tableName = new String(request, offset, tableNameLength, "UTF-8");
+			offset += tableNameLength;
+			int partitionId = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			tableService.delete(tableName, partitionId);
+			sendVoidResponse(ctx);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			sendError(ctx, e.getMessage());
+		}
+	}
+
 	private void initializePartition(ChannelHandlerContext ctx, byte[] request) {
 		int offset = 1;
 		try {
@@ -143,7 +142,53 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 			int partitionId = BytesUtil.bytesToInt(request, offset);
 			offset += Integer.BYTES;
 			tableService.initializePartition(tableName, partitionId);
-			sendInitializePartitionResponse(ctx);
+			sendVoidResponse(ctx);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			sendError(ctx, e.getMessage());
+		}
+	}
+
+	private void registerPartition(ChannelHandlerContext ctx, byte[] request) {
+		int offset = 1;
+		try {
+			int tableNameLength = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			String tableName = new String(request, offset, tableNameLength, "UTF-8");
+			offset += tableNameLength;
+			int partitionId = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			tableService.registerPartition(tableName, partitionId);
+			sendVoidResponse(ctx);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			sendError(ctx, e.getMessage());
+		}
+	}
+
+	private void unregisterPartition(ChannelHandlerContext ctx, byte[] request) {
+		int offset = 1;
+		try {
+			String tableName = new String(request, offset, request.length - offset, "UTF-8");
+			tableService.unregisterPartition(tableName);
+			sendVoidResponse(ctx);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			sendError(ctx, e.getMessage());
+		}
+	}
+
+	private void finishPartition(ChannelHandlerContext ctx, byte[] request) {
+		int offset = 1;
+		try {
+			int tableNameLength = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			String tableName = new String(request, offset, tableNameLength, "UTF-8");
+			offset += tableNameLength;
+			int partitionId = BytesUtil.bytesToInt(request, offset);
+			offset += Integer.BYTES;
+			tableService.finishPartition(tableName, partitionId);
+			sendVoidResponse(ctx);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 			sendError(ctx, e.getMessage());
@@ -202,18 +247,11 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 		ctx.writeAndFlush(buffer);
 	}
 
-	private void sendReadResponse(ChannelHandlerContext ctx, byte[] content) {
-		int totalLength = Integer.BYTES + Byte.BYTES + content.length;
-		byte[] totalLengthBytes = BytesUtil.intToBytes(totalLength);
-		ByteBuf buffer = Unpooled.wrappedBuffer(
-			totalLengthBytes,
-			TableServiceMessage.SUCCESS_BYTES,
-			content
-		);
-		ctx.writeAndFlush(buffer);
-	}
-
-	private void sendInitializePartitionResponse(ChannelHandlerContext ctx) {
+	/**
+	 * A success response without data.
+	 * @param ctx
+	 */
+	private void sendVoidResponse(ChannelHandlerContext ctx) {
 		int totalLength = Integer.BYTES + Byte.BYTES;
 		byte[] totalLengthBytes = BytesUtil.intToBytes(totalLength);
 		ByteBuf buffer = Unpooled.wrappedBuffer(
@@ -222,4 +260,5 @@ public class TableServiceServerHandler extends ChannelInboundHandlerAdapter {
 		);
 		ctx.writeAndFlush(buffer);
 	}
+
 }

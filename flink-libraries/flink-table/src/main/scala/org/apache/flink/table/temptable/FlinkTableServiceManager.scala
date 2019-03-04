@@ -23,7 +23,8 @@ import java.util.UUID
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.common.JobSubmissionResult
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
-import org.apache.flink.service.ServiceDescriptor
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.service.{ServiceDescriptor, ServiceInstance}
 import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.factories.TableFactory
@@ -31,6 +32,7 @@ import org.apache.flink.table.plan.CacheAwareRelNodePlanBuilder
 import org.apache.flink.table.temptable.util.TableServiceUtil
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.table.api.{Table, TableEnvironment}
+import org.apache.flink.table.temptable.rpc.{TableServiceClient, TableServiceRegistry}
 
 import scala.collection.JavaConverters._
 
@@ -51,6 +53,10 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
 
   private lazy val tableServiceId: String = UUID.randomUUID().toString
 
+  private var tableServiceRegistry: TableServiceRegistry = _
+
+  private var tableServiceClient: TableServiceClient = _
+
   def getTableServiceFactory(): Option[TableFactory] = {
     Option(tEnv.getConfig.getTableServiceFactoryDescriptor().getTableFactory)
   }
@@ -63,6 +69,9 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
     Option(tEnv.getConfig.getTableServiceDescriptor)
   }
 
+  def getTableServiceInstance(): java.util.Map[Integer, ServiceInstance] =
+    tableServiceRegistry.getRegistedServices
+
   private[flink] val cachePlanBuilder: CacheAwareRelNodePlanBuilder =
     new CacheAwareRelNodePlanBuilder(tEnv)
 
@@ -74,7 +83,7 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
     toBeCachedTables.put(table.logicalPlan, tableUUID)
 
     val cacheSink = cachePlanBuilder.createCacheTableSink(tableUUID, table.logicalPlan)
-    tEnv.writeToSink(table, cacheSink)
+    tEnv.writeToSink(table, cacheSink, tableUUID)
 
     val cacheSource = cachePlanBuilder.createCacheTableSource(tableUUID, table.logicalPlan)
     if (tEnv.getTable(tableUUID).isEmpty) {
@@ -87,12 +96,51 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
     cacheTable(table, name)
   }
 
+  def invalidateCache(table: Table): Unit = {
+    if (toBeCachedTables.containsKey(table.logicalPlan)) {
+      val uuid = toBeCachedTables.get(table.logicalPlan)
+      tEnv.sinkNodes = tEnv.sinkNodes.filter(_.sinkName != uuid)
+      toBeCachedTables.remove(table.logicalPlan)
+    } else if (cachedTables.containsKey(table.logicalPlan)) {
+      val uuid = cachedTables.get(table.logicalPlan)
+      deleteTable(uuid)
+      cachedTables.remove(table.logicalPlan)
+    }
+  }
+
+  private def deleteTable(tableUUID: String): Unit = {
+    if (tableServiceRegistry != null) {
+      initClient()
+      val partitions = tableServiceClient.getPartitions(tableUUID)
+      partitions.asScala.foreach {
+        partition => tableServiceClient.deletePartition(tableUUID, partition)
+      }
+      tableServiceClient.unregisterPartitions(tableUUID)
+    } else {
+      // this indicates a test path, ignore
+    }
+  }
+
+  /**
+    * Used for test only
+    * @param table
+    */
+  private[temptable] def unregisterPartitions(table: Table): Unit = {
+    if (cachedTables.containsKey(table.logicalPlan)) {
+      val uuid = cachedTables.get(table.logicalPlan)
+      initClient()
+      tableServiceClient.unregisterPartitions(uuid)
+    }
+  }
+
   /**
     * invalidate all cached tables if TableService is failed.
     */
   def invalidateCachedTable(): Unit = {
     cachedTables.asScala.foreach {
-      case (plan, name) => cacheTable(new Table(tEnv, plan), name)
+      case (plan, name) => {
+        cacheTable(new Table(tEnv, plan), name)
+      }
     }
     cachedTables.clear()
   }
@@ -122,14 +170,34 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
   @VisibleForTesting
   private[flink] def startTableServiceJobInternally(descriptor: ServiceDescriptor): Unit = {
     if (!tableServiceStarted) {
+      tableServiceRegistry = new TableServiceRegistry(descriptor.getServiceParallelism)
+      tableServiceRegistry.open(descriptor.getConfiguration)
+      TableServiceUtil.checkRegistryServiceReady(
+        tableServiceRegistry,
+        descriptor.getConfiguration
+          .getInteger(TableServiceOptions.TABLE_REGISTRY_READY_RETRY_TIMES),
+        descriptor.getConfiguration
+          .getLong(TableServiceOptions.TABLE_REGISTRY_READY_RETRY_BACKOFF_MS)
+      )
+      descriptor.getConfiguration
+        .setString(TableServiceOptions.TABLE_SERVICE_REGISTRY_ADDRESS, tableServiceRegistry.getIp)
+      descriptor.getConfiguration
+        .setInteger(TableServiceOptions.TABLE_SERVICE_REGISTRY_PORT, tableServiceRegistry.getPort)
       val executionEnv = StreamExecutionEnvironment.getExecutionEnvironment
       executionEnv.setRestartStrategy(
         RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, 500L))
       descriptor.getConfiguration.setString(TableServiceOptions.TABLE_SERVICE_ID, tableServiceId)
       TableServiceUtil.createTableServiceJob(executionEnv, descriptor)
       submitResult = executionEnv.submit("FlinkTableServiceJob")
-      tableServiceEnv = executionEnv
       tableServiceStarted = true
+      tableServiceEnv = executionEnv
+      TableServiceUtil.checkTableServiceReady(
+        tableServiceRegistry,
+        descriptor.getConfiguration
+          .getInteger(TableServiceOptions.TABLE_SERVICE_READY_RETRY_TIMES),
+        descriptor.getConfiguration
+          .getLong(TableServiceOptions.TABLE_SERVICE_READY_RETRY_BACKOFF_MS)
+      )
     }
   }
 
@@ -137,6 +205,23 @@ class FlinkTableServiceManager(tEnv: TableEnvironment) {
     if (tableServiceStarted) {
       tableServiceEnv.stopJob(submitResult.getJobID)
       tableServiceStarted = false
+    }
+    if (tableServiceRegistry != null) {
+      tableServiceRegistry.close()
+      tableServiceRegistry = null
+    }
+    if (tableServiceClient != null) {
+      tableServiceClient.close()
+      tableServiceClient = null
+    }
+  }
+
+  private def initClient(): Unit = {
+    if (tableServiceClient == null) {
+      tableServiceClient = new TableServiceClient
+      val config = new Configuration
+      TableServiceUtil.injectTableServiceInstances(tableServiceRegistry.getRegistedServices, config)
+      tableServiceClient.open(config)
     }
   }
 

@@ -21,12 +21,12 @@ package org.apache.flink.table.temptable.rpc;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.service.LifeCycleAware;
 import org.apache.flink.service.ServiceInstance;
-import org.apache.flink.service.ServiceRegistry;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryRow;
 import org.apache.flink.table.temptable.TableServiceException;
 import org.apache.flink.table.temptable.TableServiceOptions;
 import org.apache.flink.table.temptable.util.BytesUtil;
+import org.apache.flink.table.temptable.util.TableServiceUtil;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 
 import org.apache.flink.shaded.netty4.io.netty.bootstrap.Bootstrap;
@@ -43,11 +43,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 /**
  * Built-in implementation of Table Service Client.
@@ -57,13 +55,9 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private Logger logger = LoggerFactory.getLogger(TableServiceClient.class);
 
-	private List<ServiceInstance> serviceInfoList;
-
 	private String lastTableName = null;
 
 	private int lastPartitionIndex = -1;
-
-	private int lastTablePartitionOffset = 0;
 
 	private Bootstrap bootstrap;
 
@@ -75,69 +69,93 @@ public class TableServiceClient implements LifeCycleAware {
 
 	private volatile TableServiceBuffer writeBuffer;
 
-	private volatile TableServiceBuffer readBuffer;
-
-	private int readBufferSize;
-
 	private int writeBufferSize;
-
-	private ServiceRegistry registry;
 
 	private String tableServiceId;
 
-	public void setRegistry(ServiceRegistry registry) {
-		this.registry = registry;
+	public Map<Integer, ServiceInstance> getServiceInstanceMap() {
+		return serviceInstanceMap;
 	}
 
-	public final ServiceRegistry getRegistry() {
-		return registry;
-	}
+	private Map<Integer, ServiceInstance> serviceInstanceMap;
 
 	public List<Integer> getPartitions(String tableName) {
-		List<ServiceInstance> serviceInfoList = getRegistry().getAllInstances(tableServiceId);
+		ServiceInstance serviceInstance = serviceInstanceMap.get(0);
 		List<Integer> partitions = new ArrayList<>();
-		if (serviceInfoList != null) {
-			for (ServiceInstance serviceInfo : serviceInfoList) {
-				Bootstrap bootstrap = new Bootstrap();
-				TableServiceClientHandler clientHandler = new TableServiceClientHandler();
-				ChannelFuture channelFuture = null;
-				try {
-					bootstrap.group(eventLoopGroup)
-						.channel(NioSocketChannel.class)
-						.option(ChannelOption.TCP_NODELAY, true)
-						.handler(new ChannelInitializer<SocketChannel>() {
-							@Override
-							protected void initChannel(SocketChannel socketChannel) throws Exception {
-								socketChannel.pipeline().addLast(new LengthFieldBasedFrameDecoder(
-									65536,
-									0,
-									Integer.BYTES,
-									-Integer.BYTES,
-									Integer.BYTES)
-								);
-								socketChannel.pipeline().addLast(clientHandler);
-							}
-						});
-					channelFuture = bootstrap.connect(serviceInfo.getServiceIp(), serviceInfo.getServicePort()).sync();
-					List<Integer> subPartitions = clientHandler.getPartitions(tableName);
-					if (subPartitions != null && !subPartitions.isEmpty()) {
-						partitions.addAll(subPartitions);
-					}
-				} catch (Exception e) {
-					logger.error(e.getMessage(), e);
-					throw new TableServiceException(new RuntimeException(e.getMessage(), e));
-				} finally {
-					if (channelFuture != null) {
-						try {
-							channelFuture.channel().close().sync();
-						} catch (InterruptedException e) {
-							logger.error(e.getMessage(), e);
-						}
+		if (serviceInstance != null) {
+			TableServiceClientHandler clientHandler = new TableServiceClientHandler();
+			Bootstrap bootstrap = getTempBootstrap(clientHandler);
+			ChannelFuture channelFuture = null;
+			try {
+				channelFuture = bootstrap.connect(serviceInstance.getServiceIp(), serviceInstance.getServicePort()).sync();
+				List<Integer> subPartitions = clientHandler.getPartitions(tableName);
+				if (subPartitions != null && !subPartitions.isEmpty()) {
+					partitions.addAll(subPartitions);
+				}
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+				throw new TableServiceException(new RuntimeException(e.getMessage(), e));
+			} finally {
+				if (channelFuture != null) {
+					try {
+						channelFuture.channel().close().sync();
+					} catch (InterruptedException e) {
+						logger.error(e.getMessage(), e);
 					}
 				}
 			}
 		}
 		return partitions;
+	}
+
+	public void unregisterPartitions(String tableName) {
+		ServiceInstance serviceInstance = serviceInstanceMap.get(0);
+		if (serviceInstance != null) {
+			TableServiceClientHandler clientHandler = new TableServiceClientHandler();
+			Bootstrap bootstrap = getTempBootstrap(clientHandler);
+			ChannelFuture channelFuture = null;
+			try {
+				channelFuture = bootstrap.connect(serviceInstance.getServiceIp(), serviceInstance.getServicePort()).sync();
+				clientHandler.unregisterPartitions(tableName);
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+				throw new TableServiceException(new RuntimeException(e.getMessage(), e));
+			} finally {
+				if (channelFuture != null) {
+					try {
+						channelFuture.channel().close().sync();
+					} catch (InterruptedException e) {
+						logger.error(e.getMessage(), e);
+					}
+				}
+			}
+		}
+	}
+
+	private Bootstrap getTempBootstrap(TableServiceClientHandler handler) {
+		Bootstrap bootstrap = new Bootstrap();
+		try {
+			bootstrap.group(eventLoopGroup)
+				.channel(NioSocketChannel.class)
+				.option(ChannelOption.TCP_NODELAY, true)
+				.handler(new ChannelInitializer<SocketChannel>() {
+					@Override
+					protected void initChannel(SocketChannel socketChannel) throws Exception {
+						socketChannel.pipeline().addLast(new LengthFieldBasedFrameDecoder(
+							65536,
+							0,
+							Integer.BYTES,
+							-Integer.BYTES,
+							Integer.BYTES)
+						);
+						socketChannel.pipeline().addLast(handler);
+					}
+				});
+			return bootstrap;
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+			throw new TableServiceException(new RuntimeException(e.getMessage(), e));
+		}
 	}
 
 	public void write(String tableName, int partitionIndex, BaseRow row, BaseRowSerializer baseRowSerializer) throws Exception {
@@ -159,27 +177,9 @@ public class TableServiceClient implements LifeCycleAware {
 		}
 	}
 
-	public BaseRow readNext(String tableName, int partitionIndex, BaseRowSerializer baseRowSerializer) throws Exception {
+	public void finish(String tableName, int partitionIndex) throws Exception {
 		ensureConnected(tableName, partitionIndex);
-		if (readBuffer == null) {
-			readBuffer = new TableServiceBuffer(tableName, partitionIndex, readBufferSize);
-		}
-
-		byte[] buffer = readFromBuffer(Integer.BYTES);
-
-		if (buffer == null) {
-			return null;
-		}
-
-		int sizeInBytes = BytesUtil.bytesToInt(buffer);
-
-		buffer = readFromBuffer(sizeInBytes);
-
-		if (buffer == null) {
-			return null;
-		}
-
-		return BytesUtil.deSerialize(buffer, sizeInBytes, baseRowSerializer);
+		clientHandler.finishPartition(tableName, partitionIndex);
 	}
 
 	public void initializePartition(String tableName, int partitionIndex) throws Exception {
@@ -187,36 +187,54 @@ public class TableServiceClient implements LifeCycleAware {
 		clientHandler.initializePartition(tableName, partitionIndex);
 	}
 
+	public void deletePartition(String tableName, int partitionIndex) throws Exception {
+		ensureConnected(tableName, partitionIndex);
+		clientHandler.deletePartition(tableName, partitionIndex);
+	}
+
+	public void registerPartition(String tableName, int partitionIndex) throws Exception {
+		ServiceInstance serviceInstance = serviceInstanceMap.get(0);
+		if (serviceInstance != null) {
+			TableServiceClientHandler clientHandler = new TableServiceClientHandler();
+			Bootstrap bootstrap = getTempBootstrap(clientHandler);
+			ChannelFuture channelFuture = null;
+			try {
+				channelFuture = bootstrap.connect(serviceInstance.getServiceIp(), serviceInstance.getServicePort()).sync();
+				clientHandler.registerPartition(tableName, partitionIndex);
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+				throw new TableServiceException(new RuntimeException(e.getMessage(), e));
+			} finally {
+				if (channelFuture != null) {
+					try {
+						channelFuture.channel().close().sync();
+					} catch (InterruptedException e) {
+						logger.error(e.getMessage(), e);
+					}
+				}
+			}
+		}
+	}
+
 	@Override
-	public void open(Configuration config) throws Exception{
+	public void open(Configuration config) throws Exception {
 
 		tableServiceId = config.getString(TableServiceOptions.TABLE_SERVICE_ID);
 
 		logger.info("TableServiceClient open with tableServiceId = " + tableServiceId);
 
-		if (getRegistry() != null) {
-			getRegistry().open(config);
-		}
-
-		readBufferSize = config.getInteger(TableServiceOptions.TABLE_SERVICE_CLIENT_READ_BUFFER_SIZE);
 		writeBufferSize = config.getInteger(TableServiceOptions.TABLE_SERVICE_CLIENT_WRITE_BUFFER_SIZE);
 
 		eventLoopGroup = new NioEventLoopGroup();
+
+		serviceInstanceMap = new HashMap<>();
+		serviceInstanceMap.putAll(TableServiceUtil.buildTableServiceInstance(config));
 	}
 
 	@Override
 	public void close() throws Exception {
 
-		if (writeBuffer != null) {
-			writeBuffer.getByteBuffer().flip();
-			if (writeBuffer.getByteBuffer().hasRemaining()) {
-				ensureConnected(writeBuffer.getTableName(), writeBuffer.getPartitionIndex());
-				byte[] writeBytes = new byte[writeBuffer.getByteBuffer().remaining()];
-				writeBuffer.getByteBuffer().get(writeBytes);
-				clientHandler.write(writeBuffer.getTableName(), writeBuffer.getPartitionIndex(), writeBytes);
-				writeBuffer.getByteBuffer().clear();
-			}
-		}
+		flush();
 
 		if (channelFuture != null) {
 			try {
@@ -227,6 +245,19 @@ public class TableServiceClient implements LifeCycleAware {
 		}
 		if (eventLoopGroup != null && !eventLoopGroup.isShutdown()) {
 			eventLoopGroup.shutdownGracefully();
+		}
+	}
+
+	public void flush() throws Exception {
+		if (writeBuffer != null) {
+			writeBuffer.getByteBuffer().flip();
+			if (writeBuffer.getByteBuffer().hasRemaining()) {
+				ensureConnected(writeBuffer.getTableName(), writeBuffer.getPartitionIndex());
+				byte[] writeBytes = new byte[writeBuffer.getByteBuffer().remaining()];
+				writeBuffer.getByteBuffer().get(writeBytes);
+				clientHandler.write(writeBuffer.getTableName(), writeBuffer.getPartitionIndex(), writeBytes);
+				writeBuffer.getByteBuffer().clear();
+			}
 		}
 	}
 
@@ -248,24 +279,17 @@ public class TableServiceClient implements LifeCycleAware {
 
 		lastTableName = tableName;
 		lastPartitionIndex = partitionIndex;
-		lastTablePartitionOffset = 0;
-		serviceInfoList = getRegistry().getAllInstances(tableServiceId);
 
-		if (serviceInfoList == null || serviceInfoList.isEmpty()) {
-			logger.error("fetch serviceInfoList fail");
-			throw new TableServiceException(new RuntimeException("serviceInfoList is empty"));
+		if (serviceInstanceMap == null || serviceInstanceMap.isEmpty()) {
+			throw new TableServiceException(new RuntimeException("serviceInstanceMap is empty"));
 		}
 
-		Collections.sort(serviceInfoList, Comparator.comparing(ServiceInstance::getInstanceId));
+		int pickIndex = TableServiceUtil.tablePartitionToIndex(tableName, partitionIndex, serviceInstanceMap.size());
 
-		int hashCode = Objects.hash(tableName, partitionIndex);
-
-		int pickIndex = (hashCode % serviceInfoList.size());
-		if (pickIndex < 0) {
-			pickIndex += serviceInfoList.size();
+		ServiceInstance pickedServiceInfo = serviceInstanceMap.get(pickIndex);
+		if (pickedServiceInfo == null) {
+			throw new TableServiceException(new RuntimeException("serviceInstanceMap does not contains service instance with instanceId = " + pickIndex));
 		}
-
-		ServiceInstance pickedServiceInfo = serviceInfoList.get(pickIndex);
 
 		logger.info("build client with ip = " + pickedServiceInfo.getServiceIp() + ", port = " + pickedServiceInfo.getServicePort());
 
@@ -297,89 +321,6 @@ public class TableServiceClient implements LifeCycleAware {
 		}
 
 		logger.info("build client end");
-	}
-
-	public boolean isReady() {
-
-		List<ServiceInstance> serviceInfoList = getRegistry().getAllInstances(tableServiceId);
-
-		if (serviceInfoList == null || serviceInfoList.isEmpty()) {
-			logger.info("serviceInfoList is empty");
-			return false;
-		}
-
-		String headInstanceId = serviceInfoList.get(0).getInstanceId();
-
-		int totalInstanceNumber = Integer.valueOf(headInstanceId.split("_")[1]);
-
-		if (serviceInfoList.size() != totalInstanceNumber) {
-			logger.info("expected " + totalInstanceNumber + " instance, but only " + serviceInfoList.size() + " found");
-			return false;
-		}
-
-		boolean misMatch = serviceInfoList.stream()
-			.anyMatch(serviceInfo -> !serviceInfo.getInstanceId().split("_")[1].equals(totalInstanceNumber + ""));
-
-		if (misMatch) {
-			logger.info("mismatch total number of instance");
-			return false;
-		}
-
-		boolean countMatch = serviceInfoList.stream()
-			.map(serviceInfo -> Integer.valueOf(serviceInfo.getInstanceId().split("_")[0]))
-			.collect(Collectors.toSet())
-			.size() == totalInstanceNumber;
-
-		if (!countMatch) {
-			logger.info("some instance is not ready");
-			return false;
-		}
-
-		return true;
-	}
-
-	private byte[] readFromBuffer(int readCount) throws Exception {
-
-		readBuffer.getByteBuffer().flip();
-		byte[] bytes;
-		int remaining = readBuffer.getByteBuffer().remaining();
-		if (remaining >= readCount) {
-			bytes = new byte[readCount];
-			readBuffer.getByteBuffer().get(bytes);
-			readBuffer.getByteBuffer().compact();
-		} else {
-			bytes = new byte[readCount];
-			readBuffer.getByteBuffer().get(bytes, 0, remaining);
-			int count = remaining;
-			if (count < readCount) {
-				boolean success = fillReadBufferFromClient();
-				if (success) {
-					byte[] bufferRead = readFromBuffer(readCount - count);
-					if (bufferRead != null) {
-						System.arraycopy(bufferRead, 0, bytes, count, readCount - count);
-					} else {
-						return null;
-					}
-				} else {
-					return null;
-				}
-			}
-		}
-		return bytes;
-	}
-
-	private boolean fillReadBufferFromClient() throws Exception {
-		byte[] buffer;
-		buffer = clientHandler.read(lastTableName, lastPartitionIndex, lastTablePartitionOffset, readBufferSize);
-
-		if (buffer != null && buffer.length > 0) {
-			lastTablePartitionOffset += buffer.length;
-			readBuffer.getByteBuffer().clear();
-			readBuffer.getByteBuffer().put(buffer);
-			return true;
-		}
-
-		return false;
 	}
 
 }

@@ -88,7 +88,7 @@ public final class TableServiceOptions {
 	 */
 	public static final ConfigOption<Integer> TABLE_SERVICE_READY_RETRY_TIMES =
 		key("flink.service.table.service.ready.retry.times")
-		.defaultValue(3)
+		.defaultValue(10)
 		.withDescription("How many times the TableServiceClient will retry to check TableService's status.");
 
 	/**
@@ -96,8 +96,25 @@ public final class TableServiceOptions {
 	 */
 	public static final ConfigOption<Long> TABLE_SERVICE_READY_RETRY_BACKOFF_MS =
 		key("flink.service.table.service.ready.backoff.ms")
-		.defaultValue(10000L)
+		.defaultValue(3000L)
 		.withDescription("How long the TableServiceClient will wait before the next retry.");
+
+	/**
+	 * How many times the table service manager will retry to check RegistryService's status.
+	 * TableServiceClient will throw {@link TableServiceException} if the retries are exhausted.
+	 */
+	public static final ConfigOption<Integer> TABLE_REGISTRY_READY_RETRY_TIMES =
+		key("flink.service.table.registry.ready.retry.times")
+			.defaultValue(10)
+			.withDescription("How many times the table service manager will retry to check RegistryService's status.");
+
+	/**
+	 * How long the table service manager will wait before the next retry.
+	 */
+	public static final ConfigOption<Long> TABLE_REGISTRY_READY_RETRY_BACKOFF_MS =
+		key("flink.service.table.registry.ready.backoff.ms")
+			.defaultValue(1000L)
+			.withDescription("How long the table service manager will wait before the next retry.");
 
 	/**
 	 * Specify the id of the TableService instance.
@@ -117,14 +134,6 @@ public final class TableServiceOptions {
 		.withDescription("Specify the root path for table storage, System.getProperty(\"user.dir\") will be used if not specified.");
 
 	/**
-	 * Specify the maximum size (in bytes) of a table partition segment file.
-	 */
-	public static final ConfigOption<Integer> TABLE_SERVICE_STORAGE_SEGMENT_MAX_SIZE =
-		key("fink.service.table.service.storage.segment.max.size")
-		.defaultValue(128 * 1024 * 1024)
-		.withDescription("Specify the maximum size (in bytes) of a table partition segment file.");
-
-	/**
 	 * Specify the read buffer size for TableServiceClient.
 	 */
 	public static final ConfigOption<Integer> TABLE_SERVICE_CLIENT_READ_BUFFER_SIZE =
@@ -139,5 +148,20 @@ public final class TableServiceOptions {
 		key("flink.service.table.service.client.write.buffer.size")
 		.defaultValue(4 * 1024 * 1024)
 		.withDescription("Specify the write buffer size (in bytes) for TableServiceClient.");
+
+	public static final ConfigOption<String> TABLE_SERVICE_REGISTRY_ADDRESS =
+		key("flink.service.table.service.registry.address")
+		.noDefaultValue()
+		.withDescription("");
+
+	public static final ConfigOption<Integer> TABLE_SERVICE_REGISTRY_PORT =
+		key("flink.service.table.service.registry.port")
+		.defaultValue(-1)
+		.withDescription("");
+
+	public static final ConfigOption<String> TABLE_SERVICE_INSTANCES =
+		key("flink.service.table.service.instances")
+		.noDefaultValue()
+		.withDescription("");
 
 }

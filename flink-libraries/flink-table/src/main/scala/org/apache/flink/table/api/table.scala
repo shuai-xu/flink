@@ -210,6 +210,33 @@ class Table(
   }
 
   /**
+    * Invalidate the cache if this table has already been cached.
+    *
+    * This method provides a hint to Flink that the cache of this table will no longer be used.
+    * The following code snippet gives an example of how this method could be used.
+    * {{{
+    *   val t = tEnv.fromCollection(data).as('country, 'color, 'count)
+    *   val t1 = t.filter('count < 100)
+    *   t1.cache()
+    *   // t1 is cached after it is generated for the first time.
+    *   val x = t1.collect()
+    *   x.size()
+    *
+    *   t1.invalidateCache()
+    *
+    *   // this call acts just as t1 is never cached before.
+    *   // so table x and table y has exactly the same plan.
+    *   val y = t1.collect()
+    *   y.size()
+    *
+    * }}}
+    *
+    */
+  def invalidateCache(): Unit = {
+    tableEnv.tableServiceManager.invalidateCache(this)
+  }
+
+  /**
     * Performs a selection operation. Similar to an SQL SELECT statement. The field expressions
     * can contain complex expressions and aggregations.
     *

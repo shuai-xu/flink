@@ -45,15 +45,12 @@ public interface TableService {
 	int write(String tableName, int partitionId, byte[] content) throws Exception;
 
 	/**
-	 * Given a table, read from the specified partition, starting from the given offset and read up to the given number of bytes.
+	 * Delete one partition of a table.
 	 * @param tableName the name of the table.
 	 * @param partitionId partition id of the table.
-	 * @param offset the start index for read.
-	 * @param readCount the length for read.
-	 * @return the bytes of successful read, may be shorter than readCount, never return null.
 	 * @throws Exception
 	 */
-	byte[] read(String tableName, int partitionId, int offset, int readCount) throws Exception;
+	void delete(String tableName, int partitionId) throws Exception;
 
 	/**
 	 * initialize a table with specified partition, this request will delete the data if the given table name and partition id.
@@ -63,4 +60,26 @@ public interface TableService {
 	 */
 	void initializePartition(String tableName, int partitionId) throws Exception;
 
+	/**
+	 * register a table with specified partition.
+	 * @param tableName the name of the table.
+	 * @param partitionId partition id of the table.
+	 * @throws Exception
+	 */
+	void registerPartition(String tableName, int partitionId) throws Exception;
+
+	/**
+	 * unregister all partitions of a table.
+	 * @param tableName the name of the table.
+	 * @throws Exception
+	 */
+	void unregisterPartition(String tableName) throws Exception;
+
+	/**
+	 * finish writing partition of table, this will generate finish file and index file.
+	 * @param tableName the name of the table.
+	 * @param partitionId partition id of the table.
+	 * @throws Exception
+	 */
+	void finishPartition(String tableName, int partitionId) throws Exception;
 }

@@ -24,8 +24,8 @@ import org.apache.flink.table.plan.logical.LogicalNode
 import org.apache.flink.table.plan.util.LogicalNodeUtil
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.temptable.TableServiceOptions
 import org.apache.flink.table.types.{DataType, InternalType, TimestampType}
+import org.apache.flink.table.temptable.{FlinkTableServiceFactory, TableServiceOptions}
 import org.apache.flink.table.util.TableProperties
 
 import _root_.scala.collection.JavaConverters._
@@ -82,6 +82,11 @@ class CacheAwareRelNodePlanBuilder(tEnv: TableEnvironment) {
     var schema: Option[RichTableSchema] = None
     var properties: Option[TableProperties] =
       tEnv.tableServiceManager.getTableServiceFactoryProperties()
+
+    tableFactory match {
+      case Some(factory: FlinkTableServiceFactory) => factory.setTableEnv(tEnv)
+      case _ =>
+    }
 
     def createCacheTableSink(): TableSink[_] = {
       build()

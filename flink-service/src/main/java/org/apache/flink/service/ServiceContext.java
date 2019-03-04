@@ -26,12 +26,6 @@ import org.apache.flink.metrics.MetricGroup;
 public interface ServiceContext {
 
 	/**
-	 * Access the {@link ServiceRegistry}.
-	 * @return ServiceRegistry of the environment.
-	 */
-	ServiceRegistry getRegistry();
-
-	/**
 	 * Access the {@link MetricGroup}.
 	 * @return MetricGroup of the environment.
 	 */

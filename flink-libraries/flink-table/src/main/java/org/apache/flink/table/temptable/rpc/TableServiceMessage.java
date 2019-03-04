@@ -31,14 +31,14 @@ public class TableServiceMessage {
 	public static final byte GET_PARTITIONS = 1;
 
 	/**
-	 * Indicates this is a {@link TableService} read request.
-	 */
-	public static final byte READ = 2;
-
-	/**
 	 * Indicates this is a {@link TableService} write request.
 	 */
-	public static final byte WRITE = 3;
+	public static final byte WRITE = 2;
+
+	/**
+	 * Indicates this is a {@link TableService} delete partition request.
+	 */
+	public static final byte DELETE_PARTITION = 3;
 
 	/**
 	 * Indicates this is a {@link TableService} initialize partition request.
@@ -46,24 +46,54 @@ public class TableServiceMessage {
 	public static final byte INITIALIZE_PARTITION = 4;
 
 	/**
+	 * Indicates this is a {@link TableService} register table partition request.
+	 */
+	public static final byte REGISTER_PARTITION = 5;
+
+	/**
+	 * Indicates this is a {@link TableService} unregister partitions request.
+	 */
+	public static final byte UNREGISTER_PARTITIONS = 6;
+
+	/**
+	 * Indicates this is a {@link TableService} has finished write table partition.
+	 */
+	public static final byte FINISH_PARTITION = 7;
+
+	/**
 	 * The bytes of GET_PARTITIONS.
 	 */
 	public static final byte[] GET_PARTITIONS_BYTES = new byte[] {1};
 
 	/**
-	 * The bytes of READ.
-	 */
-	public static final byte[] READ_BYTES = new byte[] {2};
-
-	/**
 	 * The bytes of WRITE.
 	 */
-	public static final byte[] WRITE_BYTES = new byte[] {3};
+	public static final byte[] WRITE_BYTES = new byte[] {2};
+
+	/**
+	 * The bytes of DELETE_PARTITION.
+	 */
+	public static final byte[] DELETE_PARTITION_BYTES = new byte[] {3};
 
 	/**
 	 * The bytes of INITIALIZE_PARTITION.
 	 */
 	public static final byte[] INITIALIZE_PARTITION_BYTES = new byte[] {4};
+
+	/**
+	 * The bytes of REGISTER_PARTITION.
+	 */
+	public static final byte[] REGISTER_PARTITION_BYTES = new byte[] {5};
+
+	/**
+	 * The bytes of UNREGISTER_PARTITION.
+	 */
+	public static final byte[] UNREGISTER_PARTITIONS_BYTES = new byte[] {6};
+
+	/**
+	 * The bytes of REGISTER_PARTITION.
+	 */
+	public static final byte[] FINISH_PARTITION_BYTES = new byte[] {7};
 
 	/**
 	 * Indicates this is a successful request.

@@ -18,7 +18,9 @@
 
 package org.apache.flink.table.temptable
 
-import org.apache.flink.table.api.RichTableSchema
+import java.util.Collections
+
+import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory}
 import org.apache.flink.table.sinks.BatchTableSink
@@ -26,10 +28,10 @@ import org.apache.flink.table.sources.BatchTableSource
 import org.apache.flink.table.types.{DataType, RowType}
 import org.apache.flink.table.util.TableProperties
 
-import java.util.Collections
-
 class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
   with BatchTableSourceFactory[BaseRow] {
+
+  private var tEnv: TableEnvironment = _
 
   override def createBatchTableSink(
      properties: java.util.Map[String, String]): BatchTableSink[BaseRow] = {
@@ -39,6 +41,7 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
     val schema = tableProperties
       .readSchemaFromProperties(classOf[FlinkTableServiceFactory].getClassLoader)
     new FlinkTableServiceSink(
+      tEnv,
       tableProperties,
       tableName,
       toRowType(schema)
@@ -56,6 +59,7 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
     val schema = tableProperties
       .readSchemaFromProperties(classOf[FlinkTableServiceFactory].getClassLoader)
     new FlinkTableServiceSource(
+      tEnv,
       tableProperties,
       tableName,
       toRowType(schema)
@@ -67,4 +71,8 @@ class FlinkTableServiceFactory extends BatchTableSinkFactory[BaseRow]
 
   override def supportedProperties(): java.util.List[String] =
     Collections.emptyList()
+
+  def setTableEnv(tEnv: TableEnvironment): Unit = {
+    this.tEnv = tEnv
+  }
 }

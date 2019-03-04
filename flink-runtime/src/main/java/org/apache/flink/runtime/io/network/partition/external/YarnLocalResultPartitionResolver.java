@@ -129,12 +129,12 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	}
 
 	@Override
-	void initializeApplication(String user, String appId) {
+	public void initializeApplication(String user, String appId) {
 		appIdToUser.putIfAbsent(appId, user);
 	}
 
 	@Override
-	Set<ResultPartitionID> stopApplication(String appId) {
+	public Set<ResultPartitionID> stopApplication(String appId) {
 		// Don't need to deal with partition files because NodeManager will recycle application's directory.
 		Set<ResultPartitionID> toRemove = new HashSet<>();
 		Iterator<Map.Entry<ResultPartitionID, YarnResultPartitionFileInfo>> partitionIterator =
@@ -151,7 +151,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	}
 
 	@Override
-	ResultPartitionFileInfo getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException {
+	public ResultPartitionFileInfo getResultPartitionDir(ResultPartitionID resultPartitionID) throws IOException {
 		YarnResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
 		if (fileInfo != null) {
 			if (!fileInfo.isReadyToBeConsumed()) {
@@ -170,7 +170,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	}
 
 	@Override
-	void recycleResultPartition(ResultPartitionID resultPartitionID) {
+	public void recycleResultPartition(ResultPartitionID resultPartitionID) {
 		YarnResultPartitionFileInfo fileInfo = resultPartitionMap.get(resultPartitionID);
 		if (fileInfo != null) {
 			fileInfo.markToDelete(); // Lazy deletion, do real deletion during disk scan.
@@ -178,7 +178,7 @@ public class YarnLocalResultPartitionResolver extends LocalResultPartitionResolv
 	}
 
 	@Override
-	void stop() {
+	public void stop() {
 		LOG.warn("stop YarnLocalResultPartitionResolver.");
 		try {
 			diskScannerExecutorService.shutdownNow();
