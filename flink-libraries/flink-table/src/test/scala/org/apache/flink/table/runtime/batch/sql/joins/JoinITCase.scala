@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.batch.sql
+package org.apache.flink.table.runtime.batch.sql.joins
 
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.common.typeinfo.BasicArrayTypeInfo.STRING_ARRAY_TYPE_INFO
@@ -26,25 +26,20 @@ import org.apache.flink.api.java.typeutils.{GenericTypeInfo, ObjectArrayTypeInfo
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.TwoInputSubstituteStreamOperator
+import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.row
 import org.apache.flink.table.runtime.batch.sql.TestData._
-import org.apache.flink.table.runtime.batch.sql.joins.JoinITCaseBase
 import org.apache.flink.table.runtime.batch.sql.joins.JoinType.{BroadcastHashJoin, HashJoin, JoinType, NestedLoopJoin, SortMergeJoin}
 import org.apache.flink.table.sinks.CollectRowTableSink
 import org.apache.flink.table.types.DataTypes
 import org.apache.flink.types.Row
 
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import org.junit.{Assert, Before, Ignore, Test}
-
-import java.util
 
 import scala.collection.JavaConversions._
 import scala.collection.Seq
 
-@RunWith(classOf[Parameterized])
-class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCaseBase {
+abstract class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCaseBase {
 
   @Before
   def before(): Unit = {
@@ -108,7 +103,7 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
 
       checkResult(
         "SELECT c, g FROM (SELECT h, g, f, e, d FROM PojoSmallTable3, PojoTable5 WHERE b = e)," +
-            " PojoSmallTable3 WHERE b = e",
+          " PojoSmallTable3 WHERE b = e",
         Seq(
           row("Hi", "Hallo"),
           row("Hello", "Hallo Welt"),
@@ -440,7 +435,7 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
     if (expectedJoinType == NestedLoopJoin) {
       checkResult(
         "SELECT c, mc FROM SmallTable3 t1 FULL OUTER JOIN " +
-            "(SELECT min(b) AS mb, max(c) AS mc FROM SmallTable3) t2 ON b > mb",
+          "(SELECT min(b) AS mb, max(c) AS mc FROM SmallTable3) t2 ON b > mb",
         Seq(
           row("Hello world", "Hi"), row("Hello", "Hi"), row("Hi", null)
         ))
@@ -452,7 +447,7 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
     if (expectedJoinType == NestedLoopJoin) {
       checkResult(
         "SELECT c, mc FROM SmallTable3 t1 FULL OUTER JOIN " +
-            "(SELECT max(b) AS mb, max(c) AS mc FROM SmallTable3) t2 ON b > mb",
+          "(SELECT max(b) AS mb, max(c) AS mc FROM SmallTable3) t2 ON b > mb",
         Seq(
           row("Hello world", null), row("Hello", null), row("Hi", null), row(null, "Hi")
         ))
@@ -636,7 +631,7 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
   def testJoinWithNull(): Unit = {
     checkResult(
       "SELECT c, g FROM NullTable3, NullTable5 " +
-          "WHERE (a = d OR (a IS NULL AND d IS NULL)) AND b = h",
+        "WHERE (a = d OR (a IS NULL AND d IS NULL)) AND b = h",
       Seq(
         row("Hi", "Hallo"),
         row("Hello", "Hallo Welt"),
@@ -652,7 +647,7 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
 
     checkResult(
       "SELECT c, g FROM NullTable3, NullTable5 " +
-          "WHERE (a = d OR (a IS NULL AND d IS NULL)) and c = 'NullTuple'",
+        "WHERE (a = d OR (a IS NULL AND d IS NULL)) and c = 'NullTuple'",
       Seq(
         row("NullTuple", "NullTuple"),
         row("NullTuple", "NullTuple"),
@@ -664,8 +659,8 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
       "NullT", Seq(row(null, null, "c")), type3, allNullablesOfNullData3, 'a, 'b, 'c)
     checkResult(
       "SELECT T1.a, T1.b, T1.c FROM NullT T1, NullT T2 WHERE " +
-          "(T1.a = T2.a OR (T1.a IS NULL AND T2.a IS NULL)) " +
-          "AND (T1.b = T2.b OR (T1.b IS NULL AND T2.b IS NULL)) AND T1.c = T2.c",
+        "(T1.a = T2.a OR (T1.a IS NULL AND T2.a IS NULL)) " +
+        "AND (T1.b = T2.b OR (T1.b IS NULL AND T2.b IS NULL)) AND T1.c = T2.c",
       Seq(row("null", "null", "c")))
   }
 
@@ -725,13 +720,13 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
     if (expectedJoinType == NestedLoopJoin) {
       checkResult(
         "SELECT s, a, b, c FROM SmallTable3 FULL JOIN " +
-            "(SELECT SUM(b) AS s FROM SmallTable3 HAVING COUNT(*) < 0) ON true",
+          "(SELECT SUM(b) AS s FROM SmallTable3 HAVING COUNT(*) < 0) ON true",
         Seq(row(null, 1, 1, "Hi"), row(null, 2, 2, "Hello"), row(null, 3, 2, "Hello world"))
       )
 
       checkResult(
         "SELECT s, a, b, c FROM (SELECT SUM(b) AS s FROM SmallTable3 HAVING COUNT(*) < 0) " +
-            "FULL JOIN SmallTable3 ON true",
+          "FULL JOIN SmallTable3 ON true",
         Seq(row(null, 1, 1, "Hi"), row(null, 2, 2, "Hello"), row(null, 3, 2, "Hello world"))
       )
     }
@@ -756,15 +751,15 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
     if (expectedJoinType == NestedLoopJoin) {
       checkResult(
         "SELECT sa, sb FROM " +
-            "(SELECT SUM(a) AS sa FROM SmallTable3 HAVING COUNT(*) < 0) FULL JOIN " +
-            "(SELECT SUM(b) AS sb FROM SmallTable3 HAVING COUNT(*) < 0) ON true",
+          "(SELECT SUM(a) AS sa FROM SmallTable3 HAVING COUNT(*) < 0) FULL JOIN " +
+          "(SELECT SUM(b) AS sb FROM SmallTable3 HAVING COUNT(*) < 0) ON true",
         Seq()
       )
 
       checkResult(
         "SELECT sa, sb FROM " +
-            "(SELECT SUM(b) AS sb FROM SmallTable3 HAVING COUNT(*) < 0) FULL JOIN " +
-            "(SELECT SUM(a) AS sa FROM SmallTable3 HAVING COUNT(*) < 0) ON true",
+          "(SELECT SUM(b) AS sb FROM SmallTable3 HAVING COUNT(*) < 0) FULL JOIN " +
+          "(SELECT SUM(a) AS sa FROM SmallTable3 HAVING COUNT(*) < 0) ON true",
         Seq()
       )
     }
@@ -815,15 +810,6 @@ class JoinITCase(expectedJoinType: JoinType) extends BatchTestBase with JoinITCa
         row(2, 2L, 4L, 4L)
       )
     )
-  }
-}
-
-object JoinITCase {
-
-  @Parameterized.Parameters(name = "{0}")
-  def parameters(): util.Collection[Array[_]] = {
-    util.Arrays.asList(
-      Array(BroadcastHashJoin), Array(HashJoin), Array(SortMergeJoin), Array(NestedLoopJoin))
   }
 }
 
