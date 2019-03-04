@@ -94,7 +94,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.sliding(Duration.ofSeconds(3), Duration.ofSeconds(1))
+			.sliding(Duration.ofSeconds(3), Duration.ofSeconds(1), 0)
 			.withEventTime(2)
 			.aggregate(new SumAndCountAggTimeWindow(), equaliser, accTypes, aggResultTypes, windowTypes)
 			.build();
@@ -179,7 +179,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.sliding(Duration.ofSeconds(3), Duration.ofSeconds(1))
+			.sliding(Duration.ofSeconds(3), Duration.ofSeconds(1), 0)
 			.withProcessingTime()
 			.aggregate(new SumAndCountAggTimeWindow(), equaliser, accTypes, aggResultTypes, windowTypes)
 			.build();
@@ -243,7 +243,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.tumble(Duration.ofSeconds(3))
+			.tumble(Duration.ofSeconds(3), 0)
 			.withEventTime(2)
 			.aggregate(new SumAndCountAggTimeWindow(), equaliser, accTypes, aggResultTypes, windowTypes)
 			.build();
@@ -323,7 +323,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.tumble(Duration.ofSeconds(3))
+			.tumble(Duration.ofSeconds(3), 0)
 			.withEventTime(2)
 			.triggering(
 				EventTime
@@ -441,7 +441,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.tumble(Duration.ofSeconds(3))
+			.tumble(Duration.ofSeconds(3), 0)
 			.withEventTime(2)
 			.triggering(
 				EventTime
@@ -567,7 +567,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.tumble(Duration.ofSeconds(3))
+			.tumble(Duration.ofSeconds(3), 0)
 			.withProcessingTime()
 			.aggregate(new SumAndCountAggTimeWindow(), equaliser, accTypes, aggResultTypes, windowTypes)
 			.build();
@@ -797,7 +797,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.tumble(Duration.ofSeconds(2))
+			.tumble(Duration.ofSeconds(2), 0)
 			.withEventTime(2)
 			.aggregate(new SumAndCountAggTimeWindow(), equaliser, accTypes, aggResultTypes, windowTypes)
 			.withAllowedLateness(Duration.ofMillis(500))
@@ -853,7 +853,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.tumble(Duration.ofMillis(windowSize))
+			.tumble(Duration.ofMillis(windowSize), 0)
 			.withEventTime(2)
 			.aggregate(new SumAndCountAggTimeWindow(), equaliser, accTypes, aggResultTypes, windowTypes)
 			.withAllowedLateness(Duration.ofMillis(lateness))
@@ -908,7 +908,7 @@ public class WindowOperatorTest {
 		WindowOperator operator = WindowOperatorBuilder
 			.builder()
 			.withInputFields(inputFieldTypes)
-			.tumble(Duration.ofSeconds(windowSize))
+			.tumble(Duration.ofSeconds(windowSize), 0)
 			.withEventTime(2)
 			.aggregate(new SumAndCountAggTimeWindow(), equaliser, accTypes, aggResultTypes, windowTypes)
 			.withAllowedLateness(Duration.ofMillis(lateness))

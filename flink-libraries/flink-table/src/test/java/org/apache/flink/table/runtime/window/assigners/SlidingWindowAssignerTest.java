@@ -166,15 +166,15 @@ public class SlidingWindowAssignerTest {
 	@Test
 	public void testInvalidParameters() {
 		thrown.expect(IllegalArgumentException.class);
-		thrown.expectMessage("0 <= offset < slide and size > 0");
+		thrown.expectMessage("slide > 0 and size > 0");
 		SlidingWindowAssigner.of(Duration.ofSeconds(-2), Duration.ofSeconds(1));
 
 		thrown.expect(IllegalArgumentException.class);
-		thrown.expectMessage("0 <= offset < slide and size > 0");
+		thrown.expectMessage("slide > 0 and size > 0");
 		SlidingWindowAssigner.of(Duration.ofSeconds(2), Duration.ofSeconds(-1));
 
 		thrown.expect(IllegalArgumentException.class);
-		thrown.expectMessage("0 <= offset < slide and size > 0");
+		thrown.expectMessage("slide > 0 and size > 0");
 		SlidingWindowAssigner.of(Duration.ofSeconds(20), Duration.ofSeconds(10)).withOffset(Duration.ofSeconds(-1));
 	}
 

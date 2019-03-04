@@ -130,31 +130,50 @@ abstract class AbstractExactlyOnceSink[T] extends RichSinkFunction[T] with Check
   }
 }
 
-final class TestingAppendSink extends AbstractExactlyOnceSink[Row] {
-  def invoke(value: Row): Unit = localResults += value.toString
+final class TestingAppendSink(tz: TimeZone)
+  extends AbstractExactlyOnceSink[Row] {
+  def this() {
+    this(TimeZone.getTimeZone("UTC"))
+  }
+  def invoke(value: Row): Unit = localResults += TestSinkUtil.rowToString(value, tz)
   def getAppendResults: List[String] = getResults
 }
 
-final class TestingAppendPojoSink extends AbstractExactlyOnceSink[Pojo1] {
-  def invoke(value: Pojo1): Unit = localResults += value.toString
+final class TestingAppendPojoSink(tz: TimeZone)
+  extends AbstractExactlyOnceSink[Pojo1] {
+  def this() {
+    this(TimeZone.getTimeZone("UTC"))
+  }
+  def invoke(value: Pojo1): Unit = localResults += TestSinkUtil.pojoToString(value, tz)
   def getAppendResults: List[String] = getResults
 }
 
-final class TestingAppendBaseRowSink(rowTypeInfo: BaseRowTypeInfo)
+final class TestingAppendBaseRowSink(
+    rowTypeInfo: BaseRowTypeInfo, tz: TimeZone)
   extends AbstractExactlyOnceSink[BaseRow] {
+  def this(rowTypeInfo: BaseRowTypeInfo) {
+    this(rowTypeInfo, TimeZone.getTimeZone("UTC"))
+  }
   def invoke(value: BaseRow): Unit = localResults += baseRowToString(value, rowTypeInfo)
   def getAppendResults: List[String] = getResults
   def baseRowToString(value: BaseRow, rowTypeInfo: BaseRowTypeInfo): String = {
     val config = new ExecutionConfig
     val fieldTypes = rowTypeInfo.getFieldTypes
     val fieldSerializers = fieldTypes.map(_.createSerializer(config))
-    BaseRowUtil.toGenericRow(value, fieldTypes, fieldSerializers).toString
+    TestSinkUtil.genericRowToString(
+      BaseRowUtil.toGenericRow(value, fieldTypes, fieldSerializers), tz)
+
   }
 }
 
-class TestingRetractSink extends AbstractExactlyOnceSink[(Boolean, Row)] {
+class TestingRetractSink(tz: TimeZone)
+  extends AbstractExactlyOnceSink[(Boolean, Row)] {
   protected var retractResultsState: ListState[String] = _
   protected var localRetractResults: ArrayBuffer[String] = _
+
+  def this() {
+    this(TimeZone.getTimeZone("UTC"))
+  }
 
   override def initializeState(context: FunctionInitializationContext): Unit = {
     super.initializeState(context)
@@ -185,9 +204,9 @@ class TestingRetractSink extends AbstractExactlyOnceSink[(Boolean, Row)] {
 
   def invoke(v: (Boolean, Row)): Unit = {
     this.synchronized {
-      val tupleString = v.toString()
+      val tupleString = "(" + v._1.toString + "," + TestSinkUtil.rowToString(v._2, tz) + ")"
       localResults += tupleString
-      val rowString = v._2.toString
+      val rowString = TestSinkUtil.rowToString(v._2, tz)
       if (v._1) {
         localRetractResults += rowString
       } else {
@@ -215,12 +234,16 @@ class TestingRetractSink extends AbstractExactlyOnceSink[(Boolean, Row)] {
   }
 }
 
-final class TestingUpsertSink(keys: Array[Int])
+final class TestingUpsertSink(keys: Array[Int], tz: TimeZone)
   extends AbstractExactlyOnceSink[BaseRow] {
 
   private var upsertResultsState: ListState[String] = _
   private var localUpsertResults: mutable.Map[String, String] = _
   private var fieldTypes: Array[DataType] = _
+
+  def this(keys: Array[Int]) {
+    this(keys, TimeZone.getTimeZone("UTC"))
+  }
 
   def configureTypes(fieldTypes: Array[DataType]): Unit = {
     this.fieldTypes = fieldTypes
@@ -275,11 +298,12 @@ final class TestingUpsertSink(keys: Array[Int])
       DataTypes.createTupleType(DataTypes.BOOLEAN, DataTypes.createRowType(fieldTypes: _*)))
     val v = converter.apply(wrapRow).asInstanceOf[JTuple2[Boolean, Row]]
 
-    val tupleString = v.toString
+    val rowString = TestSinkUtil.rowToString(v.f1, tz)
+    val tupleString = "(" + v.f0.toString + "," + rowString + ")"
     localResults += tupleString
-    val keyString = Row.project(v.f1, keys).toString
+    val keyString = TestSinkUtil.rowToString(Row.project(v.f1, keys), tz)
     if (v.f0) {
-      localUpsertResults += (keyString -> v.f1.toString)
+      localUpsertResults += (keyString -> rowString)
     } else {
       val oldValue = localUpsertResults.remove(keyString)
       if (oldValue.isEmpty) {
@@ -303,9 +327,13 @@ final class TestingUpsertSink(keys: Array[Int])
 }
 
 class TestPartitionalSink(
-    index: Int, results: mutable.Map[Int, mutable.HashSet[Any]])
-    extends TestingRetractSink {
+    index: Int, results: mutable.Map[Int, mutable.HashSet[Any]], tz: TimeZone)
+  extends TestingRetractSink(tz) {
   protected var taskId: Int = _
+
+  def this(index: Int, results: mutable.Map[Int, mutable.HashSet[Any]]) {
+    this(index, results, TimeZone.getTimeZone("UTC"))
+  }
 
   override def open(parameters: Configuration): Unit = {
     taskId = getRuntimeContext.getIndexOfThisSubtask
@@ -327,9 +355,15 @@ class TestPartitionalSink(
 }
 
 class TestPartitionalOutputFormat[T](
-    results: mutable.Map[Int, mutable.HashSet[String]], getIndexKey: (T) => String)
-  extends TestingOutputFormat[T] {
+    results: mutable.Map[Int, mutable.HashSet[String]],
+    getIndexKey: (T) => String,
+    tz: TimeZone)
+  extends TestingOutputFormat[T](tz) {
   protected var taskId: Int = _
+
+  def this(results: mutable.Map[Int, mutable.HashSet[String]], getIndexKey: (T) => String) {
+    this(results, getIndexKey, TimeZone.getTimeZone("UTC"))
+  }
 
   override def open(taskNumber: Int, numTasks: Int): Unit = {
     taskId = taskNumber
@@ -350,11 +384,15 @@ class TestPartitionalOutputFormat[T](
   }
 }
 
-class TestingOutputFormat[T]
+class TestingOutputFormat[T](tz: TimeZone)
   extends OutputFormat[T] {
 
   val index: Int = StreamTestSink.getNewSinkId
   var localRetractResults: ArrayBuffer[String] = _
+
+  def this() {
+    this(TimeZone.getTimeZone("UTC"))
+  }
 
   protected var globalResults: mutable.Map[Int, ArrayBuffer[String]] = _
 
@@ -367,7 +405,12 @@ class TestingOutputFormat[T]
     }
   }
 
-  def writeRecord(value: T): Unit = localRetractResults += value.toString
+  def writeRecord(value: T): Unit = localRetractResults += { value match {
+    case r: Row => TestSinkUtil.rowToString(r, tz)
+    case tp: JTuple2[JBoolean, Row]  =>
+      "(" + tp.f0.toString + "," + TestSinkUtil.rowToString(tp.f1, tz) + ")"
+    case _ => ""
+  }}
 
   def close(): Unit = {}
 
@@ -389,11 +432,15 @@ class TestingOutputFormat[T]
   }
 }
 
-final class TestingUpsertTableSink(keys: Array[Int])
+final class TestingUpsertTableSink(keys: Array[Int], tz: TimeZone)
   extends BaseUpsertStreamTableSink[BaseRow] {
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _
-  var sink = new TestingUpsertSink(keys)
+  var sink = new TestingUpsertSink(keys, tz)
+
+  def this(keys: Array[Int]) {
+    this(keys, TimeZone.getTimeZone("UTC"))
+  }
 
   override def setKeyFields(keys: Array[String]): Unit = {
     // ignore
@@ -426,7 +473,7 @@ final class TestingUpsertTableSink(keys: Array[Int])
     fieldNames: Array[String],
     fieldTypes: Array[DataType])
   : TableSink[BaseRow] = {
-    val copy = new TestingUpsertTableSink(keys)
+    val copy = new TestingUpsertTableSink(keys, tz)
     copy.fNames = fieldNames
     copy.fTypes = fieldTypes
     sink.configureTypes(fieldTypes)
@@ -439,12 +486,17 @@ final class TestingUpsertTableSink(keys: Array[Int])
   def getUpsertResults: List[String] = sink.getUpsertResults
 }
 
-final class TestingAppendTableSink extends AppendStreamTableSink[Row]
-  with BatchTableSink[Row]{
+final class TestingAppendTableSink(tz: TimeZone)
+  extends AppendStreamTableSink[Row]
+    with BatchTableSink[Row]{
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _
-  var sink = new TestingAppendSink
-  var outputFormat = new TestingOutputFormat[Row]
+  var sink = new TestingAppendSink(tz)
+  var outputFormat = new TestingOutputFormat[Row](tz)
+
+  def this() {
+    this(TimeZone.getTimeZone("UTC"))
+  }
 
   override def emitDataStream(dataStream: DataStream[Row]) = {
     dataStream.addSink(sink).name("TestingAppendTableSink")
@@ -464,7 +516,7 @@ final class TestingAppendTableSink extends AppendStreamTableSink[Row]
     fieldNames: Array[String],
     fieldTypes: Array[DataType])
   : TableSink[Row] = {
-    val copy = new TestingAppendTableSink
+    val copy = new TestingAppendTableSink(tz)
     copy.fNames = fieldNames
     copy.fTypes = fieldTypes
     copy.outputFormat = outputFormat
@@ -481,15 +533,20 @@ final class TestingAppendTableSink extends AppendStreamTableSink[Row]
   def getResults: List[String] = outputFormat.getResults
 }
 
-final class TestingRetractTableSink extends RetractStreamTableSink[Row]
-  with BatchCompatibleStreamTableSink[JTuple2[JBoolean, Row]] with DefinedDistribution {
+final class TestingRetractTableSink(tz: TimeZone)
+  extends RetractStreamTableSink[Row]
+    with BatchCompatibleStreamTableSink[JTuple2[JBoolean, Row]] with DefinedDistribution {
 
   var fNames: Array[String] = _
   var fTypes: Array[DataType] = _
-  var sink = new TestingRetractSink
-  var outputFormat = new TestingOutputFormat[JTuple2[JBoolean, Row]]
+  var sink = new TestingRetractSink(tz)
+  var outputFormat = new TestingOutputFormat[JTuple2[JBoolean, Row]](tz)
 
   var pk: String = _
+
+  def this() {
+    this(TimeZone.getTimeZone("UTC"))
+  }
 
   def setPartitionalOutput(output: TestingOutputFormat[JTuple2[JBoolean, Row]]): Unit = {
     outputFormat = output
@@ -538,7 +595,7 @@ final class TestingRetractTableSink extends RetractStreamTableSink[Row]
     fieldNames: Array[String],
     fieldTypes: Array[DataType])
   : TableSink[JTuple2[JBoolean, Row]] = {
-    val copy = new TestingRetractTableSink
+    val copy = new TestingRetractTableSink(tz)
     copy.fNames = fieldNames
     copy.fTypes = fieldTypes
     copy.sink = sink

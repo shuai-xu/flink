@@ -44,6 +44,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.tools.RelBuilder
 
 import java.time.Duration
+import java.util.Calendar
 
 import scala.collection.JavaConversions._
 
@@ -294,11 +295,13 @@ class StreamExecGroupWindowAggregate(
     val newBuilder = window match {
       case TumblingGroupWindow(_, timeField, size)
         if isProctimeAttribute(timeField) && isTimeIntervalLiteral(size) =>
-        builder.tumble(toDuration(size)).withProcessingTime()
+        builder.tumble(toDuration(size),
+          config.getTimeZone.getOffset(Calendar.ZONE_OFFSET)).withProcessingTime()
 
       case TumblingGroupWindow(_, timeField, size)
         if isRowtimeAttribute(timeField) && isTimeIntervalLiteral(size) =>
-        builder.tumble(toDuration(size)).withEventTime(timeIdx)
+        builder.tumble(toDuration(size),
+          config.getTimeZone.getOffset(Calendar.ZONE_OFFSET)).withEventTime(timeIdx)
 
       case TumblingGroupWindow(_, timeField, size)
         if isProctimeAttribute(timeField) && isRowCountLiteral(size) =>
@@ -313,11 +316,13 @@ class StreamExecGroupWindowAggregate(
 
       case SlidingGroupWindow(_, timeField, size, slide)
         if isProctimeAttribute(timeField) && isTimeIntervalLiteral(slide) =>
-        builder.sliding(toDuration(size), toDuration(slide)).withProcessingTime()
+        builder.sliding(toDuration(size), toDuration(slide),
+          config.getTimeZone.getOffset(Calendar.ZONE_OFFSET)).withProcessingTime()
 
       case SlidingGroupWindow(_, timeField, size, slide)
         if isRowtimeAttribute(timeField) && isTimeIntervalLiteral(size) =>
-        builder.sliding(toDuration(size), toDuration(slide)).withEventTime(timeIdx)
+        builder.sliding(toDuration(size), toDuration(slide),
+          config.getTimeZone.getOffset(Calendar.ZONE_OFFSET)).withEventTime(timeIdx)
 
       case SlidingGroupWindow(_, timeField, size, slide)
         if isProctimeAttribute(timeField) && isRowCountLiteral(size) =>

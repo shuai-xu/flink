@@ -20,6 +20,7 @@ package org.apache.flink.util;
 
 import java.nio.charset.Charset;
 import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -365,6 +366,20 @@ public class TimeConvertUtils {
 			return unixTimeToString(toInt((java.sql.Time) o));
 		} else if (o instanceof Timestamp) {
 			return unixTimestampToString(toLong((Timestamp) o), 3);
+		} else {
+			return o.toString();
+		}
+	}
+
+	public static String unixDateTimeToString(Object o, TimeZone tz) {
+		int offset = tz.getOffset(Calendar.ZONE_OFFSET);
+
+		if (o instanceof java.sql.Date) {
+			return unixDateToString(toInt((java.sql.Date) o) + offset);
+		} else if (o instanceof java.sql.Time) {
+			return unixTimeToString((toInt((java.sql.Time) o) + offset) % (int) MILLIS_PER_DAY);
+		} else if (o instanceof java.sql.Timestamp) {
+			return unixTimestampToString(toLong((java.sql.Timestamp) o) + offset, 3);
 		} else {
 			return o.toString();
 		}

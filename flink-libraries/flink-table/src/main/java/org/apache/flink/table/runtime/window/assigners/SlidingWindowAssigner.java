@@ -54,9 +54,9 @@ public class SlidingWindowAssigner extends PanedWindowAssigner<TimeWindow> imple
 	private final boolean isEventTime;
 
 	protected SlidingWindowAssigner(long size, long slide, long offset, boolean isEventTime) {
-		if (offset < 0 || offset >= slide || size <= 0) {
+		if (size <= 0 || slide <= 0) {
 			throw new IllegalArgumentException(
-				"SlidingWindowAssigner parameters must satisfy 0 <= offset < slide and size > 0");
+				"SlidingWindowAssigner parameters must satisfy slide > 0 and size > 0");
 		}
 
 		this.size = size;

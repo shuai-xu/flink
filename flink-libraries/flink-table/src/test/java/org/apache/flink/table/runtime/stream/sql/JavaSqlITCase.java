@@ -42,6 +42,7 @@ import java.util.List;
 
 import scala.collection.JavaConversions;
 
+
 /**
  * Integration tests for streaming SQL.
  */

@@ -19,14 +19,12 @@
 package org.apache.flink.table.sinks
 
 import java.lang.{Boolean => JBoolean}
-
 import org.apache.flink.api.scala._
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo.{INT_TYPE_INFO, LONG_TYPE_INFO, STRING_TYPE_INFO}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.dataformat.BinaryString.fromString
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.table.dataformat.BinaryRow
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase
 import org.apache.flink.table.runtime.batch.sql.BatchTestBase.binaryRow
 import org.apache.flink.table.runtime.utils._
@@ -36,6 +34,8 @@ import org.apache.flink.types.Row
 import org.junit.Before
 import org.junit._
 import org.junit.Assert._
+
+import java.util.TimeZone
 
 import scala.collection.{Seq, mutable}
 
@@ -69,6 +69,22 @@ class BatchTableSinksITCase extends BatchTestBase {
       "2,2,Hello",
       "3,2,Hello world",
       "4,3,Hello world, how are you?"
+    ).sorted
+
+    assertEquals(expected, tableSink.getResults.sorted)
+  }
+
+  @Test
+  def testTableSinkWithTimezone(): Unit = {
+    tEnv.getConfig.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
+    val tableSink = new TestingAppendTableSink(tEnv.getConfig.getTimeZone)
+    tEnv.sqlQuery("select a, TO_TIMESTAMP(b), c from sTable").writeToSink(tableSink)
+    tEnv.execute()
+    val expected = List (
+      "1,1970-01-01 08:00:00.001,Hi",
+      "2,1970-01-01 08:00:00.002,Hello",
+      "3,1970-01-01 08:00:00.002,Hello world",
+      "4,1970-01-01 08:00:00.003,Hello world, how are you?"
     ).sorted
 
     assertEquals(expected, tableSink.getResults.sorted)

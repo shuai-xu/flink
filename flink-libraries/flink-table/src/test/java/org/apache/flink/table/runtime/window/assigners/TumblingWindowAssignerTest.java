@@ -68,15 +68,15 @@ public class TumblingWindowAssignerTest {
 	@Test
 	public void testInvalidParameters() {
 		thrown.expect(IllegalArgumentException.class);
-		thrown.expectMessage("0 <= offset < size");
+		thrown.expectMessage("size > 0");
 		TumblingWindowAssigner.of(Duration.ofSeconds(-1));
 
 		thrown.expect(IllegalArgumentException.class);
-		thrown.expectMessage("0 <= offset < size");
+		thrown.expectMessage("size > 0");
 		TumblingWindowAssigner.of(Duration.ofSeconds(10)).withOffset(Duration.ofSeconds(20));
 
 		thrown.expect(IllegalArgumentException.class);
-		thrown.expectMessage("0 <= offset < size");
+		thrown.expectMessage("size > 0");
 		TumblingWindowAssigner.of(Duration.ofSeconds(10)).withOffset(Duration.ofSeconds(-1));
 	}
 

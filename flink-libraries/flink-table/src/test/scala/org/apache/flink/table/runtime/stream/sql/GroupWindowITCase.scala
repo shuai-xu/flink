@@ -34,6 +34,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 import java.math.BigDecimal
+import java.util.TimeZone
 
 @RunWith(classOf[Parameterized])
 class GroupWindowITCase(mode: StateBackendMode)
@@ -317,6 +318,80 @@ class GroupWindowITCase(mode: StateBackendMode)
     val expected = List(
       "Hello,2,1970-01-01 03:53:00.0,1970-01-01 03:54:00.0"
     )
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+  }
+
+  @Test
+  def testEventTimeSlidingWindowWithTimeZone(): Unit = {
+    val stream = failingDataSource(data)
+      .assignTimestampsAndWatermarks(
+        new TimestampAndWatermarkWithOffset
+          [(Long, Int, Double, Float, BigDecimal, String, String)](0L))
+    val table = stream.toTable(tEnv, 'ts.rowtime, 'int, 'double, 'float, 'bigdec, 'string, 'name)
+    tEnv.registerTable("T1", table)
+    tEnv.getConfig.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
+
+    val sql =
+      """
+        |SELECT
+        |  string,
+        |  HOP_START(ts, INTERVAL '12' HOUR, INTERVAL '1' DAY),
+        |  HOP_ROWTIME(ts, INTERVAL '12' HOUR, INTERVAL '1' DAY),
+        |  COUNT(`int`),
+        |  COUNT(DISTINCT `float`)
+        |FROM T1
+        |GROUP BY string, HOP(ts, INTERVAL '12' HOUR, INTERVAL '1' DAY)
+      """.stripMargin
+
+    val sink = new TestingAppendSink(tEnv.getConfig.getTimeZone)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+    val expected = Seq(
+      "Hallo,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,1,1",
+      "Hallo,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
+      "Hello world,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,2,2",
+      "Hello world,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,2,2",
+      "Hello,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,4,3",
+      "Hello,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,4,3",
+      "Hi,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,1,1",
+      "Hi,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
+      "null,1969-12-31 12:00:00.0,1970-01-01 11:59:59.999,1,1",
+      "null,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1")
+    assertEquals(expected.sorted, sink.getAppendResults.sorted)
+
+  }
+
+  @Test
+  def testEventTimeTumblingWindowWithTimeZone(): Unit = {
+    val stream = failingDataSource(data)
+      .assignTimestampsAndWatermarks(
+        new TimestampAndWatermarkWithOffset
+          [(Long, Int, Double, Float, BigDecimal, String, String)](0L))
+    val table = stream.toTable(tEnv, 'ts.rowtime, 'int, 'double, 'float, 'bigdec, 'string, 'name)
+    tEnv.registerTable("T1", table)
+    tEnv.getConfig.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
+
+    val sql =
+      """
+        |SELECT
+        |  string,
+        |  TUMBLE_START(ts, INTERVAL '1' DAY),
+        |  TUMBLE_ROWTIME(ts, INTERVAL '1' DAY),
+        |  COUNT(`int`),
+        |  COUNT(DISTINCT `float`)
+        |FROM T1
+        |GROUP BY string, TUMBLE(ts, INTERVAL '1' DAY)
+      """.stripMargin
+
+    val sink = new TestingAppendSink(tEnv.getConfig.getTimeZone)
+    tEnv.sqlQuery(sql).toAppendStream[Row].addSink(sink)
+    env.execute()
+    val expected = Seq(
+      "Hallo,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
+      "Hello world,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,2,2",
+      "Hello,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,4,3",
+      "Hi,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1",
+      "null,1970-01-01 00:00:00.0,1970-01-01 23:59:59.999,1,1")
     assertEquals(expected.sorted, sink.getAppendResults.sorted)
   }
 }

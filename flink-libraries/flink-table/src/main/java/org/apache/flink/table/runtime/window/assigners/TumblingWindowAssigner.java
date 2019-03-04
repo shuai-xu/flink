@@ -48,9 +48,9 @@ public class TumblingWindowAssigner extends WindowAssigner<TimeWindow> implement
 	private final boolean isEventTime;
 
 	protected TumblingWindowAssigner(long size, long offset, boolean isEventTime) {
-		if (offset < 0 || offset >= size) {
+		if (size <= 0) {
 			throw new IllegalArgumentException
-				("TumblingWindowAssigner parameters must satisfy 0 <= offset < size");
+				("TumblingWindowAssigner parameters must satisfy size > 0");
 		}
 		this.size = size;
 		this.offset = offset;
