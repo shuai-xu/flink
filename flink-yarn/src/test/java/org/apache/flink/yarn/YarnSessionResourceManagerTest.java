@@ -131,7 +131,10 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 
 	@Test
 	public void testContainersCompleted() throws Exception {
-		yarnSessionResourceManager.setAMRMClient(mock(AMRMClientAsync.class));
+		AMRMClientAsync mockAMRMClient = mock(AMRMClientAsync.class);
+		RequestAdapter requestAdapter = Utils.getRequestAdapter(new Configuration(), mockAMRMClient);
+		yarnSessionResourceManager.setAMRMClient(mockAMRMClient);
+		yarnSessionResourceManager.setRequestAdapter(requestAdapter);
 		yarnSessionResourceManager.setNMClient(mock(NMClient.class));
 		yarnSessionResourceManager.setExecutor(new ManuallyTriggeredScheduledExecutor());
 		try {
@@ -172,7 +175,9 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 	@Test
 	public void testAllocateContainerWithFloatingManagedMemory() {
 		AMRMClientAsync yarnClient = mock(AMRMClientAsync.class);
+		RequestAdapter requestAdapter = Utils.getRequestAdapter(new Configuration(), yarnClient);
 		yarnSessionResourceManager.setAMRMClient(yarnClient);
+		yarnSessionResourceManager.setRequestAdapter(requestAdapter);
 		ArgumentCaptor<AMRMClient.ContainerRequest> containerRequestCaptor =
 				ArgumentCaptor.forClass(AMRMClient.ContainerRequest.class);
 
@@ -199,8 +204,10 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 		AMRMClientAsync mockAMRMClient = mock(AMRMClientAsync.class);
 		when(mockAMRMClient.registerApplicationMaster(eq("localhost"), eq(123), any(String.class)))
 				.thenReturn(mockResponse);
+		RequestAdapter requestAdapter = Utils.getRequestAdapter(new Configuration(), mockAMRMClient);
 		yarnSessionResourceManager.setExecutor(new ManuallyTriggeredScheduledExecutor());
 		yarnSessionResourceManager.setAMRMClient(mockAMRMClient);
+		yarnSessionResourceManager.setRequestAdapter(requestAdapter);
 		yarnSessionResourceManager.setNMClient(mock(NMClient.class));
 		try {
 			yarnSessionResourceManager.start();
@@ -214,7 +221,10 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 
 	@Test
 	public void testCheckRegisterTimeoutContainers() throws Exception {
-		yarnSessionResourceManager.setAMRMClient(mock(AMRMClientAsync.class));
+		AMRMClientAsync mockAMRMClient = mock(AMRMClientAsync.class);
+		RequestAdapter requestAdapter = Utils.getRequestAdapter(new Configuration(), mockAMRMClient);
+		yarnSessionResourceManager.setAMRMClient(mockAMRMClient);
+		yarnSessionResourceManager.setRequestAdapter(requestAdapter);
 		yarnSessionResourceManager.setNMClient(mock(NMClient.class));
 		yarnSessionResourceManager.setExecutor(new ManuallyTriggeredScheduledExecutor());
 		try {
@@ -242,7 +252,9 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 	@Test
 	public void testReleaseOverAllocatedContainers() throws Exception {
 		AMRMClientAsync yarnClient = mock(AMRMClientAsync.class);
+		RequestAdapter requestAdapter = Utils.getRequestAdapter(new Configuration(), yarnClient);
 		yarnSessionResourceManager.setAMRMClient(yarnClient);
+		yarnSessionResourceManager.setRequestAdapter(requestAdapter);
 		yarnSessionResourceManager.setNMClient(mock(NMClient.class));
 		yarnSessionResourceManager.setExecutor(new ManuallyTriggeredScheduledExecutor());
 		try {
@@ -294,6 +306,8 @@ public class YarnSessionResourceManagerTest extends TestLogger {
 		YarnSessionResourceManager resourceManager = createYarnSessionResourceManager(conf);
 		AMRMClientAsync yarnClient = mock(AMRMClientAsync.class);
 		resourceManager.setAMRMClient(yarnClient);
+		RequestAdapter requestAdapter = Utils.getRequestAdapter(conf, yarnClient);
+		resourceManager.setRequestAdapter(requestAdapter);
 		ArgumentCaptor<AMRMClient.ContainerRequest> containerRequestCaptor =
 			ArgumentCaptor.forClass(AMRMClient.ContainerRequest.class);
 

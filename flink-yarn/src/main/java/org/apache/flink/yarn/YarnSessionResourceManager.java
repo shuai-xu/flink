@@ -19,6 +19,8 @@
 package org.apache.flink.yarn;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.operators.ResourceConstraints;
+import org.apache.flink.api.common.operators.ResourceConstraintsConfig;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.common.resources.CommonExtendedResource;
 import org.apache.flink.api.common.time.Time;
@@ -84,6 +86,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * The yarn implementation of the resource manager. Used when the system is started
@@ -144,6 +147,9 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	 */
 	private AMRMClientAsync<AMRMClient.ContainerRequest> resourceManagerClient;
 
+	/** Request adapter to communicate with Resource Manager (YARN's master) with special version. */
+	private RequestAdapter requestAdapter;
+
 	/**
 	 * Client to communicate with the Node manager and launch TaskExecutor processes.
 	 */
@@ -166,6 +172,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	private final Time containerRegisterTimeout;
 
 	private final TaskManagerResource taskManagerResource;
+
+	private final ResourceConstraints resourceConstraints;
 
 	/**
 	 * executor for start yarn container.
@@ -255,7 +263,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				flinkConfig.getInteger(YarnConfigOptions.YARN_VCORE_RATIO));
 		// TODO: Set extended resources if the version of yarn api >= 2.8 .
 		workerResource = Resource.newInstance(containerMemory, containerVcore);
-		log.info("workerNum: {}, workerResource: {}", workerNum, workerResource);
+		resourceConstraints = new ResourceConstraintsConfig(flinkConfig).getDefaultResourceConstraints();
+		log.info("workerNum: {}, workerResource: {}, resourceConstraints: {}", workerNum, workerResource, resourceConstraints);
 	}
 
 	protected AMRMClientAsync<AMRMClient.ContainerRequest> createAndStartResourceManagerClient(
@@ -323,6 +332,14 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 					yarnConfig,
 					yarnHeartbeatIntervalMillis,
 					webInterfaceUrl);
+			requestAdapter = Utils.getRequestAdapter(flinkConfig, resourceManagerClient);
+			log.info("Using request adapter: " + requestAdapter.getClass().getSimpleName());
+			// update worker resource
+			Map<String, org.apache.flink.api.common.resources.Resource> extendedResources = getExtendedResources();
+			requestAdapter.updateExtendedResources(workerResource, extendedResources);
+			log.info("Updating extended resources {} for worker resource: {}",
+				extendedResources.values().stream().collect(Collectors.toMap(e -> e.getName(), e -> e.getValue())),
+				workerResource);
 		} catch (Exception e) {
 			throw new ResourceManagerException("Could not start resource manager client.", e);
 		}
@@ -526,7 +543,7 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 			}
 
 			numPendingContainerRequests.addAndGet(1);
-			resourceManagerClient.addContainerRequest(new AMRMClient.ContainerRequest(resource, null, null, resourcePriority));
+			requestAdapter.addRequest(resource, resourcePriority, numPendingContainerRequests.get(), this.resourceConstraints);
 		}
 
 		// make sure we transmit the request fast and receive fast news of granted allocations
@@ -663,6 +680,11 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 	}
 
 	@VisibleForTesting
+	void setRequestAdapter(RequestAdapter requestAdapter) {
+		this.requestAdapter = requestAdapter;
+	}
+
+	@VisibleForTesting
 	void setNMClient(NMClient client) {
 		this.nodeManagerClient = client;
 	}
@@ -722,8 +744,8 @@ public class YarnSessionResourceManager extends ResourceManager<YarnWorkerNode> 
 				log.info("Received new container: {} - Remaining pending container requests: {}",
 						container.getId(), numPendingContainerRequests.get() - 1);
 				numPendingContainerRequests.decrementAndGet();
-				resourceManagerClient.removeContainerRequest(
-						new AMRMClient.ContainerRequest(workerResource, null, null, resourcePriority));
+				requestAdapter.removeRequest(workerResource, resourcePriority,
+					numPendingContainerRequests.get(), resourceConstraints);
 
 				String errMsg = String.format("Container allocated with id %s exceed total resource limit, releasing container.", container.getId());
 				if (checkAllocateNewResourceExceedTotalResourceLimit(

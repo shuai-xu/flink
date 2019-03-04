@@ -29,7 +29,6 @@ public class ResourceConstraintsOptions {
 	/** comma separated strings.*/
 	public static final String YARN_CONTAINER_TAGS = BLINK_RESOURCE_CONSTRAINT_PREFIX + "yarn.container.tags";
 	public static final String YARN_PLACEMENT_CONSTRAINTS = BLINK_RESOURCE_CONSTRAINT_PREFIX + "yarn.container.placement.constraints";
-	public static final String YARN_CONTAINER_PRIORITY = BLINK_RESOURCE_CONSTRAINT_PREFIX + "yarn.container.priority";
 
 	public static final String YARN_EXECUTION_TYPE_GUARANTEED = "GUARANTEED";
 	public static final String YARN_EXECUTION_TYPE_OPPORTUNISTIC = "OPPORTUNISTIC";

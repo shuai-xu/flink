@@ -131,6 +131,7 @@ under the License.
 									<include>org.apache.httpcomponents:*</include>
 									<include>commons-httpclient:commons-httpclient</include>
 									<include>org.codehaus.jackson:*</include>
+									<include>org.codehaus.jettison:*</include>
 
 									<include>com.squareup.okio:*</include>
 								</includes>
@@ -178,6 +179,10 @@ under the License.
 								<relocation>
 									<pattern>okio</pattern>
 									<shadedPattern>org.apache.flink.hadoop.shaded.okio</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.codehaus.jettison</pattern>
+									<shadedPattern>org.apache.flink.hadoop.shaded.org.codehaus.jettison</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>

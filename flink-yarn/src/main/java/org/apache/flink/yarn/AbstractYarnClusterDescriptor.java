@@ -1589,7 +1589,7 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 				ps.format(format, "Memory", res.getMemory() + " MB");
 				ps.format(format, "vCores", res.getVirtualCores());
 				ps.format(format, "HealthReport", rep.getHealthReport());
-				ps.format(format, "Containers", rep.getNumContainers());
+				ps.format(format, "Containers", getNumContainers(rep));
 				ps.println("+---------------------------------------+");
 			}
 			ps.println("Summary: totalMemory " + totalMemory + " totalCores " + totalCores);
@@ -1602,6 +1602,22 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		} catch (Exception e) {
 			throw new RuntimeException("Couldn't get cluster description", e);
 		}
+	}
+
+	/**
+	 * This method is to get num total containers from all YARN versions.
+	 * NodeReport#getNumContainers has been changed to NodeReport#getNumTotalContainers in YARN 3.x.
+	 */
+	private int getNumContainers(NodeReport nodeReport) throws Exception {
+		int numContainers;
+		try {
+			Method method = NodeReport.class.getDeclaredMethod("getNumContainers", null);
+			numContainers = (Integer) method.invoke(nodeReport, null);
+		} catch (NoSuchMethodException e) {
+			Method method = NodeReport.class.getDeclaredMethod("getNumTotalContainers", null);
+			numContainers = (Integer) method.invoke(nodeReport, null);
+		}
+		return numContainers;
 	}
 
 	public void setName(String name) {

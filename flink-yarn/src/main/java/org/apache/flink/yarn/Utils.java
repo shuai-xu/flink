@@ -18,6 +18,8 @@
 
 package org.apache.flink.yarn;
 
+import org.apache.flink.api.common.operators.ResourceSpec;
+import org.apache.flink.api.common.resources.Resource;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.JobManagerOptions;
@@ -25,8 +27,10 @@ import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.runtime.clusterframework.BootstrapTools;
 import org.apache.flink.runtime.clusterframework.ContaineredTaskManagerParameters;
+import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.util.HadoopUtils;
 import org.apache.flink.util.StringUtils;
+import org.apache.flink.yarn.configuration.YarnConfigOptions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -46,6 +50,8 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -56,6 +62,7 @@ import javax.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -65,8 +72,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static org.apache.flink.yarn.YarnConfigKeys.ENV_FLINK_CLASSPATH;
+import static org.apache.flink.yarn.YarnConfigKeys.SCHEDULING_REQUEST_ADAPTER_CLASS;
 
 /**
  * Utility class that provides helper methods to work with Apache Hadoop YARN.
@@ -790,5 +799,44 @@ public final class Utils {
 		if (!condition) {
 			throw new RuntimeException(String.format(message, values));
 		}
+	}
+
+	public static RequestAdapter getRequestAdapter(
+		org.apache.flink.configuration.Configuration flinkConfig,
+		AMRMClientAsync<AMRMClient.ContainerRequest> rmClient) {
+		Boolean useSchedulingRequest = flinkConfig.getBoolean(YarnConfigOptions.USE_SCHEDULING_REQUEST);
+		if (useSchedulingRequest) {
+			Class<?> schedulingRequestAdapterClass;
+			try {
+				schedulingRequestAdapterClass = Class.forName(SCHEDULING_REQUEST_ADAPTER_CLASS);
+			} catch (ClassNotFoundException e) {
+				String message =
+					"Failed to find class of scheduling request adapter="
+						+ SCHEDULING_REQUEST_ADAPTER_CLASS
+						+ ", this binary is generated without build profile -- yarn3"
+						+ ", please replace with correct binary or make sure "
+						+ YarnConfigOptions.USE_SCHEDULING_REQUEST.key() + " is set to false.";
+				LOG.error(message);
+				throw new IllegalArgumentException(message);
+			}
+			try {
+				Constructor<?> constructor =
+					schedulingRequestAdapterClass.getDeclaredConstructor(AMRMClientAsync.class);
+				return (RequestAdapter) constructor.newInstance(rmClient);
+			} catch (Exception e) {
+				throw new RuntimeException(e.getMessage(), e);
+			}
+		}
+		return new ResourceRequestAdapter(rmClient);
+	}
+
+	public static Map<String, Resource> getPureExtendedResources(ResourceProfile resourceProfile) {
+		if (resourceProfile != null && resourceProfile.getExtendedResources() != null) {
+			return resourceProfile.getExtendedResources().entrySet().stream().filter(
+				e -> !e.getKey().equals(ResourceSpec.MANAGED_MEMORY_NAME) && !e.getKey()
+					.equals(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME))
+				.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+		}
+		return null;
 	}
 }

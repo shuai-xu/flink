@@ -179,12 +179,12 @@ public class StreamingJobGraphGenerator {
 			ResourceConstraintsConfig resourceConstraintsConfig = new ResourceConstraintsConfig(flinkConf);
 			ResourceConstraints constraints = resourceConstraintsConfig.getDefaultResourceConstraints();
 			if (constraints != null) {
+				LOG.info("Set default resource constraints: " + constraints.toString());
 				for (StreamNode streamNode : streamGraph.getStreamNodes()) {
 					if (streamNode.getResourceConstraints() == null) {
 						streamNode.setResourceConstraints(constraints.clone());
 					}
 				}
-				LOG.info(constraints.toString());
 			}
 		}
 	}

@@ -63,6 +63,7 @@ public class YarnConfigKeys {
 	public static final String ENV_TM_CAPACITY_MEMORY_MB = "_TM_CAPACITY_MEMORY_MB";
 	public static final String ENV_TM_CAPACITY_CPU_CORE = "_TM_CAPACITY_CPU_CORE";
 
+	public static final String SCHEDULING_REQUEST_ADAPTER_CLASS = "org.apache.flink.yarn.SchedulingRequestAdapter";
 	// ------------------------------------------------------------------------
 
 	/** Private constructor to prevent instantiation. */

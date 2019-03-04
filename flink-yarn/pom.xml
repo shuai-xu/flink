@@ -189,6 +189,33 @@ under the License.
 			</dependencies>
 		</profile>
 
+		<profile>
+			<id>yarn3</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>build-helper-maven-plugin</artifactId>
+						<version>1.5</version>
+						<executions>
+							<execution>
+								<id>add-sources</id>
+								<phase>generate-sources</phase>
+								<goals>
+									<goal>add-source</goal>
+								</goals>
+								<configuration>
+									<sources>
+										<source>${basedir}/src/main/optional/java</source>
+									</sources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
 	</profiles>
 
 	<build>
@@ -326,6 +353,7 @@ under the License.
 					</execution>
 				</executions>
 			</plugin>
+
 		</plugins>
 	</build>
 </project>

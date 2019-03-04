@@ -145,6 +145,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	/** Client to communicate with the Resource Manager (YARN's master). */
 	private AMRMClientAsync<AMRMClient.ContainerRequest> resourceManagerClient;
 
+	/** Request adapter to communicate with Resource Manager (YARN's master) with special version. */
+	private RequestAdapter requestAdapter;
+
 	/** Client to communicate with the Node manager and launch TaskExecutor processes. */
 	private NMClient nodeManagerClient;
 
@@ -313,6 +316,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 				yarnConfig,
 				yarnHeartbeatIntervalMillis,
 				webInterfaceUrl);
+			requestAdapter = Utils.getRequestAdapter(flinkConfig, resourceManagerClient);
+			log.info("Using request adapter: " + requestAdapter.getClass().getSimpleName());
 		} catch (Exception e) {
 			throw new ResourceManagerException("Could not start resource manager client.", e);
 		}
@@ -476,8 +481,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			if (slotNumber == 1) {
 				// if one container has one slot, just decrease the pending number
 				pendingNumber.decrementAndGet();
-				resourceManagerClient.removeContainerRequest(new AMRMClient.ContainerRequest(
-						containerResource, null, null, Priority.newInstance(priority)));
+				requestAdapter.removeRequest(containerResource, Priority.newInstance(priority),
+					pendingNumber.get(), getResourceConstraints(priority));
 			} else {
 				Integer spareSlots = priorityToSpareSlots.get(priority);
 				// if spare slots not fulfill a container, add one to the spare number, else decrease the pendign number
@@ -488,8 +493,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 				} else {
 					priorityToSpareSlots.remove(priority);
 					pendingNumber.decrementAndGet();
-					resourceManagerClient.removeContainerRequest(new AMRMClient.ContainerRequest(
-						containerResource, null, null, Priority.newInstance(priority)));
+					requestAdapter.removeRequest(containerResource, Priority.newInstance(priority),
+						pendingNumber.get(), getResourceConstraints(priority));
 				}
 			}
 		}
@@ -559,8 +564,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 				if (pendingNumber != null && pendingNumber.get() > 0) {
 					pendingNumber.decrementAndGet();
-					resourceManagerClient.removeContainerRequest(new AMRMClient.ContainerRequest(
-						getOrigContainerResource(priority), null, null, Priority.newInstance(priority)));
+					requestAdapter.removeRequest(getOrigContainerResource(priority),
+						Priority.newInstance(priority), pendingNumber.get(), getResourceConstraints(priority));
 
 					String errMsg = String.format("Container allocated with id %s exceed total resource limit, releasing container.", container.getId());
 					if (checkAllocateNewResourceExceedTotalResourceLimit(
@@ -679,7 +684,6 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		return new Tuple2<>(host, Integer.valueOf(port));
 	}
 
-	//TODO: update abstract request with constraints
 	private void requestYarnContainer(Resource resource, Priority priority, ResourceConstraints constraints) {
 		AtomicInteger pendingNumber = new AtomicInteger(0);
 		AtomicInteger prevPendingNumber = numPendingContainerRequests.putIfAbsent(priority.getPriority(), pendingNumber);
@@ -688,13 +692,13 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		}
 		pendingNumber.getAndIncrement();
 
-		resourceManagerClient.addContainerRequest(new AMRMClient.ContainerRequest(resource, null, null, priority));
+		requestAdapter.addRequest(resource, priority, pendingNumber.get(), constraints);
 
 		// make sure we transmit the request fast and receive fast news of granted allocations
 		resourceManagerClient.setHeartbeatInterval(FAST_YARN_HEARTBEAT_INTERVAL_MS);
 
-		log.info("Requesting new TaskExecutor container with resources {}. Priority {}. Number pending requests {}.",
-			resource, priority, pendingNumber.get());
+		log.info("Requesting new TaskExecutor container with resources {}. Priority {}. Number pending requests {}." +
+				" Resource constraints {}.", resource, priority, pendingNumber.get(), constraints);
 	}
 
 	private boolean checkAllocateNewResourceExceedTotalResourceLimit(double cpu, int memory, String errMsg) {
@@ -916,7 +920,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		int mem = Math.max(tmResource.getTotalContainerMemory(), minMemoryPerContainer);
 		int vcore = (int) (Math.max(tmResource.getContainerCpuCores(), minCorePerContainer) * yarnVcoreRatio);
 		Resource capability = Resource.newInstance(mem, vcore);
-		// TODO: Set extended resources if the version of yarn api >= 2.8 .
+		Map<String, org.apache.flink.api.common.resources.Resource> extendedResources =
+			Utils.getPureExtendedResources(tmResource.getTaskResourceProfile());
+		requestAdapter.updateExtendedResources(capability, extendedResources);
 		return capability;
 	}
 

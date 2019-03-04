@@ -185,6 +185,14 @@ public class YarnConfigOptions {
 			key("yarn.container-register-timeout")
 					.defaultValue(120L);
 
+	/**
+	 * Whether to use scheduling request with YARN RM whose version must be 3.0+.
+	 */
+	public static final ConfigOption<Boolean> USE_SCHEDULING_REQUEST =
+		key("yarn.use-scheduling-request")
+			.defaultValue(false)
+			.withDescription("Whether to use scheduling request with YARN RM whose version must be 3.0+");
+
 	// ------------------------------------------------------------------------
 
 	/** This class is not meant to be instantiated. */
