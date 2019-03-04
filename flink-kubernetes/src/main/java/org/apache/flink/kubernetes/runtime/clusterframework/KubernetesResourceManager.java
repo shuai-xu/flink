@@ -504,30 +504,10 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 
 		String taskManagerPodName = taskManagerPodNamePrefix + generateNewPodId();
 		try {
-			// init additional environments
-			Map<String, String> additionalEnvs = new HashMap<>();
-			additionalEnvs.put(Constants.ENV_TM_NUM_TASK_SLOT, String.valueOf(taskManagerResource.getSlotNum()));
-			additionalEnvs.put(Constants.ENV_TM_RESOURCE_PROFILE_KEY,
-				KubernetesRMUtils.getEncodedResourceProfile(taskManagerResource.getTaskResourceProfile()));
-
-			final long managedMemory = taskManagerResource.getManagedMemorySize() > 1 ? taskManagerResource.getManagedMemorySize() :
-				flinkConfig.getLong(TaskManagerOptions.MANAGED_MEMORY_SIZE);
-			additionalEnvs.put(Constants.ENV_TM_MANAGED_MEMORY_SIZE, String.valueOf(managedMemory));
-
-			final int floatingManagedMemory = taskManagerResource.getFloatingManagedMemorySize();
-			additionalEnvs.put(Constants.ENV_TM_FLOATING_MANAGED_MEMORY_SIZE, String.valueOf(floatingManagedMemory));
-
-			additionalEnvs.put(Constants.ENV_TM_PROCESS_NETTY_MEMORY,
-				String.valueOf(taskManagerResource.getTaskManagerNettyMemorySizeMB()));
-
-			long networkBufBytes = ((long) taskManagerResource.getNetworkMemorySize()) << 20;
-			additionalEnvs.put(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MIN, String.valueOf(networkBufBytes));
-			additionalEnvs.put(Constants.ENV_TM_NETWORK_BUFFERS_MEMORY_MAX, String.valueOf(networkBufBytes));
-			log.debug("Task manager environments: " + additionalEnvs);
 			// create TM container
 			Container container = KubernetesRMUtils.createTaskManagerContainer(
 				flinkConfig, taskManagerResource, confDir, taskManagerPodName,
-				minCorePerContainer, minMemoryPerContainer, additionalEnvs);
+				minCorePerContainer, minMemoryPerContainer);
 			log.debug("Task manager start command: " + container.getArgs());
 			// create TM pod
 			Map<String, String> currentLabels = new HashMap<>(taskManagerPodLabels);

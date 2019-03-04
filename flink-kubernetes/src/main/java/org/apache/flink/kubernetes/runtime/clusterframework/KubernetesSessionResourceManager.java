@@ -59,6 +59,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -431,8 +432,15 @@ public class KubernetesSessionResourceManager extends
 
 	protected ResourceID requestNewWorkerNode() throws ResourceManagerException {
 		String taskManagerPodName = taskManagerPodNamePrefix + generateNewPodId();
-		Container container = KubernetesRMUtils.createTaskManagerContainer(
-			flinkConfig, taskManagerResource, confDir, taskManagerPodName, null, null, null);
+		Container container;
+		try {
+			container = KubernetesRMUtils.createTaskManagerContainer(
+				flinkConfig, taskManagerResource, confDir, taskManagerPodName, null, null);
+		} catch (IOException e) {
+			log.error("Failed to request new worker node. TM Pod name {}. TM Resources {}.",
+				taskManagerPodName, taskManagerResource, e);
+			throw new ResourceManagerException(e);
+		}
 		log.info("Task manager start command: " + container.getArgs());
 		Pod taskManagerPod = KubernetesRMUtils
 			.createTaskManagerPod(taskManagerPodLabels, taskManagerPodName,
