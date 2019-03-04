@@ -81,6 +81,12 @@ class StreamExecMatch(
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType
 
+  override def requireWatermark: Boolean = {
+    val rowtimeFields = getInput.getRowType.getFieldList
+      .filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
+    return rowtimeFields.nonEmpty
+  }
+
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
     new StreamExecMatch(
       cluster,

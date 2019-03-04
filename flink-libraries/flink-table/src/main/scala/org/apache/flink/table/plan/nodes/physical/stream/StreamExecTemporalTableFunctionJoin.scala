@@ -80,6 +80,23 @@ class StreamExecTemporalTableFunctionJoin(
 
   override def producesRetractions: Boolean = false
 
+  override def requireWatermark: Boolean = {
+    val nonEquiJoinRex = joinInfo.getRemaining(cluster.getRexBuilder)
+
+    var rowtimeJoin: Boolean = false
+    val visitor = new RexVisitorImpl[Unit](true) {
+      override def visitCall(call: RexCall): Unit = {
+        if (call.getOperator == TEMPORAL_JOIN_CONDITION) {
+          rowtimeJoin = TemporalJoinUtil.isRowtimeCall(call)
+        } else {
+          call.getOperands.foreach(node => node.accept(this))
+        }
+      }
+    }
+    nonEquiJoinRex.accept(visitor)
+    rowtimeJoin
+  }
+
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     checkState(inputs.size() == 2)
     new StreamExecTemporalTableFunctionJoin(

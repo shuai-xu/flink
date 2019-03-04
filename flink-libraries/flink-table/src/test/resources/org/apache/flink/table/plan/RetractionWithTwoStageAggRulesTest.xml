@@ -28,11 +28,11 @@ StreamExecCalc(select=[count, TMP_1 AS frequency], updateAsRetraction=[false], a
          :     +- StreamExecGlobalGroupAggregate(groupBy=[word], select=[word, COUNT(count$0) AS TMP_0], updateAsRetraction=[true], accMode=[AccRetract])
          :        +- StreamExecExchange(distribution=[hash[word]], updateAsRetraction=[true], accMode=[Acc])
          :           +- StreamExecLocalGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS count$0], updateAsRetraction=[true], accMode=[Acc])
-         :              +- StreamExecMiniBatchAssigner(interval=[1000ms], updateAsRetraction=[true], accMode=[Acc])
+         :              +- StreamExecWatermarkAssigner(fields=[[word, number]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms], updateAsRetraction=[true], accMode=[Acc])
          :                 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
          +- StreamExecLocalGroupAggregate(groupBy=[count_r], select=[count_r, COUNT_RETRACT(count_r) AS count$0, COUNT_RETRACT(*) AS count$1], updateAsRetraction=[true], accMode=[Acc])
             +- StreamExecCalc(select=[count_r], updateAsRetraction=[true], accMode=[Acc])
-               +- StreamExecMiniBatchAssigner(interval=[1000ms], updateAsRetraction=[true], accMode=[Acc])
+               +- StreamExecWatermarkAssigner(fields=[[word_r, count_r]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms], updateAsRetraction=[true], accMode=[Acc])
                   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
@@ -48,7 +48,7 @@ StreamExecCalc(select=[count, TMP_1 AS frequency], updateAsRetraction=[false], a
             +- StreamExecGlobalGroupAggregate(groupBy=[word], select=[word, COUNT(count$0) AS TMP_0], updateAsRetraction=[true], accMode=[AccRetract])
                +- StreamExecExchange(distribution=[hash[word]], updateAsRetraction=[true], accMode=[Acc])
                   +- StreamExecLocalGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS count$0], updateAsRetraction=[true], accMode=[Acc])
-                     +- StreamExecMiniBatchAssigner(interval=[1000ms], updateAsRetraction=[true], accMode=[Acc])
+                     +- StreamExecWatermarkAssigner(fields=[[word, number]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms], updateAsRetraction=[true], accMode=[Acc])
                         +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>
@@ -60,7 +60,7 @@ StreamExecCalc(select=[TMP_0], updateAsRetraction=[false], accMode=[Acc])
 +- StreamExecGlobalGroupAggregate(groupBy=[word], select=[word, COUNT(count$0) AS TMP_0], updateAsRetraction=[false], accMode=[Acc])
    +- StreamExecExchange(distribution=[hash[word]], updateAsRetraction=[true], accMode=[Acc])
       +- StreamExecLocalGroupAggregate(groupBy=[word], select=[word, COUNT(number) AS count$0], updateAsRetraction=[true], accMode=[Acc])
-         +- StreamExecMiniBatchAssigner(interval=[1000ms], updateAsRetraction=[true], accMode=[Acc])
+         +- StreamExecWatermarkAssigner(fields=[[word, number]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms], updateAsRetraction=[true], accMode=[Acc])
             +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>

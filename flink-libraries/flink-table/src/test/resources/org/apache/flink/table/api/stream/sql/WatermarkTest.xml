@@ -19,7 +19,7 @@ limitations under the License.
   <TestCase name="testWatermarkAssigner">
     <Resource name="plan">
       <![CDATA[
-StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[a], watermarkOffset=[1])
+StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[a], watermarkOffset=[1], watermarkInterval=[0ms])
 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>

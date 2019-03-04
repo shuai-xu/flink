@@ -62,6 +62,16 @@ class StreamExecOverAggregate(
 
   override def needsUpdatesAsRetraction(input: RelNode) = true
 
+  override def requireWatermark: Boolean = {
+    if (logicWindow.groups.size() != 1
+      || logicWindow.groups.get(0).orderKeys.getFieldCollations.size() != 1) {
+      return false
+    }
+    val orderKey = logicWindow.groups.get(0).orderKeys.getFieldCollations.get(0)
+    val timeType = outputSchema.fieldTypeInfos(orderKey.getFieldIndex)
+    FlinkTypeFactory.isRowtimeIndicatorType(timeType)
+  }
+
   override def consumesRetractions = true
 
   override def deriveRowType(): RelDataType = outputSchema.relDataType

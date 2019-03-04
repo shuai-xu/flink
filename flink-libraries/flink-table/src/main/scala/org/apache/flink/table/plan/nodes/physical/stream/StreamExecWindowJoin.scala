@@ -72,6 +72,8 @@ class StreamExecWindowJoin(
 
   override def deriveRowType(): RelDataType = outputRowSchema.relDataType
 
+  override def requireWatermark: Boolean = isRowTime
+
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new StreamExecWindowJoin(
       cluster,

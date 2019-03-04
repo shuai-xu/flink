@@ -49,4 +49,8 @@ trait StreamPhysicalRel extends FlinkPhysicalRel {
     */
   def producesRetractions: Boolean = false
 
+  /**
+    * Whether the [[FlinkRelNode]] requires rowtime watermark in processing logic.
+    */
+  def requireWatermark: Boolean = false
 }

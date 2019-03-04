@@ -20,9 +20,6 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
-import org.apache.flink.streaming.api.watermark.Watermark
-import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.Null
 import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchMode
@@ -166,9 +163,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join **/
   @Test
   def testRowTimeInnerJoin(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
     val sqlQuery =
       """
         |SELECT t2.key, t2.id, t1.id
@@ -196,13 +190,13 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     // test null key
     data2.+=((null.asInstanceOf[String], "RIGHT10", 10000L))
 
-    val t1 = env.fromCollection(data1).assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+    val t1 = env.fromCollection(data1).assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
-    val t2 = env.fromCollection(data2).assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+    val t2 = env.fromCollection(data2).assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     result.addSink(sink)
@@ -214,13 +208,57 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     assertEquals(expected, sink.getAppendResults.sorted)
   }
 
+  @Test
+  def testUnboundedAggAfterRowtimeInnerJoin(): Unit = {
+    val innerSql=
+      """
+        |SELECT t2.key as key, t2.id as id1, t1.id as id2
+        |FROM T1 as t1 join T2 as t2 ON
+        |  t1.key = t2.key AND
+        |  t1.rt BETWEEN t2.rt - INTERVAL '5' SECOND AND
+        |    t2.rt + INTERVAL '6' SECOND
+        |""".stripMargin
+
+    val sqlQuery = "SELECT key, COUNT(DISTINCT id1), COUNT(DISTINCT id2) FROM (" +
+      innerSql + ") GROUP BY key"
+
+    val data1 = new mutable.MutableList[(String, String, Long)]
+    // for boundary test
+    data1.+=(("A", "LEFT0.999", 999L))
+    data1.+=(("A", "LEFT1", 1000L))
+    data1.+=(("A", "LEFT2", 2000L))
+    data1.+=(("A", "LEFT3", 3000L))
+    data1.+=(("B", "LEFT4", 4000L))
+    data1.+=(("A", "LEFT5", 5000L))
+    data1.+=(("A", "LEFT6", 6000L))
+    // test null key
+    data1.+=((null.asInstanceOf[String], "LEFT8", 8000L))
+
+    val data2 = new mutable.MutableList[(String, String, Long)]
+    data2.+=(("A", "RIGHT6", 6000L))
+    data2.+=(("B", "RIGHT7", 7000L))
+    // test null key
+    data2.+=((null.asInstanceOf[String], "RIGHT10", 10000L))
+
+    val t1 = env.fromCollection(data1).assignAscendingTimestamps(r => r._3)
+      .toTable(tEnv, 'key, 'id, 'rt.rowtime)
+    val t2 = env.fromCollection(data2).assignAscendingTimestamps(r => r._3)
+      .toTable(tEnv, 'key, 'id, 'rt.rowtime)
+
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
+    val sink = new TestingRetractSink
+    val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
+    result.addSink(sink)
+    env.execute()
+    val expected = mutable.MutableList("A,1,5", "B,1,1")
+    assertEquals(expected, sink.getRetractResults.sorted)
+  }
+
   /** test row time inner join with equi-times **/
   @Test
   def testRowTimeInnerJoinWithEquiTimeAttrs(): Unit = {
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
 
     val sqlQuery =
       """
@@ -242,14 +280,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("B", "R-6", 6000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row4WatermarkExtractor)
+      .assignAscendingTimestamps(r => r._4)
       .toTable(tEnv, 'id, 'tm, 'key, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -267,10 +305,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join with other conditions **/
   @Test
   def testRowTimeInnerJoinWithOtherConditions(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.a, t1.c, t2.c
@@ -303,14 +337,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=((1, 4L, "RIGHT8", 8000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row4WatermarkExtractor)
+      .assignAscendingTimestamps(r => r._4)
       .toTable(tEnv, 'a, 'b, 'c, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row4WatermarkExtractor)
+      .assignAscendingTimestamps(r => r._4)
       .toTable(tEnv, 'a, 'b, 'c, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     result.addSink(sink)
@@ -327,10 +361,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join with another time condition **/
   @Test
   def testRowTimeInnerJoinWithOtherTimeCondition(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.a, t1.c, t2.c
@@ -356,14 +386,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=((1, 4L, "RIGHT8", 8000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row4WatermarkExtractor)
+      .assignAscendingTimestamps(r => r._4)
       .toTable(tEnv, 'a, 'b, 'c, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row4WatermarkExtractor)
+      .assignAscendingTimestamps(r => r._4)
       .toTable(tEnv, 'a, 'b, 'c, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
     result.addSink(sink)
@@ -381,10 +411,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test rowtime inner join with window aggregation **/
   @Test
   def testRowTimeInnerJoinWithWindowAggregateOnFirstTime(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t1.key, TUMBLE_END(t1.rt, INTERVAL '4' SECOND), COUNT(t2.key)
@@ -412,14 +438,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("D", "R-2", 8000L)) // no joining record
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val t_r = tEnv.sqlQuery(sqlQuery)
@@ -438,10 +464,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** test row time inner join with window aggregation **/
   @Test
   def testRowTimeInnerJoinWithWindowAggregateOnSecondTime(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.key, TUMBLE_END(t2.rt, INTERVAL '4' SECOND), COUNT(t1.key)
@@ -468,14 +490,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("D", "R-2", 8000L)) // no joining record
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -532,10 +554,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
   /** Tests row time left outer join **/
   @Test
   def testRowTimeLeftOuterJoin(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t1.key, t2.id, t1.id
@@ -565,15 +583,15 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("A", "R-11", 11000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -598,10 +616,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeLeftOuterJoinNegativeWindowSize(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.key, t2.id, t1.id
@@ -623,14 +637,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("D", "R-8", 8000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -686,10 +700,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeRightOuterJoin(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.key, t2.id, t1.id
@@ -718,14 +728,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("A", "R-20", 20000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -744,15 +754,10 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     )
 
     assertEquals(expected.toList.sorted, sink.getAppendResults.sorted)
-
   }
 
   @Test
   def testRowTimeRightOuterJoinNegativeWindowSize(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.key, t2.id, t1.id
@@ -774,14 +779,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("D", "R-8", 8000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -836,10 +841,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeFullOuterJoin(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.key, t2.id, t1.id
@@ -869,14 +870,14 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("D", "R-8", 8000L))
 
     val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
     val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+      .assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -901,10 +902,6 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
   @Test
   def testRowTimeFullOuterJoinNegativeWindowSize(): Unit = {
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    tEnv.getConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
-    tEnv.getConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
-
     val sqlQuery =
       """
         |SELECT t2.key, t2.id, t1.id
@@ -925,15 +922,13 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
     data2.+=(("B", "R-7", 7000L))
     data2.+=(("D", "R-8", 8000L))
 
-    val t1 = env.fromCollection(data1)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+    val t1 = env.fromCollection(data1).assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
-    val t2 = env.fromCollection(data2)
-      .assignTimestampsAndWatermarks(new Row3WatermarkExtractor2)
+    val t2 = env.fromCollection(data2).assignAscendingTimestamps(r => r._3)
       .toTable(tEnv, 'key, 'id, 'rt.rowtime)
 
-    tEnv.registerTable("T1", t1)
-    tEnv.registerTable("T2", t2)
+    tEnv.registerTableWithWatermark("T1", t1, "rt", 0)
+    tEnv.registerTableWithWatermark("T2", t2, "rt", 0)
 
     val sink = new TestingAppendSink
     val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
@@ -2007,32 +2002,5 @@ class JoinStreamITCase(miniBatch: MiniBatchMode, mode: StateBackendMode)
 
     val expected = List("500")
     assertEquals(expected.sorted, sink.getRetractResults.sorted)
-  }
-}
-
-private class Row4WatermarkExtractor extends
-  AssignerWithPunctuatedWatermarks[(Int, Long, String, Long)] {
-  override def checkAndGetNextWatermark(lastElement: (Int, Long, String, Long),
-    extractedTimestamp: Long): Watermark = {
-    new Watermark(extractedTimestamp - 1)
-  }
-
-  override def extractTimestamp(element: (Int, Long, String, Long),
-    previousElementTimestamp: Long): Long = {
-    element._4
-  }
-}
-
-private class Row3WatermarkExtractor2 extends
-  AssignerWithPunctuatedWatermarks[(String, String, Long)] {
-  override def checkAndGetNextWatermark(lastElement: (String, String, Long),
-    extractedTimestamp: Long): Watermark = {
-    new Watermark(extractedTimestamp - 1)
-  }
-
-  override def extractTimestamp(
-    element: (String, String, Long),
-    previousElementTimestamp: Long): Long = {
-    element._3
   }
 }

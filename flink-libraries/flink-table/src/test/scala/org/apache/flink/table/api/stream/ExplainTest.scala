@@ -90,6 +90,38 @@ class ExplainTest extends TableTestBase {
     util.verifyExplain()
   }
 
+  /**
+    * Test emit latency propagate among RelNodeBlocks
+    */
+  @Test
+  def testMiniBatchIntervalInference(): Unit = {
+    val table1 = StreamTestData.get3TupleDataStream(util.env)
+      .toTable(util.tableEnv, 'id1, 'num1.rowtime, 'text)
+    util.tableEnv.registerTableWithWatermark("table1", table1, "num1", 0)
+    val table2 = StreamTestData.get5TupleDataStream(util.env)
+      .toTable(util.tableEnv, 'id2, 'num2.rowtime, 'cnt, 'name, 'goods)
+    util.tableEnv.registerTableWithWatermark("table2", table2, "num2", 0)
+
+    util.tableEnv.getConfig.getConf.setLong(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 3000L)
+
+    val table3 = util.tableEnv.scan("table1").join(util.tableEnv.scan("table2"))
+      .where('id1 === 'id2 && 'num1 > 'num2 - 5.minutes && 'num1 < 'num2 + 3.minutes)
+      .select('id1, 'num1, 'text)
+
+    val table4 = table3.window(Tumble over 8.second on 'num1 as 'w)
+      .groupBy('w, 'id1)
+      .select('id1, 'text.concat_agg("#"))
+    table4.writeToSink(new TestingAppendTableSink)
+
+    val table5 = table3.window(Slide over 12.second every 6.second on 'num1 as 'w)
+      .groupBy('w, 'id1)
+      .select('id1, 'text.concat_agg("*"))
+    table5.writeToSink(new TestingAppendTableSink)
+
+    util.verifyExplain()
+  }
+
   @Test
   def testRetractAndUpsertSink(): Unit = {
     val t = StreamTestData.get3TupleDataStream(util.env)

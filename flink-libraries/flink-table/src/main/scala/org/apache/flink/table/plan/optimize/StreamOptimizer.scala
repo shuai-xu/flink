@@ -18,24 +18,26 @@
 
 package org.apache.flink.table.plan.optimize
 
-import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
 import org.apache.flink.table.calcite.{FlinkChainContext, FlinkTypeFactory}
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef, UpdateAsRetractionTraitDef}
+import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef, MiniBatchInterval, MiniBatchIntervalTrait, MiniBatchIntervalTraitDef, MiniBatchMode, UpdateAsRetractionTraitDef}
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.plan.nodes.calcite.Sink
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecDataStreamScan, StreamExecIntermediateTableScan, StreamPhysicalRel}
 import org.apache.flink.table.plan.optimize.program.{FlinkStreamPrograms, StreamOptimizeContext}
 import org.apache.flink.table.plan.schema.IntermediateRelNodeTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
-import org.apache.flink.table.plan.util.SameRelObjectShuttle
+import org.apache.flink.table.plan.util.{MiniBatchIntervalInferUtil, SameRelObjectShuttle}
 import org.apache.flink.table.sinks.BaseRetractStreamTableSink
 import org.apache.flink.util.Preconditions
+
 import org.apache.calcite.plan.{Context, Contexts, RelOptPlanner}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rex.RexBuilder
+
 import java.util
 
 import scala.collection.JavaConversions._
@@ -48,7 +50,7 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
   override protected def doOptimize(roots: Seq[RelNode]): Seq[RelNodeBlock] = {
     // build RelNodeBlock plan
     val sinkBlocks = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(roots, tEnv)
-    // infer updateAsRetraction property for sink block
+    // infer updateAsRetraction property and minibatch interval property for sink block
     sinkBlocks.foreach { sinkBlock =>
       val retractionFromRoot = sinkBlock.outputNode match {
         case n: Sink =>
@@ -56,7 +58,18 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
         case o =>
           o.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE).sendsUpdatesAsRetractions
       }
+      val miniBatchInterval: MiniBatchInterval = if (tEnv.getConfig.getConf.contains(
+        TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)) {
+        val minibatchLatency = tEnv.getConfig.getConf.getLong(
+          TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
+        Preconditions.checkArgument(minibatchLatency > 0,
+          "MiniBatch Latency must be greater than 0.", null)
+        MiniBatchInterval(minibatchLatency, MiniBatchMode.ProcTime)
+      }  else {
+        MiniBatchIntervalTrait.NONE.getMiniBatchInterval
+      }
       sinkBlock.setUpdateAsRetraction(retractionFromRoot)
+      sinkBlock.setMiniBatchInterval(miniBatchInterval)
     }
 
     if (sinkBlocks.size == 1) {
@@ -67,15 +80,17 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
       val optimizedTree = optimizeTree(
         block.getPlan,
         block.isUpdateAsRetraction,
+        block.getMiniBatchInterval,
         isSinkBlock = true)
       block.setOptimizedPlan(optimizedTree)
       return sinkBlocks
     }
 
     // infer updateAsRetraction property for all input blocks
-    sinkBlocks.foreach(b => inferUpdateAsRetraction(b, b.isUpdateAsRetraction, isSinkBlock = true))
-    // propagate updateAsRetraction property to all input blocks
-    sinkBlocks.foreach(propagateUpdateAsRetraction)
+    sinkBlocks.foreach(b => inferUpdateAsRetraction(
+      b, b.isUpdateAsRetraction, b.getMiniBatchInterval, isSinkBlock = true))
+    // propagate updateAsRetraction and minibatch interval property to all input blocks
+    sinkBlocks.foreach(propagateTraits)
     // clear the intermediate result
     sinkBlocks.foreach(resetIntermediateResult)
     // optimize recursively RelNodeBlock
@@ -98,6 +113,7 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
         val optimizedTree = optimizeTree(
           s,
           updatesAsRetraction = block.isUpdateAsRetraction,
+          miniBatchInterval = block.getMiniBatchInterval,
           isSinkBlock = true)
         block.setOptimizedPlan(optimizedTree)
 
@@ -105,6 +121,7 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
         val optimizedPlan = optimizeTree(
           o,
           updatesAsRetraction = block.isUpdateAsRetraction,
+          miniBatchInterval = block.getMiniBatchInterval,
           isSinkBlock = isSinkBlock)
         val isAccRetract = optimizedPlan.getTraitSet
           .getTrait(AccModeTraitDef.INSTANCE).getAccMode == AccMode.AccRetract
@@ -124,12 +141,14 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
     *
     * @param relNode The root node of the relational expression tree.
     * @param updatesAsRetraction True if request updates as retraction messages.
+    * @param miniBatchInterval minibatch interval of the block.
     * @param isSinkBlock True if the given block is sink block.
     * @return The optimized [[RelNode]] tree
     */
   private def optimizeTree(
       relNode: RelNode,
       updatesAsRetraction: Boolean,
+      miniBatchInterval: MiniBatchInterval,
       isSinkBlock: Boolean): RelNode = {
 
     val config = tEnv.getConfig
@@ -148,6 +167,11 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
       override def updateAsRetraction: Boolean = updatesAsRetraction
 
       override def needFinalTimeIndicatorConversion: Boolean = isSinkBlock
+
+      /**
+        * Returns the minibatch interval that sink requests.
+        */
+      override def getMiniBatchInterval(): MiniBatchInterval = miniBatchInterval
     })
 
     // Rewrite same rel object to different rel objects
@@ -166,12 +190,17 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
   private def inferUpdateAsRetraction(
       block: RelNodeBlock,
       retractionFromRoot: Boolean,
+      miniBatchInterval: MiniBatchInterval,
       isSinkBlock: Boolean): Unit = {
 
     block.children.foreach {
       child =>
         if (child.getNewOutputNode.isEmpty) {
-          inferUpdateAsRetraction(child, retractionFromRoot = false, isSinkBlock=false)
+          inferUpdateAsRetraction(
+            child,
+            retractionFromRoot = false,
+            miniBatchInterval = MiniBatchInterval.NONE,
+            isSinkBlock=false)
         }
     }
 
@@ -179,11 +208,13 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
     blockLogicalPlan match {
       case n: Sink =>
         require(isSinkBlock)
-        val optimizedPlan = optimizeTree(n, retractionFromRoot, isSinkBlock = true)
+        val optimizedPlan = optimizeTree(
+          n, retractionFromRoot, miniBatchInterval, isSinkBlock = true)
         block.setOptimizedPlan(optimizedPlan)
 
       case o =>
-        val optimizedPlan = optimizeTree(o, retractionFromRoot, isSinkBlock = isSinkBlock)
+        val optimizedPlan = optimizeTree(
+          o, retractionFromRoot, miniBatchInterval, isSinkBlock = isSinkBlock)
         val rowType = optimizedPlan.getRowType
         val fieldExpressions = getExprsWithTimeAttribute(o.getRowType, rowType)
         val name = tEnv.createUniqueTableName()
@@ -196,40 +227,49 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends AbstractOptimizer {
   }
 
   /**
-    * Propagate updateAsRetraction property to all input blocks
+    * Propagate updateAsRetraction and MiniBatchInterval property to all input blocks.
     *
     * @param block The [[RelNodeBlock]] instance.
     */
-  private def propagateUpdateAsRetraction(block: RelNodeBlock): Unit = {
+  private def propagateTraits(block: RelNodeBlock): Unit = {
 
     // process current block
-    def shipUpdateAsRetraction(rel: RelNode, updateAsRetraction: Boolean): Unit = {
+    def shipTraits(
+        rel: RelNode,
+        updateAsRetraction: Boolean,
+        miniBatchInterval: MiniBatchInterval): Unit = {
       rel match {
         case _: StreamExecDataStreamScan | _: StreamExecIntermediateTableScan =>
           val scan = rel.asInstanceOf[TableScan]
           val retractionTrait = scan.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)
-          if (retractionTrait.sendsUpdatesAsRetractions || updateAsRetraction) {
-            val tableName = scan.getTable.getQualifiedName.last
-            val retractionBlocks = block.children.filter(_.getOutputTableName eq tableName)
-            Preconditions.checkArgument(retractionBlocks.size <= 1)
-            if (retractionBlocks.size == 1) {
-              retractionBlocks.head.setUpdateAsRetraction(true)
+          val miniBatchIntervalTrait = scan.getTraitSet.getTrait(MiniBatchIntervalTraitDef.INSTANCE)
+          val tableName = scan.getTable.getQualifiedName.last
+          val inputBlocks = block.children.filter(_.getOutputTableName eq tableName)
+          Preconditions.checkArgument(inputBlocks.size <= 1)
+          if (inputBlocks.size == 1) {
+            val mergedInterval = MiniBatchIntervalInferUtil.mergedMiniBatchInterval(
+                miniBatchIntervalTrait.getMiniBatchInterval, miniBatchInterval)
+            val newInterval = MiniBatchIntervalInferUtil.mergedMiniBatchInterval(
+              inputBlocks.head.getMiniBatchInterval,mergedInterval)
+            inputBlocks.head.setMiniBatchInterval(newInterval)
+
+            if (retractionTrait.sendsUpdatesAsRetractions || updateAsRetraction) {
+              inputBlocks.head.setUpdateAsRetraction(true)
             }
           }
         case ser: StreamPhysicalRel => ser.getInputs.foreach { e =>
           if (ser.needsUpdatesAsRetraction(e) || (updateAsRetraction && !ser.consumesRetractions)) {
-            shipUpdateAsRetraction(e, updateAsRetraction = true)
+            shipTraits(e, updateAsRetraction = true, miniBatchInterval)
           } else {
-            shipUpdateAsRetraction(e, updateAsRetraction = false)
+            shipTraits(e, updateAsRetraction = false, miniBatchInterval)
           }
         }
       }
     }
 
-    shipUpdateAsRetraction(block.getOptimizedPlan, block.isUpdateAsRetraction)
-    block.children.foreach(propagateUpdateAsRetraction)
+    shipTraits(block.getOptimizedPlan, block.isUpdateAsRetraction, block.getMiniBatchInterval)
+    block.children.foreach(propagateTraits)
   }
-
 
   /**
     * Reset the intermediate result including newOutputNode and outputTableName

@@ -36,7 +36,7 @@ class StreamExecWatermarkAssignerRule
     val convertInput = RelOptRule.convert(logicalNode.getInput, FlinkConventions.STREAM_PHYSICAL)
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.STREAM_PHYSICAL)
 
-    new StreamExecWatermarkAssigner(
+    StreamExecWatermarkAssigner.createRowTimeWatermarkAssigner(
       logicalNode.getCluster,
       traitSet,
       convertInput,

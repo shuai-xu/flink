@@ -1,0 +1,179 @@
+<?xml version="1.0" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<Root>
+  <TestCase name="testMiniBatchOnly">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 count$0) AS EXPR$1, MAX(max$1) AS EXPR$2, SUM(sum$2) AS EXPR$3])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecLocalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 a) AS count$0, MAX(b) AS max$1, SUM(c) AS sum$2, DISTINCT(a) AS distinct$0])
+      +- StreamExecCalc(select=[b, a, c])
+         +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testRedundantWatermarkDefinition">
+    <Resource name="plan">
+      <![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 count$0) AS EXPR$1, MAX(max$1) AS EXPR$2, SUM(sum$2) AS EXPR$3])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecLocalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 a) AS count$0, MAX(b) AS max$1, SUM(c) AS sum$2, DISTINCT(a) AS distinct$0])
+      +- StreamExecCalc(select=[b, a, c])
+         +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testWindowWithoutMinibatch">
+    <Resource name="plan">
+		<![CDATA[
+StreamExecGroupAggregate(groupBy=[b], select=[b, SUM(cnt) AS EXPR$1])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecCalc(select=[b, cnt])
+      +- StreamExecGroupWindowAggregate(groupBy=[b], window=[TumblingGroupWindow('w$, 'rowtime, 5000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[b, COUNT(a) AS cnt, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+         +- StreamExecExchange(distribution=[hash[b]])
+            +- StreamExecCalc(select=[b, rowtime, a])
+               +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[None])
+                  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testWindowWithMinibatch">
+	<Resource name="plan">
+		<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, SUM(sum$0) AS EXPR$1])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecLocalGroupAggregate(groupBy=[b], select=[b, SUM(cnt) AS sum$0])
+      +- StreamExecCalc(select=[b, cnt])
+         +- StreamExecGroupWindowAggregate(groupBy=[b], window=[SlidingGroupWindow('w$, 'rowtime, 6000.millis, 5000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[b, COUNT(a) AS cnt, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+            +- StreamExecExchange(distribution=[hash[b]])
+               +- StreamExecCalc(select=[b, rowtime, a])
+                  +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 1000ms])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+	</Resource>
+  </TestCase>
+  <TestCase name="testWindowWithEarlyFire">
+	  <Resource name="plan">
+		  <![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, SUM_RETRACT((sum$0, count$1)) AS EXPR$1])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecLocalGroupAggregate(groupBy=[b], select=[b, SUM_RETRACT(cnt) AS (sum$0, count$1), COUNT_RETRACT(*) AS count$2])
+      +- StreamExecCalc(select=[b, cnt])
+         +- StreamExecGroupWindowAggregate(groupBy=[b], window=[SlidingGroupWindow('w$, 'rowtime, 6000.millis, 5000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[b, COUNT(a) AS cnt, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime], emit=[early delay 500 millisecond])
+            +- StreamExecExchange(distribution=[hash[b]])
+               +- StreamExecCalc(select=[b, rowtime, a])
+                  +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 500ms])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+      </Resource>
+  </TestCase>
+  <TestCase name="testWindowCascade">
+	<Resource name="plan">
+		<![CDATA[
+StreamExecGroupWindowAggregate(groupBy=[b], window=[TumblingGroupWindow('w$, 'rt, 5000.millis)], select=[b, SUM(cnt) AS EXPR$1])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecCalc(select=[b, w$rowtime AS rt, cnt])
+      +- StreamExecGroupWindowAggregate(groupBy=[b], window=[TumblingGroupWindow('w$, 'rowtime, 10000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[b, COUNT(a) AS cnt, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+         +- StreamExecExchange(distribution=[hash[b]])
+            +- StreamExecCalc(select=[b, rowtime, a])
+               +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 10000ms])
+                  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+	</Resource>
+  </TestCase>
+  <TestCase name="testWindowJoinWithMiniBatch">
+	<Resource name="plan">
+		<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, COUNT(count$0) AS EXPR$1])
++- StreamExecExchange(distribution=[hash[b]])
+   +- StreamExecLocalGroupAggregate(groupBy=[b], select=[b, COUNT(a) AS count$0])
+      +- StreamExecCalc(select=[b, a])
+         +- StreamExecWindowJoin(where=[AND(=(a, a0), >=(rowtime, -(rowtime0, 5000)), <=(rowtime, +(rowtime0, 10000)))], join=[a, b, rowtime, a0, rowtime0], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-5000, leftUpperBound=10000, leftTimeIndex=2, rightTimeIndex=1])
+            :- StreamExecExchange(distribution=[hash[a]])
+            :  +- StreamExecCalc(select=[a, b, rowtime])
+            :     +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 1000ms])
+            :        +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+            +- StreamExecExchange(distribution=[hash[a]])
+               +- StreamExecCalc(select=[a, rowtime])
+                  +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 1000ms])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+	</Resource>
+  </TestCase>
+  <TestCase name="testRowtimeRowsOverWithMiniBatch">
+	<Resource name="plan">
+		<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[cnt], select=[cnt, COUNT(count$0) AS EXPR$1])
++- StreamExecExchange(distribution=[hash[cnt]])
+   +- StreamExecLocalGroupAggregate(groupBy=[cnt], select=[cnt, COUNT(c) AS count$0])
+      +- StreamExecCalc(select=[w0$o0 AS cnt, c])
+         +- StreamExecOverAggregate(partitionBy=[c], orderBy=[rowtime ASC], window=[ ROWS BETWEEN 5 PRECEDING AND CURRENT ROW], select=[a, c, rowtime, COUNT(a) AS w0$o0])
+            +- StreamExecExchange(distribution=[hash[c]])
+               +- StreamExecCalc(select=[a, c, rowtime])
+                  +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 1000ms])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+]]>
+	</Resource>
+  </TestCase>
+  <TestCase name="testTemporalTableFunctionJoinWithMiniBatch">
+	<Resource name="plan">
+		<![CDATA[
+StreamExecGlobalGroupAggregate(groupBy=[r_a], select=[r_a, COUNT(count$0) AS EXPR$1])
++- StreamExecExchange(distribution=[hash[r_a]])
+   +- StreamExecLocalGroupAggregate(groupBy=[r_a], select=[r_a, COUNT(o_a) AS count$0])
+      +- StreamExecCalc(select=[a0 AS r_a, a AS o_a])
+         +- StreamExecTemporalTableFunctionJoin(where=[AND(__TEMPORAL_JOIN_CONDITION(rowtime, rowtime0, b0), =(b, b0))], join=[a, b, rowtime, a0, b0, rowtime0], joinType=[InnerJoin])
+            :- StreamExecExchange(distribution=[hash[b]])
+            :  +- StreamExecCalc(select=[a, b, rowtime])
+            :     +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 1000ms])
+            :        +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+            +- StreamExecExchange(distribution=[hash[b]])
+               +- StreamExecCalc(select=[a, b, rowtime])
+                  +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 1000ms])
+                     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+	</Resource>
+  </TestCase>
+  <TestCase name="testMultiOperatorNeedsWatermark">
+  	<Resource name="plan">
+		<![CDATA[
+StreamExecCalc(select=[b, w0$o0 AS $1])
++- StreamExecOverAggregate(partitionBy=[b], orderBy=[rt ASC], window=[ ROWS BETWEEN 5 PRECEDING AND CURRENT ROW], select=[a, b, rt, COUNT(a) AS w0$o0])
+   +- StreamExecExchange(distribution=[hash[b]])
+      +- StreamExecCalc(select=[a, b, rt])
+         +- StreamExecWindowJoin(where=[AND(=(a, a0), >=(rt, -(rt0, 5000)), <=(rt, +(rt0, 10000)))], join=[b, a, rt, a0, rt0], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-5000, leftUpperBound=10000, leftTimeIndex=2, rightTimeIndex=1])
+            :- StreamExecExchange(distribution=[hash[a]])
+            :  +- StreamExecCalc(select=[b, a, w$rowtime AS rt])
+            :     +- StreamExecGroupWindowAggregate(groupBy=[b], window=[TumblingGroupWindow('w$, 'rowtime, 5000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[b, COUNT(a) AS a, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+            :        +- StreamExecExchange(distribution=[hash[b]])
+            :           +- StreamExecCalc(select=[b, rowtime, a])
+            :              +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 5000ms])
+            :                 +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
+            +- StreamExecExchange(distribution=[hash[a]])
+               +- StreamExecCalc(select=[a, w$rowtime AS rt])
+                  +- StreamExecGroupWindowAggregate(groupBy=[b], window=[SlidingGroupWindow('w$, 'rowtime, 6000.millis, 5000.millis)], properties=[w$start, w$end, w$rowtime, w$proctime], select=[b, COUNT(a) AS a, start('w$) AS w$start, end('w$) AS w$end, rowtime('w$) AS w$rowtime, proctime('w$) AS w$proctime])
+                     +- StreamExecExchange(distribution=[hash[b]])
+                        +- StreamExecCalc(select=[b, rowtime, a])
+                           +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[rowtime], watermarkOffset=[0], miniBatchInterval=[Rowtime, 1000ms])
+                              +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
+]]>
+    </Resource>
+  </TestCase>
+</Root>

@@ -28,8 +28,8 @@ import org.apache.flink.table.runtime.window.triggers._
 class EmitStrategy(
     isEventTime: Boolean,
     isSessionWindow: Boolean,
-    earlyFireInterval: Long,
-    lateFireInterval: Long,
+    val earlyFireInterval: Long,
+    val lateFireInterval: Long,
     allowLateness: Long) {
 
   def getAllowLateness: Long = allowLateness

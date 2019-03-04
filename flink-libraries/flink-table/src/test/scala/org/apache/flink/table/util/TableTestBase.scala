@@ -150,6 +150,14 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     table
   }
 
+  def registerTableWithWatermark(
+      tableName: String,
+      table: Table,
+      rt: String,
+      offset: Long): Unit = {
+    tableEnv.registerTableWithWatermark(tableName, table, rt, offset)
+  }
+
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {
     val stream = javaEnv.addSource(new EmptySource[T], typeInfo)
     val table = javaTableEnv.fromDataStream(stream, fields)

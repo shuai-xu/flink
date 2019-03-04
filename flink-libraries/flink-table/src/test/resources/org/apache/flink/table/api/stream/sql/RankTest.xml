@@ -437,7 +437,7 @@ StreamExecRank(rankFunction=[ROW_NUMBER], partitionBy=[b], orderBy=[$f3 DESC], r
                      +- StreamExecCalc(select=[a, b, c, $f3, =($e, 1) AS $g_1, =($e, 0) AS $g_0], updateAsRetraction=[true], accMode=[Acc])
                         +- StreamExecExpand(projects=[{a, b, c, $f3, 0 AS $e}, {a, b, c, null AS $f3, 1 AS $e}], updateAsRetraction=[true], accMode=[Acc])
                            +- StreamExecCalc(select=[a, b, c, MOD(HASH_CODE(c), 1024) AS $f3], where=[>=(c, 0)], updateAsRetraction=[true], accMode=[Acc])
-                              +- StreamExecMiniBatchAssigner(interval=[1000ms], updateAsRetraction=[true], accMode=[Acc])
+                              +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms], updateAsRetraction=[true], accMode=[Acc])
                                  +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
 ]]>
     </Resource>

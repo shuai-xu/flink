@@ -350,13 +350,22 @@ object FlinkStreamExecRuleSets {
   )
 
   /**
-    * RuleSet to decorate plans for stream exec execution
+    * RuleSet for retraction inference.
     */
-  val STREAM_EXEC_DECORATE_RULES: RuleSet = RuleSets.ofList(
+  val STREAM_EXEC_RETRACTION_RULES: RuleSet = RuleSets.ofList(
     // retraction rules
     StreamExecRetractionRules.DEFAULT_RETRACTION_INSTANCE,
     StreamExecRetractionRules.UPDATES_AS_RETRACTION_INSTANCE,
-    StreamExecRetractionRules.ACCMODE_INSTANCE)
+    StreamExecRetractionRules.ACCMODE_INSTANCE
+  )
+
+  /**
+    * RuleSet related to watermark assignment.
+    */
+  val STREAM_EXEC_MINIBATCH_RULES: RuleSet = RuleSets.ofList(
+    // watermark interval infer rule
+    MiniBatchIntervalInferRule.INSTANCE
+  )
 
   /**
     * RuleSet to optimize plans after stream exec execution.

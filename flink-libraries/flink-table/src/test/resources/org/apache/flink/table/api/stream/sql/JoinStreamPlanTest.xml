@@ -188,11 +188,11 @@ StreamExecJoin(where=[=(a1, b1)], join=[a1, b1], joinType=[InnerJoin], leftState
 StreamExecJoin(where=[=(a1, b1)], join=[a1, b1], joinType=[InnerJoin], leftStateType=[WITHOUT_PRIMARY_KEY], leftMatchStateType=[EMPTY_MATCH], rightStateType=[WITHOUT_PRIMARY_KEY], rightMatchStateType=[EMPTY_MATCH])
   StreamExecExchange(distribution=[hash[a1]])
     StreamExecCalc(select=[a1])
-      StreamExecMiniBatchAssigner(interval=[1000ms])
+      StreamExecWatermarkAssigner(fields=[[a1, a2, a3]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
         StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
   StreamExecExchange(distribution=[hash[b1]])
     StreamExecCalc(select=[b1])
-      StreamExecMiniBatchAssigner(interval=[1000ms])
+      StreamExecWatermarkAssigner(fields=[[b1, b2, b3]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
         StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
 ]]>
     </Resource>

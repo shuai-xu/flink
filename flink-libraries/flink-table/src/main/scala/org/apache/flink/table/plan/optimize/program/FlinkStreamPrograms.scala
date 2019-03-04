@@ -209,15 +209,24 @@ object FlinkStreamPrograms {
     programs.addLast(
       PHYSICAL_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
+        .addProgram(new FlinkUpdateAsRetractionTraitInitProgram,
+          "Initialization for retraction inference")
         .addProgram(
-          FlinkDecorateProgramBuilder.newBuilder
+          FlinkHepRuleSetProgramBuilder.newBuilder
             .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
             .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-            .add(FlinkStreamExecRuleSets.STREAM_EXEC_DECORATE_RULES)
-            .build(), "decorate")
-        .addProgram(new FlinkMiniBatchAnalyseProgram, "micro batch")
+            .add(FlinkStreamExecRuleSets.STREAM_EXEC_RETRACTION_RULES)
+            .build(), "retraction")
+        .addProgram(new FlinkMiniBatchIntervalTraitInitProgram,
+          "Initialization for minibatch interval inference")
         .addProgram(
-          FlinkDecorateProgramBuilder.newBuilder
+          FlinkHepRuleSetProgramBuilder.newBuilder
+            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+            .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
+            .add(FlinkStreamExecRuleSets.STREAM_EXEC_MINIBATCH_RULES)
+            .build(), "minibatch interval")
+        .addProgram(
+          FlinkHepRuleSetProgramBuilder.newBuilder
             .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
             .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
             .add(FlinkStreamExecRuleSets.PHYSICAL_REWRITE)

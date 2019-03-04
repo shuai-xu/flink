@@ -93,6 +93,7 @@ abstract class StreamTableEnvironment(
       ConventionTraitDef.INSTANCE,
       FlinkRelDistributionTraitDef.INSTANCE,
       RelCollationTraitDef.INSTANCE,
+      MiniBatchIntervalTraitDef.INSTANCE,
       UpdateAsRetractionTraitDef.INSTANCE,
       AccModeTraitDef.INSTANCE),
     catalogManager

@@ -23,8 +23,8 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.functions.{AssignerWithPunctuatedWatermarks, ProcessFunction}
 import org.apache.flink.streaming.api.watermark.Watermark
-import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.{TableSchema, Types}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, BinaryRowWriter}
 import org.apache.flink.table.expressions.{ExpressionParser, TimeIntervalUnit}
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc

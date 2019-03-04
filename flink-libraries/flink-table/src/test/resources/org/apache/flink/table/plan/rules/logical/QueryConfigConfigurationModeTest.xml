@@ -25,7 +25,7 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
             +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
-               +- StreamExecMiniBatchAssigner(interval=[6000ms])
+               +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 6000ms])
                   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
@@ -37,7 +37,7 @@ StreamExecGlobalGroupAggregate(select=[COUNT(distinct$0 count$0) AS EXPR$0])
 +- StreamExecExchange(distribution=[single])
    +- StreamExecLocalGroupAggregate(select=[COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
       +- StreamExecCalc(select=[c])
-         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+         +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
             +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
@@ -51,7 +51,7 @@ StreamExecGlobalGroupAggregate(select=[$SUM0(count$0) AS $f0])
       +- StreamExecExchange(distribution=[hash[$f1]])
          +- StreamExecLocalGroupAggregate(groupBy=[$f1], select=[$f1, COUNT(distinct$0 c) AS count$0, DISTINCT(c) AS distinct$0])
             +- StreamExecCalc(select=[c, MOD(HASH_CODE(c), 1024) AS $f1])
-               +- StreamExecMiniBatchAssigner(interval=[1000ms])
+               +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
                   +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>

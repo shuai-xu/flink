@@ -23,10 +23,10 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COU
 +- StreamExecExchange(distribution=[hash[a]])
    +- StreamExecUnion(all=[true], union=[a, sum$0, count$1, distinct$0])
       :- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) AS sum$0, COUNT(distinct$0 c) AS count$1, DISTINCT(c) AS distinct$0])
-      :  +- StreamExecMiniBatchAssigner(interval=[1000ms])
+      :  +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
       :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
       +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) AS sum$0, COUNT(distinct$0 c) AS count$1, DISTINCT(c) AS distinct$0])
-         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+         +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
             +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_2]])
 ]]>
     </Resource>
@@ -48,7 +48,7 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COU
 +- StreamExecExchange(distribution=[hash[a]])
    +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(b) FILTER $f2 AS sum$0, COUNT(distinct$0 c) FILTER $f4 AS count$1, COUNT(distinct$0 c) FILTER $f5 AS count$2, MAX(b) AS max$3, DISTINCT(c) AS distinct$0])
       +- StreamExecCalc(select=[a, b, IS TRUE(=(c, 'A')) AS $f2, c, IS TRUE(d) AS $f4, IS TRUE(=(b, 1)) AS $f5])
-         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+         +- StreamExecWatermarkAssigner(fields=[[a, b, c, d]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
             +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
 ]]>
     </Resource>
@@ -60,7 +60,7 @@ StreamExecGlobalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 count$0)
 +- StreamExecExchange(distribution=[hash[b]])
    +- StreamExecLocalGroupAggregate(groupBy=[b], select=[b, COUNT(distinct$0 a) AS count$0, MAX(b) AS max$1, SUM(c) AS sum$2, DISTINCT(a) AS distinct$0])
       +- StreamExecCalc(select=[b, a, c])
-         +- StreamExecMiniBatchAssigner(interval=[1000ms])
+         +- StreamExecWatermarkAssigner(fields=[[a, b, c, proctime, rowtime]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
             +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]])
 ]]>
     </Resource>
@@ -94,11 +94,11 @@ StreamExecGlobalGroupAggregate(groupBy=[a], select=[a, SUM(sum$0) AS EXPR$1, COU
    +- StreamExecUnion(all=[true], union=[a, sum$0, count$1, distinct$0])
       :- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(c) AS sum$0, COUNT(distinct$0 b) AS count$1, DISTINCT(b) AS distinct$0])
       :  +- StreamExecCalc(select=[a, c, b])
-      :     +- StreamExecMiniBatchAssigner(interval=[1000ms])
+      :     +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
       :        +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]])
       +- StreamExecLocalGroupAggregate(groupBy=[a], select=[a, SUM(c) AS sum$0, COUNT(distinct$0 b) AS count$1, DISTINCT(b) AS distinct$0])
          +- StreamExecCalc(select=[a, c, b])
-            +- StreamExecMiniBatchAssigner(interval=[1000ms])
+            +- StreamExecWatermarkAssigner(fields=[[a, b, c]], rowtimeField=[null], watermarkOffset=[0], miniBatchInterval=[Proctime, 1000ms])
                +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_2]])
 ]]>
     </Resource>

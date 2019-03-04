@@ -309,6 +309,11 @@ public class TableConfigOptions {
 			.defaultValue(true)
 			.withDescription("Whether to enable flushing buffered data before snapshot.");
 
+	public static final ConfigOption<Boolean> SQL_EXEC_MINI_BATCH_WINDOW_ENABLED =
+		key("sql.exec.mini-batch.window.enabled")
+			.defaultValue(true)
+			.withDescription("Whether to enable miniBatch window.");
+
 	// ------------------------------------------------------------------------
 	//  Source Options
 	// ------------------------------------------------------------------------

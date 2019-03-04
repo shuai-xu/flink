@@ -1799,4 +1799,121 @@ StreamExecSink(fields=[id1, num, text1], updateAsRetraction=[false], accMode=[Ac
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testMiniBatchIntervalInference">
+    <Resource name="explain">
+<![CDATA[== Abstract Syntax Tree ==
+LogicalProject(id1=[$0], TMP_0=[$1])
++- LogicalWindowAggregate(group=[{0}], TMP_0=[CONCAT_AGG($3, $1)], window=[TumblingGroupWindow('w, 'num1, 8000.millis)], properties=[])
+   +- LogicalProject(id1=[$0], text=[$1], num1=[$2], $f3=['#'])
+      +- LogicalProject(id1=[$0], text=[$2], num1=[$1])
+         +- LogicalProject(id1=[$0], num1=[$1], text=[$2])
+            +- LogicalFilter(condition=[AND(=($0, $3), >($1, -($4, 300000)), <($1, +($4, 180000)))])
+               +- LogicalJoin(condition=[true], joinType=[inner])
+                  :- LogicalTableScan(table=[[builtin, default, table1]])
+                  +- LogicalTableScan(table=[[builtin, default, table2]])
+
+LogicalProject(id1=[$0], TMP_1=[$1])
++- LogicalWindowAggregate(group=[{0}], TMP_1=[CONCAT_AGG($3, $1)], window=[SlidingGroupWindow('w, 'num1, 12000.millis, 6000.millis)], properties=[])
+   +- LogicalProject(id1=[$0], text=[$1], num1=[$2], $f3=['*'])
+      +- LogicalProject(id1=[$0], text=[$2], num1=[$1])
+         +- LogicalProject(id1=[$0], num1=[$1], text=[$2])
+            +- LogicalFilter(condition=[AND(=($0, $3), >($1, -($4, 300000)), <($1, +($4, 180000)))])
+               +- LogicalJoin(condition=[true], joinType=[inner])
+                  :- LogicalTableScan(table=[[builtin, default, table1]])
+                  +- LogicalTableScan(table=[[builtin, default, table2]])
+
+== Optimized Logical Plan ==
+StreamExecCalc(select=[id1, text, num1], updateAsRetraction=[true], accMode=[Acc], reuse_id=[1])
++- StreamExecWindowJoin(where=[AND(=(id1, id2), >(num1, -(num2, 300000)), <(num1, +(num2, 180000)))], join=[id1, num1, text, id2, num2], joinType=[InnerJoin], windowBounds=[isRowTime=true, leftLowerBound=-299999, leftUpperBound=179999, leftTimeIndex=1, rightTimeIndex=1], updateAsRetraction=[true], accMode=[Acc])
+   :- StreamExecExchange(distribution=[hash[id1]], updateAsRetraction=[true], accMode=[Acc])
+   :  +- StreamExecWatermarkAssigner(fields=[[id1, num1, text]], rowtimeField=[num1], watermarkOffset=[0], miniBatchInterval=[Rowtime, 2000ms], updateAsRetraction=[true], accMode=[Acc])
+   :     +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_0]], updateAsRetraction=[true], accMode=[Acc])
+   +- StreamExecExchange(distribution=[hash[id2]], updateAsRetraction=[true], accMode=[Acc])
+      +- StreamExecCalc(select=[id2, num2], updateAsRetraction=[true], accMode=[Acc])
+         +- StreamExecWatermarkAssigner(fields=[[id2, num2, cnt, name, goods]], rowtimeField=[num2], watermarkOffset=[0], miniBatchInterval=[Rowtime, 2000ms], updateAsRetraction=[true], accMode=[Acc])
+            +- StreamExecDataStreamScan(table=[[builtin, default, _DataStreamTable_1]], updateAsRetraction=[true], accMode=[Acc])
+
+StreamExecSink(fields=[id1, TMP_0], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecGroupWindowAggregate(groupBy=[id1], window=[TumblingGroupWindow('w, 'num1, 8000.millis)], select=[id1, CONCAT_AGG($f3, text) AS TMP_0], updateAsRetraction=[false], accMode=[Acc])
+   +- StreamExecExchange(distribution=[hash[id1]], updateAsRetraction=[true], accMode=[Acc])
+      +- StreamExecCalc(select=[id1, text, num1, '#' AS $f3], updateAsRetraction=[true], accMode=[Acc])
+         +- Reused(reference_id=[1])
+
+StreamExecSink(fields=[id1, TMP_1], updateAsRetraction=[false], accMode=[Acc])
++- StreamExecGroupWindowAggregate(groupBy=[id1], window=[SlidingGroupWindow('w, 'num1, 12000.millis, 6000.millis)], select=[id1, CONCAT_AGG($f3, text) AS TMP_1], updateAsRetraction=[false], accMode=[Acc])
+   +- StreamExecExchange(distribution=[hash[id1]], updateAsRetraction=[true], accMode=[Acc])
+      +- StreamExecCalc(select=[id1, text, num1, '*' AS $f3], updateAsRetraction=[true], accMode=[Acc])
+         +- Reused(reference_id=[1])
+
+== Physical Execution Plan ==
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+ : Data Source
+	content : collect elements with CollectionInputFormat
+
+	 : Operator
+		content : SourceConversion(table:[builtin, default, _DataStreamTable_0], fields:(id1, num1, text))
+		ship_strategy : FORWARD
+
+		 : Operator
+			content : MiniBatchedWatermarkAssigner(rowtime: num1, offset: 0, intervalMs: 2000)
+			ship_strategy : FORWARD
+
+			 : Operator
+				content : SourceConversion(table:[builtin, default, _DataStreamTable_1], fields:(id2, num2, cnt, name, goods))
+				ship_strategy : FORWARD
+
+				 : Operator
+					content : MiniBatchedWatermarkAssigner(rowtime: num2, offset: 0, intervalMs: 2000)
+					ship_strategy : FORWARD
+
+					 : Operator
+						content : Calc(select: (id2, num2))
+						ship_strategy : FORWARD
+
+						 : Operator
+							content : Co-Process
+							ship_strategy : HASH
+
+							 : Operator
+								content : Calc(select: (id1, text, num1))
+								ship_strategy : FORWARD
+
+								 : Operator
+									content : Calc(select: (id1, text, num1, '#' AS $f3))
+									ship_strategy : FORWARD
+
+									 : Operator
+										content : window: (TumblingGroupWindow('w, 'num1, 8000.millis)), groupBy: (id1), select: (id1, CONCAT_AGG($f3, text) AS TMP_0)
+										ship_strategy : HASH
+
+										 : Operator
+											content : SinkConversion to Row
+											ship_strategy : FORWARD
+
+											 : Operator
+												content : Calc(select: (id1, text, num1, '*' AS $f3))
+												ship_strategy : FORWARD
+
+												 : Operator
+													content : window: (SlidingGroupWindow('w, 'num1, 12000.millis, 6000.millis)), groupBy: (id1), select: (id1, CONCAT_AGG($f3, text) AS TMP_1)
+													ship_strategy : HASH
+
+													 : Operator
+														content : SinkConversion to Row
+														ship_strategy : FORWARD
+
+														 : Data Sink
+															content : Sink: TestingAppendTableSink
+															ship_strategy : FORWARD
+
+															 : Data Sink
+																content : Sink: TestingAppendTableSink
+																ship_strategy : FORWARD
+
+]]>
+	</Resource>
+  </TestCase>
+
 </Root>

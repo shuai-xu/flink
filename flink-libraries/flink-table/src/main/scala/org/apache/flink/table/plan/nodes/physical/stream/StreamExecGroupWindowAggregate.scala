@@ -58,7 +58,7 @@ class StreamExecGroupWindowAggregate(
     inputSchema: BaseRowSchema,
     grouping: Array[Int],
     inputTimestampIndex: Int,
-    emitStrategy: EmitStrategy)
+    val emitStrategy: EmitStrategy)
   extends SingleRel(cluster, traitSet, inputNode)
   with StreamPhysicalRel
   with RowStreamExecNode {
@@ -70,6 +70,16 @@ class StreamExecGroupWindowAggregate(
   override def consumesRetractions = true
 
   override def needsUpdatesAsRetraction(input: RelNode) = true
+
+  override def requireWatermark: Boolean = window match {
+    case TumblingGroupWindow(_, timeField, size)
+      if isRowtimeAttribute(timeField) && isTimeIntervalLiteral(size) => true
+    case SlidingGroupWindow(_, timeField, size, _)
+      if isRowtimeAttribute(timeField) && isTimeIntervalLiteral(size) => true
+    case SessionGroupWindow(_, timeField, _)
+      if isRowtimeAttribute(timeField) => true
+    case _ => false
+  }
 
   def getGroupings: Array[Int] = grouping
 
