@@ -473,7 +473,7 @@ public class FlinkStandaloneHiveRunner extends BlockJUnit4ClassRunner {
 			try {
 				HiveMetaStore.main(new String[]{"-v", "-p", String.valueOf(msport)});
 			} catch (Throwable t) {
-				LOGGER.error("Exiting. Got exception from metastore: ", t);
+				LOGGER.warn("Exiting. Got exception from metastore: ", t);
 			}
 		}
 

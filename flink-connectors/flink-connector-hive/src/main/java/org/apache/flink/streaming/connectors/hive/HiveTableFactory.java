@@ -27,9 +27,11 @@ import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.catalog.hive.config.HiveMetastoreConfig;
 import org.apache.flink.table.catalog.hive.config.HiveTableConfig;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.factories.BatchTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
 import org.apache.flink.table.factories.TableSourceParserFactory;
 import org.apache.flink.table.plan.stats.TableStats;
+import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.types.TypeConverters;
@@ -59,7 +61,8 @@ import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CO
 /**
  * Hive table factory provides for sql to register hive table.
  */
-public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, TableSourceParserFactory {
+public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, TableSourceParserFactory,
+										BatchTableSinkFactory<BaseRow> {
 	private static Logger logger = LoggerFactory.getLogger(HiveTableFactory.class);
 	/**
 	 * Add this method to make some optimize rule work normally, we should delete it later.
@@ -72,41 +75,32 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 
 	@Override
 	public BatchTableSource<BaseRow> createBatchTableSource(Map<String, String> props) {
-		HiveConf hiveConf = new HiveConf();
-		TableStats tableStats = null;
-		for (Map.Entry<String, String> prop : props.entrySet()) {
-			hiveConf.set(prop.getKey(), prop.getValue());
-		}
-		String[] fieldNames = props.get(HIVE_TABLE_FIELD_NAMES).split(",");
-		String hiveRowTypeString = props.get(HIVE_TABLE_FIELD_TYPES);
-		String[] hiveFieldTypes = hiveRowTypeString.split(DEFAULT_LIST_COLUMN_TYPES_SEPARATOR);
-		InternalType[] colTypes = new InternalType[fieldNames.length];
-		TypeInformation[] typeInformations = new TypeInformation[fieldNames.length];
-		for (int i = 0; i < hiveFieldTypes.length; i++) {
-			colTypes[i] = HiveCatalogUtil.convert(hiveFieldTypes[i]);
-			typeInformations[i] = TypeConverters.createExternalTypeInfoFromDataType(colTypes[i]);
-		}
-		String hiveDbName = props.get(HIVE_TABLE_DB_NAME);
-		String hiveTableName = props.get(HIVE_TABLE_TABLE_NAME);
-		String partitionFields = props.get(HIVE_TABLE_PARTITION_FIELDS);
-		String[] partitionColumns = new String[0];
-		if (null != partitionFields && !partitionFields.isEmpty()) {
-			partitionColumns = partitionFields.split(",");
-		}
-		hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, props.get(HiveConf.ConfVars.METASTOREURIS.varname));
+		HiveTableInfo hiveTableInfo = new HiveTableInfo(props).invoke();
 		try {
-			JobConf jobConf = new JobConf(hiveConf);
-			return new HiveTableSource(new RowTypeInfo(typeInformations, fieldNames),
-									hiveRowTypeString,
-									jobConf,
-									tableStats,
-									hiveDbName,
-									hiveTableName,
-									partitionColumns);
+			return new HiveTableSource(new RowTypeInfo(hiveTableInfo.getTypeInformations(), hiveTableInfo.getFieldNames()),
+									hiveTableInfo.getHiveRowTypeString(),
+									new JobConf(hiveTableInfo.getHiveConf()),
+									hiveTableInfo.getTableStats(),
+									hiveTableInfo.getHiveDbName(),
+									hiveTableInfo.getHiveTableName(),
+									hiveTableInfo.getPartitionColumns());
 		} catch (Exception e){
 			logger.error("Error when create hive batch table source ...", e);
 			throw new FlinkCatalogException(e);
 		}
+	}
+
+	@Override
+	public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
+		HiveTableInfo hiveTableInfo = new HiveTableInfo(properties).invoke();
+		// todo: solve dynamic partition table write problem
+		return new HiveTableSink(new JobConf(hiveTableInfo.getHiveConf()),
+								new RowTypeInfo(hiveTableInfo.getTypeInformations(),
+								hiveTableInfo.getFieldNames()),
+								hiveTableInfo.getHiveDbName(),
+								hiveTableInfo.getHiveTableName(),
+								hiveTableInfo.getPartitionColumns(),
+								null);
 	}
 
 	@Override
@@ -154,5 +148,79 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 		properties.add(HiveConf.ConfVars.METASTOREURIS.varname);
 
 		return properties;
+	}
+
+	private class HiveTableInfo {
+		private Map<String, String> props;
+		private HiveConf hiveConf;
+		private TableStats tableStats;
+		private String[] fieldNames;
+		private String hiveRowTypeString;
+		private TypeInformation[] typeInformations;
+		private String hiveDbName;
+		private String hiveTableName;
+		private String[] partitionColumns;
+
+		public HiveTableInfo(Map<String, String> props) {
+			this.props = props;
+		}
+
+		public HiveConf getHiveConf() {
+			return hiveConf;
+		}
+
+		public TableStats getTableStats() {
+			return tableStats;
+		}
+
+		public String[] getFieldNames() {
+			return fieldNames;
+		}
+
+		public String getHiveRowTypeString() {
+			return hiveRowTypeString;
+		}
+
+		public TypeInformation[] getTypeInformations() {
+			return typeInformations;
+		}
+
+		public String getHiveDbName() {
+			return hiveDbName;
+		}
+
+		public String getHiveTableName() {
+			return hiveTableName;
+		}
+
+		public String[] getPartitionColumns() {
+			return partitionColumns;
+		}
+
+		public HiveTableInfo invoke() {
+			hiveConf = new HiveConf();
+			tableStats = null;
+			for (Map.Entry<String, String> prop : props.entrySet()) {
+				hiveConf.set(prop.getKey(), prop.getValue());
+			}
+			fieldNames = props.get(HIVE_TABLE_FIELD_NAMES).split(",");
+			hiveRowTypeString = props.get(HIVE_TABLE_FIELD_TYPES);
+			String[] hiveFieldTypes = hiveRowTypeString.split(DEFAULT_LIST_COLUMN_TYPES_SEPARATOR);
+			InternalType[] colTypes = new InternalType[fieldNames.length];
+			typeInformations = new TypeInformation[fieldNames.length];
+			for (int i = 0; i < hiveFieldTypes.length; i++) {
+				colTypes[i] = HiveCatalogUtil.convert(hiveFieldTypes[i]);
+				typeInformations[i] = TypeConverters.createExternalTypeInfoFromDataType(colTypes[i]);
+			}
+			hiveDbName = props.get(HIVE_TABLE_DB_NAME);
+			hiveTableName = props.get(HIVE_TABLE_TABLE_NAME);
+			String partitionFields = props.get(HIVE_TABLE_PARTITION_FIELDS);
+			partitionColumns = new String[0];
+			if (null != partitionFields && !partitionFields.isEmpty()) {
+				partitionColumns = partitionFields.split(",");
+			}
+			hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, props.get(HiveConf.ConfVars.METASTOREURIS.varname));
+			return this;
+		}
 	}
 }
