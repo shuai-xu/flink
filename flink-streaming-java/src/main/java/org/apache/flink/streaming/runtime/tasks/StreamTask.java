@@ -193,6 +193,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
 	private long initTime = -1L;
 
+	private StreamTaskStateInitializer streamTaskStateInitializer = null;
+
 	// ------------------------------------------------------------------------
 
 	/**
@@ -265,10 +267,13 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	}
 
 	public StreamTaskStateInitializer createStreamTaskStateInitializer() {
-		return new StreamTaskStateInitializerImpl(
-			getEnvironment(),
-			stateBackend,
-			timerService);
+		if (streamTaskStateInitializer == null) {
+			streamTaskStateInitializer = new StreamTaskStateInitializerImpl(
+				getEnvironment(),
+				stateBackend,
+				timerService);
+		}
+		return streamTaskStateInitializer;
 	}
 
 	@Override
