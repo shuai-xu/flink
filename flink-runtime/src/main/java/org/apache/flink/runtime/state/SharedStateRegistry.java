@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -242,6 +243,29 @@ public class SharedStateRegistry implements AutoCloseable {
 		}
 	}
 
+	public boolean isSegmentsRegistered() {
+		synchronized (registeredStates) {
+			Iterator<SharedStateEntry> iterator = registeredStates.values().iterator();
+			if (iterator.hasNext()) {
+				SharedStateEntry firstRegistry = iterator.next();
+				return firstRegistry.stateHandle instanceof FileSegmentStateHandle;
+			}
+			return false;
+		}
+	}
+
+	public boolean isEmpty() {
+		synchronized (registeredStates) {
+			return registeredStates.isEmpty();
+		}
+	}
+
+	public boolean isKeyRegistered(SharedStateRegistryKey registryKey) {
+		synchronized (registeredStates) {
+			return registeredStates.containsKey(registryKey);
+		}
+	}
+
 	/**
 	 * An entry in the registry, tracking the handle and the corresponding reference count.
 	 */
@@ -359,7 +383,7 @@ public class SharedStateRegistry implements AutoCloseable {
 		public void run() {
 			try {
 				Path filePath = toDispose.getFilePath();
-				FileSystem.get(filePath.toUri()).delete(filePath, false);;
+				FileSystem.get(filePath.toUri()).delete(filePath, false);
 			} catch (Exception e) {
 				LOG.warn("A problem occurred during asynchronous disposal of a shared state datum object: {}", toDispose, e);
 			}

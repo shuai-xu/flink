@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.util.ExceptionUtils;
 
 import javax.annotation.Nonnegative;
@@ -44,20 +45,20 @@ public class IncrementalLocalKeyedStateSnapshot extends DirectoryKeyedStateHandl
 
 	/** Map with the local state handle ID and unique gobal id of all shared state handles created by the checkpoint. */
 	@Nonnull
-	private final Map<StateHandleID, String> sharedStateHandleIDs;
+	private final Map<StateHandleID, Tuple2<String, StreamStateHandle>> sharedStateHandles;
 
 	public IncrementalLocalKeyedStateSnapshot(
 		@Nonnull KeyGroupRange keyGroupRange,
 		@Nonnegative long checkpointId,
 		@Nonnull StreamStateHandle metaStateHandle,
 		@Nonnull DirectoryStateHandle directoryStateHandle,
-		@Nonnull Map<StateHandleID, String> sharedStateHandleIDs
+		@Nonnull Map<StateHandleID, Tuple2<String, StreamStateHandle>> sharedStateHandles
 	) {
 		super(directoryStateHandle, keyGroupRange);
 
 		this.checkpointId = checkpointId;
 		this.metaStateHandle = metaStateHandle;
-		this.sharedStateHandleIDs = sharedStateHandleIDs;
+		this.sharedStateHandles = sharedStateHandles;
 	}
 
 	public long getCheckpointId() {
@@ -70,8 +71,8 @@ public class IncrementalLocalKeyedStateSnapshot extends DirectoryKeyedStateHandl
 	}
 
 	@Nonnull
-	public Map<StateHandleID, String> getSharedStateHandleIDs() {
-		return sharedStateHandleIDs;
+	public Map<StateHandleID, Tuple2<String, StreamStateHandle>> getSharedStateHandles() {
+		return sharedStateHandles;
 	}
 
 	@Override
@@ -93,7 +94,7 @@ public class IncrementalLocalKeyedStateSnapshot extends DirectoryKeyedStateHandl
 
 		IncrementalLocalKeyedStateHandle that = (IncrementalLocalKeyedStateHandle) o;
 
-		if (!getSharedStateHandleIDs().equals(that.getSharedStateHandleIDs())) {
+		if (!getSharedStateHandles().equals(that.getSharedStateHandleIDs())) {
 			return false;
 		}
 		return getMetaStateHandle().equals(that.getMetaDataState());
@@ -130,7 +131,7 @@ public class IncrementalLocalKeyedStateSnapshot extends DirectoryKeyedStateHandl
 	public int hashCode() {
 		int result = super.hashCode();
 		result = 31 * result + getMetaStateHandle().hashCode();
-		result = 31 * result + getSharedStateHandleIDs().hashCode();
+		result = 31 * result + getSharedStateHandles().hashCode();
 		return result;
 	}
 

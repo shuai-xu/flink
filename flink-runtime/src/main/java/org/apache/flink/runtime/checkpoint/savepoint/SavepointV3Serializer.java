@@ -25,6 +25,7 @@ import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.IncrementalKeyedStateSnapshot;
+import org.apache.flink.runtime.state.IncrementalSegmentStateSnapshot;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeOffsets;
 import org.apache.flink.runtime.state.KeyGroupsStateHandle;
@@ -82,6 +83,7 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 	private static final byte KEY_GROUP_STATE_SNAPSHOT = 6;
 	private static final byte INCREMENTAL_KEYE_STATE_SNAPSHOT = 7;
 	private static final byte FILE_SEGMENT_STREAM_STATE_HANDLE = 8;
+	private static final byte INCREMENTAL_FILE_SEGMENT_STATE_SNAPSHOT = 9;
 
 	/** The singleton instance of the serializer */
 	public static final SavepointV3Serializer INSTANCE = new SavepointV3Serializer();
@@ -368,7 +370,11 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 		} else if (stateHandle instanceof IncrementalKeyedStateSnapshot) {
 			IncrementalKeyedStateSnapshot incrementSnapshot = (IncrementalKeyedStateSnapshot) stateHandle;
 
-			dos.writeByte(INCREMENTAL_KEYE_STATE_SNAPSHOT);
+			if (stateHandle instanceof IncrementalSegmentStateSnapshot) {
+				dos.writeByte(INCREMENTAL_FILE_SEGMENT_STATE_SNAPSHOT);
+			} else {
+				dos.writeByte(INCREMENTAL_KEYE_STATE_SNAPSHOT);
+			}
 			dos.writeInt((incrementSnapshot.getKeyGroupRange().getStartKeyGroup()));
 			dos.writeInt((incrementSnapshot.getKeyGroupRange().getEndKeyGroup()));
 
@@ -466,7 +472,7 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 			} else {
 				return new KeyGroupsStateSnapshot(groupRange, metaInfos, stateHandle);
 			}
-		} else if (INCREMENTAL_KEYE_STATE_SNAPSHOT == type) {
+		} else if (INCREMENTAL_KEYE_STATE_SNAPSHOT == type || INCREMENTAL_FILE_SEGMENT_STATE_SNAPSHOT == type) {
 			int start = dis.readInt();
 			int end = dis.readInt();
 			KeyGroupRange range = new KeyGroupRange(start, end);
@@ -485,7 +491,12 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 			}
 
 			Map<StateHandleID, StreamStateHandle> privateStates = deserializeStreamStateHandleMap(dis);
-			return new IncrementalKeyedStateSnapshot(range, checkpointId, shared, privateStates, metaStateHandle);
+
+			if (INCREMENTAL_KEYE_STATE_SNAPSHOT == type) {
+				return new IncrementalKeyedStateSnapshot(range, checkpointId, shared, privateStates, metaStateHandle);
+			} else {
+				return new IncrementalSegmentStateSnapshot(range, checkpointId, shared, privateStates, metaStateHandle);
+			}
 		} else {
 			throw new IllegalStateException("Reading invalid KeyedStateHandle for SavepointV3, type: " + type);
 		}
@@ -561,6 +572,7 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 			FileSegmentStateHandle fileSegmentStateHandle = (FileSegmentStateHandle) stateHandle;
 			dos.writeLong(fileSegmentStateHandle.getStartPosition());
 			dos.writeLong(fileSegmentStateHandle.getEndPosition());
+			dos.writeBoolean(fileSegmentStateHandle.isFileClosed());
 			dos.writeUTF(fileSegmentStateHandle.getFilePath().toString());
 
 		} else if (stateHandle instanceof FileStateHandle) {
@@ -600,8 +612,9 @@ class SavepointV3Serializer implements SavepointSerializer<SavepointV3> {
 		} else if (FILE_SEGMENT_STREAM_STATE_HANDLE == type) {
 			long startPosition = dis.readLong();
 			long endPosition = dis.readLong();
+			boolean fileClosed = dis.readBoolean();
 			String pathString = dis.readUTF();
-			return new FileSegmentStateHandle(new Path(pathString), startPosition, endPosition);
+			return new FileSegmentStateHandle(new Path(pathString), startPosition, endPosition, fileClosed);
 		} else {
 			throw new IOException("Unknown implementation of StreamStateHandle, code: " + type);
 		}

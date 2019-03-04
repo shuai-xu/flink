@@ -21,36 +21,37 @@ package org.apache.flink.runtime.state.filesystem;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.runtime.state.SharedStateRegistryKey;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.util.Preconditions;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
+import java.util.Objects;
 
 public class FileSegmentStateHandle implements StreamStateHandle {
 
-	private static final Logger LOG = LoggerFactory.getLogger(FileSegmentStateHandle.class);
-
 	private static final long serialVersionUID = 1L;
 
-	/** The file where the segment locates */
+	/** The file where the segment locates. */
 	private final Path filePath;
 
 	/** The start position of the snapshot data in the file. */
 	private final long startPosition;
 
-	/** The end position of the snapshot data in the file.*/
+	/** The end position of the snapshot data in the file. */
 	private final long endPosition;
 
 	/** The state size of this segment. */
 	private final long stateSize;
 
+	/** Indicating whether the underlying file is closed. */
+	private final boolean fileClosed;
+
 	public FileSegmentStateHandle(
 			final Path filePath,
 			final long startPosition,
-			final long endPosition) {
+			final long endPosition,
+			final boolean fileClosed) {
 
 		Preconditions.checkArgument(startPosition >= 0 && endPosition >= startPosition,
 			"Illegal startPosition: " + startPosition + " and endPosition:" + endPosition);
@@ -59,6 +60,7 @@ public class FileSegmentStateHandle implements StreamStateHandle {
 		this.startPosition = startPosition;
 		this.endPosition = endPosition;
 		this.stateSize = endPosition - startPosition;
+		this.fileClosed = fileClosed;
 	}
 
 	@Override
@@ -82,7 +84,8 @@ public class FileSegmentStateHandle implements StreamStateHandle {
 
 		return filePath.equals(that.filePath) &&
 			startPosition == that.startPosition &&
-			endPosition == that.endPosition;
+			endPosition == that.endPosition &&
+			fileClosed == that.fileClosed;
 	}
 
 	@Override
@@ -90,6 +93,7 @@ public class FileSegmentStateHandle implements StreamStateHandle {
 		int result = filePath.hashCode();
 		result = 31 * result + (int) (startPosition ^ (startPosition >>> 32));
 		result = 31 * result + (int) (endPosition ^ (endPosition >>> 32));
+		result = 31 * result + Objects.hashCode(fileClosed);
 		return result;
 	}
 
@@ -100,6 +104,7 @@ public class FileSegmentStateHandle implements StreamStateHandle {
 			", startPosition=" + startPosition +
 			", endPosition=" + endPosition +
 			", stateSize=" + getStateSize() +
+			", fileClosed=" + fileClosed +
 			"}";
 	}
 
@@ -123,6 +128,14 @@ public class FileSegmentStateHandle implements StreamStateHandle {
 
 	public Path getFilePath() {
 		return filePath;
+	}
+
+	public SharedStateRegistryKey getRegistryKey() {
+		return new SharedStateRegistryKey(filePath.toString());
+	}
+
+	public boolean isFileClosed() {
+		return fileClosed;
 	}
 
 	private FileSystem getFileSystem() throws IOException {

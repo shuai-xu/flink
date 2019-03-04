@@ -31,7 +31,6 @@ import org.apache.flink.runtime.state.IncrementalKeyedStateSnapshot;
 import org.apache.flink.runtime.state.IncrementalLocalKeyedStateSnapshot;
 import org.apache.flink.runtime.state.InternalBackendSerializationProxy;
 import org.apache.flink.runtime.state.KeyedStateHandle;
-import org.apache.flink.runtime.state.PlaceholderStreamStateHandle;
 import org.apache.flink.runtime.state.RegisteredStateMetaInfo;
 import org.apache.flink.runtime.state.StateHandleID;
 import org.apache.flink.runtime.state.StateMetaInfoSnapshot;
@@ -52,7 +51,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -141,16 +139,9 @@ public class RocksDBIncrementalRestoreOperation {
 				IncrementalLocalKeyedStateSnapshot restoredStateSnapshot = (IncrementalLocalKeyedStateSnapshot) rawStateSnapshot;
 				LOG.info("Restoring from local recovery path {}.", restoredStateSnapshot.getDirectoryStateHandle().getDirectory());
 
-				sstFiles = new HashMap<>();
+				sstFiles = restoredStateSnapshot.getSharedStateHandles();
 
 				metaStateHandle = restoredStateSnapshot.getMetaStateHandle();
-
-				for (Map.Entry<StateHandleID, String> entry : restoredStateSnapshot.getSharedStateHandleIDs().entrySet()) {
-					StateHandleID stateHandleID = entry.getKey();
-					String uniqueId = entry.getValue();
-
-					sstFiles.put(stateHandleID, Tuple2.of(uniqueId, new PlaceholderStreamStateHandle()));
-				}
 
 				Path localRecoverDirectory = restoredStateSnapshot.getDirectoryStateHandle().getDirectory();
 				FileStatus[] fileStatuses = localFileSystem.listStatus(localRecoverDirectory);

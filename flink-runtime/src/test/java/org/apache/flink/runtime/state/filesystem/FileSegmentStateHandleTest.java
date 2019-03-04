@@ -42,7 +42,7 @@ public class FileSegmentStateHandleTest {
 		writeTestData(file);
 		assertTrue(file.exists());
 
-		FileSegmentStateHandle handle = new FileSegmentStateHandle(Path.fromLocalFile(file), 0, file.length());
+		FileSegmentStateHandle handle = new FileSegmentStateHandle(Path.fromLocalFile(file), 0, file.length(), true);
 		handle.discardState();
 		assertTrue(file.exists());
 	}

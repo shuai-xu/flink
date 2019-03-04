@@ -374,12 +374,13 @@ public class CheckpointTestUtils {
 			out.write(data);
 		}
 
-		return new FileSegmentStateHandle(Path.fromLocalFile(file), file.length() / 3, file.length() - rnd.nextInt(5));
+		return new FileSegmentStateHandle(
+			Path.fromLocalFile(file), file.length() / 3, file.length() - rnd.nextInt(5), false);
 	}
 
 	public static StreamStateHandle createDummySegmentStreamStateHandle(File file, long startPosition, long endPosition) {
-
-		return new FileSegmentStateHandle(Path.fromLocalFile(file), startPosition, endPosition);
+		boolean fileClosed = endPosition == file.length();
+		return new FileSegmentStateHandle(Path.fromLocalFile(file), startPosition, endPosition, fileClosed);
 	}
 
 	public static KeyGroupsStateSnapshot createDummyKeyedStateBackend(Random rnd) {

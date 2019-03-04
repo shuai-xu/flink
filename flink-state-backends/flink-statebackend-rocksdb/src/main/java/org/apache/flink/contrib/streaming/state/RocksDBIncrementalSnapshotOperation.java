@@ -238,17 +238,13 @@ public class RocksDBIncrementalSnapshotOperation {
 
 			if (directoryStateHandle != null && taskLocalSnapshotMetaDataStateHandle != null) {
 
-				Map<StateHandleID, String> sharedStateHandleIDs = new HashMap<>();
-				for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> entry : sstFiles.entrySet()) {
-					sharedStateHandleIDs.put(entry.getKey(), entry.getValue().f0);
-				}
 				KeyedStateHandle localStateSnapshot =
 					new IncrementalLocalKeyedStateSnapshot(
 						stateBackend.getKeyGroupRange(),
 						checkpointId,
 						taskLocalSnapshotMetaDataStateHandle,
 						directoryStateHandle,
-						sharedStateHandleIDs);
+						sstFiles);
 				return SnapshotResult.withLocalState(stateSnapshot, localStateSnapshot);
 			} else {
 				return SnapshotResult.of(stateSnapshot);

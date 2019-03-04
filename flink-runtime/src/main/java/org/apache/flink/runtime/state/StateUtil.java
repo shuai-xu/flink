@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.FutureUtil;
 import org.apache.flink.util.LambdaUtil;
 
@@ -58,6 +60,21 @@ public class StateUtil {
 	public static void bestEffortDiscardAllStateObjects(
 		Iterable<? extends StateObject> handlesToDiscard) throws Exception {
 		LambdaUtil.applyToAllWhileSuppressingExceptions(handlesToDiscard, StateObject::discardState);
+	}
+
+	/**
+	 * Iterates through the passed state segments and delete each segment that is not null. All
+	 * occurring exceptions are suppressed and collected until the iteration is over and emitted as a single exception.
+	 *
+	 * @param pathsToDiscard Snapshot segments to discard. Passed iterable is allowed to deliver null values.
+	 * @throws Exception exception that is a collection of all suppressed exceptions that were caught during iteration
+	 */
+	public static void bestEffortDiscardAllPaths(
+		Iterable<? extends Path> pathsToDiscard) throws Exception {
+
+		LambdaUtil.applyToAllWhileSuppressingExceptions(pathsToDiscard, filePath -> {
+			FileSystem.get(filePath.toUri()).delete(filePath, false);
+		});
 	}
 
 	/**

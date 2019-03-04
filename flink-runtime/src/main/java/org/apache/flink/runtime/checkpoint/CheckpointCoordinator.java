@@ -21,6 +21,8 @@ package org.apache.flink.runtime.checkpoint;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.checkpoint.hooks.MasterHooks;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.execution.ExecutionState;
@@ -37,9 +39,14 @@ import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CheckpointStorageLocation;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
+import org.apache.flink.runtime.state.IncrementalSegmentStateSnapshot;
+import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.SharedStateRegistryFactory;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.StateUtil;
+import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.filesystem.FileSegmentStateHandle;
 import org.apache.flink.runtime.taskmanager.DispatcherThreadFactory;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;
@@ -50,7 +57,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,6 +70,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -329,8 +339,9 @@ public class CheckpointCoordinator {
 				timer.shutdownNow();
 
 				// clear and discard all pending checkpoints
+				Exception shuttingDownException = new Exception("Checkpoint Coordinator is shutting down");
 				for (PendingCheckpoint pending : pendingCheckpoints.values()) {
-					pending.abortError(new Exception("Checkpoint Coordinator is shutting down"));
+					abortPendingCheckpoint(pending, shuttingDownException);
 				}
 				pendingCheckpoints.clear();
 
@@ -537,7 +548,12 @@ public class CheckpointCoordinator {
 					if (!checkpoint.isDiscarded()) {
 						LOG.info("Checkpoint {} of job {} expired before completing.", checkpointID, job);
 
-						checkpoint.abortExpired();
+						if (sharedStateRegistry.isSegmentsRegistered() || checkpoint.isSegmentsComposed()) {
+							checkpoint.abortExpired(
+								collectPathsToDiscardFromPendingCheckpoint(checkpoint));
+						} else {
+							checkpoint.abortExpired();
+						}
 						pendingCheckpoints.remove(checkpointID);
 						rememberRecentCheckpointId(checkpointID);
 
@@ -633,7 +649,7 @@ public class CheckpointCoordinator {
 						checkpointID, job, numUnsuccessful, t);
 
 				if (!checkpoint.isDiscarded()) {
-					checkpoint.abortError(new Exception("Failed to trigger checkpoint", t));
+					abortPendingCheckpoint(checkpoint, new Exception("Failed to trigger checkpoint", t));
 				}
 
 				try {
@@ -647,6 +663,49 @@ public class CheckpointCoordinator {
 			}
 
 		} // end trigger lock
+	}
+
+	/**
+	 * Collect the underlying file paths from given collection of OperatorSubtaskState.
+	 */
+	private Collection<Path> collectFilesToDiscard(Collection<OperatorSubtaskState> operatorSubtaskStates) {
+		final Collection<Path> filesToDiscard = new HashSet<>(operatorSubtaskStates.size());
+
+		for (OperatorSubtaskState operatorSubtaskState : operatorSubtaskStates) {
+			for (KeyedStateHandle keyedStateHandle : operatorSubtaskState.getManagedKeyedState()) {
+
+				if (keyedStateHandle instanceof IncrementalSegmentStateSnapshot) {
+					// IncrementalSegmentStateSnapshot only contains FileSegmentStateHandle
+					IncrementalSegmentStateSnapshot segmentStateSnapshot = (IncrementalSegmentStateSnapshot) keyedStateHandle;
+
+					StreamStateHandle metaStateHandle = segmentStateSnapshot.getMetaStateHandle();
+					if (metaStateHandle instanceof FileSegmentStateHandle) {
+
+						collectFilesToDiscard((FileSegmentStateHandle) metaStateHandle, filesToDiscard);
+
+						for (Tuple2<String, StreamStateHandle> states : segmentStateSnapshot.getSharedState().values()) {
+							collectFilesToDiscard((FileSegmentStateHandle) states.f1, filesToDiscard);
+						}
+
+						for (StreamStateHandle state : segmentStateSnapshot.getPrivateState().values()) {
+							collectFilesToDiscard((FileSegmentStateHandle) state, filesToDiscard);
+						}
+					}
+				} else {
+					return filesToDiscard;
+				}
+			}
+		}
+
+		return filesToDiscard;
+	}
+
+	private void collectFilesToDiscard(FileSegmentStateHandle fileSegmentStateHandle, Collection<Path> filesToDiscard) {
+		if (fileSegmentStateHandle.isFileClosed()) {
+			if (!sharedStateRegistry.isKeyRegistered(fileSegmentStateHandle.getRegistryKey())) {
+				filesToDiscard.add(fileSegmentStateHandle.getFilePath());
+			}
+		}
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -822,7 +881,7 @@ public class CheckpointCoordinator {
 			catch (Exception e1) {
 				// abort the current pending checkpoint if we fails to finalize the pending checkpoint.
 				if (!pendingCheckpoint.isDiscarded()) {
-					pendingCheckpoint.abortError(e1);
+					abortPendingCheckpoint(pendingCheckpoint, e1);
 				}
 
 				throw new CheckpointException("Could not finalize the pending checkpoint " + checkpointId + '.', e1);
@@ -1307,12 +1366,26 @@ public class CheckpointCoordinator {
 				currentPeriodicTrigger = null;
 			}
 
+			Exception suspendingException = new Exception("Checkpoint Coordinator is suspending.");
 			for (PendingCheckpoint p : pendingCheckpoints.values()) {
-				p.abortError(new Exception("Checkpoint Coordinator is suspending."));
+				abortPendingCheckpoint(p, suspendingException);
 			}
 
 			pendingCheckpoints.clear();
 			numUnsuccessfulCheckpointsTriggers.set(0);
+		}
+	}
+
+	private void abortPendingCheckpoint(PendingCheckpoint pendingCheckpoint, Throwable throwable) {
+		if (sharedStateRegistry.isSegmentsRegistered() || pendingCheckpoint.isSegmentsComposed()) {
+			Collection<Path> pathsToDiscard;
+			// acquire the lock in case the sharedStateRegistry is recreated.
+			synchronized (lock) {
+				pathsToDiscard = collectPathsToDiscardFromPendingCheckpoint(pendingCheckpoint);
+			}
+			pendingCheckpoint.abortError(throwable, pathsToDiscard);
+		} else {
+			pendingCheckpoint.abortError(throwable);
 		}
 	}
 
@@ -1365,7 +1438,12 @@ public class CheckpointCoordinator {
 
 		LOG.info("Discarding checkpoint {} of job {} because: {}", checkpointId, job, reason);
 
-		pendingCheckpoint.abortDeclined();
+		if (sharedStateRegistry.isSegmentsRegistered() || pendingCheckpoint.isSegmentsComposed()) {
+			pendingCheckpoint.abortDeclined(
+				collectPathsToDiscardFromPendingCheckpoint(pendingCheckpoint));
+		} else {
+			pendingCheckpoint.abortDeclined();
+		}
 		rememberRecentCheckpointId(checkpointId);
 
 		// we don't have to schedule another "dissolving" checkpoint any more because the
@@ -1385,6 +1463,17 @@ public class CheckpointCoordinator {
 		}
 	}
 
+	private Collection<Path> collectPathsToDiscardFromPendingCheckpoint(PendingCheckpoint pendingCheckpoint) {
+		assert(Thread.holdsLock(lock));
+
+		Collection<Path> pathsToDispose = new HashSet<>();
+		Collection<OperatorState> operatorStates = pendingCheckpoint.getOperatorStates().values();
+		for (OperatorState operatorState : operatorStates) {
+			pathsToDispose.addAll(collectFilesToDiscard(operatorState.getStates()));
+		}
+		return pathsToDispose;
+	}
+
 	/**
 	 * Discards the given state object asynchronously belonging to the given job, execution attempt
 	 * id and checkpoint id.
@@ -1401,18 +1490,31 @@ public class CheckpointCoordinator {
 			final TaskStateSnapshot subtaskState) {
 
 		if (subtaskState != null) {
-			executor.execute(new Runnable() {
-				@Override
-				public void run() {
+			assert(Thread.holdsLock(lock));
 
+			Collection<Path> pathsToDiscard = collectFilesToDiscard(
+				subtaskState.getSubtaskStateMappings().stream()
+					.map(Map.Entry::getValue).collect(Collectors.toList()));
+
+			executor.execute( () -> {
+
+				if (!pathsToDiscard.isEmpty()) {
 					try {
-						subtaskState.discardState();
-					} catch (Throwable t2) {
-						LOG.warn("Could not properly discard state object of checkpoint {} " +
-							"belonging to task {} of job {}.", checkpointId, executionAttemptID, jobId, t2);
+						StateUtil.bestEffortDiscardAllPaths(pathsToDiscard);
+					} catch (Throwable t1) {
+						LOG.warn("Could not properly discard paths of segmented checkpoint {} " +
+							"belonging to task {} of job {}.", checkpointId, executionAttemptID, jobId, t1);
 					}
 				}
+
+				try {
+					subtaskState.discardState();
+				} catch (Throwable t2) {
+					LOG.warn("Could not properly discard state object of checkpoint {} " +
+						"belonging to task {} of job {}.", checkpointId, executionAttemptID, jobId, t2);
+				}
 			});
+
 		}
 	}
 }

@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.checkpoint;
 
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.checkpoint.savepoint.Savepoint;
 import org.apache.flink.runtime.checkpoint.savepoint.SavepointV3;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
@@ -27,6 +28,8 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.CheckpointMetadataOutputStream;
 import org.apache.flink.runtime.state.CheckpointStorageLocation;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
+import org.apache.flink.runtime.state.IncrementalSegmentStateSnapshot;
+import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.StateUtil;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.Preconditions;
@@ -38,8 +41,11 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -186,6 +192,24 @@ public class PendingCheckpoint {
 	}
 
 	/**
+	 * Returns whether this pending checkpoint ever contains a segmented state snapshot.
+	 *
+	 * @return whether this pending checkpoint ever contains a segmented state snapshot.
+	 */
+	public boolean isSegmentsComposed() {
+		for (OperatorState operatorState : operatorStates.values()) {
+			for (OperatorSubtaskState state : operatorState.getStates()) {
+				Iterator<KeyedStateHandle> iterator = state.getManagedKeyedState().iterator();
+				if (iterator.hasNext()) {
+					KeyedStateHandle next = iterator.next();
+					return next instanceof IncrementalSegmentStateSnapshot;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Checks whether this checkpoint can be subsumed or whether it should always continue, regardless
 	 * of newer checkpoints in progress.
 	 *
@@ -283,7 +307,7 @@ public class PendingCheckpoint {
 				}
 
 				// mark this pending checkpoint as disposed, but do NOT drop the state
-				dispose(false);
+				dispose(false, Collections.emptyList());
 
 				return completed;
 			}
@@ -410,12 +434,19 @@ public class PendingCheckpoint {
 	 * Aborts a checkpoint because it expired (took too long).
 	 */
 	public void abortExpired() {
+		abortExpired(Collections.emptyList());
+	}
+
+	/**
+	 * Aborts a checkpoint because it expired (took too long).
+	 */
+	public void abortExpired(Collection<Path> pathsToDiscard) {
 		try {
 			Exception cause = new Exception("Checkpoint expired before completing");
 			onCompletionPromise.completeExceptionally(cause);
 			reportFailedCheckpoint(cause);
 		} finally {
-			dispose(true);
+			dispose(true, pathsToDiscard);
 		}
 	}
 
@@ -432,17 +463,21 @@ public class PendingCheckpoint {
 				throw new IllegalStateException("Bug: forced checkpoints must never be subsumed");
 			}
 		} finally {
-			dispose(true);
+			dispose(true, Collections.emptyList());
 		}
 	}
 
 	public void abortDeclined() {
+		abortDeclined(Collections.emptyList());
+	}
+
+	public void abortDeclined(Collection<Path> pathsToDiscard) {
 		try {
 			Exception cause = new Exception("Checkpoint was declined (tasks not ready)");
 			onCompletionPromise.completeExceptionally(cause);
 			reportFailedCheckpoint(cause);
 		} finally {
-			dispose(true);
+			dispose(true, pathsToDiscard);
 		}
 	}
 
@@ -451,16 +486,24 @@ public class PendingCheckpoint {
 	 * @param cause The error's exception.
 	 */
 	public void abortError(Throwable cause) {
+		abortError(cause, Collections.emptyList());
+	}
+
+	/**
+	 * Aborts the pending checkpoint due to an error.
+	 * @param cause The error's exception.
+	 */
+	public void abortError(Throwable cause, Collection<Path> pathsToDiscard) {
 		try {
 			Exception failure = new Exception("Checkpoint failed: " + cause.getMessage(), cause);
 			onCompletionPromise.completeExceptionally(failure);
 			reportFailedCheckpoint(failure);
 		} finally {
-			dispose(true);
+			dispose(true, pathsToDiscard);
 		}
 	}
 
-	private void dispose(boolean releaseState) {
+	private void dispose(boolean releaseState, Collection<Path> pathsToDispose) {
 
 		synchronized (lock) {
 			try {
@@ -469,6 +512,16 @@ public class PendingCheckpoint {
 					executor.execute(new Runnable() {
 						@Override
 						public void run() {
+
+							// discard the useless files for those segments.
+							if (!pathsToDispose.isEmpty()) {
+								try {
+									StateUtil.bestEffortDiscardAllPaths(pathsToDispose);
+								} catch (Throwable t) {
+									LOG.warn("Could not properly dispose the segments in the pending checkpoint {} of job {}.",
+										checkpointId, jobId, t);
+								}
+							}
 
 							// discard the private states.
 							// unregistered shared states are still considered private at this point.
