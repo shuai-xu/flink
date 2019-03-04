@@ -477,12 +477,13 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 		if (log.isDebugEnabled()) {
 			log.debug("Allocating slot with request {} for task execution {}, CoLocationConstraint: {}, "
-					+ "EnableSharedSlot: {}, SlotSharingGroup: {}",
+					+ "EnableSharedSlot: {}, SlotSharingGroup: {}, Tags: {}",
 				slotRequestId,
 				task.getTaskToExecute(),
 				coLocationConstraint,
 				enableSharedSlot,
-				task.getSlotSharingGroupId());
+				task.getSlotSharingGroupId(),
+				slotProfile.getTags());
 		}
 
 		if (slotSharingGroupId != null) {
@@ -586,13 +587,14 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 
 			if (log.isDebugEnabled()) {
 				log.debug("Allocating slot with request {} for task execution {}, CoLocationConstraint: {}, "
-								+ "EnableSharedSlot: {}, SlotSharingGroup: {}, SlotProfile: {}",
+								+ "EnableSharedSlot: {}, SlotSharingGroup: {}, ResourceProfile: {}, Tags: {}",
 						slotRequestIds.get(i),
 						tasks.get(i).getTaskToExecute(),
 						coLocationConstraint,
 						enableSharedSlot,
 						tasks.get(i).getSlotSharingGroupId(),
-						slotProfiles.get(i));
+						slotProfiles.get(i).getResourceProfile(),
+						slotProfiles.get(i).getTags());
 			}
 
 			if (slotSharingGroupId != null) {
@@ -1042,7 +1044,8 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		checkNotNull(resourceManagerGateway);
 		checkNotNull(pendingRequest);
 
-		log.info("Requesting slot with profile {} from resource manager (request = {}).", pendingRequest.getResourceProfile(), pendingRequest.getSlotRequestId());
+		log.info("Requesting slot with profile {} and tags {} from resource manager (request = {}).",
+			pendingRequest.getResourceProfile(), pendingRequest.getTags(), pendingRequest.getSlotRequestId());
 
 		final AllocationID allocationId = new AllocationID();
 
@@ -1231,13 +1234,30 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 	}
 
 	private List<SlotAndLocality> pollAndAllocateSlots(List<SlotRequestId> slotRequestIds, List<SlotProfile> slotProfiles) {
-		List<SlotAndLocality> slotsFromPool = availableSlots.poll(slotProfiles, enableSlotsConverging, allocatedSlots);
+		List<SlotAndLocality> slotsFromPool;
 
-		for (int i = 0; i < slotRequestIds.size(); i++) {
-			if (slotsFromPool.get(i) != null) {
-				allocatedSlots.add(slotRequestIds.get(i), slotsFromPool.get(i).getSlot());
+		if (enableSlotsConverging) {
+			slotsFromPool = new ArrayList<>();
+
+			for (int i = 0; i < slotRequestIds.size(); i++) {
+				SlotAndLocality slotFromPool = availableSlots.pollSlotConvergedInTaskManagers(
+					schedulingStrategy, slotProfiles.get(i), allocatedSlots);
+				slotsFromPool.add(slotFromPool);
+
+				if (slotFromPool != null) {
+					allocatedSlots.add(slotRequestIds.get(i), slotFromPool.getSlot());
+				}
+			}
+		} else {
+			slotsFromPool = availableSlots.poll(slotProfiles, enableSlotsConverging, allocatedSlots);
+
+			for (int i = 0; i < slotRequestIds.size(); i++) {
+				if (slotsFromPool.get(i) != null) {
+					allocatedSlots.add(slotRequestIds.get(i), slotsFromPool.get(i).getSlot());
+				}
 			}
 		}
+
 		return slotsFromPool;
 	}
 
@@ -1339,6 +1359,9 @@ public class SlotPool extends RpcEndpoint implements SlotPoolGateway, AllocatedS
 		// check if this TaskManager is valid
 		final ResourceID resourceID = taskManagerLocation.getResourceID();
 		final AllocationID allocationID = slotOffer.getAllocationId();
+
+		log.debug("Received slot offer for allocation [{}]. resources={}, tags={}, location={}.",
+			allocationID, slotOffer.getResourceProfile(), slotOffer.getTags(), taskManagerLocation);
 
 		if (!registeredTaskManagers.contains(resourceID)) {
 			log.debug("Received outdated slot offering [{}] from unregistered TaskManager: {}",

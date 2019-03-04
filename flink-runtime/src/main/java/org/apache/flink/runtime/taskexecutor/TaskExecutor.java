@@ -786,8 +786,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 		final Time timeout) {
 		// TODO: Filter invalid requests from the resource manager by using the instance/registration Id
 
-		log.info("Receive slot request {} for job {} from resource manager with leader id {}.",
-			allocationId, jobId, resourceManagerId);
+		log.info("Receive slot request {} for job {} from resource manager with leader id {}. tags={}.",
+			allocationId, jobId, resourceManagerId, tags);
 
 		try {
 			if (!isConnectedToResourceManager(resourceManagerId)) {

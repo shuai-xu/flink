@@ -60,4 +60,9 @@ public class SlotTag implements java.io.Serializable {
 		SlotTag tag = (SlotTag) obj;
 		return tagName.equals(tag.tagName) && jobId.equals(tag.jobId);
 	}
+
+	@Override
+	public String toString() {
+		return "tag(" + jobId + ", " + tagName + ")";
+	}
 }
