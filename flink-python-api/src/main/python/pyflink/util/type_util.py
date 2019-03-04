@@ -254,20 +254,3 @@ class TypesUtil(object):
 
         return clz
 
-    # @staticmethod
-    # def class_for_name(class_name):
-    #     ReflectionUtil = get_gateway().jvm.py4j.reflection.ReflectionUtil
-    #     java_clazz = ReflectionUtil.classForName(class_name)
-    #
-    #     _gateway = get_gateway()
-    #     clz = _gateway.jvm
-    #
-    #     # e.g.: org.apache.flink.streaming.api.TimeCharacteristic
-    #     attrs = class_name.split('.')
-    #     for attr in attrs:
-    #         if hasattr(clz, attr):
-    #             clz = getattr(clz, attr)
-    #         else:
-    #             raise Exception('Has no such attribute')
-    #
-    #     return java_clazz

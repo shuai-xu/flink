@@ -33,8 +33,14 @@ def get_gateway():
     global _gateway
     global _lock
     with _lock:
+        # if Java Gateway is ready(in this case, python is started by java)
         if _gateway is None:
-            _gateway = launch_java_gateway()
+            if 'PYFLINK_GATEWAY_PORT' in os.environ:
+                gateway_port = int(os.environ['PYFLINK_GATEWAY_PORT'])
+                _gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
+            else:
+                # we start Java from python
+                _gateway = launch_java_gateway()
     return _gateway
 
 
@@ -51,8 +57,7 @@ def receive_all(sock, data_len):
 
 
 def launch_java_gateway(conf = None):
-    # if java gateway is alive, try to get its listening port
-    # java_port = get_java_server_port('org.apache.flink.api.python.PythonShellGatewayServer')
+
     java_port = None
     # if not started yet, start it.
     if java_port is None:
@@ -89,14 +94,16 @@ def launch_java_gateway(conf = None):
 
 
 def launch_java_process(port):
-
-    flink_home = os.environ['FLINK_HOME']
+    flink_home = None
+    if 'FLINK_ROOT_DIR' in os.environ:
+        flink_home = os.environ['FLINK_ROOT_DIR']
+    elif 'FLINK_HOME' in os.environ:
+        flink_home = os.environ['FLINK_HOME']
     if flink_home is None:
-        raise Exception("FLINK_HOME has not been set!")
+        raise Exception('FLINK_ROOT_DIR or FLINK_HOME is not set')
     bin_dir = flink_home + '/bin'
 
     shell_gateway = 'org.apache.flink.api.python.PythonShellGatewayServer'
-    p = None
     try:
         command = [bin_dir+'/pyflink2.sh', '-c', shell_gateway, str(port)]
 
@@ -115,7 +122,6 @@ def launch_java_process(port):
 
 
 def import_java_modular(gateway):
-    java_import(gateway.jvm, "org.apache.flink.api.python.PythonShellGateway")
     java_import(gateway.jvm, "org.apache.flink.streaming.api.environment.ExecutionEnvironment")
     java_import(gateway.jvm, "org.apache.flink.table.api.java.StreamTableEnvironment")
     java_import(gateway.jvm, "org.apache.flink.table.api.TableEnvironment")

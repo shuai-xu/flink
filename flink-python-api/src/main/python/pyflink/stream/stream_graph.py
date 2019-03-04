@@ -98,7 +98,7 @@ class StreamGraph(object):
     def get_streaming_plan_as_json(self):
         return self._j_stream_graph.getStreamingPlanAsJSON()
 
-    def dumpStreamingPlanAsJSON(self, file):
+    def dump_streaming_plan_as_JSON(self, file):
         file.write(self.get_streaming_plan_as_json())
 
 

@@ -59,3 +59,4 @@ class JobExecutionResult(JobSubmissionResult):
 
     def get_accumulator_result(self):
         return self._j_job_execution_result.getNetRuntime()
+

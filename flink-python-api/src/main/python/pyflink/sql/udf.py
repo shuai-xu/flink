@@ -17,7 +17,7 @@
 ################################################################################
 
 import functools
-from pyflink.data_types import *
+from pyflink.sql.data_type import *
 
 
 def udf(data_type=StringType()):
@@ -31,6 +31,23 @@ def udf(data_type=StringType()):
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
         wrapper.return_type = data_type
+        return wrapper
+
+    return decorator
+
+
+def udtf(row_types=StringType()):
+    """
+    Create user defined function
+    :type row_types: List of DataType
+    :param row_types:
+    :return:
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        wrapper.row_types = row_types
         return wrapper
 
     return decorator

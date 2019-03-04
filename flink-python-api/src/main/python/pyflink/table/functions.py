@@ -16,12 +16,14 @@
 # limitations under the License.
 ################################################################################
 from abc import ABCMeta, abstractmethod
+from pyflink.worker_server import do_table_func_collect
 
 __all__ = [
     'JavaScalarFunction',
     'JavaAggregateFunction',
     'JavaTableFunction',
-    'ScalarFunction'
+    'ScalarFunction',
+    'TableFunction'
 ]
 
 
@@ -69,8 +71,34 @@ class ScalarFunction(object):
 
     @classmethod
     def is_deterministic(cls):
-        return False
+        return True
 
-    # TODO:  Using decorator to implement getParameterTypes(self):
-    # public DataType getResultType(Object[] arguments, Class[] argTypes)
 
+class TableFunction(object):
+    """
+    An interface for writing python Table function
+    """
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def eval(self, *args):
+        """Please define your implementation"""
+
+    def open(self, *args):
+        pass
+
+    def close(self, *args):
+        pass
+
+    def collect(self, *args):
+        """
+        Note that this is a system interface, no need to implement this interface
+        At runtime, it will be override by Flink.
+        :param args:
+        :return:
+        """
+        do_table_func_collect(self, *args)
+
+    @classmethod
+    def is_deterministic(cls):
+        return True

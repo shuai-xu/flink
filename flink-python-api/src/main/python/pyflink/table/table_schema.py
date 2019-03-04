@@ -86,20 +86,24 @@ class TableSchema(object):
 
         # if user specify the names & types
         if names is not None and types is not None:
-            self.columns = TableSchema._validate(names, types, nulls)
+            self.columns = None
             self.primary_keys = None
             self.unique_keys = None
             self.indexes = None
             self.computed_columns = None
             self.watermarks = None
 
-            j_table_schema_cls = TypesUtil.class_for_name('org.apache.flink.table.api.TableSchema')
-            j_name_arr = TypesUtil._convert_py_list_to_java_array('java.lang.String', names)
-            j_type_arr = TypesUtil._convert_py_list_to_java_array('org.apache.flink.table.types.DataType', types)
-
-            self._j_table_schema = j_table_schema_cls(j_name_arr, j_type_arr)
-        if j_schema is not None:
+            builder = TableSchema.Builder(columns=TableSchema._validate(names, types),
+                                          primary_keys=[],
+                                          unique_keys=[],
+                                          indexes=[],
+                                          computed_columns=[],
+                                          watermarks=[])
+            self._j_table_schema = builder.build()._j_table_schema
+        if self._j_table_schema is not None:
             self._java_to_python()
+        else:
+            raise Exception('Failed to build TableSchema')
 
     def __str__(self):
         if self._j_table_schema is not None:
@@ -158,14 +162,20 @@ class TableSchema(object):
         >>> schema = b.build()
         """
 
-        _columns = []             # type: List[Column]
-        _primary_keys = []        # type: List[str]
-        _unique_keys = []         # type: List[List[str]]
-        _indexes = []             # type: List[List[str]]
-        _computed_columns = []    # type: List[ComputedColumn]
-        _watermarks = []          # type: List[Watermark]
+        # _columns = []             # type: List[Column]
+        # _primary_keys = []        # type: List[str]
+        # _unique_keys = []         # type: List[List[str]]
+        # _indexes = []             # type: List[List[str]]
+        # _computed_columns = []    # type: List[ComputedColumn]
+        # _watermarks = []          # type: List[Watermark]
 
-        def __init__(self, columns=[], primary_keys=[], unique_keys=[], indexes=[], computed_columns=[], watermarks=[]):
+        def __init__(self,
+                     columns=[],
+                     primary_keys=[],
+                     unique_keys=[],
+                     indexes=[],
+                     computed_columns=[],
+                     watermarks=[]):
 
             self._columns = columns
             self._primary_keys = primary_keys

@@ -15,14 +15,17 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
+import os
+from threading import RLock
 
 from pyflink.java_gateway import get_gateway
 from pyflink.stream.datastream import DataStream, DataStreamSource
 from pyflink.stream.functions.source import JavaSourceFunction
-from pyflink.common import ExecutionConfig
+from pyflink.common.conf import ExecutionConfig, ParameterTool, Configuration
 from pyflink.common.cache import DistributedCache
 from pyflink.common.job_result import JobExecutionResult, JobSubmissionResult
 from pyflink.util.type_util import TypesUtil
+
 
 __all__ = [
     'StreamExecutionEnvironment',
@@ -32,6 +35,8 @@ __all__ = [
 
 # TODO: org.apache.flink.streaming.api.environment
 # * CheckpointConfig
+
+_lock = RLock()
 
 
 # TODO: type_limit ...
@@ -64,6 +69,70 @@ class StreamExecutionEnvironment(object):
             py_tuple = TypesUtil._java_tuple_to_tuple(j_files[i], types)
             py_list.append(py_tuple)
         return py_list
+
+    def register_cached_file(self, file_path, name, executable=False):
+        self._j_env.registerCachedFile(file_path, name, executable)
+
+    def register_python_file(self, file_path, name):
+        with _lock:
+            # first, register the python file distributed cache key
+            key = 'PYFLINK_SQL_CACHED_USR_LIB_IDS'
+            cached_names = name
+
+            j_gjp = self._j_env.getConfig().getGlobalJobParameters()
+            if j_gjp is not None:
+                j_map = j_gjp.toMap()
+                pt_orig = ParameterTool.from_map(j_map)
+                cached_names = pt_orig.get(key)
+                if cached_names is not None:
+                    cached_names = cached_names + ',' + name
+
+                prop = {key: cached_names}
+                pt = ParameterTool.from_dict(prop)
+                pt = pt_orig.merge_with(pt)
+            else:
+                prop = {key: cached_names}
+                pt = ParameterTool.from_dict(prop)
+
+            self._j_env.getConfig().setGlobalJobParameters(pt._j_parameter_tool)
+
+            self._j_env.registerCachedFile(file_path, name)
+
+    def register_python_files(self, file_paths, names=None):
+        """
+        ::type file_paths: List of str
+        :param file_paths:
+
+        :param names:
+        :return:
+        """
+        if names is None:
+            names = [os.path.split(path)[1] for path in file_paths]
+
+        with _lock:
+            # first, register the python file distributed cache key
+            key = 'PYFLINK_SQL_CACHED_USR_LIB_IDS'
+            cached_names = ','.join(names)
+
+            j_gjp = self._j_env.getConfig().getGlobalJobParameters()
+            if j_gjp is not None:
+                j_map = j_gjp.toMap()
+                pt_orig = ParameterTool.from_map(j_map)
+                cached_path = pt_orig.get(key)
+                if cached_path is not None:
+                    cached_path = cached_path + ',' + cached_names
+
+                prop = {key: cached_path}
+                pt = ParameterTool.from_dict(prop)
+                pt = pt_orig.merge_with(pt)
+            else:
+                prop = {key: cached_names}
+                pt = ParameterTool.from_dict(prop)
+
+            self._j_env.getConfig().setGlobalJobParameters(pt._j_parameter_tool)
+
+            for (p, n) in zip(file_paths, names):
+                self._j_env.registerCachedFile(p, n)
 
     def get_parallelism(self):
         return self._j_env.getParallelism()
@@ -179,7 +248,7 @@ class StreamExecutionEnvironment(object):
         if type(data[0]) is tuple:
             java_list = TypesUtil._convert_tuple_list(data)
         else:
-            java_list =TypesUtil._convert_pylist_to_java_list(data)
+            java_list = TypesUtil._convert_pylist_to_java_list(data)
         j_ds_source = self._j_env.fromCollection(java_list)
         return DataStreamSource(j_ds_source)
 
@@ -296,7 +365,7 @@ class StreamExecutionEnvironment(object):
         return LocalStreamEnvironment(j_local_env)
 
     @classmethod
-    def create_local_environment_with_web_UI(cls, conf):
+    def create_local_environment_with_web_ui(cls, conf):
         _cls = get_gateway().jvm.org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
         j_local_env = _cls.createLocalEnvironmentWithWebUI(conf)
         return LocalStreamEnvironment(j_local_env)

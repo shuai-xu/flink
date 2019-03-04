@@ -86,8 +86,9 @@ def test_schema():
      |-- a
     '''
 
+    output_schema = TableSchema(names=['label_org', 'predict_label'], types=[IntegerType(), IntegerType()])
+
 
 def test_rowtype():
     out_row_type = RowType([StringType(), IntegerType()], ["image_raw", "label"])
     j_row_type = TypesUtil.to_java_sql_type(out_row_type)
-

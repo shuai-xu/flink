@@ -196,7 +196,7 @@ public class CliFrontend {
 			return;
 		}
 
-		if (runOptions.getJarFilePath() == null) {
+		if (runOptions.getJarFilePath() == null  && !runOptions.isPython()) {
 			throw new CliArgsException("The program JAR file was not specified.");
 		}
 
@@ -821,22 +821,27 @@ public class CliFrontend {
 		final List<URI> libjars = options.getLibjars();
 		final List<URI> files = options.getFiles();
 
-		if (jarFilePath == null) {
+		if (jarFilePath == null && !options.isPython()) {
 			throw new IllegalArgumentException("The program JAR file was not specified.");
 		}
 
-		File jarFile = new File(jarFilePath);
+		File jarFile = null;
+		if (!options.isPython()) {
+			jarFile = new File(jarFilePath);
 
-		// Check if JAR file exists
-		if (!jarFile.exists()) {
-			throw new FileNotFoundException("JAR file does not exist: " + jarFile);
-		}
-		else if (!jarFile.isFile()) {
-			throw new FileNotFoundException("JAR file is not a file: " + jarFile);
+			// Check if JAR file exists
+			if (!jarFile.exists()) {
+				throw new FileNotFoundException("JAR file does not exist: " + jarFile);
+			} else if (!jarFile.isFile()) {
+				throw new FileNotFoundException("JAR file is not a file: " + jarFile);
+			}
 		}
 
 		// Get assembler class
 		String entryPointClass = options.getEntryPointClassName();
+		if (options.isPython() && entryPointClass == null) {
+			entryPointClass = "org.apache.flink.api.python.PythonDriver";
+		}
 
 		PackagedProgram program = entryPointClass == null ?
 				new PackagedProgram(jarFile, classpaths, libjars, files, programArgs) :

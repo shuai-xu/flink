@@ -95,6 +95,8 @@ public class PackagedProgram {
 
 	private final List<URI> files;
 
+	private boolean isPython = false;
+
 	/**
 	 * Creates an instance that wraps the plan defined in the jar file using the given
 	 * argument.
@@ -188,18 +190,23 @@ public class PackagedProgram {
 	 *         may be a missing / wrong class or manifest files.
 	 */
 	public PackagedProgram(File jarFile, List<URL> classpaths, @Nullable String entryPointClassName, List<URI> libjars, List<URI> files, String... args) throws ProgramInvocationException {
-		if (jarFile == null) {
+		if (entryPointClassName != null && entryPointClassName.equals("org.apache.flink.api.python.PythonDriver")) {
+			isPython = true;
+		}
+		if (jarFile == null && !isPython) {
 			throw new IllegalArgumentException("The jar file must not be null.");
 		}
 
-		URL jarFileUrl;
-		try {
-			jarFileUrl = jarFile.getAbsoluteFile().toURI().toURL();
-		} catch (MalformedURLException e1) {
-			throw new IllegalArgumentException("The jar file path is invalid.");
-		}
+		URL jarFileUrl = null;
+		if (jarFile != null && !isPython) {
+			try {
+				jarFileUrl = jarFile.getAbsoluteFile().toURI().toURL();
+			} catch (MalformedURLException e1) {
+				throw new IllegalArgumentException("The jar file path is invalid.");
+			}
 
-		checkJarFile(jarFileUrl);
+			checkJarFile(jarFileUrl);
+		}
 
 		this.jarFile = jarFileUrl;
 		this.args = args == null ? new String[0] : args;
@@ -213,9 +220,14 @@ public class PackagedProgram {
 		this.files = files;
 
 		// now that we have an entry point, we can extract the nested jar files (if any)
-		this.extractedTempLibraries = extractContainedLibraries(jarFileUrl);
+
+		this.extractedTempLibraries = !isPython ?
+				extractContainedLibraries(jarFileUrl) : Collections.emptyList();
+
 		this.classpaths = classpaths;
-		this.userCodeClassLoader = JobWithJars.buildUserCodeClassLoader(getAllLibraries(), classpaths, getClass().getClassLoader());
+		this.userCodeClassLoader = !isPython ?
+			JobWithJars.buildUserCodeClassLoader(getAllLibraries(), classpaths, getClass().getClassLoader())
+			: getClass().getClassLoader();
 
 		// load the entry point class
 		this.mainClass = loadMainClass(entryPointClassName, userCodeClassLoader);

@@ -42,6 +42,8 @@ import static org.apache.flink.client.cli.CliFrontendParser.LIBJARS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.LOGGING_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.MULTIPLE_VALUE_SEPARATOR;
 import static org.apache.flink.client.cli.CliFrontendParser.PARALLELISM_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.PYFILES_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.PYMOD_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.RESUME_PATH_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.SAVEPOINT_ALLOW_NON_RESTORED_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.SAVEPOINT_PATH_OPTION;
@@ -72,6 +74,8 @@ public abstract class ProgramOptions extends CommandLineOptions {
 
 	private final List<URI> files;
 
+	private boolean isPython = false;
+
 	protected ProgramOptions(CommandLine line) throws CliArgsException {
 		super(line);
 
@@ -79,12 +83,39 @@ public abstract class ProgramOptions extends CommandLineOptions {
 				line.getOptionValues(ARGS_OPTION.getOpt()) :
 				line.getArgs();
 
+		// move --py-files --mod options to args
+		if (line.hasOption(PYFILES_OPTION.getLongOpt())) {
+			isPython = true;
+			String[] newArgs;
+			if (line.hasOption(PYMOD_OPTION.getLongOpt())) {
+				newArgs = new String[args.length + 4];
+				System.arraycopy(args, 0, newArgs, 2, args.length);
+				newArgs[0] = PYFILES_OPTION.getLongOpt();
+				newArgs[1] = PYFILES_OPTION.getValue();
+				newArgs[2] = PYMOD_OPTION.getLongOpt();
+				newArgs[3] = PYMOD_OPTION.getValue();
+			}
+			else {
+				newArgs = new String[args.length + 2];
+				System.arraycopy(args, 0, newArgs, 2, args.length);
+				newArgs[0] = PYFILES_OPTION.getLongOpt();
+				newArgs[1] = PYFILES_OPTION.getValue();
+			}
+			args = newArgs;
+		}
+
 		if (line.hasOption(JAR_OPTION.getOpt())) {
 			this.jarFilePath = line.getOptionValue(JAR_OPTION.getOpt());
 		}
 		else if (args.length > 0) {
-			jarFilePath = args[0];
-			args = Arrays.copyOfRange(args, 1, args.length);
+			if (args[0].endsWith(".py")) {
+				isPython = true;
+				jarFilePath = args[0];
+			}
+			else {
+				jarFilePath = args[0];
+				args = Arrays.copyOfRange(args, 1, args.length);
+			}
 		}
 		else {
 			jarFilePath = null;
@@ -185,6 +216,10 @@ public abstract class ProgramOptions extends CommandLineOptions {
 
 	public List<URI> getFiles() {
 		return files;
+	}
+
+	public Boolean isPython() {
+		return isPython;
 	}
 
 	private List<URI> extractMultipleURIOption(String opt, CommandLine line) throws CliArgsException {

@@ -129,6 +129,18 @@ public class CliFrontendParser {
 			"Use '#' after the file path to specify retrieval key in runtime. " +
 			"(eg: --file file:///tmp/a.txt#file_key,hdfs:///$namenode_address/tmp/b.txt)");
 
+	static final Option PYFILES_OPTION = new Option(null, "py-files", true,
+		"Attach custom python files for job. " +
+			"Use '" + MULTIPLE_VALUE_SEPARATOR + "' to separate multiple files. " +
+			"The files could be in local file system or distributed file system. " +
+			"Use URI schema to specify which file system the file belongs. " +
+			"If schema is missing, would try to get the file in local file system. " +
+			"Use '#' after the file path to specify retrieval key in runtime. " +
+			"(eg: --py-files file:///tmp/myproject.zip,hdfs:///$namenode_address/venv.zip)");
+
+	static final Option PYMOD_OPTION = new Option(null, "mod", true,
+		"run python library module as a script. ");
+
 	static {
 		HELP_OPTION.setRequired(false);
 
@@ -181,6 +193,12 @@ public class CliFrontendParser {
 
 		FILES_OPTION.setRequired(false);
 		FILES_OPTION.setArgName("files");
+
+		PYFILES_OPTION.setRequired(false);
+		PYFILES_OPTION.setArgName("py-files");
+
+		PYMOD_OPTION.setRequired(false);
+		PYMOD_OPTION.setArgName("mod");
 	}
 
 	private static final Options RUN_OPTIONS = getRunCommandOptions();
@@ -203,6 +221,8 @@ public class CliFrontendParser {
 		options.addOption(YARN_DETACHED_OPTION);
 		options.addOption(LIBJARS_OPTION);
 		options.addOption(FILES_OPTION);
+		options.addOption(PYFILES_OPTION);
+		options.addOption(PYMOD_OPTION);
 		return options;
 	}
 
@@ -214,6 +234,8 @@ public class CliFrontendParser {
 		options.addOption(DETACHED_OPTION);
 		options.addOption(LIBJARS_OPTION);
 		options.addOption(FILES_OPTION);
+		options.addOption(PYFILES_OPTION);
+		options.addOption(PYMOD_OPTION);
 		return options;
 	}
 

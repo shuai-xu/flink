@@ -17,10 +17,8 @@
 ################################################################################
 from __future__ import absolute_import
 
-from pyflink.common.execution_config import ExecutionConfig
 from pyflink.common.cache import DistributedCache
 
 __all__ = [
-    'ExecutionConfig',
     'DistributedCache'
 ]

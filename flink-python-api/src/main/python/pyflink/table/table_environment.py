@@ -26,6 +26,7 @@ from pyflink.table.functions import *
 from pyflink.util.type_util import TypesUtil
 from pyflink.common.job_result import JobSubmissionResult, JobExecutionResult
 from pyflink.stream.stream_graph import StreamGraph
+from pyflink import cloudpickle
 
 if sys.version > '3':
     xrange = range
@@ -70,16 +71,17 @@ class TableEnvironment(object):
         self._j_tenv.getTable(name)
 
     def register_function(self, name, func):
-        if isinstance(func, ScalarFunction):
-            pass
-            # TODO: Support UDF defined with Python
-            # j_scalarFunction = jvm.org.apache.flink.table.functions.PythonScalarFunction()
-            # j_scalarFunction.pyCode = ...
-            # self._j_tenv.registerFunction(name, j_scalar_function)
-        elif isinstance(func, JavaScalarFunction) \
+        if isinstance(func, JavaScalarFunction) \
                 or isinstance(func, JavaTableFunction)  \
                 or isinstance(func, JavaAggregateFunction):
             self._j_tenv.registerFunction(name, func.j_func)
+        # elif isinstance(func, Ta)
+        else:
+            clz = TypesUtil.class_for_name('org.apache.flink.api.python.PythonScalarUDF')
+            pickled_bytes = bytearray(cloudpickle.dumps(func))
+            j_type = TypesUtil.to_java_sql_type(func.eval.return_type)
+            j_func = clz(name, pickled_bytes, j_type)
+            self._j_tenv.registerFunction(name, j_func)
 
     def register_table(self, name, table):
         self._j_tenv.registerTable(name, table._java_table)
@@ -203,6 +205,8 @@ class StreamTableEnvironment(TableEnvironment):
         self.table_config = table_config
 
     def from_data_stream(self, data_stream, fields):
+        # type: (DataStream, List) -> Table
+
         if fields is None:
             j_table = self._j_tenv.fromDataStream(data_stream._j_datastream_source)
         else:

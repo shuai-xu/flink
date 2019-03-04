@@ -35,14 +35,13 @@ class DataStream(object):
         return
 
 
-class DataStreamSource(DataStream):
+class DataStreamSource(object):
 
-    def __init__(self, j_ds_source):
-        self._j_datastream_source = j_ds_source
+    def __init__(self, ds_source):
+        self._j_datastream_source = ds_source
 
     def set_parallelism(self, parallelism):
         # type: (int) -> None
-
         self._j_datastream_source.setParallelism(parallelism)
 
 

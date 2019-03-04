@@ -35,7 +35,6 @@ private[flink] object PythonShellGatewayServer {
     * </p>
     */
   def main(args: Array[String]): Unit = {
-    println("Starting PythonShellGatewayServer for flink python shell...")
     if (args.length == 0) {
       System.exit(1)
     }
@@ -60,7 +59,6 @@ private[flink] object PythonShellGatewayServer {
     while (System.in.read() != -1) {
       // Do nothing
     }
-
     println("Existing...")
   }
 }

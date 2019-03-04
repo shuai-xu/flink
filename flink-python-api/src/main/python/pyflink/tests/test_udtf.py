@@ -1,4 +1,4 @@
-################################################################################
+# ###############################################################################
 #  Licensed to the Apache Software Foundation (ASF) under one
 #  or more contributor license agreements.  See the NOTICE file
 #  distributed with this work for additional information
@@ -15,21 +15,22 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-from distutils.core import setup
 
-setup(
-    name='pyflink',
-    version='1.0',
-    packages=['pyflink',
-              'pyflink.common',
-              'pyflink.stream',
-              'pyflink.table',
-              'pyflink.sql',
-              'pyflink.util'],
-    url='http://flink.apache.org',
-    license='Licensed under the Apache License, Version 2.0',
-    author='Flink Developers',
-    author_email='dev@flink.apache.org',
-    install_requires=['py4j==0.10.7'],
-    description='Flink Python API'
-)
+from pyflink.table.functions import ScalarFunction, TableFunction
+from pyflink.sql.udf import udf, udtf
+from pyflink import cloudpickle
+from pyflink.sql.data_type import StringType
+
+
+class PyTableFunction(TableFunction):
+    @udtf(row_types=[StringType()])
+    def eval(self, names):
+        for name in names.split('#'):
+            super(PyTableFunction, self).collect(name)
+
+
+def test_f1():
+    with open('/Users/xianda/picklefile_udtf', 'w') as f:
+        udtf = PyTableFunction()
+        udtf_bytes = cloudpickle.dumps(udtf)
+        f.write(udtf_bytes)

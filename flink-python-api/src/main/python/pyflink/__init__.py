@@ -18,8 +18,9 @@
 
 from __future__ import absolute_import
 
-from pyflink.environment import StreamExecutionEnvironment
+from pyflink.environment import StreamExecutionEnvironment, LocalStreamEnvironment, RemoteStreamEnvironment
 
 __all__ = [
-    'StreamExecutionEnvironment'
+    'StreamExecutionEnvironment',
+    'LocalStreamEnvironment'
 ]
