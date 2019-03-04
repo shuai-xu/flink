@@ -122,7 +122,7 @@ public class FrequentFullGCDetector implements Detector {
 					severe = true;
 				}
 			}
-			LOGGER.debug("tm {} gc {}", tmId, gcCount.get(tmId));
+			LOGGER.debug("tm {} gc count {}", tmId, gcCount.get(tmId));
 		}
 
 		if (jobVertexIDs != null && !jobVertexIDs.isEmpty()) {

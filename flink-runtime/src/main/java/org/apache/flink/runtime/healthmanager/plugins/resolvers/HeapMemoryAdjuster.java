@@ -206,6 +206,11 @@ public class HeapMemoryAdjuster implements Resolver {
 			return true;
 		}
 
+		if (jobVertexLongTimeFullGC != null && jobVertexLongTimeFullGC.isCritical()) {
+			LOGGER.debug("Critical long time full GC detected, should rescale.");
+			return true;
+		}
+
 		if (jobStable == null || jobStable.getStableTime() < stableTime) {
 			LOGGER.debug("Job unstable, should not rescale.");
 			return false;

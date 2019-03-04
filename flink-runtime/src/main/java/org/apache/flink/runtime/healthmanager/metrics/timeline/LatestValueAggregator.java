@@ -16,34 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.healthmanager.plugins.symptoms;
+package org.apache.flink.runtime.healthmanager.metrics.timeline;
 
-import org.apache.flink.api.common.JobID;
-import org.apache.flink.runtime.jobgraph.JobVertexID;
-
-import java.util.List;
+import org.apache.flink.api.java.tuple.Tuple2;
 
 /**
- * Symptom indicating job vertices exist long time full gc.
+ * Calculate the last value without considering the interval.
  */
-public class JobVertexLongTimeFullGC extends AbstractJobVertexSymptom {
+public class LatestValueAggregator extends TimelineAggregator {
 
-	private boolean severe;
-
-	private boolean critical;
-
-	public JobVertexLongTimeFullGC(JobID jobID, List<JobVertexID> jobVertexIDs, boolean severe, boolean critical) {
-		super(jobID, jobVertexIDs);
-		this.severe = severe;
-		this.critical = critical;
+	public LatestValueAggregator(long interval) {
+		super(interval);
 	}
 
-	public boolean isSevere() {
-		return this.severe;
-	}
-
-	public boolean isCritical() {
-		return this.critical;
+	@Override
+	public void addValue(Tuple2<Long, Double> value) {
+		if (value.f0 > currentTimestamp) {
+			currentTimestamp = value.f0;
+			currentValue = value.f1;
+		}
 	}
 }
-

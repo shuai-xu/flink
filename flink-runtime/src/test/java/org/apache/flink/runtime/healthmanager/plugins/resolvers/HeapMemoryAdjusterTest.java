@@ -64,7 +64,7 @@ public class HeapMemoryAdjusterTest {
 		JobVertexFrequentFullGC jobVertexFrequentFullGC = new JobVertexFrequentFullGC(new JobID(),
 			Collections.emptyList(), false);
 		JobVertexLongTimeFullGC jobVertexLongTimeFullGC = new JobVertexLongTimeFullGC(new JobID(),
-			Collections.emptyList(), false);
+			Collections.emptyList(), false, false);
 		JobVertexLowMemory jobVertexLowMemory = new JobVertexLowMemory(new JobID());
 
 		List<Symptom> symptomList = new ArrayList<>();
@@ -122,8 +122,10 @@ public class HeapMemoryAdjusterTest {
 		JobVertexID vertex4 = new JobVertexID();
 
 		JobVertexHeapOOM jobVertexHeapOOM = new JobVertexHeapOOM(new JobID(), Lists.newArrayList(vertex1));
-		JobVertexFrequentFullGC jobVertexFrequentFullGC = new JobVertexFrequentFullGC(new JobID(), Lists.newArrayList(vertex2), false);
-		JobVertexLongTimeFullGC jobVertexLongTimeFullGC = new JobVertexLongTimeFullGC(new JobID(), Lists.newArrayList(vertex3), false);
+		JobVertexFrequentFullGC jobVertexFrequentFullGC = new JobVertexFrequentFullGC(
+			new JobID(), Lists.newArrayList(vertex2), false);
+		JobVertexLongTimeFullGC jobVertexLongTimeFullGC = new JobVertexLongTimeFullGC(
+			new JobID(), Lists.newArrayList(vertex3), false, false);
 
 		Set<JobVertexID> vertexToScaleUp = new HashSet<>();
 		vertexToScaleUp.add(vertex3);

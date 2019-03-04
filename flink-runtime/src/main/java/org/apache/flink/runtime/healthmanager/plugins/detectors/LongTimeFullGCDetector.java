@@ -30,7 +30,6 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Detector;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
-import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricNames;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
@@ -67,7 +66,7 @@ public class LongTimeFullGCDetector implements Detector {
 
 	private long gcTimeThreshold;
 	private long gcTimeSevereThreshold;
-	private long gcCheckInterval;
+	private final long gcCheckInterval = 1L;
 
 	private JobTMMetricSubscription gcTimeSubscription;
 	private JobTMMetricSubscription gcCountSubscription;
@@ -80,7 +79,6 @@ public class LongTimeFullGCDetector implements Detector {
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
-		gcCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
 		gcTimeThreshold = monitor.getConfig().getLong(FULL_GC_TIME_THRESHOLD);
 		gcTimeSevereThreshold = monitor.getConfig().getLong(FULL_GC_TIME_SEVERE_THRESHOLD);
 
@@ -109,10 +107,11 @@ public class LongTimeFullGCDetector implements Detector {
 		}
 
 		boolean severe = false;
+		boolean critical = false;
 		Set<JobVertexID> jobVertexIDs = new HashSet<>();
 		for (String tmId : gcTime.keySet()) {
 			if (!gcCount.containsKey(tmId)
-				|| !MetricUtils.validateTmMetric(monitor, gcCheckInterval * 2, gcTime.get(tmId), gcCount.get(tmId))
+				|| !MetricUtils.validateTmMetric(monitor, gcCheckInterval, gcTime.get(tmId), gcCount.get(tmId))
 				|| gcCount.get(tmId).f1 < 1) {
 				LOGGER.debug("Skip vertex {}, GC metrics missing.", jobVertexIDs);
 				continue;
@@ -128,14 +127,15 @@ public class LongTimeFullGCDetector implements Detector {
 				}
 				if (perGCDeltaTime > gcTimeSevereThreshold) {
 					severe = true;
+					critical = true;
 				}
 			}
-			LOGGER.debug("tm {} gc {}", tmId, gcTime.get(tmId));
+			LOGGER.debug("tm {} gc time {}", tmId, perGCDeltaTime);
 		}
 
 		if (jobVertexIDs != null && !jobVertexIDs.isEmpty()) {
 			LOGGER.info("Long time full gc detected for vertices {}.", jobVertexIDs);
-			return new JobVertexLongTimeFullGC(jobID, new ArrayList<>(jobVertexIDs), severe);
+			return new JobVertexLongTimeFullGC(jobID, new ArrayList<>(jobVertexIDs), severe, critical);
 		}
 		return null;
 	}

@@ -61,6 +61,9 @@ public abstract class TimelineAggregator {
 	 * @return timeline aggregator with given agg type and interval.
 	 */
 	public static TimelineAggregator createTimelineAggregator(TimelineAggType timelineAggType, long interval) {
+		if (interval == 1L) {
+			return new LatestValueAggregator(interval);
+		}
 		switch (timelineAggType) {
 			case AVG:
 				return new AvgTimelineAggregator(interval);

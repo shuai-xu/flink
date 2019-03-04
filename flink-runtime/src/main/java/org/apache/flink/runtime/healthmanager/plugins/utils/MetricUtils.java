@@ -79,7 +79,7 @@ public class MetricUtils {
 		long now = System.currentTimeMillis();
 		for (Tuple2<Long, Double> metric : metrics) {
 			if (metric == null || metric.f0 < monitor.getJobStartExecutionTime() ||
-				now - metric.f0 > validInterval) {
+				validInterval > 1 && now - metric.f0 > validInterval) {
 				return false;
 			}
 		}
