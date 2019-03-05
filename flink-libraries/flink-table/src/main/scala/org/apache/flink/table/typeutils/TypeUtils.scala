@@ -33,10 +33,10 @@ import scala.collection.mutable
 object TypeUtils {
 
   def getExternalClassForType(t: DataType): Class[_] =
-    TypeConverters.createExternalTypeInfoFromDataType(t).getTypeClass
+    if (t == null) null else TypeConverters.createExternalTypeInfoFromDataType(t).getTypeClass
 
   def getInternalClassForType(t: DataType): Class[_] =
-    TypeConverters.createInternalTypeInfoFromDataType(t).getTypeClass
+    if (t == null) null else TypeConverters.createInternalTypeInfoFromDataType(t).getTypeClass
 
   def getPrimitiveInternalClassForType(t: DataType): Class[_] = {
     val internalType = t.toInternalType
