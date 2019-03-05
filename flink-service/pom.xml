@@ -23,7 +23,7 @@ under the License.
 	<parent>
 		<artifactId>flink-parent</artifactId>
 		<groupId>org.apache.flink</groupId>
-		<version>blink-3.2-SNAPSHOT</version>
+		<version>release-3.2-SNAPSHOT</version>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 
