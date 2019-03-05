@@ -77,6 +77,10 @@ public class PlaceholderSegmentStateHandle extends PlaceholderStreamStateHandle 
 		return this.segmentSize;
 	}
 
+	public boolean isFileClosed() {
+		return fileClosed;
+	}
+
 	public Path getFilePath() {
 		return filePath;
 	}

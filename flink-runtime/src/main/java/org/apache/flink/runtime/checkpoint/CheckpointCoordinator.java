@@ -41,6 +41,7 @@ import org.apache.flink.runtime.state.CheckpointStorageLocation;
 import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
 import org.apache.flink.runtime.state.IncrementalSegmentStateSnapshot;
 import org.apache.flink.runtime.state.KeyedStateHandle;
+import org.apache.flink.runtime.state.PlaceholderSegmentStateHandle;
 import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.SharedStateRegistryFactory;
 import org.apache.flink.runtime.state.StateBackend;
@@ -684,7 +685,12 @@ public class CheckpointCoordinator {
 						collectFilesToDiscard((FileSegmentStateHandle) metaStateHandle, filesToDiscard);
 
 						for (Tuple2<String, StreamStateHandle> states : segmentStateSnapshot.getSharedState().values()) {
-							collectFilesToDiscard((FileSegmentStateHandle) states.f1, filesToDiscard);
+							// shared state might be a place holder stream state handle.
+							if (states.f1 instanceof PlaceholderSegmentStateHandle) {
+								collectFilesToDiscard(((PlaceholderSegmentStateHandle) states.f1).toFileSegmentStateHandle(), filesToDiscard);
+							} else {
+								collectFilesToDiscard((FileSegmentStateHandle) states.f1, filesToDiscard);
+							}
 						}
 
 						for (StreamStateHandle state : segmentStateSnapshot.getPrivateState().values()) {

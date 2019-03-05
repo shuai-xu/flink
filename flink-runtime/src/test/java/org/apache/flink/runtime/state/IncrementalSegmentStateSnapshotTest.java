@@ -63,7 +63,7 @@ public class IncrementalSegmentStateSnapshotTest {
 	public void testUnregisteredDiscarding() throws Exception {
 		File file = createTempFile();
 
-		IncrementalSegmentStateSnapshot stateHandle = create(new Random(42), KeyGroupRange.of(0, 0), file, 0, file.length());
+		IncrementalSegmentStateSnapshot stateHandle = create(new Random(42), KeyGroupRange.of(0, 0), file, 0, file.length(), false);
 
 		assertTrue(file.exists());
 		stateHandle.discardState();
@@ -75,7 +75,7 @@ public class IncrementalSegmentStateSnapshotTest {
 		File file = createTempFile();
 
 		// verify expected getIntersection
-		IncrementalSegmentStateSnapshot stateSnapshot03 = create(ThreadLocalRandom.current(), KeyGroupRange.of(0, 3), file, 0, file.length());
+		IncrementalSegmentStateSnapshot stateSnapshot03 = create(ThreadLocalRandom.current(), KeyGroupRange.of(0, 3), file, 0, file.length(), false);
 
 		KeyedStateHandle intersection = stateSnapshot03.getIntersection(KeyGroupRange.of(3, 5));
 		assertNotNull(intersection);
@@ -103,17 +103,17 @@ public class IncrementalSegmentStateSnapshotTest {
 		long satrt2 = end1;
 		long end2 = file1.length();
 		long end3 = file2.length();
-		IncrementalSegmentStateSnapshot stateSnapshotX = create(new Random(1), KeyGroupRange.of(0, 0), file1, 0, end1);
+		IncrementalSegmentStateSnapshot stateSnapshotX = create(new Random(1), KeyGroupRange.of(0, 0), file1, 0, end1, false);
 		StreamStateHandle metaStateHandle1 = stateSnapshotX.getMetaStateHandle();
 		assertTrue(metaStateHandle1 instanceof FileSegmentStateHandle);
 		FileSegmentStateHandle registeredStateHandle1 = (FileSegmentStateHandle) metaStateHandle1;
 		SharedStateRegistryKey actualRegisteredKey1 = new SharedStateRegistryKey(registeredStateHandle1.getFilePath().toString());
 		int stateSnapshotXSize = stateSnapshotX.getSharedState().size() + stateSnapshotX.getPrivateState().size() + 1;
 
-		IncrementalSegmentStateSnapshot stateSnapshotY = create(new Random(2), KeyGroupRange.of(0, 0), file1, satrt2, end2);
+		IncrementalSegmentStateSnapshot stateSnapshotY = create(new Random(2), KeyGroupRange.of(0, 0), file1, satrt2, end2, true);
 		int stateSnapshotYSize = stateSnapshotY.getSharedState().size() + stateSnapshotY.getPrivateState().size() + 1;
 
-		IncrementalSegmentStateSnapshot stateSnapshotZ = create(new Random(3), KeyGroupRange.of(0, 0), file2, 0, end3);
+		IncrementalSegmentStateSnapshot stateSnapshotZ = create(new Random(3), KeyGroupRange.of(0, 0), file2, 0, end3, false);
 		StreamStateHandle metaStateHandle2 = stateSnapshotZ.getMetaStateHandle();
 		assertTrue(metaStateHandle2 instanceof FileSegmentStateHandle);
 		FileSegmentStateHandle registeredStateHandle2 = (FileSegmentStateHandle) metaStateHandle2;
@@ -149,7 +149,7 @@ public class IncrementalSegmentStateSnapshotTest {
 
 		// Attempt to register to closed registry should trigger exception
 		try {
-			create(new Random(4), KeyGroupRange.of(0, 0), file1, 0, file1.length() / 4).registerSharedStates(stateRegistryA);
+			create(new Random(4), KeyGroupRange.of(0, 0), file1, 0, file1.length() / 4, true).registerSharedStates(stateRegistryA);
 			fail("Should not be able to register new state to closed registry.");
 		} catch (IllegalStateException ignore) {
 		}
@@ -196,8 +196,8 @@ public class IncrementalSegmentStateSnapshotTest {
 		SharedStateRegistry registry = spy(new SharedStateRegistry());
 
 		// Create two state handles with overlapping state
-		IncrementalSegmentStateSnapshot stateSnapshot1 = create(new Random(42), KeyGroupRange.of(0, 0), file, 0, midPosition);
-		IncrementalSegmentStateSnapshot stateSnapshot2 = create(new Random(42), KeyGroupRange.of(0, 0), file, midPosition, endPosition);
+		IncrementalSegmentStateSnapshot stateSnapshot1 = create(new Random(42), KeyGroupRange.of(0, 0), file, 0, midPosition, false);
+		IncrementalSegmentStateSnapshot stateSnapshot2 = create(new Random(42), KeyGroupRange.of(0, 0), file, midPosition, endPosition, false);
 		for (Map.Entry<StateHandleID, Tuple2<String, StreamStateHandle>> entry : stateSnapshot2.getSharedState().entrySet()) {
 			String id = entry.getValue().f0;
 			assertTrue(entry.getValue().f1 instanceof FileSegmentStateHandle);
@@ -264,7 +264,8 @@ public class IncrementalSegmentStateSnapshotTest {
 			KeyGroupRange keyGroupRange,
 			File underlyingFile,
 			long startPosition,
-			long endPosition) {
+			long endPosition,
+			boolean registeredEver) {
 
 		long start1 = startPosition;
 		long offset = endPosition - startPosition;
@@ -277,7 +278,7 @@ public class IncrementalSegmentStateSnapshotTest {
 		return new IncrementalSegmentStateSnapshot(
 				keyGroupRange,
 				1L,
-				placeTupleSpies(createRandomStateSnapshotMap(rnd, underlyingFile, start1, end1)),
+				placeTupleSpies(createRandomStateSnapshotMap(rnd, underlyingFile, start1, end1, registeredEver)),
 				placeSpies(createRandomStateHandleMap(rnd, underlyingFile, start2, end2)),
 				spy(createDummySegmentStreamStateHandle(underlyingFile, start3, end3)));
 	}
@@ -314,7 +315,8 @@ public class IncrementalSegmentStateSnapshotTest {
 			Random rnd,
 			File file,
 			long startPosition,
-			long endPosition) {
+			long endPosition,
+			boolean registeredEver) {
 		final int size = rnd.nextInt(4);
 		Map<StateHandleID, Tuple2<String, StreamStateHandle>> result = new HashMap<>(size);
 		if (size > 0) {
@@ -331,7 +333,11 @@ public class IncrementalSegmentStateSnapshotTest {
 				} else {
 					end = Math.min(step * (i + 1) + startPosition, endPosition);
 				}
-				result.put(randomId, Tuple2.of(file.toURI().toString(), stateHandle));
+				if (registeredEver) {
+					result.put(randomId, Tuple2.of(file.toURI().toString(), new PlaceholderSegmentStateHandle((FileSegmentStateHandle) stateHandle)));
+				} else {
+					result.put(randomId, Tuple2.of(file.toURI().toString(), stateHandle));
+				}
 			}
 		}
 

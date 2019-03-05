@@ -353,7 +353,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			long start2 = end1;
 			long end2 = underlyingFile.length();
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(
-				jid, attemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start1, end1)));
+				jid, attemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start1, end1, false)));
 			if (expectFileDiscarded) {
 				coord.receiveDeclineMessage(new DeclineCheckpoint(jid, attemptID1, checkpointId));
 			} else {
@@ -398,9 +398,10 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			verify(vertex2.getCurrentExecutionAttempt()).triggerCheckpoint(checkpointId, timestamp, CheckpointOptions.forCheckpointWithDefaultLocation());
 
 			// acknowledge from one of the tasks
-
+			// if we expect the file not discarded, the previous acknowledge message must ever registered.
+			boolean registeredEver = !expectFileDiscarded;
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(
-				jid, attemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start2, end2)));
+				jid, attemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start2, end2, registeredEver)));
 			assertEquals(1, checkpoint.getNumberOfAcknowledgedTasks());
 			assertEquals(1, checkpoint.getNumberOfNonAcknowledgedTasks());
 			assertFalse(checkpoint.isDiscarded());
@@ -408,7 +409,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 
 			// acknowledge the same task again (should not matter)
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(
-				jid, attemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start2, end2)));
+				jid, attemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start2, end2, registeredEver)));
 			assertFalse(checkpoint.isDiscarded());
 			assertFalse(checkpoint.isFullyAcknowledged());
 
@@ -1088,7 +1089,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			long start2 = end1;
 			long end2 = underlyingFile.length();
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(
-				jid, ackAttemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start1, end1)));
+				jid, ackAttemptID2, checkpointId, new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start1, end1, false)));
 
 			if (expectFileDiscarded) {
 				coord.receiveDeclineMessage(new DeclineCheckpoint(jid, ackAttemptID1, checkpointId));
@@ -1110,8 +1111,9 @@ public class CheckpointCoordinatorTest extends TestLogger {
 			checkpoint = coord.getPendingCheckpoints().values().iterator().next();
 			assertFalse(checkpoint.isDiscarded());
 
+			boolean registeredEver = !expectFileDiscarded;
 			coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(
-				jid, ackAttemptID2, checkpoint.getCheckpointId(), new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start2, end2)));
+				jid, ackAttemptID2, checkpoint.getCheckpointId(), new CheckpointMetrics(), createTaskStateSnapshot(operatorID2, underlyingFile, start2, end2, registeredEver)));
 
 			// wait until the checkpoint must have expired.
 			// we check every 250 msecs conservatively for 5 seconds
@@ -1272,7 +1274,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		// verify that the subtask state has not been discarded
 		verify(subtaskStateTrigger, never()).discardState();
 
-		TaskStateSnapshot unknownSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length());
+		TaskStateSnapshot unknownSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length(), false);
 
 		// receive an acknowledge message for an unknown vertex
 		coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(jobId, new ExecutionAttemptID(), checkpointId, new CheckpointMetrics(), unknownSubtaskState));
@@ -1282,7 +1284,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		assertFalse(underlyingFile.exists());
 
 		underlyingFile = createTempFile();
-		TaskStateSnapshot differentJobSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length());
+		TaskStateSnapshot differentJobSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length(), false);
 
 		// receive an acknowledge message from an unknown job
 		coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(new JobID(), new ExecutionAttemptID(), checkpointId, new CheckpointMetrics(), differentJobSubtaskState));
@@ -1292,7 +1294,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		assertTrue(underlyingFile.exists());
 
 		// duplicate acknowledge message for the trigger vertex
-		TaskStateSnapshot triggerSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length());
+		TaskStateSnapshot triggerSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length(), false);
 		coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(jobId, triggerAttemptId, checkpointId, new CheckpointMetrics(), triggerSubtaskState));
 
 		// duplicate acknowledge messages for a known vertex should not trigger discarding the state
@@ -1308,7 +1310,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		// check that we've cleaned up the already acknowledged state
 		verify(subtaskStateTrigger, times(1)).discardState();
 
-		TaskStateSnapshot ackSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length());
+		TaskStateSnapshot ackSubtaskState = createTaskStateSnapshot(new OperatorID(), underlyingFile, 0, underlyingFile.length(), true);
 
 		// late acknowledge message from the second ack vertex
 		coord.receiveAcknowledgeMessage(new AcknowledgeCheckpoint(jobId, ackAttemptId2, checkpointId, new CheckpointMetrics(), ackSubtaskState));
@@ -4069,7 +4071,7 @@ public class CheckpointCoordinatorTest extends TestLogger {
 		return executionVertices;
 	}
 
-	private TaskStateSnapshot createTaskStateSnapshot(OperatorID operatorID, File file, long startPosition, long endPosition) {
+	private TaskStateSnapshot createTaskStateSnapshot(OperatorID operatorID, File file, long startPosition, long endPosition, boolean registerdEver) {
 		OperatorSubtaskState operatorSubtaskState = spy(new OperatorSubtaskState(
 			null,
 			null,
@@ -4078,7 +4080,8 @@ public class CheckpointCoordinatorTest extends TestLogger {
 				KeyGroupRange.of(1, 1),
 				file,
 				startPosition,
-				endPosition),
+				endPosition,
+				registerdEver),
 			null));
 
 		TaskStateSnapshot subtaskState = spy(new TaskStateSnapshot());
