@@ -99,23 +99,9 @@ class KeyedStateSortedMapView[K, MK, MV](state: KeyedSortedMapState[K, MK, MV])
     state.iterator(stateKey)
   }
 
-  override def firstKey: MK = {
-    val it = state.iterator(stateKey)
-    if (it.hasNext) {
-      it.next().getKey
-    } else {
-      null.asInstanceOf[MK]
-    }
-  }
+  override def firstKey: MK = state.firstEntry(stateKey).getKey
 
-  override def firstEntry: Map.Entry[MK, MV] = {
-    val it = state.iterator(stateKey)
-    if (it.hasNext) {
-      it.next()
-    } else {
-      null.asInstanceOf[Map.Entry[MK, MV]]
-    }
-  }
+  override def firstEntry: Map.Entry[MK, MV] = state.firstEntry(stateKey)
 
   override def headEntries(var1: MK): JIterable[Map.Entry[MK, MV]] = {
     new JIterable[Map.Entry[MK, MV]] {
