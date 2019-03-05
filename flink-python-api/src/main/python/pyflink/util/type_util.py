@@ -47,7 +47,7 @@ class TypesUtil(object):
             with _init_lock:
                 _gateway = get_gateway()
                 j_sql_types = _gateway.jvm.org.apache.flink.table.types.DataTypes
-                j_sql_decimal = _gateway.jvm.org.apache.flink.table.api.types.DECIMAL
+                j_sql_decimal = _gateway.jvm.org.apache.flink.table.types.DECIMAL
                 _sql_basic_types_py2j_map = {
                     DataTypes.STRING: j_sql_types.STRING,
                     DataTypes.INT: j_sql_types.INT,
@@ -99,7 +99,7 @@ class TypesUtil(object):
             with _init_lock:
                 _gateway = get_gateway()
                 j_data_types = _gateway.jvm.org.apache.flink.table.types.DataTypes
-                # j_sql_decimal = _gateway.jvm.org.apache.flink.table.api.types.DECIMAL
+                j_sql_decimal = _gateway.jvm.org.apache.flink.table.types.DECIMAL
                 _sql_basic_types_j2py_map = {
                     j_data_types.STRING: DataTypes.STRING,
                     j_data_types.INT: DataTypes.INT,

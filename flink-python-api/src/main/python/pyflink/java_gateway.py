@@ -38,6 +38,7 @@ def get_gateway():
             if 'PYFLINK_GATEWAY_PORT' in os.environ:
                 gateway_port = int(os.environ['PYFLINK_GATEWAY_PORT'])
                 _gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
+                import_java_modular(_gateway)
             else:
                 # we start Java from python
                 _gateway = launch_java_gateway()
@@ -125,6 +126,7 @@ def import_java_modular(gateway):
     java_import(gateway.jvm, "org.apache.flink.streaming.api.environment.ExecutionEnvironment")
     java_import(gateway.jvm, "org.apache.flink.table.api.java.StreamTableEnvironment")
     java_import(gateway.jvm, "org.apache.flink.table.api.TableEnvironment")
+    java_import(gateway.jvm, "org.apache.flink.api.java.utils.ParameterTool")
 
 
 def _test():

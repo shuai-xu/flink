@@ -276,6 +276,16 @@ under the License.
 			</plugin>
 
 		</plugins>
+		<resources>
+			<resource>
+				<directory>lib/</directory>
+				<includes>
+					<include>**/*.zip</include>
+					<include>**/*.txt</include>
+				</includes>
+				<filtering>false</filtering>
+			</resource>
+		</resources>
 	</build>
 
 </project>

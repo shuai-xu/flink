@@ -22,11 +22,13 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.filecache.FileCache;
 import org.apache.flink.util.FileUtils;
+import org.apache.flink.util.IOUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -67,17 +69,6 @@ public class PythonUtil {
 
 		StringBuilder pythonPathEnv = new StringBuilder();
 
-		// Add Python Flink libraries to PYTHONPATH
-		String root = System.getenv().get("FLINK_ROOT_DIR");
-		if (root != null) {
-			String pyLibDir = root + File.separator + "lib" + File.separator + "python" +  File.separator;
-			final String[] libs = {PYFLINK_LIB_ZIP_FILENAME, PYFLINK_PY4J_FILENAME};
-			for (String lib : libs) {
-				pythonPathEnv.append(pyLibDir + lib);
-				pythonPathEnv.append(File.pathSeparator);
-			}
-		}
-
 		// 1. setup temporary local directory for the user files
 		String tmpFilesDir = System.getProperty("java.io.tmpdir") +
 			File.separator + "pyflink_tmp_" + UUID.randomUUID();
@@ -91,6 +82,13 @@ public class PythonUtil {
 		pythonPathEnv.append(tmpFileDirPath.toString());
 
 		env.workingDirectory = tmpFileDirPath.toString();
+
+		// Add Python Flink libraries to PYTHONPATH
+		final String[] libs = {PYFLINK_LIB_ZIP_FILENAME, PYFLINK_PY4J_FILENAME};
+		for (String lib : libs) {
+			pythonPathEnv.append(File.pathSeparator);
+			pythonPathEnv.append(env.workingDirectory + File.separator + lib);
+		}
 
 		// copy all user's files from distributed cache to tmp folder
 		// Map<String, File> usrFiles = getUserFilesFromDistributedCache(ctx);
@@ -117,6 +115,9 @@ public class PythonUtil {
 				}
 			}
 		}
+
+		// Replace existing.
+		extractPyflinkLibs(env.workingDirectory);
 
 		env.pythonPath = pythonPathEnv.toString();
 		return env;
@@ -182,6 +183,27 @@ public class PythonUtil {
 			}
 		}
 		return null;
+	}
+
+	public static void extractPyflinkLibs(String tmpDir) throws IOException {
+
+		final String[] libs = {PYFLINK_LIB_ZIP_FILENAME, PYFLINK_PY4J_FILENAME};
+		for (String lib : libs) {
+			ClassLoader classLoader = PythonUtil.class.getClassLoader();
+			InputStream in = classLoader.getResourceAsStream(lib);
+			if (in == null) {
+				String err = "Can't extract python library files from resource..";
+				//LOG.error(err);
+				throw new IOException(err);
+			}
+			File targetFile = new File(tmpDir + File.separator + lib);
+			java.nio.file.Files.copy(
+				in,
+				targetFile.toPath(),
+				StandardCopyOption.REPLACE_EXISTING);
+
+			IOUtils.closeQuietly(in);
+		}
 	}
 
 	public static synchronized Process startPythonProcess(

@@ -255,5 +255,5 @@ class ParameterTool(object):
 
     @classmethod
     def _get_java_cls(cls):
-        return get_gateway().jvm.org.apache.flink.api.java.utils.ParameterTool
+        return get_gateway().jvm.ParameterTool
 

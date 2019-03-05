@@ -20,7 +20,6 @@ package org.apache.flink.api.python
 import org.apache.flink.core.fs.Path
 
 import collection.JavaConverters._
-import py4j.GatewayServer
 
 /**
   * Python Driver.
