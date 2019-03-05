@@ -24,8 +24,11 @@ import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.util.Preconditions;
 
 /**
  * A stream operator that extracts timestamps from stream elements and
@@ -41,15 +44,35 @@ public class WatermarkAssignerOperator
 
 	private final long offset;
 
+	private final long idleTimeout;
+
 	private transient long watermarkInterval;
 
 	private transient long currentWatermark;
 
 	private transient long currentMaxTimestamp;
 
-	public WatermarkAssignerOperator(int rowtimeIndex, long offset) {
+	private transient long lastRecordTime;
+
+	private transient StreamStatusMaintainer streamStatusMaintainer;
+
+	/**
+	 * Create a watermark assigner operator.
+	 * @param rowtimeIndex  the field index to extract event timestamp
+	 * @param offset    the offset/delay by which watermarks are behind the maximum observed timestamp.
+	 * @param idleTimeout   (-1 if idleness checking is disabled)
+	 */
+	public WatermarkAssignerOperator(int rowtimeIndex, long offset, long idleTimeout) {
 		this.rowtimeIndex = rowtimeIndex;
 		this.offset = offset;
+
+		if (idleTimeout != -1) {
+			Preconditions.checkArgument(
+				idleTimeout >= 1,
+				"The idle timeout cannot be smaller than 1 ms.");
+		}
+
+		this.idleTimeout = idleTimeout;
 		this.chainingStrategy = ChainingStrategy.ALWAYS;
 	}
 
@@ -58,9 +81,11 @@ public class WatermarkAssignerOperator
 		super.open();
 
 		// watermark and timestamp should start from 0
-		currentWatermark = 0;
-		currentMaxTimestamp = 0;
-		watermarkInterval = getExecutionConfig().getAutoWatermarkInterval();
+		this.currentWatermark = 0;
+		this.currentMaxTimestamp = 0;
+		this.watermarkInterval = getExecutionConfig().getAutoWatermarkInterval();
+		this.lastRecordTime = getProcessingTimeService().getCurrentProcessingTime();
+		this.streamStatusMaintainer = getContainingTask().getStreamStatusMaintainer();
 
 		if (watermarkInterval > 0) {
 			long now = getProcessingTimeService().getCurrentProcessingTime();
@@ -70,6 +95,11 @@ public class WatermarkAssignerOperator
 
 	@Override
 	public void processElement(StreamRecord<BaseRow> element) throws Exception {
+		if (idleTimeout != -1) {
+			// mark the channel active
+			streamStatusMaintainer.toggleStreamStatus(StreamStatus.ACTIVE);
+			lastRecordTime = getProcessingTimeService().getCurrentProcessingTime();
+		}
 		BaseRow row = element.getValue();
 		if (row.isNullAt(rowtimeIndex)) {
 			throw new RuntimeException("RowTime field should not be null," +
@@ -100,6 +130,14 @@ public class WatermarkAssignerOperator
 	public void onProcessingTime(long timestamp) throws Exception {
 		advanceWatermark();
 
+		if (idleTimeout != -1) {
+			final long currentTime = getProcessingTimeService().getCurrentProcessingTime();
+			if (currentTime - lastRecordTime > idleTimeout) {
+				// mark the channel as idle to ignore watermarks from this channel
+				streamStatusMaintainer.toggleStreamStatus(StreamStatus.IDLE);
+			}
+		}
+
 		// register next timer
 		long now = getProcessingTimeService().getCurrentProcessingTime();
 		getProcessingTimeService().registerTimer(now + watermarkInterval, this);
@@ -115,6 +153,10 @@ public class WatermarkAssignerOperator
 		// if we receive a Long.MAX_VALUE watermark we forward it since it is used
 		// to signal the end of input and to not block watermark progress downstream
 		if (mark.getTimestamp() == Long.MAX_VALUE && currentWatermark != Long.MAX_VALUE) {
+			if (idleTimeout != -1) {
+				// mark the channel active
+				streamStatusMaintainer.toggleStreamStatus(StreamStatus.ACTIVE);
+			}
 			currentWatermark = Long.MAX_VALUE;
 			output.emitWatermark(mark);
 		}

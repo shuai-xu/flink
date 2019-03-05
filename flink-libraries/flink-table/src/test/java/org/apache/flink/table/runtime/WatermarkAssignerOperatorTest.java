@@ -21,12 +21,17 @@ package org.apache.flink.table.runtime;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
+import org.apache.flink.table.runtime.bundle.MiniBatchedWatermarkAssignerOperator;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static junit.framework.TestCase.assertTrue;
@@ -39,9 +44,94 @@ import static org.junit.Assert.assertNotNull;
 public class WatermarkAssignerOperatorTest {
 
 	@Test
+	public void testWatermarkAssignerWithIdleSource() throws Exception {
+		// with timeout 1000 ms
+		final WatermarkAssignerOperator operator = new WatermarkAssignerOperator(0, 1, 1000);
+		OneInputStreamOperatorTestHarness<BaseRow, BaseRow> testHarness =
+			new OneInputStreamOperatorTestHarness<>(operator);
+		testHarness.getExecutionConfig().setAutoWatermarkInterval(50);
+		testHarness.open();
+
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(1L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(2L)));
+		testHarness.processWatermark(new Watermark(2)); // this watermark should be ignored
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(3L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(4L)));
+
+		// trigger watermark emit
+		testHarness.setProcessingTime(51);
+		ConcurrentLinkedQueue<Object> output = testHarness.getOutput();
+		List<Watermark> watermarks = extractWatermarks(output);
+		assertEquals(1, watermarks.size());
+		assertEquals(new Watermark(3), watermarks.get(0));
+		assertEquals(StreamStatus.ACTIVE, testHarness.getStreamStatus());
+		output.clear();
+
+		testHarness.setProcessingTime(1001);
+		assertEquals(StreamStatus.IDLE, testHarness.getStreamStatus());
+
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(4L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(5L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(6L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(7L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(8L)));
+
+		assertEquals(StreamStatus.ACTIVE, testHarness.getStreamStatus());
+		testHarness.setProcessingTime(1060);
+		output = testHarness.getOutput();
+		watermarks = extractWatermarks(output);
+		assertEquals(1, watermarks.size());
+		assertEquals(new Watermark(7), watermarks.get(0));
+	}
+
+	@Test
+	public void testMiniBatchedWatermarkAssignerWithIdleSource() throws Exception {
+		// with timeout 1000 ms
+		final MiniBatchedWatermarkAssignerOperator operator = new MiniBatchedWatermarkAssignerOperator(
+			0, 1, 0, 1000, 50);
+		OneInputStreamOperatorTestHarness<BaseRow, BaseRow> testHarness =
+			new OneInputStreamOperatorTestHarness<>(operator);
+		testHarness.open();
+
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(1L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(2L)));
+		testHarness.processWatermark(new Watermark(2)); // this watermark should be ignored
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(3L)));
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(4L)));
+		// this watermark excess expected watermark, should emit a watermark of 49
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(50L)));
+
+		ConcurrentLinkedQueue<Object> output = testHarness.getOutput();
+		List<Watermark> watermarks = extractWatermarks(output);
+		assertEquals(1, watermarks.size());
+		assertEquals(new Watermark(49), watermarks.get(0));
+		assertEquals(StreamStatus.ACTIVE, testHarness.getStreamStatus());
+		output.clear();
+
+		testHarness.setProcessingTime(1001);
+		assertEquals(StreamStatus.IDLE, testHarness.getStreamStatus());
+
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(51L)));
+		assertEquals(StreamStatus.ACTIVE, testHarness.getStreamStatus());
+
+		// process time will not trigger to emit watermark
+		testHarness.setProcessingTime(1060);
+		output = testHarness.getOutput();
+		watermarks = extractWatermarks(output);
+		assertTrue(watermarks.isEmpty());
+		output.clear();
+
+		testHarness.processElement(new StreamRecord<>(GenericRow.of(100L)));
+		output = testHarness.getOutput();
+		watermarks = extractWatermarks(output);
+		assertEquals(1, watermarks.size());
+		assertEquals(new Watermark(99), watermarks.get(0));
+	}
+
+	@Test
 	public void testWatermarkAssingerOperator() throws Exception {
 
-		final WatermarkAssignerOperator operator = new WatermarkAssignerOperator(0, 1);
+		final WatermarkAssignerOperator operator = new WatermarkAssignerOperator(0, 1, -1);
 
 		OneInputStreamOperatorTestHarness<BaseRow, BaseRow> testHarness =
 			new OneInputStreamOperatorTestHarness<>(operator);
@@ -137,5 +227,15 @@ public class WatermarkAssignerOperatorTest {
 		else {
 			throw new IllegalArgumentException("unrecognized element: " + element);
 		}
+	}
+
+	private List<Watermark> extractWatermarks(Collection<Object> collection) {
+		List<Watermark> watermarks = new ArrayList<>();
+		for (Object obj : collection) {
+			if (obj instanceof Watermark) {
+				watermarks.add((Watermark) obj);
+			}
+		}
+		return watermarks;
 	}
 }

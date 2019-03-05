@@ -23,6 +23,9 @@ import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
+import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.util.Preconditions;
 
@@ -32,7 +35,7 @@ import org.apache.flink.util.Preconditions;
  */
 public class MiniBatchedWatermarkAssignerOperator
 	extends AbstractStreamOperator<BaseRow>
-	implements OneInputStreamOperator<BaseRow, BaseRow> {
+	implements OneInputStreamOperator<BaseRow, BaseRow>, ProcessingTimeCallback {
 
 	private final int rowtimeIndex;
 
@@ -41,22 +44,36 @@ public class MiniBatchedWatermarkAssignerOperator
 	// timezone offset.
 	private final long tzOffset;
 
+	private final long idleTimeout;
+
 	private long watermarkInterval;
 
 	private transient long currentWatermark;
 
 	private transient long expectedWatermark;
 
+	private transient long lastRecordTime;
+
+	private transient StreamStatusMaintainer streamStatusMaintainer;
+
 	public MiniBatchedWatermarkAssignerOperator(
 		int rowtimeIndex,
 		long offset,
 		long tzOffset,
+		long idleTimeout,
 		long watermarkInterval) {
 		this.rowtimeIndex = rowtimeIndex;
 		this.offset = offset;
 		this.tzOffset = tzOffset;
 		this.chainingStrategy = ChainingStrategy.ALWAYS;
 		this.watermarkInterval = watermarkInterval;
+
+		if (idleTimeout != -1) {
+			Preconditions.checkArgument(
+				idleTimeout >= 1,
+				"The idle timeout cannot be smaller than 1 ms.");
+		}
+		this.idleTimeout = idleTimeout;
 	}
 
 	@Override
@@ -70,10 +87,21 @@ public class MiniBatchedWatermarkAssignerOperator
 		currentWatermark = 0;
 		expectedWatermark = getMiniBatchStart(currentWatermark, tzOffset, watermarkInterval)
 			+ watermarkInterval - 1;
+
+		if (idleTimeout >= 1) {
+			this.lastRecordTime = getProcessingTimeService().getCurrentProcessingTime();
+			this.streamStatusMaintainer = getContainingTask().getStreamStatusMaintainer();
+			getProcessingTimeService().registerTimer(lastRecordTime + idleTimeout, this);
+		}
 	}
 
 	@Override
 	public void processElement(StreamRecord<BaseRow> element) throws Exception {
+		if (idleTimeout != -1) {
+			// mark the channel active
+			streamStatusMaintainer.toggleStreamStatus(StreamStatus.ACTIVE);
+			lastRecordTime = getProcessingTimeService().getCurrentProcessingTime();
+		}
 		BaseRow row = element.getValue();
 		if (row.isNullAt(rowtimeIndex)) {
 			throw new RuntimeException("RowTime field should not be null," +
@@ -92,6 +120,21 @@ public class MiniBatchedWatermarkAssignerOperator
 		}
 	}
 
+	@Override
+	public void onProcessingTime(long timestamp) throws Exception {
+		if (idleTimeout != -1) {
+			final long currentTime = getProcessingTimeService().getCurrentProcessingTime();
+			if (currentTime - lastRecordTime > idleTimeout) {
+				// mark the channel as idle to ignore watermarks from this channel
+				streamStatusMaintainer.toggleStreamStatus(StreamStatus.IDLE);
+			}
+		}
+
+		// register next timer
+		long now = getProcessingTimeService().getCurrentProcessingTime();
+		getProcessingTimeService().registerTimer(now + watermarkInterval, this);
+	}
+
 	/**
 	 * Override the base implementation to completely ignore watermarks propagated from
 	 * upstream (we rely only on the {@link MiniBatchedWatermarkAssignerOperator} to emit
@@ -102,6 +145,10 @@ public class MiniBatchedWatermarkAssignerOperator
 		// if we receive a Long.MAX_VALUE watermark we forward it since it is used
 		// to signal the end of input and to not block watermark progress downstream
 		if (mark.getTimestamp() == Long.MAX_VALUE && currentWatermark != Long.MAX_VALUE) {
+			if (idleTimeout != -1) {
+				// mark the channel active
+				streamStatusMaintainer.toggleStreamStatus(StreamStatus.ACTIVE);
+			}
 			currentWatermark = Long.MAX_VALUE;
 			output.emitWatermark(mark);
 		}

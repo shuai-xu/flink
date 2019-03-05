@@ -93,13 +93,15 @@ class StreamExecWatermarkAssigner (
 
     val inferredInterval = getTraitSet.getTrait(
       MiniBatchIntervalTraitDef.INSTANCE).getMiniBatchInterval
+    val idleTimeout = tableEnv.getConfig.getConf.getLong(
+      TableConfigOptions.SQL_EXEC_SOURCE_IDLE_TIMEOUT)
 
     val (operator, opName) = if (inferredInterval.mode == MiniBatchMode.None) {
       // 1. operator requiring watermark, but minibatch is not enabled
       // 2. redundant watermark definition in DDL
       // 3. existing window, and window minibatch is disabled.
       val rowtimeIndex = getRowType.getFieldNames.indexOf(rowtimeField)
-      val op = new WatermarkAssignerOperator(rowtimeIndex, watermarkOffset)
+      val op = new WatermarkAssignerOperator(rowtimeIndex, watermarkOffset, idleTimeout)
       val opName = s"WatermarkAssigner(rowtime: $rowtimeField, offset: $watermarkOffset)"
       (op, opName)
     } else if (inferredInterval.mode == MiniBatchMode.ProcTime) {
@@ -111,7 +113,11 @@ class StreamExecWatermarkAssigner (
       // get the timezone offset.
       val tzOffset = tableEnv.getConfig.getTimeZone.getOffset(Calendar.ZONE_OFFSET)
       val op = new MiniBatchedWatermarkAssignerOperator(
-        rowtimeIndex, watermarkOffset, tzOffset, inferredInterval.interval)
+        rowtimeIndex,
+        watermarkOffset,
+        tzOffset,
+        idleTimeout,
+        inferredInterval.interval)
       val opName = s"MiniBatchedWatermarkAssigner(rowtime: $rowtimeField," +
         s" offset: $watermarkOffset, intervalMs: ${inferredInterval.interval})"
       (op, opName)

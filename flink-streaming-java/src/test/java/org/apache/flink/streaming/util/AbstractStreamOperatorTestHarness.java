@@ -103,6 +103,8 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 
 	protected final TestProcessingTimeService processingTimeService;
 
+	protected final StreamStatusMaintainer mockStreamStatusMaintainer;
+
 	protected final StreamTask<?, ?> mockTask;
 
 	protected final TestTaskStateManager taskStateManager;
@@ -207,7 +209,7 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 
 		this.streamTaskStateInitializer = createStreamTaskStateManager(environment, stateBackend, processingTimeService);
 
-		StreamStatusMaintainer mockStreamStatusMaintainer = new StreamStatusMaintainer() {
+		this.mockStreamStatusMaintainer = new StreamStatusMaintainer() {
 			StreamStatus currentStreamStatus = StreamStatus.ACTIVE;
 
 			@Override
@@ -558,6 +560,10 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
 
 	public long getProcessingTime() {
 		return processingTimeService.getCurrentProcessingTime();
+	}
+
+	public StreamStatus getStreamStatus() {
+		return mockStreamStatusMaintainer.getStreamStatus();
 	}
 
 	public void setTimeCharacteristic(TimeCharacteristic timeCharacteristic) {
