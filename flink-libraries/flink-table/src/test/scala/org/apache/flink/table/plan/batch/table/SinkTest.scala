@@ -122,6 +122,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinks(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     val query = "SELECT SUM(a) AS sum_a, c FROM SmallTable3 GROUP BY c"
     val table = util.tableEnv.sqlQuery(query)
     val result1 = table.select('sum_a.sum as 'total_sum)
@@ -133,6 +135,10 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinks2(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_UNIONALL_AS_BREAKPOINT_DISABLED, false)
     util.addTable[(Int, Long, String, Double, Boolean)]("SmallTable5", 'a, 'b, 'c, 'd, 'e)
@@ -149,6 +155,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
   @Test
   def testMultiSinks3(): Unit = {
     util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
+    util.tableEnv.getConfig.getConf.setBoolean(
       TableConfigOptions.SQL_OPTIMIZER_UNIONALL_AS_BREAKPOINT_DISABLED, false)
     util.addTable[(Int, Long, String, Double, Boolean)]("SmallTable5", 'a, 'b, 'c, 'd, 'e)
     val t3 = util.tableEnv.scan("SmallTable3")
@@ -163,6 +171,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinks4(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     val table = util.tableEnv.scan("SmallTable3")
     val table1 = table.where('a <= 10).select('a as 'a1, 'b)
     val table2 = table.where('a >= 0).select('a, 'b, 'c)
@@ -239,6 +249,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
   def testMultiSinksWithTemporalTableSource(): Unit = {
     util.addTable[(Long, Double, Long, Timestamp)]("MyTable", 'a, 'b, 'c, 'rowtime)
     util.tableEnv.registerTableSource("TemporalSource", new TestingTemporalTableSource)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
 
     val query1 =
       """
@@ -289,6 +301,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinksSplitOnUnion1(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     util.addTable[(Int, Long, String)]("SmallTable1", 'd, 'e, 'f)
     val scan1 = util.tableEnv.scan("SmallTable3").select('a, 'c)
     val scan2 = util.tableEnv.scan("SmallTable1").select('d, 'f)
@@ -302,6 +316,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinksSplitOnUnion2(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     util.addTable[(Int, Long, String)]("SmallTable1", 'd, 'e, 'f)
     val query = "SELECT a, c FROM SmallTable3  union all SELECT d, f FROM SmallTable1"
     val table = util.tableEnv.sqlQuery(query)
@@ -314,6 +330,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinksSplitOnUnion3(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     util.addTable[(Int, Long, String)]("SmallTable1", 'd, 'e, 'f)
     util.addTable[(Int, Long, String)]("SmallTable2", 'a, 'b, 'c)
     val scan1 = util.tableEnv.scan("SmallTable3").select('a, 'c)
@@ -331,6 +349,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinksSplitOnUnion4(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     util.addTable[(Int, Long, String)]("SmallTable1", 'd, 'e, 'f)
     util.addTable[(Int, Long, String)]("SmallTable2", 'a, 'b, 'c)
     val query = "SELECT a, c FROM SmallTable3 union all SELECT d, f FROM SmallTable1 "
@@ -347,6 +367,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinksSplitOnUnion5(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     util.addTable[(Int, Long, String)]("SmallTable1", 'd, 'e, 'f)
     util.addTable[(Int, Long, String)]("SmallTable2", 'a, 'b, 'c)
     val query = "SELECT a, c FROM SmallTable3 union all SELECT d, f FROM SmallTable1 " +
@@ -447,6 +469,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinks1SQL(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     val table1 = util.tableEnv.sqlQuery("SELECT SUM(a) AS sum_a, c FROM SmallTable3 GROUP BY c")
     util.tableEnv.registerTable("table1", table1)
     val table2 = util.tableEnv.sqlQuery("select sum(sum_a) as total_sum from table1")
@@ -506,6 +530,8 @@ class SinkTest(subplanReuseEnabled: Boolean) extends TableTestBase {
 
   @Test
   def testMultiSinks5SQL(): Unit = {
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
     // test with non-deterministic udf
     util.tableEnv.registerFunction("random_udf", RandomUdf)
     val table1 = util.tableEnv.sqlQuery("SELECT random_udf(a) as a, c FROM SmallTable3")

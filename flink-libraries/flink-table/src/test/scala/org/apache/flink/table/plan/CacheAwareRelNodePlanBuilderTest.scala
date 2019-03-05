@@ -106,6 +106,8 @@ class CacheAwareRelNodePlanBuilderTest(
       new FlinkTableServiceFactoryDescriptor(factory, properties))
 
     tableEnv = TableEnvironment.getBatchTableEnvironment(env, conf)
+    tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
 
     // init test data
     val data1 = new mutable.MutableList[(String, String)]

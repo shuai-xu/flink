@@ -115,6 +115,11 @@ public class TableConfigOptions {
 				"2. nondeterministic [[AggregateFunction]](UDAF)\n" +
 				"3. nondeterministic [[TableFunction]] (UDTF)");
 
+	public static final ConfigOption<Boolean> SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED =
+			key("sql.optimizer.reuse.optimize-block.with-digest.enabled")
+			.defaultValue(false)
+			.withDescription("When true, the optimizer will try to find out duplicated sub-plan by digest " +
+				"to build optimize block. Each optimize block will be optimized independently.");
 
 	public static final ConfigOption<Boolean> SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG =
 			key("sql.optimizer.data-skew.distinct-agg")

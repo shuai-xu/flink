@@ -395,6 +395,13 @@ object RelNodeBlockPlanBuilder {
     // expand RelTable in TableScan
     val shuttle = new ExpandTableScanShuttle
     val convertedRelNodes = relNodes.map(_.accept(shuttle))
+
+    val findOpBlockWithDigest = tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED)
+    if (!findOpBlockWithDigest) {
+      return convertedRelNodes
+    }
+
     val enableNonDeterministicOpReuse = tableConfig.getConf.getBoolean(
       TableConfigOptions.SQL_OPTIMIZER_REUSE_NONDETERMINISTIC_OPERATOR_ENABLED)
     // reuse sub-plan with same digest in input RelNode trees.

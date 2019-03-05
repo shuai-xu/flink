@@ -49,7 +49,6 @@ class StreamTableMultiSinksITCase extends StreamingTestBase {
     assertEquals(expected, tableSink.getUpsertResults.sorted)
   }
 
-
   @Test
   def testCorrelate(): Unit = {
     env.setParallelism(1)

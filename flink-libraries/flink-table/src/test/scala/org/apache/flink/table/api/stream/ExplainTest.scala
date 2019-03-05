@@ -34,6 +34,8 @@ class ExplainTest extends TableTestBase {
   @Before
   def setup(): Unit = {
     util = streamTestUtil()
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
   }
 
   @Test

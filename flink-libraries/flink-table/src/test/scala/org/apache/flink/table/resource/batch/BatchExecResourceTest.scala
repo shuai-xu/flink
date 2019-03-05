@@ -62,6 +62,8 @@ class BatchExecResourceTest(inferMode: String) extends TableTestBase {
         DataTypes.LONG))
     util.addTableSource("Table5", tableSchema2)
     BatchExecResourceTest.setResourceConfig(util.getTableEnv.getConfig)
+    util.tableEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
   }
 
   @Test

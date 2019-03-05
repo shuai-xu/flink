@@ -19,7 +19,7 @@ package org.apache.flink.table.runtime.utils
 
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.{TableConfigOptions, TableEnvironment}
 import org.apache.flink.table.api.scala.StreamTableEnvironment
 
 import org.junit.{Before, Rule}
@@ -50,5 +50,7 @@ class StreamingTestBase {
       this.env.getConfig.enableObjectReuse()
     }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
+    this.tEnv.getConfig.getConf.setBoolean(
+      TableConfigOptions.SQL_OPTIMIZER_REUSE_OPTIMIZE_BLOCK_WITH_DIGEST_ENABLED, true)
   }
 }
