@@ -575,17 +575,26 @@ public class SlotManager implements AutoCloseable {
 		}
 	}
 
-	public void triggerIdleTaskManagersFastTimeout() {
+	public void enableIdleTaskManagersFastTimeout() {
 		if (tmFastTimeout) {
 			return;
 		}
 		tmFastTimeout = true;
+		scheduleTaskManagerFastTimeoutCheck();
+	}
 
+	public void disableIdleTaskManagersFastTimeout() {
+		tmFastTimeout = false;
+	}
+
+	private void scheduleTaskManagerFastTimeoutCheck() {
 		scheduledExecutor.schedule(
 			() -> mainThreadExecutor.execute(
 				() -> {
-					checkTaskManagerTimeouts(true);
-					tmFastTimeout = false;
+					if (tmFastTimeout) {
+						checkTaskManagerTimeouts(true);
+						scheduleTaskManagerFastTimeoutCheck();
+					}
 				}),
 			taskManagerFastTimeout.toMilliseconds(),
 			TimeUnit.MILLISECONDS);

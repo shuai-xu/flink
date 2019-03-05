@@ -170,7 +170,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	 */
 	private final Map<Integer, Integer> priorityToBlockedWorkers;
 
-	private final Object spareSlotsAndBlockedWorkerslock = new Object();
+	private final Object spareSlotsAndBlockedWorkersLock = new Object();
 
 	/**
 	 * executor for start yarn container.
@@ -394,7 +394,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		Resource containerResource = generateContainerResource(tmResource);
 
 		boolean requestNewContainer = false;
-		synchronized (spareSlotsAndBlockedWorkerslock) {
+		synchronized (spareSlotsAndBlockedWorkersLock) {
 			int spareSlots = priorityToSpareSlots.getOrDefault(priority, 0);
 			if (spareSlots > 0) {
 				priorityToSpareSlots.put(priority, spareSlots - 1);
@@ -409,7 +409,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 						num = priorityToBlockedWorkers.get(priority) + 1;
 					}
 					priorityToBlockedWorkers.put(priority, num);
-					slotManager.triggerIdleTaskManagersFastTimeout();
+					slotManager.enableIdleTaskManagersFastTimeout();
 					return;
 				}
 
@@ -472,6 +472,18 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(flinkConfig, resourceProfile, slotNumber);
 		int priority = generatePriority(tmResource, tags);
 		Resource containerResource = generateContainerResource(tmResource);
+
+		synchronized (spareSlotsAndBlockedWorkersLock) {
+			if (priorityToBlockedWorkers.containsKey(priority) && priorityToBlockedWorkers.get(priority) > 0) {
+				int blockedNum = priorityToBlockedWorkers.get(priority) - 1;
+				if (blockedNum > 0) {
+					priorityToBlockedWorkers.put(priority, blockedNum);
+				} else {
+					priorityToBlockedWorkers.remove(priority);
+				}
+				return;
+			}
+		}
 
 		AtomicInteger pendingNumber = numPendingContainerRequests.get(priority);
 		if (pendingNumber == null) {
@@ -960,7 +972,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			}
 			TaskManagerResource tmResource = priorityToResourceAndTagsMap.get(priority).f0;
 
-			synchronized (spareSlotsAndBlockedWorkerslock) {
+			synchronized (spareSlotsAndBlockedWorkersLock) {
 				int blockWorkerNum = priorityToBlockedWorkers.get(priority);
 				if (blockWorkerNum > tmResource.getSlotNum()) {
 					priorityToBlockedWorkers.put(priority, blockWorkerNum - tmResource.getSlotNum());
@@ -975,6 +987,10 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			Resource resource = generateContainerResource(tmResource);
 			requestYarnContainer(resource, Priority.newInstance(priority),
 				tmResource.getTaskResourceProfile().getResourceConstraints());
+		}
+
+		if (priorityToBlockedWorkers.isEmpty()) {
+			slotManager.disableIdleTaskManagersFastTimeout();
 		}
 	}
 
