@@ -72,7 +72,8 @@
     "INDEX",
     "EXTENDED",
     "FORMATTED",
-    "PARTITIONED"
+    "PARTITIONED",
+    "IF"
   ]
 
   # List of methods for parsing custom SQL statements.
