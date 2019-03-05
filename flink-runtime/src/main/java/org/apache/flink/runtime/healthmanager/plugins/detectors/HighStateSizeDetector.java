@@ -59,7 +59,7 @@ public class HighStateSizeDetector implements Detector {
 	public Symptom detect() throws Exception {
 		List<JobVertexID> highStateSizeVertices = new LinkedList<>();
 		RestServerClient.JobConfig jobConfig = healthMonitor.getJobConfig();
-		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = healthMonitor.getRestServerClient().getJobVertexCheckPointStates(healthMonitor.getJobID());
+		Map<JobVertexID, TaskCheckpointStatistics> checkpointInfo = healthMonitor.getRestServerClient().getLatestCheckPointStates(healthMonitor.getJobID()).getCheckpointStatisticsPerTask();
 		for (Map.Entry<JobVertexID, TaskCheckpointStatistics> entry: checkpointInfo.entrySet()) {
 			if (entry.getValue().getStateSize() * 1.0 / jobConfig.getVertexConfigs().get(entry.getKey()).getParallelism() > threshold) {
 				LOGGER.debug("vertex {} state size [{}] reach threshold.", entry.getKey(), entry.getValue().getStateSize());

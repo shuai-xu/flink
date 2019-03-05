@@ -29,7 +29,6 @@ import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
-import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 import org.apache.flink.util.AbstractID;
 
 import java.io.IOException;
@@ -127,11 +126,6 @@ public interface RestServerClient {
 	 * get task manager exceptions.
 	 */
 	Map<String, List<Exception>> getTaskManagerExceptions(long startTime, long endTime) throws Exception;
-
-	/**
-	 * get all JobVertex state size.
-	 */
-	Map<JobVertexID, TaskCheckpointStatistics> getJobVertexCheckPointStates(JobID jobId) throws Exception;
 
 	/**
 	 * get latest checkpoint state.

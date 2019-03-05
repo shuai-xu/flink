@@ -272,13 +272,13 @@ public class RestServerClientImplTest extends TestLogger {
 	}
 
 	@Test
-	public void testGetJobVertexCheckPointStates() throws Exception {
+	public void testGetLatestCheckPointStates() throws Exception {
 		TestCheckpointStatisticDetailsHandler testCheckpointStatisticDetailsHandler = new TestCheckpointStatisticDetailsHandler();
 		TestCheckpointingStatisticsHandler checkpointingStatisticsHandler = new TestCheckpointingStatisticsHandler();
 		try (TestRestServerEndpoint ignored = createRestServerEndpoint(testCheckpointStatisticDetailsHandler, checkpointingStatisticsHandler)) {
-			Map<JobVertexID, TaskCheckpointStatistics> vertexCheckPointStates = restServerClientImpl.getJobVertexCheckPointStates(jobId);
+			CheckpointStatistics vertexCheckPointStates = restServerClientImpl.getLatestCheckPointStates(jobId);
 			jobGraph.getVertices().forEach(v -> {
-				Assert.assertTrue(vertexCheckPointStates.get(v.getID()).getStateSize() == 2L);
+				Assert.assertTrue(vertexCheckPointStates.getCheckpointStatisticsPerTask().get(v.getID()).getFullStateSize() == 2L);
 			});
 		}
 	}

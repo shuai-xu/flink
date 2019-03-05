@@ -24,6 +24,7 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighStateSize;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
 import org.apache.flink.runtime.rest.messages.checkpoints.TaskCheckpointStatistics;
 
 import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
@@ -67,7 +68,9 @@ public class HighStateSizeDetectorTest extends DetectorTestBase {
 				new TaskCheckpointStatistics(1, CheckpointStatsStatus.COMPLETED, 0,  200, 200, 0, 0, 0, 0));
 		checkpointInfo.put(vertex2,
 				new TaskCheckpointStatistics(1, CheckpointStatsStatus.COMPLETED, 0,  201, 200, 0, 0, 0, 0));
-		Mockito.when(restClient.getJobVertexCheckPointStates(eq(jobID))).thenReturn(checkpointInfo);
+		CheckpointStatistics checkpointStatistics = Mockito.mock(CheckpointStatistics.class);
+		Mockito.when(checkpointStatistics.getCheckpointStatisticsPerTask()).thenReturn(checkpointInfo);
+		Mockito.when(restClient.getLatestCheckPointStates(eq(jobID))).thenReturn(checkpointStatistics);
 
 		HighStateSizeDetector detector = new HighStateSizeDetector();
 		detector.open(monitor);
