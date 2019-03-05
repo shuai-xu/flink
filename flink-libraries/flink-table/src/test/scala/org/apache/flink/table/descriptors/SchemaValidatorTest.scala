@@ -75,7 +75,7 @@ class SchemaValidatorTest {
       expectedMapping,
       SchemaValidator.deriveFieldMapping(props, Optional.of(
         TypeConverters.createExternalTypeInfoFromDataType(
-          DataTypes.createRowType(
+          DataTypes.createRowTypeV2(
             inputSchema.getFieldTypes.toArray[DataType], inputSchema.getFieldNames)
         ).asInstanceOf[TypeInformation[Row]]
       )))
@@ -154,7 +154,7 @@ class SchemaValidatorTest {
       expectedMapping,
       SchemaValidator.deriveFieldMapping(props, Optional.of(
         TypeConverters.createExternalTypeInfoFromDataType(
-          DataTypes.createRowType(
+          DataTypes.createRowTypeV2(
             inputSchema.getFieldTypes.toArray[DataType], inputSchema.getFieldNames)
         ).asInstanceOf[TypeInformation[Row]]
       )))

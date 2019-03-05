@@ -433,6 +433,6 @@ class Parser extends TableFunction[Row] with Serializable {
   }
 
   override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType =
-    DataTypes.createRowType(
+    DataTypes.createRowTypeV2(
       Array[DataType](IntType.INSTANCE, IntType.INSTANCE), Array[String]("a", "b"))
 }

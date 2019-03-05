@@ -69,7 +69,7 @@ class GroupWindowITCase extends BatchTestBase {
       "c" -> ColumnStats(9000000L, 0L, 1024D, 32, 6.1D, 0D))
     val table = new BatchTableSource[Row] {
       override def getReturnType: DataType =
-        DataTypes.createRowType(
+        DataTypes.createRowTypeV2(
           tableSchema.getTypes.asInstanceOf[Array[DataType]], tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(10000000L, colStats)

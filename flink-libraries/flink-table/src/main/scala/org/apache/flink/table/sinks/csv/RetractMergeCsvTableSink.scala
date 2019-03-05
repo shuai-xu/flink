@@ -108,7 +108,7 @@ class RetractMergeCsvTableSink(
       writeMode, outputFieldNames, timezone)
   }
 
-  override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes: _*)
+  override def getRecordType: DataType = DataTypes.createRowTypeV2(getFieldTypes: _*)
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]])= {
     val sink = dataStream.addSink(new RetractMergeRowSinkFunction(

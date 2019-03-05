@@ -52,7 +52,7 @@ class PrintTableSink(tz: TimeZone)
 
   override def setIsAppendOnly(isAppendOnly: JBool): Unit = {}
 
-  override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes, getFieldNames)
+  override def getRecordType: DataType = DataTypes.createRowTypeV2(getFieldTypes, getFieldNames)
 
   /** Emits the DataStream. */
   override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]]) = {

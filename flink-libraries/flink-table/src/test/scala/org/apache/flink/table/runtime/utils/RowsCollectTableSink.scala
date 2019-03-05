@@ -54,7 +54,7 @@ class RowsCollectTableSink extends TableSinkBase[Row] with BatchTableSink[Row] {
   }
 
   override def getOutputType: DataType = {
-    DataTypes.createRowType(getFieldTypes: _*)
+    DataTypes.createRowTypeV2(getFieldTypes: _*)
   }
 
   def init(typeSerializer: TypeSerializer[Seq[Row]], id: String): Unit = {

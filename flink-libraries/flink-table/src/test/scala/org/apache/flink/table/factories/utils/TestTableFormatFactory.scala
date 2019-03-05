@@ -52,7 +52,7 @@ class TestTableFormatFactory
     // TODO: fix me if this is not correct!
     val tableSchema = deriveSchema(properties)
     new TestDeserializationSchema(
-      TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowType(
+      TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowTypeV2(
         tableSchema.getFieldTypes.toArray[DataType], tableSchema.getFieldNames)
       ).asInstanceOf[TypeInformation[Row]])
   }
@@ -64,7 +64,7 @@ class TestTableFormatFactory
     // TODO: fix me if this is not correct!
     val tableSchema = deriveSchema(properties)
     new TestSerializationSchema(
-      TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowType(
+      TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowTypeV2(
         tableSchema.getFieldTypes.toArray[DataType], tableSchema.getFieldNames)
       ).asInstanceOf[TypeInformation[Row]])
   }

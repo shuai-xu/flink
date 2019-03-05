@@ -36,7 +36,7 @@ class RowSchema(private val logicalRowType: RelDataType) {
       f => FlinkTypeFactory.toDataType(f.getType).toInternalType
     }
 
-  private lazy val physicalRowType: InternalType = DataTypes.createRowType(
+  private lazy val physicalRowType: InternalType = DataTypes.createRowTypeV2(
     physicalRowFieldTypes.toArray[DataType], fieldNames.toArray)
 
   /**
@@ -70,6 +70,6 @@ class RowSchema(private val logicalRowType: RelDataType) {
   def projectedTypeInfo(fields: Array[Int]): RowType = {
     val projectedTypes = fields.map(fieldTypeInfos(_))
     val projectedNames = fields.map(fieldNames(_))
-    DataTypes.createRowType(projectedTypes.toArray[DataType], projectedNames)
+    DataTypes.createRowTypeV2(projectedTypes.toArray[DataType], projectedNames)
   }
 }

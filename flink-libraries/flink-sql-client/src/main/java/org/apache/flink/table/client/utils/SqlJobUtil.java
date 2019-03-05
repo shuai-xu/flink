@@ -672,7 +672,7 @@ public class SqlJobUtil {
 
 		@Override
 		public DataType getReturnType() {
-			return DataTypes.createRowType(schema.getTypes(), schema.getColumnNames());
+			return DataTypes.createRowTypeV2(schema.getTypes(), schema.getColumnNames());
 		}
 
 		@Override

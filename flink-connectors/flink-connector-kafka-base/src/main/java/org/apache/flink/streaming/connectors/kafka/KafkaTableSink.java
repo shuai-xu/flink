@@ -155,7 +155,7 @@ public abstract class KafkaTableSink implements AppendStreamTableSink<Row> {
 	public DataType getOutputType() {
 		return schema
 			.map(s -> TableSchemaUtil.toRowType(s))
-			.orElseGet(() -> DataTypes.createRowType(getFieldTypes()));
+			.orElseGet(() -> DataTypes.createRowTypeV2(getFieldTypes()));
 	}
 
 	public String[] getFieldNames() {
@@ -185,7 +185,7 @@ public abstract class KafkaTableSink implements AppendStreamTableSink<Row> {
 		Preconditions.checkArgument(fieldNames.length == fieldTypes.length,
 			"Number of provided field names and types does not match.");
 
-		DataType rowSchema = DataTypes.createRowType(fieldTypes, fieldNames);
+		DataType rowSchema = DataTypes.createRowTypeV2(fieldTypes, fieldNames);
 		copy.serializationSchema = Optional.of(createSerializationSchema(rowSchema));
 
 		return copy;

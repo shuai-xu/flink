@@ -52,7 +52,7 @@ class DataStructureConvertersTest {
 
   @Test
   def testNullHandlingInRows(): Unit = {
-    val schema = DataTypes.createRowType(simpleTypes: _*)
+    val schema = DataTypes.createRowTypeV2(simpleTypes: _*)
     val convertToInternal = createToInternalConverter(schema)
     val convertToScala = createToExternalConverter(schema)
 

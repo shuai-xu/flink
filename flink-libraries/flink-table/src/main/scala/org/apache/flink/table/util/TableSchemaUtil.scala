@@ -34,7 +34,8 @@ object TableSchemaUtil {
     * @return type information where columns are fields of a Row.
     */
   def toRowType(tableSchema: TableSchema): DataType = {
-    DataTypes.createRowType(tableSchema.getFieldTypes.toArray[DataType], tableSchema.getFieldNames)
+    DataTypes.createRowTypeV2(tableSchema.getFieldTypes.toArray[DataType],
+      tableSchema.getFieldNames)
   }
 
   /**

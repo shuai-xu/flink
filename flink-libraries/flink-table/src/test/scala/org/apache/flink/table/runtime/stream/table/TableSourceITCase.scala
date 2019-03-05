@@ -61,7 +61,7 @@ class TableSourceITCase extends StreamingTestBase {
         execEnv.fromCollection(data, new GenericTypeInfo[Row](classOf[Row]))
       }
       override def getReturnType: DataType =
-        DataTypes.createRowType(fieldTypes.toArray[DataType], fieldNames)
+        DataTypes.createRowTypeV2(fieldTypes.toArray[DataType], fieldNames)
       override def getTableSchema: TableSchema = new TableSchema(fieldNames, fieldTypes)
     }
     tEnv.registerTableSource("T", tableSource)

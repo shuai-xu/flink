@@ -146,7 +146,7 @@ class UDTFWithDynamicType extends TableFunction[Row] {
     val column = arguments(1).asInstanceOf[Int]
     val basicTypeInfos = Array.fill[DataType](column)(DataTypes.INT)
     basicTypeInfos(0) = DataTypes.STRING
-    DataTypes.createRowType(basicTypeInfos: _*)
+    DataTypes.createRowTypeV2(basicTypeInfos: _*)
   }
 }
 

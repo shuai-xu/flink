@@ -92,7 +92,7 @@ object MetadataTestUtil {
     )
     val ts1 = new StreamTableSource[Row] {
       override def getReturnType: DataType =
-        DataTypes.createRowType(types, tableSchema.getColumnNames)
+        DataTypes.createRowTypeV2(types, tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(100L, colStatsOfT1)
 
@@ -109,7 +109,7 @@ object MetadataTestUtil {
     )
     val tsBigT1 = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(types, tableSchema.getColumnNames)
+        DataTypes.createRowTypeV2(types, tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(512 * 512 * 512L, colStatsOfBigT1)
 
@@ -124,7 +124,7 @@ object MetadataTestUtil {
     )
     val ts2 = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(types, tableSchema.getColumnNames)
+        DataTypes.createRowTypeV2(types, tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(50L, colStatsOfT2)
 
@@ -137,7 +137,7 @@ object MetadataTestUtil {
 
     val ts3 = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(types, tableSchema.getColumnNames)
+        DataTypes.createRowTypeV2(types, tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(100L)
 
@@ -149,7 +149,7 @@ object MetadataTestUtil {
 
     val ts4 = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(types, tableSchema.getColumnNames)
+        DataTypes.createRowTypeV2(types, tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(100L)
 
@@ -164,7 +164,7 @@ object MetadataTestUtil {
     )
     val ts5 = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(types, tableSchema.getColumnNames)
+        DataTypes.createRowTypeV2(types, tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(100L, colStatsOfT5)
 
@@ -179,7 +179,7 @@ object MetadataTestUtil {
     )
     val ts6 = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(types, tableSchema.getColumnNames)
+        DataTypes.createRowTypeV2(types, tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(80L, colStatsOfT6)
 
@@ -192,7 +192,7 @@ object MetadataTestUtil {
       override def getReturnType: DataType = {
         val types = Array[DataType](DataTypes.INT, DataTypes.INT, DataTypes.INT)
         val names = Array("a", "b", "c")
-        DataTypes.createRowType(types, names)
+        DataTypes.createRowTypeV2(types, names)
       }
 
       override def getTableStats: TableStats = TableStats(100L)
@@ -210,7 +210,7 @@ object MetadataTestUtil {
     )
     val ts8 = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(
+        DataTypes.createRowTypeV2(
           Array[DataType](DataTypes.INT, DataTypes.DOUBLE, DataTypes.STRING),
           Array("id", "score", "english_name"))
 
@@ -235,7 +235,7 @@ object MetadataTestUtil {
       "height" -> ColumnStats(46L, 0L, 32D, 32, 172.1D, 161.0D))
     val tStudent = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(
+        DataTypes.createRowTypeV2(
           tableSchemaOfTStudent.getTypes.asInstanceOf[Array[DataType]],
           tableSchemaOfTStudent.getColumnNames)
 
@@ -258,7 +258,7 @@ object MetadataTestUtil {
         DataTypes.ROWTIME_INDICATOR))
     val timeSource = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(
+        DataTypes.createRowTypeV2(
           timeTableSchema.getTypes.asInstanceOf[Array[DataType]],
           timeTableSchema.getColumnNames)
 
@@ -284,7 +284,7 @@ object MetadataTestUtil {
     val uniqueKeysOfTimeSource = ImmutableSet.of(ImmutableSet.of("a"))
     val timeSourceWithUniqueKeys = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(
+        DataTypes.createRowTypeV2(
           timeTableSchema1.getTypes.asInstanceOf[Array[DataType]],
           timeTableSchema1.getColumnNames)
 
@@ -304,7 +304,7 @@ object MetadataTestUtil {
 
     val bigTimeSource = new TableSource {
       override def getReturnType: DataType =
-        DataTypes.createRowType(
+        DataTypes.createRowTypeV2(
           timeTableSchema.getTypes.asInstanceOf[Array[DataType]],
           timeTableSchema.getColumnNames)
 

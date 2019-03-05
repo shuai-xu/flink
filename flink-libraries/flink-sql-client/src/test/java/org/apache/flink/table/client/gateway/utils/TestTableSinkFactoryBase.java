@@ -112,7 +112,7 @@ public abstract class TestTableSinkFactoryBase implements StreamTableSinkFactory
 
 		@Override
 		public DataType getOutputType() {
-			return DataTypes.createRowType(schema.getFieldTypes(), schema.getFieldNames());
+			return DataTypes.createRowTypeV2(schema.getFieldTypes(), schema.getFieldNames());
 		}
 
 		@Override

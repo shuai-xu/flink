@@ -70,7 +70,7 @@ public class JDBCAppendTableSink implements AppendStreamTableSink<Row>, BatchTab
 
 	@Override
 	public DataType getOutputType() {
-		return DataTypes.createRowType(fieldTypes, fieldNames);
+		return DataTypes.createRowTypeV2(fieldTypes, fieldNames);
 	}
 
 	@Override

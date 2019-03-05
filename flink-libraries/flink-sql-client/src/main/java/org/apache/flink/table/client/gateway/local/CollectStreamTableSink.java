@@ -69,7 +69,7 @@ public class CollectStreamTableSink implements RetractStreamTableSink<Row> {
 
 	@Override
 	public DataType getRecordType() {
-		return DataTypes.createRowType(fieldTypes, fieldNames);
+		return DataTypes.createRowTypeV2(fieldTypes, fieldNames);
 	}
 
 	@Override

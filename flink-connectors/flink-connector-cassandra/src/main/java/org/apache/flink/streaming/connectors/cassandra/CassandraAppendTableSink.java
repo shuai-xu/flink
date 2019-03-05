@@ -58,7 +58,7 @@ public class CassandraAppendTableSink implements AppendStreamTableSink<Row> {
 		for (int i = 0; i < fieldTypes.length; i++) {
 			tmp[i] = (InternalType) fieldTypes[i];
 		}
-		return DataTypes.createRowType(tmp, fieldNames);
+		return DataTypes.createRowTypeV2(tmp, fieldNames);
 	}
 
 	@Override

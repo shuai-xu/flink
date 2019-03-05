@@ -48,7 +48,7 @@ class Kafka08TableSink(
 
   override def setIsAppendOnly(isAppendOnly: JBool): Unit = {}
 
-  override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes, getFieldNames)
+  override def getRecordType: DataType = DataTypes.createRowTypeV2(getFieldTypes, getFieldNames)
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]])
     : DataStreamSink[JTuple2[JBool, Row]] = {

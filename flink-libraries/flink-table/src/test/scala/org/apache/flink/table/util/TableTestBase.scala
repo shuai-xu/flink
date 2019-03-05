@@ -651,7 +651,7 @@ class TestBatchTableSource(tableSchema: TableSchema,
     extends BatchTableSource[Row] with LimitableTableSource {
 
   override def getReturnType: DataType =
-    DataTypes.createRowType(
+    DataTypes.createRowTypeV2(
       tableSchema.getTypes.asInstanceOf[Array[DataType]],
       tableSchema.getColumnNames)
 

@@ -63,7 +63,7 @@ class PartitionPathUtilsTest {
       BuildInScalarFunctions.toInt(UTCTime("5:23:43 +08:00")),
       BuildInScalarFunctions.toInt(UTCDate("2019-02-21")),
       BuildInScalarFunctions.toLong(UTCTimestamp("2019-02-21 13:47:56")))
-    val partitionPath = PartitionPathUtils.getPartitionPath(row, DataTypes.createRowType(
+    val partitionPath = PartitionPathUtils.getPartitionPath(row, DataTypes.createRowTypeV2(
       rowTypeInfo.getFieldTypes.map(TypeConverters.createInternalTypeFromTypeInfo),
       rowTypeInfo.getFieldNames), TimeZone.getTimeZone("UTC"))
     val expectPath = "f0=abc d/" +

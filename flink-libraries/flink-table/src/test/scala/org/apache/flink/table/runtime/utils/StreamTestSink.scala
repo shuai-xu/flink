@@ -295,7 +295,7 @@ final class TestingUpsertSink(keys: Array[Int], tz: TimeZone)
     wrapRow.update(0, BaseRowUtil.isAccumulateMsg(row))
     wrapRow.update(1, row)
     val converter = DataStructureConverters.createToExternalConverter(
-      DataTypes.createTupleType(DataTypes.BOOLEAN, DataTypes.createRowType(fieldTypes: _*)))
+      DataTypes.createTupleType(DataTypes.BOOLEAN, DataTypes.createRowTypeV2(fieldTypes: _*)))
     val v = converter.apply(wrapRow).asInstanceOf[JTuple2[Boolean, Row]]
 
     val rowString = TestSinkUtil.rowToString(v.f1, tz)
@@ -510,7 +510,7 @@ final class TestingAppendTableSink(tz: TimeZone)
     boundedStream.writeUsingOutputFormat(outputFormat).name("appendTableSink")
   }
 
-  override def getOutputType: DataType = DataTypes.createRowType(fTypes, fNames)
+  override def getOutputType: DataType = DataTypes.createRowTypeV2(fTypes, fNames)
 
   override def configure(
     fieldNames: Array[String],
@@ -585,7 +585,7 @@ final class TestingRetractTableSink(tz: TimeZone)
       .name("appendBatchExecSink")
   }
 
-  override def getRecordType: DataType = DataTypes.createRowType(fTypes, fNames)
+  override def getRecordType: DataType = DataTypes.createRowTypeV2(fTypes, fNames)
 
   override def getFieldNames: Array[String] = fNames
 

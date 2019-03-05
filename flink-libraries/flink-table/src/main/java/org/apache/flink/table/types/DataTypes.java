@@ -173,15 +173,39 @@ public class DataTypes {
 		return new MultisetType(elementType);
 	}
 
-	public static RowType createRowType(DataType[] types, String[] fieldNames) {
+	/**
+	 * Deprecated from 3.x version, please use createRowTypeV2 instead.
+	 */
+	@Deprecated
+	public static DataType createRowType(DataType[] types, String[] fieldNames) {
 		return new RowType(types, fieldNames);
 	}
 
-	public static RowType createRowType(InternalType[] types, String[] fieldNames) {
+	public static RowType createRowTypeV2(DataType[] types, String[] fieldNames) {
 		return new RowType(types, fieldNames);
 	}
 
-	public static RowType createRowType(DataType... types) {
+	/**
+	 * Deprecated from 3.x version, please use createRowTypeV2 instead.
+	 */
+	@Deprecated
+	public static DataType createRowType(InternalType[] types, String[] fieldNames) {
+		return new RowType(types, fieldNames);
+	}
+
+	public static RowType createRowTypeV2(InternalType[] types, String[] fieldNames) {
+		return new RowType(types, fieldNames);
+	}
+
+	/**
+	 * Deprecated from 3.x version, please use createRowTypeV2 instead.
+	 */
+	@Deprecated
+	public static DataType createRowType(DataType... types) {
+		return new RowType(types);
+	}
+
+	public static RowType createRowTypeV2(DataType... types) {
 		return new RowType(types);
 	}
 

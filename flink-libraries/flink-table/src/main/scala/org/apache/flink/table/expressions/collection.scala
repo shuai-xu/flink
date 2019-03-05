@@ -47,7 +47,7 @@ case class RowConstructor(elements: Seq[Expression]) extends Expression {
 
   override def toString = s"row(${elements.mkString(", ")})"
 
-  override private[flink] def resultType: InternalType = DataTypes.createRowType(
+  override private[flink] def resultType: InternalType = DataTypes.createRowTypeV2(
     elements.map(e => e.resultType).toArray[DataType],
     Array.range(0, elements.length).map(e => s"f$e"))
 

@@ -47,7 +47,7 @@ public class JDBCAppendTableSinkTest {
 		DataTypes.STRING
 	};
 	private static final TypeInformation ROW_TYPE =
-			TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowType(FIELD_TYPES, FIELD_NAMES));
+			TypeConverters.createExternalTypeInfoFromDataType(DataTypes.createRowTypeV2(FIELD_TYPES, FIELD_NAMES));
 
 	@Test
 	public void testAppendTableSink() throws IOException {

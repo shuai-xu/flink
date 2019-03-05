@@ -94,7 +94,7 @@ class TestFilterableTableSource(val recordNum: Int = 33)
     }
   }
 
-  override def getReturnType: DataType = DataTypes.createRowType(fieldTypes, fieldNames)
+  override def getReturnType: DataType = DataTypes.createRowTypeV2(fieldTypes, fieldNames)
 
   override def applyPredicate(predicates: JList[Expression]): TableSource = {
     val newSource = new TestFilterableTableSource(recordNum)

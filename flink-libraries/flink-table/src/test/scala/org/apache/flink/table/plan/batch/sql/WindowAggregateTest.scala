@@ -57,7 +57,7 @@ class WindowAggregateTest extends TableTestBase {
       Array("ts", "customerId", "productId", "colLarge"),
       Array(DataTypes.TIMESTAMP, DataTypes.LONG, DataTypes.INT, DataTypes.STRING))
     val table = new BatchTableSource[Row] {
-      override def getReturnType: DataType = DataTypes.createRowType(
+      override def getReturnType: DataType = DataTypes.createRowTypeV2(
           tableSchema.getTypes.asInstanceOf[Array[DataType]], tableSchema.getColumnNames)
 
       override def getTableStats: TableStats = TableStats(10000000L, colStats)

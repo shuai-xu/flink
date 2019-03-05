@@ -48,7 +48,7 @@ public class CollectBatchTableSink implements BatchTableSink<Row> {
 
 	@Override
 	public DataType getOutputType() {
-		return DataTypes.createRowType(fieldTypes, fieldNames);
+		return DataTypes.createRowTypeV2(fieldTypes, fieldNames);
 	}
 
 	@Override

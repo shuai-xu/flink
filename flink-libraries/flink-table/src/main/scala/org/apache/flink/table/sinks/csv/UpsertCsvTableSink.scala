@@ -176,7 +176,7 @@ class UpsertCsvTableSink(
   }
 
   override def getRecordType: DataType = {
-    DataTypes.createRowType(getFieldTypes: _*)
+    DataTypes.createRowTypeV2(getFieldTypes: _*)
   }
 
   override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]])

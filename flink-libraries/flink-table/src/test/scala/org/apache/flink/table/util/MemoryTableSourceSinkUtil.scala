@@ -106,7 +106,7 @@ object MemoryTableSourceSinkUtil {
     with DefinedDistribution {
 
     override def getOutputType: DataType = {
-      DataTypes.createRowType(getFieldTypes, getFieldNames)
+      DataTypes.createRowTypeV2(getFieldTypes, getFieldNames)
     }
 
     override protected def copy: TableSinkBase[Row] = {

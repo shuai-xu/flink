@@ -51,7 +51,7 @@ class AggregateTest extends TableTestBase {
       "colLarge" -> ColumnStats(80000L, 0L, 1024D, 32, 6.1D, 0D))
     val table = new BatchTableSource[Row] {
       override def getReturnType: DataType =
-        DataTypes.createRowType(
+        DataTypes.createRowTypeV2(
           tableSchema.getTypes.asInstanceOf[Array[DataType]],
           tableSchema.getColumnNames)
 

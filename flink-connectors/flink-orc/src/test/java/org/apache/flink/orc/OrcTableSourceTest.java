@@ -193,7 +193,7 @@ public class OrcTableSourceTest {
 				new ItemAt(
 					new ResolvedFieldReference(
 						"list",
-						(InternalType) DataTypes.createRowType(
+						(InternalType) DataTypes.createRowTypeV2(
 							new DataType[] {DataTypes.INT, DataTypes.STRING},
 							new String[] {"int1", "string1"})),
 					new Literal(1, DataTypes.INT)),

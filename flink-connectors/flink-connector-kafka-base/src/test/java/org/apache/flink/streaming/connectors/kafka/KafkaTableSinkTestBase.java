@@ -85,7 +85,7 @@ public abstract class KafkaTableSinkTestBase {
 
 		assertArrayEquals(FIELD_NAMES, newKafkaTableSink.getFieldNames());
 		assertArrayEquals(FIELD_TYPES, newKafkaTableSink.getFieldTypes());
-		assertEquals(DataTypes.createRowType(FIELD_TYPES), newKafkaTableSink.getOutputType());
+		assertEquals(DataTypes.createRowTypeV2(FIELD_TYPES), newKafkaTableSink.getOutputType());
 	}
 
 	protected abstract KafkaTableSink createTableSink(

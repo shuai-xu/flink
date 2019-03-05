@@ -269,7 +269,7 @@ public class RichTableSchema implements Serializable {
 	 * This type info including the computed columns (if exist) and exclude proctime field.
 	 */
 	public DataType getResultRowType() {
-		return DataTypes.createRowType(getColumnTypes(), getColumnNames());
+		return DataTypes.createRowTypeV2(getColumnTypes(), getColumnNames());
 	}
 
 	public RowTypeInfo getResultTypeInfo() {
@@ -301,7 +301,7 @@ public class RichTableSchema implements Serializable {
 	/**
 	 * Describe the structure of an Index.
 	 */
-	public static class Index {
+	public static class Index implements Serializable {
 		public final boolean unique;
 		public final List<String> keyList;
 

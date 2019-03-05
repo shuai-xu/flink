@@ -148,7 +148,7 @@ private[flink] class TestRetractSink extends RetractStreamTableSink[Row] {
     s.addSink(new RowSink)
   }
 
-  override def getRecordType: DataType = DataTypes.createRowType(fTypes, fNames)
+  override def getRecordType: DataType = DataTypes.createRowTypeV2(fTypes, fNames)
 
   override def getFieldNames: Array[String] = fNames
 
@@ -188,7 +188,7 @@ private[flink] class TestUpsertSink(
       expectedIsAppendOnly,
       isAppendOnly)
 
-  override def getRecordType: DataType = DataTypes.createRowType(fTypes, fNames)
+  override def getRecordType: DataType = DataTypes.createRowTypeV2(fTypes, fNames)
 
   override def emitDataStream(s: DataStream[JTuple2[JBool, Row]]) = {
     s.addSink(new RowSink)

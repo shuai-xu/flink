@@ -125,7 +125,7 @@ public abstract class TestTableSourceFactoryBase implements StreamTableSourceFac
 
 		@Override
 		public DataType getReturnType() {
-			return DataTypes.createRowType(schema.getFieldTypes(), schema.getFieldNames());
+			return DataTypes.createRowTypeV2(schema.getFieldTypes(), schema.getFieldNames());
 		}
 
 		@Override
