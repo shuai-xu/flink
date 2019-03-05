@@ -111,6 +111,7 @@ public class SavepointITCase extends TestLogger {
 		final File testRoot = folder.newFolder();
 
 		Configuration config = new Configuration();
+		config.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, 64L << 20);
 
 		final File checkpointDir = new File(testRoot, "checkpoints");
 		final File savepointRootDir = new File(testRoot, "savepoints");
@@ -225,6 +226,7 @@ public class SavepointITCase extends TestLogger {
 
 		final Configuration config = new Configuration();
 		config.setString(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepointDir.toURI().toString());
+		config.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, 64L << 20);
 
 		MiniClusterResource cluster = new MiniClusterResource(
 			new MiniClusterResource.MiniClusterResourceConfiguration(
@@ -289,6 +291,7 @@ public class SavepointITCase extends TestLogger {
 		// Flink configuration
 		final Configuration config = new Configuration();
 		config.setString(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepointDir.toURI().toString());
+		config.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, 64L << 20);
 
 		String savepointPath;
 
@@ -583,6 +586,7 @@ public class SavepointITCase extends TestLogger {
 		Configuration config = new Configuration();
 		config.addAll(jobGraph.getJobConfiguration());
 		config.setLong(TaskManagerOptions.MANAGED_MEMORY_SIZE, -1L);
+		config.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, 64L << 20);
 		final File checkpointDir = new File(tmpDir, "checkpoints");
 		final File savepointDir = new File(tmpDir, "savepoints");
 

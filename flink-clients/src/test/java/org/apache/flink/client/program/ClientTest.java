@@ -33,6 +33,7 @@ import org.apache.flink.client.program.DetachedEnvironment.DetachedJobExecutionR
 import org.apache.flink.configuration.AkkaOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.optimizer.DataStatistics;
 import org.apache.flink.optimizer.Optimizer;
 import org.apache.flink.optimizer.costs.DefaultCostEstimator;
@@ -99,6 +100,7 @@ public class ClientTest extends TestLogger {
 		config.setString(JobManagerOptions.ADDRESS, "localhost");
 		config.setInteger(JobManagerOptions.PORT, freePort);
 		config.setString(AkkaOptions.ASK_TIMEOUT, AkkaOptions.ASK_TIMEOUT.defaultValue());
+		config.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN, 64L << 20);
 
 		try {
 			scala.Tuple2<String, Object> address = new scala.Tuple2<String, Object>("localhost", freePort);

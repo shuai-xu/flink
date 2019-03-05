@@ -47,7 +47,7 @@ public class TaskManagerResourceTest {
 	private static final int DIRECT_MEMORY_MB = 100;
 	private static final int NATIVE_MEMORY_MB = 1000;
 
-	private static final int DEFAULT_NETWORK_MEMORY_MB = 64;
+	private static final int DEFAULT_NETWORK_MEMORY_MB = 256;
 
 	@Test
 	public void testBasicMemories() {

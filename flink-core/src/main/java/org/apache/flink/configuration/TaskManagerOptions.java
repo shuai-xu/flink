@@ -578,7 +578,7 @@ public class TaskManagerOptions {
 	 */
 	public static final ConfigOption<Long> NETWORK_BUFFERS_MEMORY_MIN =
 			key("taskmanager.network.memory.min")
-			.defaultValue(64L << 20) // 64 MB
+			.defaultValue(256L << 20) // 256 MB
 			.withDescription("Minimum memory size for network buffers (in bytes).");
 
 	/**

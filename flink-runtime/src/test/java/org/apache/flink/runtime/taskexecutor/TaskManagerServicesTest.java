@@ -49,7 +49,7 @@ public class TaskManagerServicesTest extends TestLogger {
 		assertEquals(TaskManagerOptions.MEMORY_SEGMENT_SIZE.defaultValue().longValue(),
 			TaskManagerServices.calculateNetworkBufferMemory(10L << 20, config));
 		assertEquals(TaskManagerOptions.MEMORY_SEGMENT_SIZE.defaultValue().longValue(),
-			TaskManagerServices.calculateNetworkBufferMemory(64L << 20, config));
+			TaskManagerServices.calculateNetworkBufferMemory(256L << 20, config));
 
 		// test integer overflow in the memory size
 		int numBuffers = (int) ((2L << 32) / TaskManagerOptions.MEMORY_SEGMENT_SIZE.defaultValue()); // 2^33
@@ -72,7 +72,7 @@ public class TaskManagerServicesTest extends TestLogger {
 		final Long defaultMin = TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN.defaultValue();
 		final Long defaultMax = TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX.defaultValue();
 		assertEquals(enforceBounds((long) (defaultFrac * (10L << 20)), defaultMin, defaultMax),
-			TaskManagerServices.calculateNetworkBufferMemory((64L << 20 + 1), config));
+			TaskManagerServices.calculateNetworkBufferMemory((256L << 20 + 1), config));
 		assertEquals(enforceBounds((long) (defaultFrac * (10L << 30)), defaultMin, defaultMax),
 			TaskManagerServices.calculateNetworkBufferMemory((10L << 30), config));
 
@@ -146,7 +146,7 @@ public class TaskManagerServicesTest extends TestLogger {
 		Configuration config1 = config.clone();
 		config1.setFloat(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_FRACTION, 0.1f);
 		assertEquals(enforceBounds((long) (0.1f * (10L << 20)), defaultMin, defaultMax),
-			TaskManagerServices.calculateNetworkBufferMemory((64L << 20 + 1), config1));
+			TaskManagerServices.calculateNetworkBufferMemory((256L << 20 + 1), config1));
 		assertEquals(enforceBounds((long) (0.1f * (10L << 30)), defaultMin, defaultMax),
 			TaskManagerServices.calculateNetworkBufferMemory((10L << 30), config1));
 
@@ -162,7 +162,7 @@ public class TaskManagerServicesTest extends TestLogger {
 		long newMax = Math.max(64L << 20 + 1, TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MIN.defaultValue());
 		config1.setLong(TaskManagerOptions.NETWORK_BUFFERS_MEMORY_MAX, newMax);
 		assertEquals(enforceBounds((long) (defaultFrac * (10L << 20)), defaultMin, newMax),
-			TaskManagerServices.calculateNetworkBufferMemory((64L << 20 + 1), config1));
+			TaskManagerServices.calculateNetworkBufferMemory((256L << 20 + 1), config1));
 		assertEquals(enforceBounds((long) (defaultFrac * (10L << 30)), defaultMin, newMax),
 			TaskManagerServices.calculateNetworkBufferMemory((10L << 30), config1));
 		assertTrue(TaskManagerServicesConfiguration.hasNewNetworkBufConf(config1));
