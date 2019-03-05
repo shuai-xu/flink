@@ -137,6 +137,15 @@ public class CheckpointingOptions {
 			.withDescription("The minimum size of state data files. All state chunks smaller than that are stored" +
 				" inline in the root checkpoint metadata file.");
 
+	/**
+	 * The default write buffer size for file checkpoint output stream created by FsCheckpointStreamFactory.
+	 */
+	public static final ConfigOption<Integer> FS_BUFFER_SIZE = ConfigOptions
+			.key("state.backend.fs.buffer-size")
+			.defaultValue(1024 * 1024)
+			.withDescription(String.format("The default write buffer size for file checkpoint output stream created by FsCheckpointStreamFactory. " +
+				"And the final actual write buffer size would consider the maximum of values of this option and option '%s'.", FS_SMALL_FILE_THRESHOLD.key()));
+
 	// ------------------------------------------------------------------------
 	//  Options specific to the RocksDB state backend
 	// ------------------------------------------------------------------------

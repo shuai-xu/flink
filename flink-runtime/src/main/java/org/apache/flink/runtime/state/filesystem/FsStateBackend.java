@@ -110,6 +110,13 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 	 * A value of 'undefined' means not yet configured, in which case the default will be used. */
 	private TernaryBoolean createCheckpointSubDirs = TernaryBoolean.UNDEFINED;
 
+	/**
+	 * The write buffer size for created checkpoint stream, this should not be less than file state threshold when we want
+	 * state below that threshold stored as part of metadata not files.
+	 * A value of '-1' means not yet configured, in which case the default will be used.
+	 * */
+	private final int writeBufferSize;
+
 	// -----------------------------------------------------------------------
 
 	/**
@@ -320,6 +327,15 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 		int fileStateSizeThreshold,
 		TernaryBoolean asynchronousSnapshots) {
 
+		this(checkpointDirectory, defaultSavepointDirectory, fileStateSizeThreshold, -1, asynchronousSnapshots);
+	}
+
+	public FsStateBackend(
+		URI checkpointDirectory,
+		@Nullable URI defaultSavepointDirectory,
+		int fileStateSizeThreshold,
+		int writeBufferSize,
+		TernaryBoolean asynchronousSnapshots) {
 		super(checkNotNull(checkpointDirectory, "checkpoint directory is null"), defaultSavepointDirectory);
 
 		checkNotNull(asynchronousSnapshots, "asynchronousSnapshots");
@@ -327,7 +343,12 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 			"The threshold for file state size must be in [-1, %s], where '-1' means to use " +
 				"the value from the deployment's configuration.", MAX_FILE_STATE_THRESHOLD);
 
+		checkArgument(writeBufferSize >= -1 ,
+			"The write buffer size must be not less than '-1', where '-1' means to use " +
+				"the value from the deployment's configuration.");
+
 		this.fileStateThreshold = fileStateSizeThreshold;
+		this.writeBufferSize = writeBufferSize;
 		this.asynchronousSnapshots = asynchronousSnapshots;
 	}
 
@@ -362,6 +383,12 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 				CheckpointingOptions.FS_SMALL_FILE_THRESHOLD.key(), sizeThreshold,
 				CheckpointingOptions.FS_SMALL_FILE_THRESHOLD.defaultValue());
 		}
+
+		final int bufferSize = original.writeBufferSize >= 0 ?
+			original.writeBufferSize :
+			configuration.getInteger(CheckpointingOptions.FS_BUFFER_SIZE);
+
+		this.writeBufferSize = Math.max(bufferSize, this.fileStateThreshold);
 
 		// if whether to create checkpoint sub-dirs were configured, use that setting,
 		// else check the configuration
@@ -417,6 +444,20 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 	}
 
 	/**
+	 * Gets the write buffer size for created checkpoint stream.
+	 *
+	 * <p>If not explicitly configured, this is the default value of
+	 * {@link CheckpointingOptions#FS_BUFFER_SIZE}.
+	 *
+	 * @return The write buffer size, in bytes.
+	 */
+	public int getWriteBufferSize() {
+		return writeBufferSize >= 0 ?
+			writeBufferSize :
+			CheckpointingOptions.FS_BUFFER_SIZE.defaultValue();
+	}
+
+	/**
 	 * Gets whether the key/value data structures are asynchronously snapshotted.
 	 *
 	 * <p>If not explicitly configured, this is the default value of
@@ -454,7 +495,8 @@ public class FsStateBackend extends AbstractFileStateBackend implements Configur
 				getSavepointPath(),
 				jobId,
 				createCheckpointSubDirs.getOrDefault(CheckpointingOptions.CHCKPOINTS_CREATE_SUBDIRS.defaultValue()),
-				getMinFileSizeThreshold());
+				getMinFileSizeThreshold(),
+				getWriteBufferSize());
 	}
 
 	// ------------------------------------------------------------------------
