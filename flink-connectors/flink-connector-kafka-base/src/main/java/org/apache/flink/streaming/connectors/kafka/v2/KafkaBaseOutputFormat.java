@@ -237,6 +237,7 @@ public abstract class KafkaBaseOutputFormat extends TupleRichOutputFormat implem
 	@Override
 	public void close() throws IOException {
 		schema.close();
+		producer.close();
 	}
 
 	// ------------------- Logic for handling checkpoint flushing -------------------------- //
