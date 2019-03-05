@@ -44,6 +44,7 @@ import org.apache.flink.runtime.dispatcher.StandaloneDispatcher;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
 import org.apache.flink.runtime.executiongraph.AccessExecutionGraph;
 import org.apache.flink.runtime.healthmanager.HealthManager;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServicesUtils;
@@ -394,12 +395,14 @@ public class MiniCluster implements JobExecutorService, AutoCloseableAsync {
 				resourceManagerLeaderRetriever.start(resourceManagerGatewayRetriever);
 				dispatcherLeaderRetriever.start(dispatcherGatewayRetriever);
 
-				this.healthManager = new HealthManager(
-						dispatcherRestEndpoint.getRestBaseUrl(),
-						metricRegistry,
-						configuration
-				);
-				this.healthManager.start();
+				if (configuration.getBoolean(HealthMonitorOptions.ENABLE_HEALTH_MANAGER)) {
+					this.healthManager = new HealthManager(
+							dispatcherRestEndpoint.getRestBaseUrl(),
+							metricRegistry,
+							configuration
+					);
+					this.healthManager.start();
+				}
 			}
 			catch (Exception e) {
 				// cleanup everything

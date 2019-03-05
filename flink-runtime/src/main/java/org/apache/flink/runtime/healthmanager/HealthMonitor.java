@@ -199,15 +199,19 @@ public class HealthMonitor {
 			this.actionSelector.close();
 		}
 
-		for (Detector detector : detectors) {
-			detector.close();
+		if (detectors != null) {
+			for (Detector detector : detectors) {
+				detector.close();
+			}
+			detectors.clear();
 		}
-		detectors.clear();
 
-		for (Resolver resolver : resolvers) {
-			resolver.close();
+		if (resolvers != null) {
+			for (Resolver resolver : resolvers) {
+				resolver.close();
+			}
+			resolvers.clear();
 		}
-		resolvers.clear();
 
 	}
 
