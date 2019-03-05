@@ -62,6 +62,9 @@ public class CliFrontendParser {
 	public static final Option DETACHED_OPTION = new Option("d", "detached", false, "If present, runs " +
 			"the job in detached mode");
 
+	public static final Option DRIVER_OPTION = new Option("D", "driver", false, "If present, runs " +
+			"the job in driver mode");
+
 	/**
 	 * @deprecated use non-prefixed variant {@link #DETACHED_OPTION} for both YARN and non-YARN deployments
 	 */
@@ -153,6 +156,8 @@ public class CliFrontendParser {
 		CLASSPATH_OPTION.setRequired(false);
 		CLASSPATH_OPTION.setArgName("url");
 
+		DRIVER_OPTION.setRequired(false);
+
 		ADDRESS_OPTION.setRequired(false);
 		ADDRESS_OPTION.setArgName("host:port");
 
@@ -221,6 +226,7 @@ public class CliFrontendParser {
 		options.addOption(YARN_DETACHED_OPTION);
 		options.addOption(LIBJARS_OPTION);
 		options.addOption(FILES_OPTION);
+		options.addOption(DRIVER_OPTION);
 		options.addOption(PYFILES_OPTION);
 		options.addOption(PYMOD_OPTION);
 		return options;
@@ -234,6 +240,7 @@ public class CliFrontendParser {
 		options.addOption(DETACHED_OPTION);
 		options.addOption(LIBJARS_OPTION);
 		options.addOption(FILES_OPTION);
+		options.addOption(DRIVER_OPTION);
 		options.addOption(PYFILES_OPTION);
 		options.addOption(PYMOD_OPTION);
 		return options;

@@ -21,6 +21,7 @@ package org.apache.flink.client.program;
 import org.apache.flink.api.common.Plan;
 import org.apache.flink.api.common.Program;
 import org.apache.flink.api.common.ProgramDescription;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.optimizer.Optimizer;
 import org.apache.flink.optimizer.dag.DataSinkNode;
 import org.apache.flink.optimizer.plandump.PlanJSONDumpGenerator;
@@ -36,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -45,6 +47,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
@@ -59,7 +62,7 @@ import java.util.jar.Manifest;
  * functionality to extract nested libraries, search for the program entry point, and extract
  * a program plan.
  */
-public class PackagedProgram {
+public class PackagedProgram implements Serializable {
 
 	/**
 	 * Property name of the entry in JAR manifest file that describes the Flink specific entry point.
@@ -79,7 +82,9 @@ public class PackagedProgram {
 
 	private final Program program;
 
-	private final Class<?> mainClass;
+	private Class<?> mainClass;
+
+	private Class<?> driverClass;
 
 	private final List<File> extractedTempLibraries;
 
@@ -96,6 +101,10 @@ public class PackagedProgram {
 	private final List<URI> files;
 
 	private boolean isPython = false;
+
+	private Configuration userJobConf;
+
+	private boolean detached;
 
 	/**
 	 * Creates an instance that wraps the plan defined in the jar file using the given
@@ -531,6 +540,14 @@ public class PackagedProgram {
 		return this.plan;
 	}
 
+	public Configuration getUserJobConf() {
+		return userJobConf;
+	}
+
+	public void setUserJobConf(Configuration userJobConf) {
+		this.userJobConf = userJobConf;
+	}
+
 	private static boolean hasMainMethod(Class<?> entryClass) {
 		Method mainMethod;
 		try {
@@ -546,7 +563,7 @@ public class PackagedProgram {
 		return Modifier.isStatic(mainMethod.getModifiers()) && Modifier.isPublic(mainMethod.getModifiers());
 	}
 
-	private static void callMainMethod(Class<?> entryClass, String[] args) throws ProgramInvocationException {
+	public static void callMainMethod(Class<?> entryClass, String[] args) throws ProgramInvocationException {
 		Method mainMethod;
 		if (!Modifier.isPublic(entryClass.getModifiers())) {
 			throw new ProgramInvocationException("The class " + entryClass.getName() + " must be public.");
@@ -823,4 +840,49 @@ public class PackagedProgram {
 		}
 	}
 
+	public Class<?> getMainClass() {
+		return mainClass;
+	}
+
+	public void enableDriverMode() {
+		try {
+			this.driverClass = Class.forName("org.apache.flink.streaming.api.driver.DriverEntry");
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+		Class<?> tempClass = mainClass;
+		mainClass = driverClass;
+		driverClass = tempClass;
+	}
+
+	public Class<?> getDriverClass() {
+		return driverClass;
+	}
+
+	public boolean isDetached() {
+		return detached;
+	}
+
+	public void setDetached(boolean detached) {
+		this.detached = detached;
+	}
+
+	@Override
+	public String toString() {
+		return "PackagedProgram{" +
+			"jarFile=" + jarFile +
+			", args=" + Arrays.toString(args) +
+			", program=" + program +
+			", mainClass=" + mainClass +
+			", driverClass=" + driverClass +
+			", extractedTempLibraries=" + extractedTempLibraries +
+			", classpaths=" + classpaths +
+			", userCodeClassLoader=" + userCodeClassLoader +
+			", plan=" + plan +
+			", savepointSettings=" + savepointSettings +
+			", libjars=" + libjars +
+			", files=" + files +
+			", detached=" + detached +
+			'}';
+	}
 }

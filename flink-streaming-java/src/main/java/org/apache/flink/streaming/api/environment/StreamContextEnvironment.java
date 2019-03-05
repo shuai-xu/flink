@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.environment;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.client.program.ContextEnvironment;
 import org.apache.flink.client.program.DetachedEnvironment;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
@@ -66,7 +67,7 @@ public class StreamContextEnvironment extends StreamExecutionEnvironment {
 	}
 
 	@Override
-	protected JobExecutionResult executeInternal(String jobName, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws Exception {
+	protected JobSubmissionResult executeInternal(String jobName, boolean detached, SavepointRestoreSettings savepointRestoreSettings) throws Exception {
 		Preconditions.checkNotNull(jobName, "Streaming Job name should not be null.");
 
 		StreamGraph streamGraph = this.getStreamGraph();
@@ -80,16 +81,20 @@ public class StreamContextEnvironment extends StreamExecutionEnvironment {
 			((DetachedEnvironment) ctx).setDetachedPlan(streamGraph);
 			return DetachedEnvironment.DetachedJobExecutionResult.INSTANCE;
 		} else {
-			return ctx
-				.getClient()
-				.run(streamGraph, ctx.getJars(), ctx.getClasspaths(), ctx.getLibjars(), ctx.getFiles(), ctx.getUserCodeClassLoader(), ctx.getSavepointRestoreSettings(), detached)
-				.getJobExecutionResult();
+			JobSubmissionResult jobSubmissionResult = ctx.getClient().run(streamGraph, ctx.getJars(),
+				ctx.getClasspaths(), ctx.getLibjars(), ctx.getFiles(), ctx.getUserCodeClassLoader(),
+				ctx.getSavepointRestoreSettings(), detached);
+			if (detached) {
+				return jobSubmissionResult;
+			} else {
+				return jobSubmissionResult.getJobExecutionResult();
+			}
 		}
 	}
 
 	@Override
 	public void stopJob(JobID jobID) throws Exception {
-				ctx.getClient().stop(jobID);
+		ctx.getClient().stop(jobID);
 	}
 
 	public void cancel(String jobId) {

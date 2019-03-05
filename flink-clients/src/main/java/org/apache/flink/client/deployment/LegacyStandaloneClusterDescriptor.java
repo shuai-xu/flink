@@ -70,6 +70,11 @@ public class LegacyStandaloneClusterDescriptor implements ClusterDescriptor<Stan
 	}
 
 	@Override
+	public Configuration getConfiguration() {
+		return config;
+	}
+
+	@Override
 	public void close() throws Exception {
 		// nothing to do
 	}

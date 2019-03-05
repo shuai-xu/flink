@@ -18,6 +18,7 @@
 
 package org.apache.flink.client.program;
 
+import org.apache.flink.api.common.DriverProgram;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.JobSubmissionResult;
@@ -27,6 +28,7 @@ import org.apache.flink.api.common.cache.DistributedCache.DistributedCacheEntry;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.JobListener;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.DriverConfigConstants;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.optimizer.CompilerException;
 import org.apache.flink.optimizer.DataStatistics;
@@ -67,6 +69,7 @@ import org.apache.flink.runtime.util.LeaderConnectionInfo;
 import org.apache.flink.runtime.util.LeaderRetrievalUtils;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.OptionalFailure;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.SerializedValue;
@@ -78,6 +81,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -407,7 +411,7 @@ public abstract class ClusterClient<T> {
 			} else {
 				libraries = prog.getAllLibraries();
 			}
-
+			setDriverModeContext(prog);
 			ContextEnvironmentFactory factory = new ContextEnvironmentFactory(this, libraries,
 					prog.getClasspaths(), prog.getLibjars(), prog.getFiles(),
 					prog.getUserCodeClassLoader(), parallelism, isDetached(),
@@ -431,6 +435,7 @@ public abstract class ClusterClient<T> {
 			}
 			finally {
 				ContextEnvironment.unsetContext();
+				unsetDriverModeContext(prog);
 			}
 		}
 		else {
@@ -440,6 +445,45 @@ public abstract class ClusterClient<T> {
 
 	public JobSubmissionResult run(JobWithJars program, int parallelism, boolean detached) throws ProgramInvocationException {
 		return run(program, parallelism, SavepointRestoreSettings.none(), detached);
+	}
+
+	private void setDriverModeContext(PackagedProgram prog) {
+		//it is in driver mode.
+		if (DriverProgram.class.isAssignableFrom(prog.getMainClass())) {
+			DriverProgram prg = InstantiationUtil.instantiate(prog.getMainClass().asSubclass(DriverProgram.class), DriverProgram.class);
+			prg.setParameter(prog);
+			try {
+				InetSocketAddress address  = AkkaUtils.getInetSocketAddressFromAkkaURL(getClusterConnectionInfo().getAddress());
+				prg.setClusterInfo(
+					address.getAddress().getHostAddress(),
+					address.getPort());
+				Configuration configuration = prog.getUserJobConf();
+				SavepointRestoreSettings savepointRestoreSettings = prog.getSavepointSettings();
+				if (savepointRestoreSettings.getRestorePath() != null) {
+					configuration.setString(DriverConfigConstants.FLINK_DRIVER_SAVEPOINT_RESTORE_SETTINGS_PATH,
+						savepointRestoreSettings.getRestorePath());
+				}
+				configuration.setBoolean(DriverConfigConstants.FLINK_DRIVER_SAVEPOINT_RESTORE_SETTINGS_ALLOWNONRESTORESTATE,
+					savepointRestoreSettings.allowNonRestoredState());
+				configuration.setBoolean(DriverConfigConstants.FLINK_DRIVER_SAVEPOINT_RESTORE_SETTINGS_RESUMEFROMLATESTCHECKPOINT,
+					savepointRestoreSettings.resumeFromLatestCheckpoint());
+				prg.setConfiguration(configuration);
+				// the driver job's savepoint setting should be none.
+				prog.setSavepointRestoreSettings(SavepointRestoreSettings.none());
+			} catch (Exception e) {
+				throw new RuntimeException("check driver mode fails.", e);
+			}
+			//the driver job is always detached.
+			setDetached(true);
+		}
+	}
+
+	private void unsetDriverModeContext(PackagedProgram prog) {
+		if (DriverProgram.class.isAssignableFrom(prog.getMainClass())) {
+			DriverProgram prg = InstantiationUtil.instantiate(prog.getMainClass().asSubclass(DriverProgram.class), DriverProgram.class);
+			prg.setParameter(null);
+			prg.setClusterInfo(null, -1);
+		}
 	}
 
 	/**

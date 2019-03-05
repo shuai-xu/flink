@@ -35,6 +35,7 @@ import org.apache.flink.client.program.ProgramParametrizationException;
 import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.configuration.DriverConfigConstants;
 import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.RestOptions;
@@ -253,6 +254,10 @@ public class CliFrontend {
 				if (clusterId != null) {
 					client = clusterDescriptor.retrieve(clusterId);
 				} else {
+					if (runOptions.isDriverMode()) {
+						logAndSysout("Currently driver only supports session mode.");
+						return;
+					}
 					// also in job mode we have to deploy a session cluster because the job
 					// might consist of multiple parts (e.g. when using collect)
 					final ClusterSpecification clusterSpecification = customCommandLine.getClusterSpecification(commandLine);
@@ -277,6 +282,14 @@ public class CliFrontend {
 						userParallelism = defaultParallelism;
 					}
 
+					if (runOptions.isDriverMode()) {
+						//the cluster descriptor configuration should be set to user job instead driver.
+						Configuration userJobConfiguration = clusterDescriptor.getConfiguration();
+						userJobConfiguration.setInteger(DriverConfigConstants.FLINK_DRIVER_PARALLELISM, userParallelism);
+						program.setUserJobConf(userJobConfiguration);
+						//for driver job.
+						userParallelism = 1;
+					}
 					executeProgram(program, client, userParallelism);
 				} finally {
 					if (clusterId == null && !client.isDetached()) {
@@ -837,6 +850,10 @@ public class CliFrontend {
 			}
 		}
 
+		if (programArgs == null) {
+			programArgs = new String[]{};
+		}
+
 		// Get assembler class
 		String entryPointClass = options.getEntryPointClassName();
 		if (options.isPython() && entryPointClass == null) {
@@ -847,6 +864,9 @@ public class CliFrontend {
 				new PackagedProgram(jarFile, classpaths, libjars, files, programArgs) :
 				new PackagedProgram(jarFile, classpaths, entryPointClass, libjars, files, programArgs);
 
+		if (options.isDriverMode()) {
+			program.enableDriverMode();
+		}
 		program.setSavepointRestoreSettings(options.getSavepointRestoreSettings());
 
 		return program;
@@ -1241,5 +1261,4 @@ public class CliFrontend {
 
 		return constructor.newInstance(params);
 	}
-
 }

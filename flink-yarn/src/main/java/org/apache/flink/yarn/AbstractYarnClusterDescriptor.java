@@ -1908,6 +1908,16 @@ public abstract class AbstractYarnClusterDescriptor implements ClusterDescriptor
 		}
 	}
 
+	@Override
+	public Configuration getConfiguration() {
+		Configuration conf = new Configuration(flinkConfiguration);
+		Map<String, String> dynProperties = getDynamicProperties(dynamicPropertiesEncoded);
+		for (Map.Entry<String, String> dynProperty : dynProperties.entrySet()) {
+			conf.setString(dynProperty.getKey(), dynProperty.getValue());
+		}
+		return conf;
+	}
+
 	/**
 	 * Creates a YarnClusterClient; may be overriden in tests.
 	 */

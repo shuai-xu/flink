@@ -36,6 +36,7 @@ import static org.apache.flink.client.cli.CliFrontendParser.ARGS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.CLASSPATH_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.CLASS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.DETACHED_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.DRIVER_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.FILES_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.JAR_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.LIBJARS_OPTION;
@@ -67,6 +68,8 @@ public abstract class ProgramOptions extends CommandLineOptions {
 	private final boolean stdoutLogging;
 
 	private final boolean detachedMode;
+
+	private final boolean driverMode;
 
 	private final SavepointRestoreSettings savepointSettings;
 
@@ -123,7 +126,7 @@ public abstract class ProgramOptions extends CommandLineOptions {
 
 		this.programArgs = args;
 
-		List<URL> classpaths = new ArrayList<URL>();
+		List<URL> classpaths = new ArrayList<>();
 		if (line.hasOption(CLASSPATH_OPTION.getOpt())) {
 			for (String path : line.getOptionValues(CLASSPATH_OPTION.getOpt())) {
 				try {
@@ -155,8 +158,11 @@ public abstract class ProgramOptions extends CommandLineOptions {
 		}
 
 		stdoutLogging = !line.hasOption(LOGGING_OPTION.getOpt());
+
+		driverMode = line.hasOption(DRIVER_OPTION.getOpt());
+
 		detachedMode = line.hasOption(DETACHED_OPTION.getOpt()) || line.hasOption(
-			YARN_DETACHED_OPTION.getOpt());
+			YARN_DETACHED_OPTION.getOpt()) || driverMode;
 
 		if (line.hasOption(SAVEPOINT_PATH_OPTION.getOpt()) && line.hasOption(RESUME_PATH_OPTION.getOpt())) {
 			throw new CliArgsException("Please only offer either savepoint path or resume path.");
@@ -204,6 +210,10 @@ public abstract class ProgramOptions extends CommandLineOptions {
 
 	public boolean getDetachedMode() {
 		return detachedMode;
+	}
+
+	public boolean isDriverMode() {
+		return driverMode;
 	}
 
 	public SavepointRestoreSettings getSavepointRestoreSettings() {

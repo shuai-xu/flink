@@ -71,6 +71,11 @@ public class StandaloneClusterDescriptor implements ClusterDescriptor<Standalone
 	}
 
 	@Override
+	public Configuration getConfiguration() {
+		return config;
+	}
+
+	@Override
 	public void close() throws Exception {
 		// nothing to do
 	}

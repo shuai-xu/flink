@@ -150,6 +150,11 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<Kubernetes
 	}
 
 	@Override
+	public Configuration getConfiguration() {
+		return flinkConfiguration;
+	}
+
+	@Override
 	public ClusterClient<KubernetesClusterId> deployJobCluster(ClusterSpecification clusterSpecification,
 			JobGraph jobGraph, boolean detached)
 			throws ClusterDeploymentException {
