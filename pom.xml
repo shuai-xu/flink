@@ -26,7 +26,7 @@ under the License.
 
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.apache.flink</groupId>
+	<groupId>com.alibaba.blink</groupId>
 	<artifactId>flink-parent</artifactId>
 	<version>release-3.2-SNAPSHOT</version>
 
@@ -152,7 +152,7 @@ under the License.
 	<dependencies>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>force-shading</artifactId>
 			<version>release-3.2-SNAPSHOT</version>
 		</dependency>
@@ -643,7 +643,7 @@ under the License.
 
 			<!-- Testing dependency which should be included by all projects because of the Category definitions -->
 			<dependency>
-				<groupId>org.apache.flink</groupId>
+				<groupId>com.alibaba.blink</groupId>
 				<artifactId>flink-test-utils-junit</artifactId>
 				<version>${project.version}</version>
 				<scope>test</scope>
@@ -1361,7 +1361,7 @@ under the License.
 								</filter>
 								<!-- drop entries into META-INF and NOTICE files for the dummy artifact -->
 								<filter>
-									<artifact>org.apache.flink:force-shading</artifact>
+									<artifact>com.alibaba.blink:force-shading</artifact>
 									<excludes>
 										<exclude>**</exclude>
 									</excludes>
@@ -1375,7 +1375,7 @@ under the License.
 									In particular, the Scala version properties are defined in the root pom and without
 									shading, the root pom would have to be Scala suffixed and thereby all other modules.
 									-->
-									<include>org.apache.flink:force-shading</include>
+									<include>com.alibaba.blink:force-shading</include>
 								</includes>
 							</artifactSet>
 							<transformers>
@@ -1575,7 +1575,7 @@ under the License.
 					<configuration>
 						<oldVersion>
 							<dependency>
-								<groupId>org.apache.flink</groupId>
+								<groupId>com.alibaba.blink</groupId>
 								<artifactId>${project.artifactId}</artifactId>
 								<version>1.4.0</version>
 								<type>${project.packaging}</type>
@@ -1618,7 +1618,7 @@ under the License.
 						</parameter>
 						<dependencies>
 							<dependency>
-								<groupId>org.apache.flink</groupId>
+								<groupId>com.alibaba.blink</groupId>
 								<artifactId>flink-annotations</artifactId>
 								<version>${project.version}</version>
 							</dependency>

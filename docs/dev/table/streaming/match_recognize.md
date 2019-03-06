@@ -73,7 +73,7 @@ the library needs to be added as a dependency to your Maven project.
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-cep{{ site.scala_version_suffix }}</artifactId>
   <version>{{ site.version }}</version>
 </dependency>

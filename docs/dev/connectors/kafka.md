@@ -87,7 +87,7 @@ Then, import the connector in your maven project:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-connector-kafka-0.8{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -165,7 +165,7 @@ For convenience, Flink provides the following schemas:
     into an ObjectNode object, from which fields can be accessed using objectNode.get("field").as(Int/String/...)().
     The KeyValue objectNode contains a "key" and "value" field which contain all fields, as well as
     an optional "metadata" field that exposes the offset/partition/topic for this message.
-    
+
 When encountering a corrupted message that cannot be deserialized for any reason, there
 are two options - either throwing an exception from the `deserialize(...)` method
 which will cause the job to fail and be restarted, or returning `null` to allow
@@ -228,7 +228,7 @@ All versions of the Flink Kafka Consumer have the above explicit configuration m
  If a partition's latest record is earlier than the timestamp, the partition will simply be read
  from the latest record. Under this mode, committed offsets in Kafka will be ignored and not used as
  starting positions.
- 
+
 You can also specify the exact offsets the consumer should start from for each partition:
 
 <div class="codetabs" markdown="1">
@@ -311,7 +311,7 @@ job starts running) will be consumed from the earliest possible offset.
 
 By default, partition discovery is disabled. To enable it, set a non-negative value
 for `flink.partition-discovery.interval-millis` in the provided properties config,
-representing the discovery interval in milliseconds. 
+representing the discovery interval in milliseconds.
 
 <span class="label label-danger">Limitation</span> When the consumer is restored from a savepoint from Flink versions
 prior to Flink 1.3.x, partition discovery cannot be enabled on the restore run. If enabled, the restore would fail
@@ -386,7 +386,7 @@ whether or not checkpointing is enabled for the job.
  committing, simply set the `enable.auto.commit` (or `auto.commit.enable`
  for Kafka 0.8) / `auto.commit.interval.ms` keys to appropriate values
  in the provided `Properties` configuration.
- 
+
  - *Checkpointing enabled:* if checkpointing is enabled, the Flink Kafka
  Consumer will commit the offsets stored in the checkpointed states when
  the checkpoints are completed. This ensures that the committed offsets
@@ -451,8 +451,8 @@ the `Watermark getCurrentWatermark()` (for periodic) or the
 `Watermark checkAndGetNextWatermark(T lastElement, long extractedTimestamp)` (for punctuated) is called to determine
 if a new watermark should be emitted and with which timestamp.
 
-**Note**: If a watermark assigner depends on records read from Kafka to advance its watermarks (which is commonly the case), all topics and partitions need to have a continuous stream of records. Otherwise, the watermarks of the whole application cannot advance and all time-based operations, such as time windows or functions with timers, cannot make progress. A single idle Kafka partition causes this behavior. 
-A Flink improvement is planned to prevent this from happening 
+**Note**: If a watermark assigner depends on records read from Kafka to advance its watermarks (which is commonly the case), all topics and partitions need to have a continuous stream of records. Otherwise, the watermarks of the whole application cannot advance and all time-based operations, such as time windows or functions with timers, cannot make progress. A single idle Kafka partition causes this behavior.
+A Flink improvement is planned to prevent this from happening
 (see [FLINK-5479: Per-partition watermarks in FlinkKafkaConsumer should consider idle partitions](
 https://issues.apache.org/jira/browse/FLINK-5479)).
 In the meanwhile, a possible workaround is to send *heartbeat messages* to all consumed partitions that advance the watermarks of idle partitions.
@@ -516,9 +516,9 @@ are other constructor variants that allow providing the following:
  the producer also allows using an advanced serialization schema called `KeyedSerializationSchema`,
  which allows serializing the key and value separately. It also allows overriding the target topic,
  so that one producer instance can send data to multiple topics.
- 
+
 ### Kafka Producer Partitioning Scheme
- 
+
 By default, if a custom partitioner is not specified for the Flink Kafka Producer, the producer will use
 a `FlinkFixedPartitioner` that maps each Flink Kafka Producer parallel subtask to a single Kafka partition
 (i.e., all records received by a sink subtask will end up in the same Kafka partition).
@@ -559,7 +559,7 @@ methods `setLogFailuresOnly(boolean)` and `setFlushOnCheckpoint(boolean)` approp
  on-the-fly records at the time of the checkpoint to be acknowledged by Kafka before
  succeeding the checkpoint. This ensures that all records before the checkpoint have
  been written to Kafka. This must be enabled for at-least-once.
- 
+
 In conclusion, the Kafka producer by default has at-least-once guarantees for versions
 0.9 and 0.10, with `setLogFailureOnly` set to `false` and `setFlushOnCheckpoint` set
 to `true`.
@@ -646,7 +646,7 @@ the consumers until `transaction1` is committed or aborted. This has two implica
  * First of all, during normal working of Flink applications, a user can expect a delay in the visibility
  of the records produced into Kafka topics, equal to the average time between completed checkpoints.
  * Secondly in case of Flink application failure, topics into which this application was writing,
- will be blocked for the readers until the application restarts or the configured transaction 
+ will be blocked for the readers until the application restarts or the configured transaction
  timeout time will pass. This remark only applies for the cases when there are multiple
  agents/applications writing to the same Kafka topic.
 
@@ -668,13 +668,13 @@ Since Apache Kafka 0.10+, Kafka's messages can carry [timestamps](https://cwiki.
 the time the event has occurred (see ["event time" in Apache Flink](../event_time.html)) or the time when the message
 has been written to the Kafka broker.
 
-The `FlinkKafkaConsumer010` will emit records with the timestamp attached, if the time characteristic in Flink is 
+The `FlinkKafkaConsumer010` will emit records with the timestamp attached, if the time characteristic in Flink is
 set to `TimeCharacteristic.EventTime` (`StreamExecutionEnvironment.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)`).
 
-The Kafka consumer does not emit watermarks. To emit watermarks, the same mechanisms as described above in 
+The Kafka consumer does not emit watermarks. To emit watermarks, the same mechanisms as described above in
 "Kafka Consumers and Timestamp Extraction/Watermark Emission"  using the `assignTimestampsAndWatermarks` method are applicable.
 
-There is no need to define a timestamp extractor when using the timestamps from Kafka. The `previousElementTimestamp` argument of 
+There is no need to define a timestamp extractor when using the timestamps from Kafka. The `previousElementTimestamp` argument of
 the `extractTimestamp()` method contains the timestamp carried by the Kafka message.
 
 A timestamp extractor for a Kafka consumer would look like this:
@@ -699,8 +699,8 @@ config.setWriteTimestampToKafka(true);
 
 Flink's Kafka connectors provide some metrics through Flink's [metrics system]({{ site.baseurl }}/monitoring/metrics.html) to analyze
 the behavior of the connector.
-The producers export Kafka's internal metrics through Flink's metric system for all supported versions. The consumers export 
-all metrics starting from Kafka version 0.9. The Kafka documentation lists all exported metrics 
+The producers export Kafka's internal metrics through Flink's metric system for all supported versions. The consumers export
+all metrics starting from Kafka version 0.9. The Kafka documentation lists all exported metrics
 in its [documentation](http://kafka.apache.org/documentation/#selector_monitoring).
 
 In addition to these metrics, all consumers expose the `current-offsets` and `committed-offsets` for each topic partition.
@@ -709,8 +709,8 @@ we retrieved and emitted successfully. The `committed-offsets` is the last commi
 
 The Kafka Consumers in Flink commit the offsets back to Zookeeper (Kafka 0.8) or the Kafka brokers (Kafka 0.9+). If checkpointing
 is disabled, offsets are committed periodically.
-With checkpointing, the commit happens once all operators in the streaming topology have confirmed that they've created a checkpoint of their state. 
-This provides users with at-least-once semantics for the offsets committed to Zookeeper or the broker. For offsets checkpointed to Flink, the system 
+With checkpointing, the commit happens once all operators in the streaming topology have confirmed that they've created a checkpoint of their state.
+This provides users with at-least-once semantics for the offsets committed to Zookeeper or the broker. For offsets checkpointed to Flink, the system
 provides exactly once guarantees.
 
 The offsets committed to ZK or the broker can also be used to track the reading progress of the Kafka consumer. The difference between
@@ -724,16 +724,16 @@ Flink provides first-class support through the Kafka connector to authenticate t
 configured for Kerberos. Simply configure Flink in `flink-conf.yaml` to enable Kerberos authentication for Kafka like so:
 
 1. Configure Kerberos credentials by setting the following -
- - `security.kerberos.login.use-ticket-cache`: By default, this is `true` and Flink will attempt to use Kerberos credentials in ticket caches managed by `kinit`. 
- Note that when using the Kafka connector in Flink jobs deployed on YARN, Kerberos authorization using ticket caches will not work. This is also the case when deploying using Mesos, as authorization using ticket cache is not supported for Mesos deployments. 
+ - `security.kerberos.login.use-ticket-cache`: By default, this is `true` and Flink will attempt to use Kerberos credentials in ticket caches managed by `kinit`.
+ Note that when using the Kafka connector in Flink jobs deployed on YARN, Kerberos authorization using ticket caches will not work. This is also the case when deploying using Mesos, as authorization using ticket cache is not supported for Mesos deployments.
  - `security.kerberos.login.keytab` and `security.kerberos.login.principal`: To use Kerberos keytabs instead, set values for both of these properties.
- 
+
 2. Append `KafkaClient` to `security.kerberos.login.contexts`: This tells Flink to provide the configured Kerberos credentials to the Kafka login context to be used for Kafka authentication.
 
 Once Kerberos-based Flink security is enabled, you can authenticate to Kafka with either the Flink Kafka Consumer or Producer by simply including the following two settings in the provided properties configuration that is passed to the internal Kafka client:
 
 - Set `security.protocol` to `SASL_PLAINTEXT` (default `NONE`): The protocol used to communicate to Kafka brokers.
-When using standalone Flink deployment, you can also use `SASL_SSL`; please see how to configure the Kafka client for SSL [here](https://kafka.apache.org/documentation/#security_configclients). 
+When using standalone Flink deployment, you can also use `SASL_SSL`; please see how to configure the Kafka client for SSL [here](https://kafka.apache.org/documentation/#security_configclients).
 - Set `sasl.kerberos.service.name` to `kafka` (default `kafka`): The value for this should match the `sasl.kerberos.service.name` used for Kafka broker configurations. A mismatch in service name between client and server configuration will cause the authentication to fail.
 
 For more information on Flink configuration for Kerberos security, please see [here]({{ site.baseurl}}/ops/config.html).

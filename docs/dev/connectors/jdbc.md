@@ -28,7 +28,7 @@ following dependency to your project:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-jdbc</artifactId>
   <version>{{site.version}}</version>
 </dependency>
@@ -71,7 +71,7 @@ input.addSink(new JDBCSinkFunction(jdbcOutputFormat));
 * **setBatchInterval** : JDBC sink optimizes batch writing, this parameter controls how many records are flush once. To ensure exactly-once, JDBC sink will flush when snapshot and close by default.
 * **setSqlTypes** : Specify the type of field written, See sql.Types. If not specified, it calls PreparedStatement.setObject by default.
 
-             
-                                                                                                   
+
+
 
 

@@ -29,7 +29,7 @@ following dependency to your project:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-connector-nifi{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -84,8 +84,8 @@ val clientConfig: SiteToSiteClientConfig = new SiteToSiteClient.Builder()
        .requestBatchCount(5)
        .buildConfig()
 
-val nifiSource = new NiFiSource(clientConfig)       
-{% endhighlight %}       
+val nifiSource = new NiFiSource(clientConfig)
+{% endhighlight %}
 </div>
 </div>
 
@@ -131,9 +131,9 @@ val clientConfig: SiteToSiteClientConfig = new SiteToSiteClient.Builder()
 val nifiSink: NiFiSink[NiFiDataPacket] = new NiFiSink[NiFiDataPacket](clientConfig, new NiFiDataPacketBuilder<T>() {...})
 
 streamExecEnv.addSink(nifiSink)
-{% endhighlight %}       
+{% endhighlight %}
 </div>
-</div>      
+</div>
 
 More information about [Apache NiFi](https://nifi.apache.org) Site-to-Site Protocol can be found [here](https://nifi.apache.org/docs/nifi-docs/html/user-guide.html#site-to-site)
 

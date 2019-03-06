@@ -45,7 +45,7 @@ add the FlinkCEP dependency to the `pom.xml` of your project.
 <div data-lang="java" markdown="1">
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-cep{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -55,7 +55,7 @@ add the FlinkCEP dependency to the `pom.xml` of your project.
 <div data-lang="scala" markdown="1">
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-cep-scala{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -1723,7 +1723,7 @@ val alerts = patternStream.select(createAlert(_)))
 
 ### Migrating to 1.4+
 
-In Flink-1.4 the backward compatibility of CEP library with <= Flink 1.2 was dropped. Unfortunately 
+In Flink-1.4 the backward compatibility of CEP library with <= Flink 1.2 was dropped. Unfortunately
 it is not possible to restore a CEP job that was once run with 1.2.x
 
 ### Migrating to 1.3.x

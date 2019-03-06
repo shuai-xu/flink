@@ -22,7 +22,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-libraries</artifactId>
 		<version>release-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
@@ -38,7 +38,7 @@
 		<!-- core dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-scala_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -85,14 +85,14 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-clients_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-test-utils_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>

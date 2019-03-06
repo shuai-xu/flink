@@ -60,7 +60,7 @@ Next, you have to add the FlinkML dependency to the `pom.xml` of your project:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-ml{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>

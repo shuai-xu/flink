@@ -24,7 +24,7 @@ under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-parent</artifactId>
 		<version>release-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
@@ -40,19 +40,19 @@ under the License.
 		<!-- core dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-java</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-examples-batch_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -60,14 +60,14 @@ under the License.
 		<!-- test dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-test-utils_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-cep_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
@@ -111,7 +111,7 @@ under the License.
 						<configuration>
 							<artifactItems>
 								<artifactItem>
-									<groupId>org.apache.flink</groupId>
+									<groupId>com.alibaba.blink</groupId>
 									<artifactId>flink-examples-batch_${scala.binary.version}</artifactId>
 									<version>${project.version}</version>
 									<type>jar</type>
@@ -124,11 +124,11 @@ under the License.
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
-				
+
 				<executions>
 					<execution>
 						<goals>
@@ -138,7 +138,7 @@ under the License.
 				</executions>
 			</plugin>
 		</plugins>
-	
+
 		<pluginManagement>
 			<plugins>
 				<plugin>

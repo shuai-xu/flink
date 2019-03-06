@@ -49,7 +49,7 @@ If you are developing your program as a Maven project, you have to add the
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-clients{{ site.scala_version_suffix }}</artifactId>
   <version>{{ site.version }}</version>
 </dependency>

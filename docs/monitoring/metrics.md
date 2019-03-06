@@ -252,7 +252,7 @@ Flink does not provide a default implementation for `Histogram`, but offers a {%
 To use this wrapper add the following dependency in your `pom.xml`:
 {% highlight xml %}
 <dependency>
-      <groupId>org.apache.flink</groupId>
+      <groupId>com.alibaba.blink</groupId>
       <artifactId>flink-metrics-dropwizard</artifactId>
       <version>{{site.version}}</version>
 </dependency>
@@ -275,7 +275,7 @@ public class MyMapper extends RichMapFunction<Long, Long> {
       .getMetricGroup()
       .histogram("myHistogram", new DropwizardHistogramWrapper(dropwizardHistogram));
   }
-  
+
   @Override
   public Long map(Long value) throws Exception {
     this.histogram.update(value);
@@ -294,12 +294,12 @@ class MyMapper extends RichMapFunction[Long, Long] {
   override def open(config: Configuration): Unit = {
     com.codahale.metrics.Histogram dropwizardHistogram =
       new com.codahale.metrics.Histogram(new SlidingWindowReservoir(500))
-        
+
     histogram = getRuntimeContext()
       .getMetricGroup()
       .histogram("myHistogram", new DropwizardHistogramWrapper(dropwizardHistogram))
   }
-  
+
   override def map(value: Long): Long = {
     histogram.update(value)
     value
@@ -365,7 +365,7 @@ Flink offers a {% gh_link flink-metrics/flink-metrics-dropwizard/src/main/java/o
 To use this wrapper add the following dependency in your `pom.xml`:
 {% highlight xml %}
 <dependency>
-      <groupId>org.apache.flink</groupId>
+      <groupId>com.alibaba.blink</groupId>
       <artifactId>flink-metrics-dropwizard</artifactId>
       <version>{{site.version}}</version>
 </dependency>
@@ -405,7 +405,7 @@ class MyMapper extends RichMapFunction[Long,Long] {
 
   override def open(config: Configuration): Unit = {
     com.codahale.metrics.Meter dropwizardMeter = new com.codahale.metrics.Meter()
-  
+
     meter = getRuntimeContext()
       .getMetricGroup()
       .meter("myMeter", new DropwizardMeterWrapper(dropwizardMeter))
@@ -689,7 +689,7 @@ metrics.reporter.prom.class: org.apache.flink.metrics.prometheus.PrometheusRepor
 
 {% endhighlight %}
 
-Flink metric types are mapped to Prometheus metric types as follows: 
+Flink metric types are mapped to Prometheus metric types as follows:
 
 | Flink     | Prometheus | Note                                     |
 | --------- |------------|------------------------------------------|
@@ -698,7 +698,7 @@ Flink metric types are mapped to Prometheus metric types as follows:
 | Histogram | Summary    |Quantiles .5, .75, .95, .98, .99 and .999 |
 | Meter     | Gauge      |The gauge exports the meter's rate.       |
 
-All Flink metrics variables (see [List of all Variables](#list-of-all-variables)) are exported to Prometheus as labels. 
+All Flink metrics variables (see [List of all Variables](#list-of-all-variables)) are exported to Prometheus as labels.
 
 ### StatsD (org.apache.flink.metrics.statsd.StatsDReporter)
 
@@ -814,18 +814,18 @@ Thus, in order to infer the metric identifier:
 </table>
 
 ### Memory
-<table class="table table-bordered">                               
-  <thead>                                                          
-    <tr>                                                           
+<table class="table table-bordered">
+  <thead>
+    <tr>
       <th class="text-left" style="width: 18%">Scope</th>
-      <th class="text-left" style="width: 22%">Infix</th>          
-      <th class="text-left" style="width: 20%">Metrics</th>                           
+      <th class="text-left" style="width: 22%">Infix</th>
+      <th class="text-left" style="width: 20%">Metrics</th>
       <th class="text-left" style="width: 32%">Description</th>
-      <th class="text-left" style="width: 8%">Type</th>                       
-    </tr>                                                          
-  </thead>                                                         
-  <tbody>                                                          
-    <tr>                                                           
+      <th class="text-left" style="width: 8%">Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
       <th rowspan="12"><strong>Job-/TaskManager</strong></th>
       <td rowspan="12">Status.JVM.Memory</td>
       <td>Heap.Used</td>
@@ -886,8 +886,8 @@ Thus, in order to infer the metric identifier:
       <td>Mapped.TotalCapacity</td>
       <td>The number of buffers in the mapped buffer pool (in bytes).</td>
       <td>Gauge</td>
-    </tr>                                                         
-  </tbody>                                                         
+    </tr>
+  </tbody>
 </table>
 
 ### Threads
@@ -1010,7 +1010,7 @@ Thus, in order to infer the metric identifier:
     <tr>
       <td>outPoolUsage</td>
       <td>An estimate of the output buffers usage.</td>
-      <td>Gauge</td>      
+      <td>Gauge</td>
     </tr>
     <tr>
       <td rowspan="4">Network.&lt;Input|Output&gt;.&lt;gate&gt;<br />
@@ -1124,7 +1124,7 @@ Thus, in order to infer the metric identifier:
       <td>numberOfCompletedCheckpoints</td>
       <td>The number of successfully completed checkpoints.</td>
       <td>Gauge</td>
-    </tr>            
+    </tr>
     <tr>
       <td>numberOfFailedCheckpoints</td>
       <td>The number of failed checkpoints.</td>
@@ -1342,7 +1342,7 @@ a `latencyTrackingInterval` (in milliseconds) has to be set to a positive value 
 
 At the `latencyTrackingInterval`, the sources will periodically emit a special record, called a `LatencyMarker`.
 The marker contains a timestamp from the time when the record has been emitted at the sources.
-Latency markers can not overtake regular user records, thus if records are queuing up in front of an operator, 
+Latency markers can not overtake regular user records, thus if records are queuing up in front of an operator,
 it will add to the latency tracked by the marker.
 
 Note that the latency markers are not accounting for the time user records spend in operators as they are
@@ -1350,9 +1350,9 @@ bypassing them. In particular the markers are not accounting for the time record
 Only if operators are not able to accept new records, thus they are queuing up, the latency measured using
 the markers will reflect that.
 
-All intermediate operators keep a list of the last `n` latencies from each source to compute 
+All intermediate operators keep a list of the last `n` latencies from each source to compute
 a latency distribution.
-The sink operators keep a list from each source, and each parallel source instance to allow detecting 
+The sink operators keep a list from each source, and each parallel source instance to allow detecting
 latency issues caused by individual machines.
 
 Currently, Flink assumes that the clocks of all machines in the cluster are in sync. We recommend setting

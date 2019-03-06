@@ -58,7 +58,7 @@ and Reducers.
 
 {% highlight xml %}
 <dependency>
-	<groupId>org.apache.flink</groupId>
+	<groupId>com.alibaba.blink</groupId>
 	<artifactId>flink-hadoop-compatibility{{ site.scala_version_suffix }}</artifactId>
 	<version>{{site.version}}</version>
 </dependency>
@@ -69,14 +69,14 @@ In addition, if you want to compile the following example, add the following dep
 {% highlight xml %}
 <!--Dependency for java examples.-->
 <dependency>
-	<groupId>org.apache.flink</groupId>
+	<groupId>com.alibaba.blink</groupId>
 	<artifactId>flink-java</artifactId>
 	<version>{{site.version}}</version>
 </dependency>
 
 <!--Dependency for scala examples.-->
 <dependency>
-	<groupId>org.apache.flink</groupId>
+	<groupId>com.alibaba.blink</groupId>
 	<artifactId>flink-scala{{ site.scala_version_suffix }}</artifactId>
 	<version>{{site.version}}</version>
 </dependency>

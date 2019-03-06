@@ -21,7 +21,7 @@ under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-libraries</artifactId>
 		<version>release-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
@@ -58,13 +58,13 @@ under the License.
 
 		<!-- core dependencies -->
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-table-common</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -77,14 +77,14 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-cep_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -97,7 +97,7 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-shaded-hadoop2</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -251,13 +251,13 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-metrics-dropwizard</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-python_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -322,7 +322,7 @@ under the License.
 		<!-- test dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-table-common</artifactId>
 			<version>${project.version}</version>
 			<type>test-jar</type>
@@ -330,14 +330,14 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-test-utils_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-tests_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<type>test-jar</type>
@@ -345,7 +345,7 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-core</artifactId>
 			<version>${project.version}</version>
 			<type>test-jar</type>
@@ -353,14 +353,14 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-runtime_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
@@ -374,7 +374,7 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-statebackend-rocksdb_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -412,7 +412,7 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-service</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -493,12 +493,13 @@ under the License.
 									<include>org.reflections:*</include>
 									<include>org.codehaus.janino:*</include>
 									<include>com.google.guava:guava</include>
+									<include>org.apache.flink:flink-shaded-*</include>
 									<include>com.alibaba.blink:*</include>
-									<include>org.apache.flink:flink-table-common</include>
+									<include>com.alibaba.blink:flink-table-common</include>
                                 </includes>
 							</artifactSet>
 							<relocations>
-								<!-- We currently don't relocate slf4j as we have "logger not found" 
+								<!-- We currently don't relocate slf4j as we have "logger not found"
 									warnings otherwise during runtime -->
 								<!--<relocation>
 									<pattern>org.slf4j</pattern>

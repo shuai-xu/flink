@@ -45,7 +45,7 @@ If you are developing your program in a Maven project, you have to add the `flin
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-clients{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version}}</version>
 </dependency>

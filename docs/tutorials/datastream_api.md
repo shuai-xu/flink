@@ -91,22 +91,22 @@ use it in our program. Edit the `dependencies` section of the `pom.xml` so that 
 {% highlight xml %}
 <dependencies>
     <dependency>
-        <groupId>org.apache.flink</groupId>
+        <groupId>com.alibaba.blink</groupId>
         <artifactId>flink-java</artifactId>
         <version>${flink.version}</version>
     </dependency>
     <dependency>
-        <groupId>org.apache.flink</groupId>
+        <groupId>com.alibaba.blink</groupId>
         <artifactId>flink-streaming-java{{ site.scala_version_suffix }}</artifactId>
         <version>${flink.version}</version>
     </dependency>
     <dependency>
-        <groupId>org.apache.flink</groupId>
+        <groupId>com.alibaba.blink</groupId>
         <artifactId>flink-clients{{ site.scala_version_suffix }}</artifactId>
         <version>${flink.version}</version>
     </dependency>
     <dependency>
-        <groupId>org.apache.flink</groupId>
+        <groupId>com.alibaba.blink</groupId>
         <artifactId>flink-connector-wikiedits{{ site.scala_version_suffix }}</artifactId>
         <version>${flink.version}</version>
     </dependency>
@@ -301,7 +301,7 @@ use the Kafka sink. Add this to the `pom.xml` file in the dependencies section:
 
 {% highlight xml %}
 <dependency>
-    <groupId>org.apache.flink</groupId>
+    <groupId>com.alibaba.blink</groupId>
     <artifactId>flink-connector-kafka-0.11{{ site.scala_version_suffix }}</artifactId>
     <version>${flink.version}</version>
 </dependency>

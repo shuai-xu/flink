@@ -34,12 +34,12 @@ The Table API and the SQL interfaces are tightly integrated with each other as w
 Setup
 -----
 
-The Table API and SQL are bundled in the `flink-table` Maven artifact. 
+The Table API and SQL are bundled in the `flink-table` Maven artifact.
 The following dependency must be added to your project in order to use the Table API and SQL:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-table{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -49,7 +49,7 @@ In addition, you need to add a dependency for either Flink's Scala batch or stre
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-scala{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -59,7 +59,7 @@ For a streaming query you need to add:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-streaming-scala{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>

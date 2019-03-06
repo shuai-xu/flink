@@ -68,13 +68,13 @@ When setting up a project manually, you need to add the following dependencies f
 <div data-lang="java" markdown="1">
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-java</artifactId>
   <version>{{site.version }}</version>
   <scope>provided</scope>
 </dependency>
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-streaming-java{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
   <scope>provided</scope>
@@ -84,13 +84,13 @@ When setting up a project manually, you need to add the following dependencies f
 <div data-lang="scala" markdown="1">
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-scala{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
   <scope>provided</scope>
 </dependency>
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-streaming-scala{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
   <scope>provided</scope>
@@ -126,7 +126,7 @@ These connectors are not part of Flink's core dependencies and must hence be add
 Below is an example adding the connector for Kafka 0.10 as a dependency (Maven syntax):
 {% highlight xml %}
 <dependency>
-    <groupId>org.apache.flink</groupId>
+    <groupId>com.alibaba.blink</groupId>
     <artifactId>flink-connector-kafka-0.10{{ site.scala_version_suffix }}</artifactId>
     <version>{{site.version }}</version>
 </dependency>

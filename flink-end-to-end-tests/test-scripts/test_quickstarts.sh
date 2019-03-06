@@ -46,7 +46,7 @@ position=$(awk '/<dependencies>/ {print NR}' pom.xml | head -1)
 
 sed -i -e ''"$(($position + 1))"'i\
 <dependency>\
-<groupId>org.apache.flink</groupId>\
+<groupId>com.alibaba.blink</groupId>\
 <artifactId>flink-connector-elasticsearch5_${scala.binary.version}</artifactId>\
 <version>${flink.version}</version>\
 </dependency>' pom.xml

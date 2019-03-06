@@ -21,7 +21,7 @@ under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-filesystems</artifactId>
 		<version>release-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
@@ -42,7 +42,7 @@ under the License.
 		<!-- Flink core -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-core</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -51,7 +51,7 @@ under the License.
 		<!-- File system builds on the Hadoop file system support -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-hadoop-fs</artifactId>
 			<version>${project.version}</version>
 
@@ -59,7 +59,7 @@ under the License.
 				because the optional Hadoop dependency is also pulled in for tests -->
 			<exclusions>
 				<exclusion>
-					<groupId>org.apache.flink</groupId>
+					<groupId>com.alibaba.blink</groupId>
 					<artifactId>flink-shaded-hadoop2</artifactId>
 				</exclusion>
 			</exclusions>
@@ -148,7 +148,7 @@ under the License.
 		<!-- test dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-test-utils-junit</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>

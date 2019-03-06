@@ -20,13 +20,13 @@ under the License.
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<parent>
 		<artifactId>flink-parent</artifactId>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<version>release-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.apache.flink</groupId>
+	<groupId>com.alibaba.blink</groupId>
 	<artifactId>flink-yarn-shuffle</artifactId>
 	<name>flink-yarn-shuffle</name>
 
@@ -37,7 +37,7 @@ under the License.
 		<!-- core dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-runtime_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<exclusions>
@@ -48,7 +48,7 @@ under the License.
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-yarn_${scala.binary.version}</artifactId>
 			<version>${project.version}</version>
 			<exclusions>
@@ -59,7 +59,7 @@ under the License.
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-shaded-hadoop2</artifactId>
 			<version>${project.version}</version>
 			<optional>true</optional>
@@ -117,10 +117,14 @@ under the License.
 				<configuration>
 					<artifactSet>
 						<includes>
-							<include>org.apache.flink:*</include>
+							<include>org.apache.flink:flink-shaded-*</include>
+							<include>com.alibaba.blink:*</include>
 						</includes>
 						<excludes>
 							<exclude>org.apache.flink:flink-shaded-hadoop2</exclude>
+						</excludes>
+						<excludes>
+							<exclude>com.alibaba.blink:flink-shaded-hadoop2</exclude>
 						</excludes>
 					</artifactSet>
 				</configuration>

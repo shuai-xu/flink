@@ -24,7 +24,7 @@ under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-shaded-hadoop</artifactId>
 		<version>release-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
@@ -42,24 +42,24 @@ under the License.
 
 	<dependencies>
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-shaded-hadoop2</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>
 
-	
+
 
 	<build>
 		<plugins>
 
-			<!-- 
+			<!--
 				Don't deploy this uber-jar. It is not referenced by any other artifact.
 				Its sole purpose is to be included in the 'flink-dist' build.
 			-->
 
 			<!-- deploy it to use in Blink repo -->
- 
+
 			<!--<plugin>-->
 				<!--<groupId>org.apache.maven.plugins</groupId>-->
 				<!--<artifactId>maven-deploy-plugin</artifactId>-->
@@ -68,7 +68,7 @@ under the License.
 				<!--</configuration>-->
 			<!--</plugin>-->
 
-			<!-- 
+			<!--
 				Build an uber jar of the shaded-hadoop-dependency
 				and all its transitive dependencies
 			-->

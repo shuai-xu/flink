@@ -23,7 +23,7 @@ under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-formats</artifactId>
 		<version>release-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
@@ -39,7 +39,7 @@ under the License.
 		<!-- core dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-core</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -63,7 +63,7 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-table-common</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
@@ -72,7 +72,7 @@ under the License.
 		<!-- test dependencies -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-table-common</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
@@ -81,7 +81,7 @@ under the License.
 
 		<!-- TODO This could be dropped if we move the Table Avro IT Case -->
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-table_2.11</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
@@ -95,7 +95,7 @@ under the License.
 
 		<!-- TODO This could be dropped if we move the Table Avro IT Case -->
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-table_2.11</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
@@ -112,21 +112,21 @@ under the License.
 			Scala version, we hard-refer the flink-streaming-scala_2.11 here -->
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-streaming-scala_2.11</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-test-utils_2.11</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.flink</groupId>
+			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-core</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>

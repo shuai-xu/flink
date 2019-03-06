@@ -32,7 +32,7 @@ To use the connector, add the following Maven dependency to your project:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-connector-kinesis{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>

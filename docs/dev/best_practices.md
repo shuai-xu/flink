@@ -219,7 +219,7 @@ Change your projects `pom.xml` file like this:
 	</dependency>
 
 	<dependency>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-java</artifactId>
 		<version>{{ site.version }}</version>
 		<exclusions>
@@ -234,7 +234,7 @@ Change your projects `pom.xml` file like this:
 		</exclusions>
 	</dependency>
 	<dependency>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-streaming-java{{ site.scala_version_suffix }}</artifactId>
 		<version>{{ site.version }}</version>
 		<exclusions>
@@ -249,7 +249,7 @@ Change your projects `pom.xml` file like this:
 		</exclusions>
 	</dependency>
 	<dependency>
-		<groupId>org.apache.flink</groupId>
+		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-clients{{ site.scala_version_suffix }}</artifactId>
 		<version>{{ site.version }}</version>
 		<exclusions>

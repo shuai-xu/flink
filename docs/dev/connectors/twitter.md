@@ -29,7 +29,7 @@ To use this connector, add the following dependency to your project:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-connector-twitter{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>

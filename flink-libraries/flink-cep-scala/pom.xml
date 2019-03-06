@@ -20,16 +20,16 @@ under the License.
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    
+
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
-        <groupId>org.apache.flink</groupId>
+        <groupId>com.alibaba.blink</groupId>
         <artifactId>flink-libraries</artifactId>
         <version>release-3.2-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
-    
+
     <artifactId>flink-cep-scala_${scala.binary.version}</artifactId>
     <name>flink-cep-scala</name>
     <packaging>jar</packaging>
@@ -39,13 +39,13 @@ under the License.
         <!-- core dependencies -->
 
         <dependency>
-            <groupId>org.apache.flink</groupId>
+            <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-cep_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.flink</groupId>
+            <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -74,14 +74,14 @@ under the License.
         <!-- test dependencies -->
 
         <dependency>
-            <groupId>org.apache.flink</groupId>
+            <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-test-utils_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.flink</groupId>
+            <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-tests_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -111,7 +111,7 @@ under the License.
         </dependency>
 
         <dependency>
-            <groupId>org.apache.flink</groupId>
+            <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -119,7 +119,7 @@ under the License.
         </dependency>
 
         <dependency>
-            <groupId>org.apache.flink</groupId>
+            <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-cep_${scala.binary.version}</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -144,7 +144,7 @@ under the License.
                     </execution>
                 </executions>
             </plugin>
-            
+
 			<!-- Scala Code Style, most of the configuration done via plugin management -->
 			<plugin>
 				<groupId>org.scalastyle</groupId>
@@ -190,5 +190,5 @@ under the License.
 			</plugin>
         </plugins>
     </build>
-    
+
 </project>

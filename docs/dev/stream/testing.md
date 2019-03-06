@@ -102,7 +102,7 @@ In order to do so add the test dependency `flink-test-utils`:
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-test-utils{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -205,7 +205,7 @@ class ExampleIntegrationTest extends AbstractTestBase {
         // verify your results
         assertEquals(Lists.newArrayList(2L, 42L, 44L), CollectSink.values)
     }
-}    
+}
 
 // create a testing sink
 class CollectSink extends SinkFunction[Long] {
@@ -233,7 +233,7 @@ You can also implement your own custom sources for emitting watermarks.
 
 ## Testing checkpointing and state handling
 
-One way to test state handling is to enable checkpointing in integration tests. 
+One way to test state handling is to enable checkpointing in integration tests.
 
 You can do that by configuring your `StreamExecutionEnvironment` in the test:
 

@@ -41,7 +41,7 @@ This connector provides access to data streams from [RabbitMQ](http://www.rabbit
 
 {% highlight xml %}
 <dependency>
-  <groupId>org.apache.flink</groupId>
+  <groupId>com.alibaba.blink</groupId>
   <artifactId>flink-connector-rabbitmq{{ site.scala_version_suffix }}</artifactId>
   <version>{{site.version }}</version>
 </dependency>
@@ -98,7 +98,7 @@ final RMQConnectionConfig connectionConfig = new RMQConnectionConfig.Builder()
     .setPort(5000)
     ...
     .build();
-    
+
 final DataStream<String> stream = env
     .addSource(new RMQSource<String>(
         connectionConfig,            // config for the RabbitMQ connection
@@ -119,7 +119,7 @@ val connectionConfig = new RMQConnectionConfig.Builder()
     .setPort(5000)
     ...
     .build
-    
+
 val stream = env
     .addSource(new RMQSource[String](
         connectionConfig,            // config for the RabbitMQ connection
@@ -145,7 +145,7 @@ final RMQConnectionConfig connectionConfig = new RMQConnectionConfig.Builder()
     .setPort(5000)
     ...
     .build();
-    
+
 stream.addSink(new RMQSink<String>(
     connectionConfig,            // config for the RabbitMQ connection
     "queueName",                 // name of the RabbitMQ queue to send messages to
@@ -161,7 +161,7 @@ val connectionConfig = new RMQConnectionConfig.Builder()
     .setPort(5000)
     ...
     .build
-    
+
 stream.addSink(new RMQSink[String](
     connectionConfig,         // config for the RabbitMQ connection
     "queueName",              // name of the RabbitMQ queue to send messages to
