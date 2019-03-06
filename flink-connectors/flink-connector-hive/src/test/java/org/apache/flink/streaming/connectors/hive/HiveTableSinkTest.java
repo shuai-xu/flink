@@ -20,7 +20,7 @@ package org.apache.flink.streaming.connectors.hive;
 
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
@@ -55,19 +55,19 @@ public class HiveTableSinkTest {
 		hiveShell.execute("CREATE DATABASE dst_db");
 		hiveShell.execute(new StringBuilder()
 								.append("CREATE TABLE dst_db.abc_test (")
-								.append("a INT, b INT, c STRING")
+								.append("a INT, b INT, c STRING, d BIGINT, e DOUBLE")
 								.append(")")
 								.toString());
 	}
 
-	private Table getSmall3TupleDataSet(BatchTableEnvironment env) {
-		List<Tuple3<Integer, Integer, String>> data = new ArrayList();
-		data.add(new Tuple3<>(1, 10, "Hi"));
-		data.add(new Tuple3<>(2, 20, "Hello"));
-		data.add(new Tuple3<>(3, 30, "Hello world!"));
+	private Table getSmall5TupleDataSet(BatchTableEnvironment env) {
+		List<Tuple5<Integer, Integer, String, Long, Double>> data = new ArrayList();
+		data.add(new Tuple5<>(1, 10, "Hi", 11L, 1.11));
+		data.add(new Tuple5<>(2, 20, "Hello", 22L, 2.22));
+		data.add(new Tuple5<>(3, 30, "Hello world!", 33L, 3.33));
 		return env.fromCollection(data,
-								TypeInformation.of(new TypeHint<Tuple3<Integer, Integer, String>>() {}),
-								"a,b,c");
+					TypeInformation.of(new TypeHint<Tuple5<Integer, Integer, String, Long, Double>>() {}),
+								"a,b,c,d,e");
 	}
 
 	/**
@@ -82,14 +82,14 @@ public class HiveTableSinkTest {
 		BatchTableEnvironment tEnv = TableEnvironment.getBatchTableEnvironment(env, new TableConfig());
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_SINK_PARALLELISM, 1);
 		tEnv.getConfig().getConf().setInteger(TableConfigOptions.SQL_RESOURCE_DEFAULT_PARALLELISM, 1);
-		Table table = getSmall3TupleDataSet(tEnv);
+		Table table = getSmall5TupleDataSet(tEnv);
 		tEnv.registerCatalog("myHive", new HiveCatalog("myHive", "thrift://localhost:20101"));
 		tEnv.setDefaultDatabase("myHive", "dst_db");
 		table.insertInto("abc_test");
 		tEnv.execute();
 		List<String> res = hiveShell.executeQuery("select * from dst_db.abc_test");
-		assertEquals("1\t10\tHi", res.get(0));
-		assertEquals("2\t20\tHello", res.get(1));
-		assertEquals("3\t30\tHello world!", res.get(2));
+		assertEquals("1\t10\tHi\t11\t1.11", res.get(0));
+		assertEquals("2\t20\tHello\t22\t2.22", res.get(1));
+		assertEquals("3\t30\tHello world!\t33\t3.33", res.get(2));
 	}
 }

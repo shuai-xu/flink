@@ -75,7 +75,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 
 	@Override
 	public BatchTableSource<BaseRow> createBatchTableSource(Map<String, String> props) {
-		HiveTableInfo hiveTableInfo = new HiveTableInfo(props).invoke();
+		HiveTableInfo hiveTableInfo = new HiveTableInfo(props);
 		try {
 			return new HiveTableSource(new RowTypeInfo(hiveTableInfo.getTypeInformations(), hiveTableInfo.getFieldNames()),
 									hiveTableInfo.getHiveRowTypeString(),
@@ -92,7 +92,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 
 	@Override
 	public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
-		HiveTableInfo hiveTableInfo = new HiveTableInfo(properties).invoke();
+		HiveTableInfo hiveTableInfo = new HiveTableInfo(properties);
 		// todo: solve dynamic partition table write problem
 		return new HiveTableSink(new JobConf(hiveTableInfo.getHiveConf()),
 								new RowTypeInfo(hiveTableInfo.getTypeInformations(),
@@ -163,6 +163,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 
 		public HiveTableInfo(Map<String, String> props) {
 			this.props = props;
+			build();
 		}
 
 		public HiveConf getHiveConf() {
@@ -197,7 +198,7 @@ public class HiveTableFactory implements BatchTableSourceFactory<BaseRow>, Table
 			return partitionColumns;
 		}
 
-		public HiveTableInfo invoke() {
+		private HiveTableInfo build() {
 			hiveConf = new HiveConf();
 			tableStats = null;
 			for (Map.Entry<String, String> prop : props.entrySet()) {

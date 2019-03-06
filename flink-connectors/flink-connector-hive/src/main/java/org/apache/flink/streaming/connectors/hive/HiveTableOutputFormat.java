@@ -26,33 +26,19 @@ import org.apache.flink.api.java.hadoop.mapreduce.utils.HadoopUtils;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.runtime.conversion.DataStructureConverters;
 import org.apache.flink.table.types.InternalType;
 import org.apache.flink.table.types.TypeConverters;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.SerDeUtils;
-import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
-import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
-import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
-import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.MapTypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.JobContext;
@@ -76,11 +62,9 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import static org.apache.flink.api.java.hadoop.common.HadoopInputFormatCommonBase.getCredentialsFromUGI;
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.DEFAULT_LIST_COLUMN_TYPES_SEPARATOR;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.OUTDIR;
 
 /**
@@ -109,10 +93,9 @@ public class HiveTableOutputFormat extends HadoopOutputFormatCommonBase<BaseRow>
 	private String[] partitionColNames;
 	private transient AbstractSerDe serializer;
 	private transient List<? extends StructField> fieldRefs;
-	private transient StructObjectInspector soi;
+	//StructObjectInspector represents the hive row structure.
 	private transient StructObjectInspector sois;
 	private transient HiveTablePartition hiveTablePartition;
-	private transient GenericRow reuse;
 	protected OutputFormat mapredOutputFormat;
 	protected transient RecordWriter recordWriter;
 	protected transient OutputCommitter outputCommitter;
@@ -205,10 +188,10 @@ public class HiveTableOutputFormat extends HadoopOutputFormatCommonBase<BaseRow>
 			serializer = (AbstractSerDe) Class.forName(sd.getSerdeInfo().getSerializationLib()).newInstance();
 			ReflectionUtils.setConf(serializer, context.getConfiguration());
 			org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration();
-			Properties properties = createPropertiesFromStorageDescriptor(sd);
+			Properties properties = HiveTableUtil.createPropertiesFromStorageDescriptor(sd);
 			SerDeUtils.initializeSerDe(serializer, conf, properties, null);
 			// Get the row structure
-			soi = (StructObjectInspector) serializer.getObjectInspector();
+			StructObjectInspector soi = (StructObjectInspector) serializer.getObjectInspector();
 			fieldRefs = soi.getAllStructFieldRefs();
 		} catch (Exception e) {
 			logger.error("Error happens when deserialize from storage file.");
@@ -218,14 +201,8 @@ public class HiveTableOutputFormat extends HadoopOutputFormatCommonBase<BaseRow>
 		List<ObjectInspector> objectInspectors = new ArrayList<>();
 		for (int i = 0; i < fieldTypes.length; i++) {
 			fieldTypes[i] = TypeConverters.createInternalTypeFromTypeInfo(rowTypeInfo.getTypeAt(i));
-
-//			objectInspectors.add(getObjectInspector());
+			objectInspectors.add(HiveTableUtil.getObjectInspector(rowTypeInfo.getTypeAt(i).getTypeClass()));
 		}
-		//just to test run e2e completely.
-		objectInspectors.add(getObjectInspector(TypeInfoFactory.intTypeInfo));
-		objectInspectors.add(getObjectInspector(TypeInfoFactory.intTypeInfo));
-		objectInspectors.add(getObjectInspector(TypeInfoFactory.stringTypeInfo));
-
 		converters = new DataStructureConverters.DataStructureConverter[fieldTypes.length];
 		sois = ObjectInspectorFactory.getStandardStructObjectInspector(Arrays.asList(rowTypeInfo.getFieldNames()),
 																	objectInspectors);
@@ -312,67 +289,5 @@ public class HiveTableOutputFormat extends HadoopOutputFormatCommonBase<BaseRow>
 			res.add(converters[i].toExternal(record, i));
 		}
 		return res;
-	}
-
-	private static ObjectInspector getObjectInspector(TypeInfo type) throws IOException {
-
-		switch (type.getCategory()) {
-
-			case PRIMITIVE:
-				PrimitiveTypeInfo primitiveType = (PrimitiveTypeInfo) type;
-				return PrimitiveObjectInspectorFactory.getPrimitiveJavaObjectInspector(primitiveType);
-
-			case MAP:
-				MapTypeInfo mapType = (MapTypeInfo) type;
-				MapObjectInspector mapInspector = ObjectInspectorFactory.getStandardMapObjectInspector(
-						getObjectInspector(mapType.getMapKeyTypeInfo()), getObjectInspector(mapType.getMapValueTypeInfo()));
-				return mapInspector;
-
-			case LIST:
-				ListTypeInfo listType = (ListTypeInfo) type;
-				ListObjectInspector listInspector = ObjectInspectorFactory.getStandardListObjectInspector(
-						getObjectInspector(listType.getListElementTypeInfo()));
-				return listInspector;
-
-			case STRUCT:
-				StructTypeInfo structType = (StructTypeInfo) type;
-				List<TypeInfo> fieldTypes = structType.getAllStructFieldTypeInfos();
-
-				List<ObjectInspector> fieldInspectors = new ArrayList<ObjectInspector>();
-				for (TypeInfo fieldType : fieldTypes) {
-					fieldInspectors.add(getObjectInspector(fieldType));
-				}
-
-				StructObjectInspector structInspector = ObjectInspectorFactory.getStandardStructObjectInspector(
-						structType.getAllStructFieldNames(), fieldInspectors);
-				return structInspector;
-
-			default:
-				throw new IOException("Unknown field schema type");
-		}
-	}
-
-	// --------------------------------------------------------------------------------------------
-	//  Helper methods
-	// --------------------------------------------------------------------------------------------
-
-	private static Properties createPropertiesFromStorageDescriptor(StorageDescriptor storageDescriptor) {
-		SerDeInfo serDeInfo = storageDescriptor.getSerdeInfo();
-		Map<String, String> parameters = serDeInfo.getParameters();
-		Properties properties = new Properties();
-		properties.setProperty(serdeConstants.SERIALIZATION_FORMAT, parameters.get(serdeConstants.SERIALIZATION_FORMAT));
-		List<String> colTypes = new ArrayList<>();
-		List<String> colNames = new ArrayList<>();
-		List<FieldSchema> cols = storageDescriptor.getCols();
-		for (FieldSchema col: cols){
-			colTypes.add(col.getType());
-			colNames.add(col.getName());
-		}
-		properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(colNames, ","));
-		properties.setProperty(serdeConstants.COLUMN_NAME_DELIMITER, ",");
-		properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, StringUtils.join(colTypes, DEFAULT_LIST_COLUMN_TYPES_SEPARATOR));
-		properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
-		properties.putAll(parameters);
-		return properties;
 	}
 }

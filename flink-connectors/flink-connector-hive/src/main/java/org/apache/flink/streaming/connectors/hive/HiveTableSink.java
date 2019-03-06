@@ -23,7 +23,6 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.catalog.hive.HiveCatalogUtil;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.TableSink;
@@ -31,26 +30,12 @@ import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.TypeConverters;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.mapred.JobConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_COMPRESSED;
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_INPUT_FORMAT;
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_LOCATION;
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_NUM_BUCKETS;
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_OUTPUT_FORMAT;
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_SERDE_LIBRARY;
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT;
 
 /**
  * Hive table sink class.
@@ -83,7 +68,7 @@ public class HiveTableSink implements BatchTableSink<BaseRow> {
 	@Override
 	public DataStreamSink<?> emitBoundedStream(
 			DataStream<BaseRow> boundedStream, TableConfig tableConfig, ExecutionConfig executionConfig) {
-		StorageDescriptor sd = createStorageDescriptor(jobConf, rowTypeInfo);
+		StorageDescriptor sd = HiveTableUtil.createStorageDescriptor(jobConf, rowTypeInfo);
 		HiveTablePartition hiveTablePartition = new HiveTablePartition(sd, null);
 		HiveTableOutputFormat hiveTableOutputFormat = new HiveTableOutputFormat(jobConf, false, partitionCols,
 																				rowTypeInfo, hiveTablePartition);
@@ -114,35 +99,5 @@ public class HiveTableSink implements BatchTableSink<BaseRow> {
 	public TableSink<BaseRow> configure(
 			String[] fieldNames, DataType[] fieldTypes) {
 		return new HiveTableSink(jobConf, rowTypeInfo, dbName, tableName, partitionCols, partitionValues);
-	}
-
-	private static StorageDescriptor createStorageDescriptor(JobConf jobConf, RowTypeInfo rowTypeInfo) {
-		StorageDescriptor storageDescriptor = new StorageDescriptor();
-		storageDescriptor.setLocation(jobConf.get(HIVE_TABLE_LOCATION));
-		storageDescriptor.setInputFormat(jobConf.get(HIVE_TABLE_INPUT_FORMAT));
-		storageDescriptor.setOutputFormat(jobConf.get(HIVE_TABLE_OUTPUT_FORMAT));
-		storageDescriptor.setCompressed(Boolean.parseBoolean(jobConf.get(HIVE_TABLE_COMPRESSED)));
-		storageDescriptor.setNumBuckets(Integer.parseInt(jobConf.get(HIVE_TABLE_NUM_BUCKETS)));
-
-		SerDeInfo serDeInfo = new SerDeInfo();
-		serDeInfo.setSerializationLib(jobConf.get(HIVE_TABLE_SERDE_LIBRARY));
-		Map<String, String> parameters = new HashMap<>();
-		parameters.put(serdeConstants.SERIALIZATION_FORMAT, jobConf.get(HIVE_TABLE_STORAGE_SERIALIZATION_FORMAT));
-		serDeInfo.setParameters(parameters);
-		List<FieldSchema> fieldSchemas = new ArrayList<>();
-		for (int i = 0; i < rowTypeInfo.getArity(); i++) {
-			String hiveType = HiveCatalogUtil.convert(TypeConverters.createInternalTypeFromTypeInfo(rowTypeInfo.getFieldTypes()[i]));
-			if (null == hiveType) {
-				logger.error("Now we don't support flink type of " + rowTypeInfo.getFieldTypes()[i]
-							+ " converting from hive");
-				throw new RuntimeException("Now we don't support flink's type of "
-											+ rowTypeInfo.getFieldTypes()[i] + " converting from hive");
-			}
-			fieldSchemas.add(
-					new FieldSchema(rowTypeInfo.getFieldNames()[i], hiveType, ""));
-		}
-		storageDescriptor.setCols(fieldSchemas);
-		storageDescriptor.setSerdeInfo(serDeInfo);
-		return storageDescriptor;
 	}
 }

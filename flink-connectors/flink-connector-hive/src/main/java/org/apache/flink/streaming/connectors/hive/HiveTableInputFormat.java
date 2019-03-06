@@ -26,21 +26,15 @@ import org.apache.flink.api.java.hadoop.mapred.wrapper.HadoopDummyReporter;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.core.fs.FileStatus;
-import org.apache.flink.core.fs.FileSystem;
-import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.InputSplitAssigner;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.table.sources.Partition;
 import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
@@ -62,10 +56,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
-import static org.apache.flink.table.catalog.hive.config.HiveTableConfig.DEFAULT_LIST_COLUMN_TYPES_SEPARATOR;
 import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR;
 
 /**
@@ -156,7 +148,7 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 		try {
 			deserializer = (Deserializer) Class.forName(sd.getSerdeInfo().getSerializationLib()).newInstance();
 			Configuration conf = new Configuration();
-			Properties properties = createPropertiesFromStorageDescriptor(sd);
+			Properties properties = HiveTableUtil.createPropertiesFromStorageDescriptor(sd);
 			SerDeUtils.initializeSerDe(deserializer, conf, properties, null);
 			// Get the row structure
 			oi = (StructObjectInspector) deserializer.getObjectInspector();
@@ -215,7 +207,7 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 		try {
 			final org.apache.hadoop.fs.Path[] paths = FileInputFormat.getInputPaths(this.jobConf);
 
-			return getFileStats(cachedFileStats, paths, new ArrayList<FileStatus>(1));
+			return HiveTableUtil.getFileStats(cachedFileStats, paths, new ArrayList<FileStatus>(1));
 		} catch (IOException ioex) {
 			if (logger.isWarnEnabled()) {
 				logger.warn("Could not determine statistics due to an io error: "
@@ -325,82 +317,6 @@ public class HiveTableInputFormat extends HadoopInputFormatCommonBase<BaseRow, H
 
 		partitionColNames = (String[]) in.readObject();
 		partitions = (List<Partition>) in.readObject();
-	}
-
-	// --------------------------------------------------------------------------------------------
-	//  Helper methods
-	// --------------------------------------------------------------------------------------------
-
-	private static Properties createPropertiesFromStorageDescriptor(StorageDescriptor storageDescriptor) {
-		SerDeInfo serDeInfo = storageDescriptor.getSerdeInfo();
-		Map<String, String> parameters = serDeInfo.getParameters();
-		Properties properties = new Properties();
-		properties.setProperty(serdeConstants.SERIALIZATION_FORMAT,
-			parameters.get(serdeConstants.SERIALIZATION_FORMAT));
-		List<String> colTypes = new ArrayList<>();
-		List<String> colNames = new ArrayList<>();
-		List<FieldSchema> cols = storageDescriptor.getCols();
-		for (FieldSchema col: cols){
-			colTypes.add(col.getType());
-			colNames.add(col.getName());
-		}
-		properties.setProperty(serdeConstants.LIST_COLUMNS, StringUtils.join(colNames, ","));
-		properties.setProperty(serdeConstants.COLUMN_NAME_DELIMITER, ",");
-		properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, StringUtils.join(colTypes, DEFAULT_LIST_COLUMN_TYPES_SEPARATOR));
-		properties.setProperty(serdeConstants.SERIALIZATION_NULL_FORMAT, "NULL");
-		properties.putAll(parameters);
-		return properties;
-	}
-
-	private org.apache.flink.api.common.io.FileInputFormat.FileBaseStatistics getFileStats(
-			org.apache.flink.api.common.io.FileInputFormat.FileBaseStatistics cachedStats, org.apache.hadoop.fs.Path[] hadoopFilePaths,
-			ArrayList<FileStatus> files) throws IOException {
-
-		long latestModTime = 0L;
-
-		// get the file info and check whether the cached statistics are still valid.
-		for (org.apache.hadoop.fs.Path hadoopPath : hadoopFilePaths) {
-
-			final Path filePath = new Path(hadoopPath.toUri());
-			final FileSystem fs = FileSystem.get(filePath.toUri());
-
-			final FileStatus file = fs.getFileStatus(filePath);
-			latestModTime = Math.max(latestModTime, file.getModificationTime());
-
-			// enumerate all files and check their modification time stamp.
-			if (file.isDir()) {
-				FileStatus[] fss = fs.listStatus(filePath);
-				files.ensureCapacity(files.size() + fss.length);
-
-				for (FileStatus s : fss) {
-					if (!s.isDir()) {
-						files.add(s);
-						latestModTime = Math.max(s.getModificationTime(), latestModTime);
-					}
-				}
-			} else {
-				files.add(file);
-			}
-		}
-
-		// check whether the cached statistics are still valid, if we have any
-		if (cachedStats != null && latestModTime <= cachedStats.getLastModificationTime()) {
-			return cachedStats;
-		}
-
-		// calculate the whole length
-		long len = 0;
-		for (FileStatus s : files) {
-			len += s.getLen();
-		}
-
-		// sanity check
-		if (len <= 0) {
-			len = BaseStatistics.SIZE_UNKNOWN;
-		}
-
-		return new org.apache.flink.api.common.io.FileInputFormat.FileBaseStatistics(latestModTime, len,
-																					BaseStatistics.AVG_RECORD_BYTES_UNKNOWN);
 	}
 
 	/**
