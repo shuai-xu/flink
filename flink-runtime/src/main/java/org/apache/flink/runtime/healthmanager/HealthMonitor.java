@@ -54,6 +54,7 @@ import org.apache.flink.runtime.healthmanager.plugins.resolvers.DirectMemoryAdju
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.HeapMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.NativeMemoryAdjuster;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.ParallelismScaler;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 
 import org.apache.commons.lang3.StringUtils;
@@ -61,8 +62,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -82,31 +86,10 @@ public class HealthMonitor {
 					.defaultValue(RescaleResourcePriorActionSelector.class.getCanonicalName());
 
 	public static final ConfigOption<String> DETECTOR_CLASSES =
-			ConfigOptions.key("healthmonitor.detector.classes")
-					.defaultValue(HighCpuDetector.class.getCanonicalName() + ","
-						+ LowCpuDetector.class.getCanonicalName() + ","
-						+ HeapOOMDetector.class.getCanonicalName() + ","
-						+ FrequentFullGCDetector.class.getCanonicalName() + ","
-						+ LongTimeFullGCDetector.class.getCanonicalName() + ","
-						+ DirectOOMDetector.class.getCanonicalName() + ","
-						+ HighNativeMemoryDetector.class.getCanonicalName() + ","
-						+ KilledDueToMemoryExceedDetector.class.getCanonicalName() + ","
-						+ LowMemoryDetector.class.getCanonicalName() + ","
-						+ HighDelayDetector.class.getCanonicalName() + ","
-						+ LowDelayDetector.class.getCanonicalName() + ","
-						+ DelayIncreasingDetector.class.getCanonicalName() + ","
-						+ OverParallelizedDetector.class.getCanonicalName() + ","
-						+ FailoverDetector.class.getCanonicalName() + ","
-						+ JobStableDetector.class.getCanonicalName() + ","
-						+ JobStuckDetector.class.getCanonicalName());
+			ConfigOptions.key("healthmonitor.detector.classes").noDefaultValue();
 
 	public static final ConfigOption<String> RESOLVER_CLASSES =
-			ConfigOptions.key("healthmonitor.resolver.classes")
-					.defaultValue(CpuAdjuster.class.getCanonicalName() + ","
-						+ HeapMemoryAdjuster.class.getCanonicalName() + ","
-						+ DirectMemoryAdjuster.class.getCanonicalName() + ","
-						+ NativeMemoryAdjuster.class.getCanonicalName() + ","
-						+ ParallelismScaler.class.getCanonicalName());
+			ConfigOptions.key("healthmonitor.resolver.classes").noDefaultValue();
 
 	private JobID jobID;
 	private Configuration config;
@@ -223,9 +206,34 @@ public class HealthMonitor {
 	}
 
 	private void loadDetectors() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
-		String[] detectorClazzs = config.getString(DETECTOR_CLASSES).split(",");
+		Set<String> detectorClazzs = new HashSet<>();
+		if (config.getString(DETECTOR_CLASSES) != null) {
+			detectorClazzs.addAll(Arrays.asList(config.getString(DETECTOR_CLASSES).split(",")));
+		} else {
+			if (config.getBoolean(HealthMonitorOptions.ENABLE_PARALLELISM_RESCALE)) {
+				detectorClazzs.add(HighDelayDetector.class.getCanonicalName());
+				detectorClazzs.add(LowDelayDetector.class.getCanonicalName());
+				detectorClazzs.add(DelayIncreasingDetector.class.getCanonicalName());
+				detectorClazzs.add(OverParallelizedDetector.class.getCanonicalName());
+				detectorClazzs.add(FailoverDetector.class.getCanonicalName());
+				detectorClazzs.add(JobStableDetector.class.getCanonicalName());
+				detectorClazzs.add(JobStuckDetector.class.getCanonicalName());
+			}
+			if (config.getBoolean(HealthMonitorOptions.ENABLE_RESOURCE_RESCALE)) {
+				detectorClazzs.add(HighCpuDetector.class.getCanonicalName());
+				detectorClazzs.add(LowCpuDetector.class.getCanonicalName());
+				detectorClazzs.add(HeapOOMDetector.class.getCanonicalName());
+				detectorClazzs.add(FrequentFullGCDetector.class.getCanonicalName());
+				detectorClazzs.add(LongTimeFullGCDetector.class.getCanonicalName());
+				detectorClazzs.add(DirectOOMDetector.class.getCanonicalName());
+				detectorClazzs.add(HighNativeMemoryDetector.class.getCanonicalName());
+				detectorClazzs.add(KilledDueToMemoryExceedDetector.class.getCanonicalName());
+				detectorClazzs.add(LowMemoryDetector.class.getCanonicalName());
+				detectorClazzs.add(JobStableDetector.class.getCanonicalName());
+			}
+		}
 		LOGGER.info("Load detectors:" + StringUtils.join(detectorClazzs, ","));
-		this.detectors = new ArrayList<>(detectorClazzs.length);
+		this.detectors = new ArrayList<>(detectorClazzs.size());
 		for (String clazz : detectorClazzs) {
 			Detector detector = (Detector) Class.forName(clazz.trim()).newInstance();
 			detectors.add(detector);
@@ -236,10 +244,23 @@ public class HealthMonitor {
 	}
 
 	private void loadResolvers() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
-		String[] clazzs = config.getString(RESOLVER_CLASSES).split(",");
-		LOGGER.info("Load resolvers:" + StringUtils.join(clazzs, ","));
-		this.resolvers = new ArrayList<>(clazzs.length);
-		for (String clazz : clazzs) {
+		Set<String> resolverClazzs = new HashSet<>();
+		if (config.getString(RESOLVER_CLASSES) != null) {
+			resolverClazzs.addAll(Arrays.asList(config.getString(RESOLVER_CLASSES).split(",")));
+		} else {
+			if (config.getBoolean(HealthMonitorOptions.ENABLE_PARALLELISM_RESCALE)) {
+				resolverClazzs.add(ParallelismScaler.class.getCanonicalName());
+			}
+			if (config.getBoolean(HealthMonitorOptions.ENABLE_RESOURCE_RESCALE)) {
+				resolverClazzs.add(CpuAdjuster.class.getCanonicalName());
+				resolverClazzs.add(HeapMemoryAdjuster.class.getCanonicalName());
+				resolverClazzs.add(DirectMemoryAdjuster.class.getCanonicalName());
+				resolverClazzs.add(NativeMemoryAdjuster.class.getCanonicalName());
+			}
+		}
+		LOGGER.info("Load resolvers:" + StringUtils.join(resolverClazzs, ","));
+		this.resolvers = new ArrayList<>(resolverClazzs.size());
+		for (String clazz : resolverClazzs) {
 			Resolver resolver = (Resolver) Class.forName(clazz.trim()).newInstance();
 			resolvers.add(resolver);
 			resolver.open(this);

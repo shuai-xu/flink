@@ -32,6 +32,12 @@ public class HealthMonitorOptions {
 	public static final ConfigOption<Boolean> ENABLE_HEALTH_MANAGER =
 			ConfigOptions.key("healthmanager.enabled").defaultValue(false);
 
+	public static final ConfigOption<Boolean> ENABLE_PARALLELISM_RESCALE =
+			ConfigOptions.key("healthmanager.parallelism.enabled").defaultValue(true);
+
+	public static final ConfigOption<Boolean> ENABLE_RESOURCE_RESCALE =
+		ConfigOptions.key("healthmanager.resource.enabled").defaultValue(true);
+
 	/**
 	 * max parallelism per workload.
 	 */

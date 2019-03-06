@@ -403,7 +403,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 					"Container trying to request with priority %s exceeds total resource limit, give up requesting.",
 					priority);
 				if (checkAllocateNewResourceExceedTotalResourceLimit(
-					containerResource.getVirtualCores() / yarnVcoreRatio, containerResource.getMemory(), errMsg)) {
+					containerResource.getVirtualCores() / yarnVcoreRatio, containerResource.getMemory(), errMsg, true)) {
 					int num = 1;
 					if (priorityToBlockedWorkers.containsKey(priority)) {
 						num = priorityToBlockedWorkers.get(priority) + 1;
@@ -583,8 +583,10 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 					if (checkAllocateNewResourceExceedTotalResourceLimit(
 						container.getResource().getVirtualCores() / yarnVcoreRatio,
 						container.getResource().getMemory(),
-						errMsg)) {
+						errMsg,
+						false)) {
 						resourceManagerClient.releaseAssignedContainer(container.getId());
+						priorityToBlockedWorkers.put(priority, priorityToBlockedWorkers.getOrDefault(priority, 0) + 1);
 						continue;
 					}
 
@@ -713,7 +715,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 				" Resource constraints {}.", resource, priority, pendingNumber.get(), constraints);
 	}
 
-	private boolean checkAllocateNewResourceExceedTotalResourceLimit(double cpu, int memory, String errMsg) {
+	private boolean checkAllocateNewResourceExceedTotalResourceLimit(double cpu, int memory, String errMsg, boolean includePending) {
 		if (maxTotalCpuCore == Double.MAX_VALUE && maxTotalMemoryMb == Integer.MAX_VALUE) {
 			return false;
 		}
@@ -730,12 +732,14 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			currentTotalMemory += resource.getMemory();
 		}
 
-		for (Map.Entry<Integer, AtomicInteger> entry : numPendingContainerRequests.entrySet()) {
-			Tuple2<TaskManagerResource, Set<SlotTag>> tuple = priorityToResourceAndTagsMap.get(entry.getKey());
-			TaskManagerResource taskManagerResource = tuple == null ? null : tuple.f0;
-			int num = entry.getValue().get();
-			currentTotalCpu += taskManagerResource.getContainerCpuCores() * num;
-			currentTotalMemory += taskManagerResource.getTotalContainerMemory() * num;
+		if (includePending) {
+			for (Map.Entry<Integer, AtomicInteger> entry : numPendingContainerRequests.entrySet()) {
+				Tuple2<TaskManagerResource, Set<SlotTag>> tuple = priorityToResourceAndTagsMap.get(entry.getKey());
+				TaskManagerResource taskManagerResource = tuple == null ? null : tuple.f0;
+				int num = entry.getValue().get();
+				currentTotalCpu += taskManagerResource.getContainerCpuCores() * num;
+				currentTotalMemory += taskManagerResource.getTotalContainerMemory() * num;
+			}
 		}
 
 		if (currentTotalCpu + cpu > maxTotalCpuCore || currentTotalMemory + memory > maxTotalMemoryMb) {
@@ -998,7 +1002,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 		for (Map.Entry<Integer, Integer> entry : priorityToBlockedWorkers.entrySet()) {
 			Resource resource = generateContainerResource(priorityToResourceAndTagsMap.get(entry.getKey()).f0);
 			if (checkAllocateNewResourceExceedTotalResourceLimit(
-				resource.getVirtualCores() / yarnVcoreRatio, resource.getMemory(), null)) {
+				resource.getVirtualCores() / yarnVcoreRatio, resource.getMemory(), null, true)) {
 				return entry.getKey();
 			}
 		}
