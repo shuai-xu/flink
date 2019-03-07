@@ -147,7 +147,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 
 	private final CompletableFuture<?> releaseFuture;
 
-	private final CompletableFuture<TaskManagerLocation> taskManagerLocationFuture;
+	private CompletableFuture<TaskManagerLocation> taskManagerLocationFuture;
 
 	private volatile ExecutionState state = CREATED;
 
@@ -280,7 +280,7 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	 * @return true if the slot could be assigned to the execution, otherwise false
 	 */
 	@VisibleForTesting
-	boolean tryAssignResource(final LogicalSlot logicalSlot) {
+	public boolean tryAssignResource(final LogicalSlot logicalSlot) {
 		checkNotNull(logicalSlot);
 
 		// only allow to set the assigned resource in state SCHEDULED or CREATED
@@ -502,6 +502,26 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		} else {
 			// call race, already deployed, or already done
 			throw new IllegalExecutionStateException(this, CREATED, state);
+		}
+	}
+
+	/**
+	 * Rollback from SCHEDULED to CREATED and release assigned slot. This is for group scheduling.
+	 *
+	 * @throws IllegalExecutionStateException if this method has been called while not being in the SCHEDULED state
+	 */
+	public void rollbackToCreatedAndReleaseSlot() throws IllegalStateException {
+
+		// this method only works if the execution is in the state 'SCHEDULED'
+		if (transitionState(SCHEDULED, CREATED)) {
+
+			ASSIGNED_SLOT_UPDATER.set(this, null);
+			taskManagerLocationFuture = new CompletableFuture<>();
+			assignedAllocationID = null;
+			LOG.info("{} is revoked assigned resource.", getVertexWithAttempt());
+		} else {
+			// call race, already deployed, or already done
+			throw new IllegalExecutionStateException(this, SCHEDULED, state);
 		}
 	}
 

@@ -21,7 +21,10 @@ package org.apache.flink.runtime.schedule;
 import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
+import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobmaster.ExecutionSlotAllocator;
+import org.apache.flink.runtime.jobmaster.GraphManager;
 
 /**
  * Basic interface for graph manager plugin which handles execution events and decides which execution vertices to schedule.
@@ -31,7 +34,13 @@ public interface GraphManagerPlugin {
 	/**
 	 * This method is called right after it is created, before the {@link VertexScheduler} is started.
 	 */
-	void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig config);
+	void open(
+			VertexScheduler scheduler,
+			JobGraph jobGraph,
+			SchedulingConfig config,
+			ExecutionGraph eg,
+			GraphManager graphManager,
+			ExecutionSlotAllocator executionSlotAllocator);
 
 	/**
 	 * This method is called when the {@link VertexScheduler} is stopped.

@@ -1315,7 +1315,7 @@ class JobManager(
         val operationLogManager = new OperationLogManager(
           OperationLogStoreLoader.loadOperationLogStore(jobGraph.getJobID(), conf))
         val graphManager =
-          new GraphManager(graphManagerPlugin, null, operationLogManager, executionGraph)
+          new GraphManager(graphManagerPlugin, operationLogManager, executionGraph)
         graphManager.open(jobGraph, new SchedulingConfig(conf, userCodeLoader))
         executionGraph.setGraphManager(graphManager)
         operationLogManager.start()

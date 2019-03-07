@@ -22,11 +22,14 @@ import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobmaster.ExecutionSlotAllocator;
+import org.apache.flink.runtime.jobmaster.GraphManager;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,7 +50,13 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 	private VertexInputTracker inputTracker;
 
 	@Override
-	public void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig config) {
+	public void open(
+			VertexScheduler scheduler,
+			JobGraph jobGraph,
+			SchedulingConfig config,
+			ExecutionGraph eg,
+			GraphManager graphManager,
+			ExecutionSlotAllocator executionSlotAllocator) {
 		checkNotNull(config);
 
 		this.scheduler = checkNotNull(scheduler);

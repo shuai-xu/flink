@@ -53,7 +53,7 @@ public class IntermediateResult {
 
 	private final int connectionIndex;
 
-	private final ResultPartitionType resultType;
+	private ResultPartitionType resultType;
 
 	private final AtomicInteger numberOfConsumablePartitions = new AtomicInteger();
 
@@ -160,6 +160,10 @@ public class IntermediateResult {
 
 	public ResultPartitionType getResultType() {
 		return resultType;
+	}
+
+	public void setResultType(ResultPartitionType resultType) {
+		this.resultType = resultType;
 	}
 
 	public int registerConsumer() {

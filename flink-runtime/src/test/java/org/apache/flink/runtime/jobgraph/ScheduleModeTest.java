@@ -44,13 +44,13 @@ public class ScheduleModeTest {
 		SchedulingConfig config = new SchedulingConfig(conf, this.getClass().getClassLoader());
 		conf.setString(ScheduleMode.class.getName(), ScheduleMode.LAZY_FROM_SOURCES.toString());
 		graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(conf, this.getClass().getClassLoader());
-		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config);
+		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config, null, null, null);
 		assertTrue(graphManagerPlugin.allowLazyDeployment());
 
 		JobGraph eagerJobGraph = mock(JobGraph.class);
 		when(eagerJobGraph.getJobType()).thenReturn(JobType.INFINITE_STREAM);
 		graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(conf, this.getClass().getClassLoader());
-		graphManagerPlugin.open(mock(VertexScheduler.class), eagerJobGraph, config);
+		graphManagerPlugin.open(mock(VertexScheduler.class), eagerJobGraph, config, null, null, null);
 		assertFalse(graphManagerPlugin.allowLazyDeployment());
 	}
 }

@@ -1567,7 +1567,6 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		GraphManager graphManager = new GraphManager(
 				graphManagerPlugin,
-				getSelfGateway(JobMasterGateway.class),
 				operationLogManager,
 				executionGraph);
 		graphManager.open(jobGraph, new SchedulingConfig(configuration, userCodeLoader));

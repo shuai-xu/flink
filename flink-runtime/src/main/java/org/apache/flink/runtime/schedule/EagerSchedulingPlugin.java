@@ -21,10 +21,13 @@ package org.apache.flink.runtime.schedule;
 import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
+import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 
+import org.apache.flink.runtime.jobmaster.ExecutionSlotAllocator;
+import org.apache.flink.runtime.jobmaster.GraphManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +48,13 @@ public class EagerSchedulingPlugin implements GraphManagerPlugin {
 	private JobGraph jobGraph;
 
 	@Override
-	public void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig config) {
+	public void open(
+			VertexScheduler scheduler,
+			JobGraph jobGraph,
+			SchedulingConfig config,
+			ExecutionGraph eg,
+			GraphManager graphManager,
+			ExecutionSlotAllocator executionSlotAllocator) {
 		checkNotNull(config);
 
 		this.scheduler = checkNotNull(scheduler);

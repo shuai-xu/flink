@@ -21,7 +21,10 @@ package org.apache.flink.runtime.schedule;
 import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
+import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobmaster.ExecutionSlotAllocator;
+import org.apache.flink.runtime.jobmaster.GraphManager;
 
 /**
  * Utils for scheduling tests.
@@ -34,7 +37,13 @@ public class SchedulingTestUtils {
 	public static class TestGraphManagerPlugin implements GraphManagerPlugin {
 
 		@Override
-		public void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig config) {
+		public void open(
+				VertexScheduler scheduler,
+				JobGraph jobGraph,
+				SchedulingConfig config,
+				ExecutionGraph eg,
+				GraphManager graphManager,
+				ExecutionSlotAllocator executionSlotAllocator) {
 
 		}
 

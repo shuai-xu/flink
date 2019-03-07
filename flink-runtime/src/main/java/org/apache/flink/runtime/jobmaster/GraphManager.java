@@ -20,6 +20,7 @@ package org.apache.flink.runtime.jobmaster;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
@@ -48,6 +49,8 @@ import org.apache.flink.runtime.jobmaster.failover.OperationLogManager;
 import org.apache.flink.runtime.jobmaster.failover.Replayable;
 import org.apache.flink.runtime.jobmaster.failover.ResultDescriptor;
 import org.apache.flink.runtime.jobmaster.failover.ResultPartitionOperationLog;
+import org.apache.flink.runtime.schedule.ConcurrentGroupGraphManagerPlugin;
+import org.apache.flink.runtime.schedule.ConcurrentSchedulingGroup;
 import org.apache.flink.runtime.schedule.ExecutionVertexStatus;
 import org.apache.flink.runtime.schedule.GraphManagerPlugin;
 import org.apache.flink.runtime.schedule.ResultPartitionStatus;
@@ -84,11 +87,12 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 
 	private final List<Collection<ExecutionVertexID>> executionVerticesToBeScheduled;
 
-	private volatile boolean isReconciling;
+	private final List<ConcurrentSchedulingGroup> groupsToBeScheduled;
+
+	private volatile Boolean isReconciling;
 
 	public GraphManager(
 			GraphManagerPlugin graphManagerPlugin,
-			JobMasterGateway jobMasterGateway,
 			OperationLogManager operationLogManager,
 			ExecutionGraph executionGraph) {
 		this.graphManagerPlugin = checkNotNull(graphManagerPlugin);
@@ -96,10 +100,21 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 		this.executionGraph = checkNotNull(executionGraph);
 
 		this.executionVerticesToBeScheduled = new LinkedList<>();
+		this.groupsToBeScheduled = new ArrayList<>();
+		this.isReconciling = new Boolean(false);
 	}
 
 	public void open(JobGraph jobGraph, SchedulingConfig config) {
-		graphManagerPlugin.open(new ExecutionGraphVertexScheduler(), jobGraph, config);
+		graphManagerPlugin.open(
+				new ExecutionGraphVertexScheduler(),
+				jobGraph,
+				config,
+				executionGraph,
+				this,
+				new BestEffortExecutionSlotAllocator(
+						executionGraph.getSlotProvider(),
+						jobGraph.getAllowQueuedScheduling(),
+						Time.minutes(5)));
 	}
 
 	/**
@@ -138,11 +153,27 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 	}
 
 	public void leaveReconcile() {
-		synchronized (executionVerticesToBeScheduled) {
+		synchronized (isReconciling) {
 			for (Collection<ExecutionVertexID> executionVertexIDS : executionVerticesToBeScheduled) {
 				executionGraph.scheduleVertices(executionVertexIDS);
 			}
+			for (ConcurrentSchedulingGroup group : groupsToBeScheduled) {
+				if (graphManagerPlugin instanceof ConcurrentGroupGraphManagerPlugin) {
+					((ConcurrentGroupGraphManagerPlugin) graphManagerPlugin).scheduleGroup(group);
+				}
+			}
 			isReconciling = false;
+		}
+	}
+
+	public boolean cacheGroupIfReconciling(ConcurrentSchedulingGroup group) {
+		synchronized (isReconciling) {
+			if (isReconciling) {
+				groupsToBeScheduled.add(group);
+				return true;
+			} else {
+				return false;
+			}
 		}
 	}
 
@@ -343,7 +374,7 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 
 		@Override
 		public void scheduleExecutionVertices(Collection<ExecutionVertexID> verticesToSchedule) {
-			synchronized (executionVerticesToBeScheduled) {
+			synchronized (isReconciling) {
 				if (isReconciling) {
 					executionVerticesToBeScheduled.add(verticesToSchedule);
 					return;
@@ -375,7 +406,6 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 
 			return vertex.getAggregateState();
 		}
-
 
 		@Override
 		public ResultPartitionStatus getResultPartitionStatus(IntermediateDataSetID resultID, int partitionNumber) {

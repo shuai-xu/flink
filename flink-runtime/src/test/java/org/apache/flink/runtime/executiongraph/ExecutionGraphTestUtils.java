@@ -588,7 +588,6 @@ public class ExecutionGraphTestUtils {
 		GraphManagerPlugin graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(conf, classLoader);
 		GraphManager graphManager = new GraphManager(
 				graphManagerPlugin,
-				mock(JobMasterGateway.class),
 				mock(OperationLogManager.class),
 				eg);
 		graphManager.open(jobGraph, new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));
@@ -727,7 +726,6 @@ public class ExecutionGraphTestUtils {
 		GraphManagerPlugin graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(conf, classLoader);
 		GraphManager graphManager = new GraphManager(
 				graphManagerPlugin,
-				mock(JobMasterGateway.class),
 				mock(OperationLogManager.class),
 				eg);
 		graphManager.open(jobGraph, new SchedulingConfig(conf, ExecutionGraphTestUtils.class.getClassLoader()));

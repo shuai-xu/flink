@@ -23,10 +23,13 @@ import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
 import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobmaster.ExecutionSlotAllocator;
+import org.apache.flink.runtime.jobmaster.GraphManager;
 import org.apache.flink.runtime.schedule.GraphManagerPlugin;
 import org.apache.flink.runtime.schedule.SchedulingConfig;
 import org.apache.flink.runtime.schedule.VertexScheduler;
@@ -79,7 +82,13 @@ public class RunningUnitGraphManagerPlugin implements GraphManagerPlugin {
 	private JobGraph jobGraph;
 
 	@Override
-	public void open(VertexScheduler scheduler, JobGraph jobGraph, SchedulingConfig schedulingConfig) {
+	public void open(
+			VertexScheduler scheduler,
+			JobGraph jobGraph,
+			SchedulingConfig schedulingConfig,
+			ExecutionGraph eg,
+			GraphManager graphManager,
+			ExecutionSlotAllocator executionSlotAllocator) {
 		try {
 			Map<JobVertexID, ArrayList<Integer>> vertexToStreamNodeIds = InstantiationUtil.readObjectFromConfig(schedulingConfig.getConfiguration(), JOB_VERTEX_TO_STREAM_NODE_MAP, schedulingConfig.getUserClassLoader());
 			List<NodeRunningUnit> nodeRunningUnits = InstantiationUtil.readObjectFromConfig(schedulingConfig.getConfiguration(), RUNNING_UNIT_CONF_KEY, schedulingConfig.getUserClassLoader());

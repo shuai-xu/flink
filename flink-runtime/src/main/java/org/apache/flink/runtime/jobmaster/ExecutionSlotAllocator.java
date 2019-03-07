@@ -16,33 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.schedule;
+package org.apache.flink.runtime.jobmaster;
 
-import org.apache.flink.runtime.executiongraph.ExecutionVertex;
+import org.apache.flink.runtime.executiongraph.Execution;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
 
 /**
- * ConcurrentSchedulingGroup contains the execution vertices which should be scheduled at the same time.
+ * Interface for allocating slots for executions.
  */
-public class ConcurrentSchedulingGroup {
+public interface ExecutionSlotAllocator {
 
-	private final List<ExecutionVertex> executionVertices;
-
-	private final boolean hasPrecedingGroup;
-
-	ConcurrentSchedulingGroup(
-			List<ExecutionVertex> executionVertices,
-			boolean hasPrecedingGroup) {
-		this.executionVertices = executionVertices;
-		this.hasPrecedingGroup = hasPrecedingGroup;
-	}
-
-	public List<ExecutionVertex> getExecutionVertices() {
-		return executionVertices;
-	}
-
-	public boolean hasPrecedingGroup() {
-		return hasPrecedingGroup;
-	}
+	/**
+	 * Return the given slot to the slot owner.
+	 *
+	 * @param executions to allocate slots
+	 * @return Future which is completed if the slots could be returned, otherwise with exception
+	 */
+	CompletableFuture<Collection<Void>> allocateSlotsFor(Collection<Execution> executions);
 }

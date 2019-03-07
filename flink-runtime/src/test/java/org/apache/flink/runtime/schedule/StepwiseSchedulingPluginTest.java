@@ -104,7 +104,10 @@ public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+			null,
+			null,
+			null);
 
 		graphManagerPlugin.onSchedulingStarted();
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), vertices1));
@@ -210,7 +213,9 @@ public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+			null,
+			null, null);
 
 		graphManagerPlugin.onSchedulingStarted();
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), sourceVertices));
@@ -347,7 +352,10 @@ public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+			null,
+			null,
+			null);
 
 		graphManagerPlugin.onSchedulingStarted();
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), sourceVertices));
@@ -535,7 +543,10 @@ public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+			null,
+			null,
+			null);
 
 		graphManagerPlugin.onSchedulingStarted();
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), sourceVertices));
@@ -715,7 +726,10 @@ public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+			null,
+			null,
+			null);
 
 		graphManagerPlugin.onSchedulingStarted();
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), sourceVertices));
@@ -881,7 +895,10 @@ public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+			null,
+			null,
+			null);
 
 		graphManagerPlugin.onSchedulingStarted();
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), sourceVertices));

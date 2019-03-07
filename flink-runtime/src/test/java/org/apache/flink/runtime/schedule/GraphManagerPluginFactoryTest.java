@@ -46,14 +46,14 @@ public class GraphManagerPluginFactoryTest extends TestLogger {
 		jobConfig.setString(ScheduleMode.class.getName(), ScheduleMode.EAGER.toString());
 		graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
 			jobConfig, this.getClass().getClassLoader());
-		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config);
+		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config, null, null, null);
 		assertTrue(graphManagerPlugin instanceof ConcurrentGroupGraphManagerPlugin);
 		assertTrue(graphManagerPlugin.allowLazyDeployment());
 
 		jobConfig.setString(ScheduleMode.class.getName(), ScheduleMode.LAZY_FROM_SOURCES.toString());
 		graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
 			jobConfig, this.getClass().getClassLoader());
-		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config);
+		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config, null, null, null);
 		assertTrue(graphManagerPlugin instanceof ConcurrentGroupGraphManagerPlugin);
 		assertTrue(graphManagerPlugin.allowLazyDeployment());
 
@@ -61,7 +61,7 @@ public class GraphManagerPluginFactoryTest extends TestLogger {
 			"org.apache.flink.runtime.schedule.SchedulingTestUtils$TestGraphManagerPlugin");
 		graphManagerPlugin = GraphManagerPluginFactory.createGraphManagerPlugin(
 			jobConfig, Thread.currentThread().getContextClassLoader());
-		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config);
+		graphManagerPlugin.open(mock(VertexScheduler.class), mock(JobGraph.class), config, null, null, null);
 		assertTrue(graphManagerPlugin instanceof SchedulingTestUtils.TestGraphManagerPlugin);
 
 	}

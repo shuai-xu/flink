@@ -1343,6 +1343,14 @@ public class ExecutionGraph implements AccessExecutionGraph {
 		}
 	}
 
+	public void registerSchedulingFuture(CompletableFuture<Void> schedulingFuture) {
+		schedulingFutures.put(schedulingFuture, schedulingFuture);
+	}
+
+	public void unregisterSchedulingFuture(CompletableFuture<Void> schedulingFuture) {
+		schedulingFutures.remove(schedulingFuture);
+	}
+
 	public void restart(long expectedGlobalVersion) {
 		try {
 			synchronized (progressLock) {

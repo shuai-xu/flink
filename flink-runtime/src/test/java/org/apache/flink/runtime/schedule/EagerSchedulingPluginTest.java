@@ -84,7 +84,10 @@ public class EagerSchedulingPluginTest extends GraphManagerPluginTestBase {
 		graphManagerPlugin.open(
 			scheduler,
 			jobGraph,
-			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+			null,
+			null,
+			null);
 
 		graphManagerPlugin.onSchedulingStarted();
 		assertTrue(compareVertices(scheduler.getScheduledVertices(), vertices));
