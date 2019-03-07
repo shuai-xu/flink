@@ -28,8 +28,8 @@ public class RateTimelineAggregator extends TimelineAggregator {
 	private long nextIntervalKey = -1;
 	private long maxTimestamp = -1;
 	private long minTimestamp = -1;
-	private double max = Double.MIN_VALUE;
-	private double min = Double.MIN_VALUE;
+	private double max = Double.NEGATIVE_INFINITY;
+	private double min = Double.NEGATIVE_INFINITY;
 
 	public RateTimelineAggregator(long interval) {
 		super(interval);
@@ -47,7 +47,7 @@ public class RateTimelineAggregator extends TimelineAggregator {
 				minTimestamp = value.f0;
 			}
 		} else if (nextIntervalKey < value.f0 / interval) {
-			if (max != Double.MIN_VALUE && min != Double.MIN_VALUE && maxTimestamp != minTimestamp) {
+			if (max != Double.NEGATIVE_INFINITY && min != Double.NEGATIVE_INFINITY && maxTimestamp != minTimestamp) {
 				currentTimestamp = nextIntervalKey * interval;
 				currentValue = (max - min) * 1000.0D / (maxTimestamp - minTimestamp);
 			}

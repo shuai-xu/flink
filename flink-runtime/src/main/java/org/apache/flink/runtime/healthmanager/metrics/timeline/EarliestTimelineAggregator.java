@@ -27,7 +27,7 @@ public class EarliestTimelineAggregator extends TimelineAggregator {
 
 	private long nextIntervalKey = -1;
 	private long lastTimestamp = Long.MAX_VALUE;
-	private double lastValue = Double.MIN_VALUE;
+	private double lastValue = Double.NEGATIVE_INFINITY;
 
 	public EarliestTimelineAggregator(long interval) {
 		super(interval);

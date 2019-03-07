@@ -29,7 +29,7 @@ import org.apache.commons.lang3.NotImplementedException;
 public abstract class TimelineAggregator {
 
 	protected long currentTimestamp = -1;
-	protected double currentValue = Double.MIN_VALUE;
+	protected double currentValue = Double.NEGATIVE_INFINITY;
 
 	protected long interval;
 

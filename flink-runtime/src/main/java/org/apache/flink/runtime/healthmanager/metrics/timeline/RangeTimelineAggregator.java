@@ -28,8 +28,8 @@ public class RangeTimelineAggregator extends TimelineAggregator {
 	private long nextIntervalKey = -1;
 	private long maxTimestamp = -1;
 	private long minTimestamp = -1;
-	private double max = Double.MIN_VALUE;
-	private double min = Double.MIN_VALUE;
+	private double max = Double.NEGATIVE_INFINITY;
+	private double min = Double.NEGATIVE_INFINITY;
 
 	public RangeTimelineAggregator(long interval) {
 		super(interval);

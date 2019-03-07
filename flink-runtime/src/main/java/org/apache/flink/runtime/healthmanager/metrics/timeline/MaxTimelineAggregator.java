@@ -26,7 +26,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 public class MaxTimelineAggregator extends TimelineAggregator {
 
 	private long nextIntervalKey = -1;
-	private double max = Double.MIN_VALUE;
+	private double max = Double.NEGATIVE_INFINITY;
 
 	public MaxTimelineAggregator(long interval) {
 		super(interval);
@@ -37,7 +37,7 @@ public class MaxTimelineAggregator extends TimelineAggregator {
 		if (nextIntervalKey == value.f0 / interval && max < value.f1) {
 			max = value.f1;
 		} else if (nextIntervalKey < value.f0 / interval) {
-			if (max != Double.MIN_VALUE) {
+			if (max != Double.NEGATIVE_INFINITY) {
 				currentTimestamp = nextIntervalKey * interval;
 				currentValue = max;
 			}

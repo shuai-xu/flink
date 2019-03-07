@@ -26,7 +26,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 public class DeltaMinTimelineAggregator extends TimelineAggregator {
 
 	private long nextIntervalKey = -1;
-	private double min = Double.MIN_VALUE;
+	private double min = Double.NEGATIVE_INFINITY;
 
 	private long lastTimestamp = -1;
 	private double lastValue = 0;
@@ -48,7 +48,7 @@ public class DeltaMinTimelineAggregator extends TimelineAggregator {
 		if (nextIntervalKey == value.f0 / interval && min > delta) {
 			min = delta;
 		} else if (nextIntervalKey < value.f0 / interval) {
-			if (min != Double.MIN_VALUE) {
+			if (min != Double.NEGATIVE_INFINITY) {
 				currentTimestamp = nextIntervalKey * interval;
 				currentValue = min;
 			}

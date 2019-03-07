@@ -26,7 +26,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 public class DeltaMaxTimelineAggregator extends TimelineAggregator {
 
 	private long nextIntervalKey = -1;
-	private double max = Double.MIN_VALUE;
+	private double max = Double.NEGATIVE_INFINITY;
 	private long lastTimestamp = -1;
 	private double lastValue = 0;
 

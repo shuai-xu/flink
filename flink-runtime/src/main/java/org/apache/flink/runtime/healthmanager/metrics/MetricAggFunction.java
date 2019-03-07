@@ -110,7 +110,7 @@ public abstract class MetricAggFunction {
 		@Override
 		public Tuple2<Long, Double> getValue(List<Tuple2<Long, Double>> values) {
 			long timestamp = -1;
-			double value = Double.MIN_VALUE;
+			double value = Double.NEGATIVE_INFINITY;
 			for (Tuple2<Long, Double> timestampAndValue : values) {
 				if (timestampAndValue == null) {
 					return null;
