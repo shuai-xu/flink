@@ -122,7 +122,7 @@ public class HighDelayDetector implements Detector {
 		}
 
 		if (!jobVertexIDs.isEmpty()) {
-			LOGGER.info("High delay detected for vertices {}.", jobVertexIDs);
+			LOGGER.info("High delay detected for high delay vertices {} severe delay vertices {}.", jobVertexIDs, severeJobVertexIDs);
 			return new JobVertexHighDelay(jobID, jobVertexIDs, severeJobVertexIDs);
 		}
 		return null;

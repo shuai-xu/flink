@@ -146,7 +146,7 @@ public class ParallelismScalerTest {
 				1.1,
 				0,
 				0.1,
-				0,
+				1,
 				0.9,
 				0.1,
 				32
@@ -170,14 +170,14 @@ public class ParallelismScalerTest {
 				1.1,
 				0,
 				0.1,
-				0,
+				1,
 				0.9,
 				0.1,
 				32
 		);
 		allMetrics.put(vertexID, taskMetrics);
 
-		assertTrue(Math.abs(3.2 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
+		assertTrue(Math.abs(3.2 * 4 - scaler.getSubDagScaleUpRatio(allMetrics).get(vertexID)) < 1e-6);
 
 		// not parallel source
 		highDelay = new JobVertexHighDelay(jobID, Collections.singletonList(vertexID), Collections.singletonList(vertexID));
@@ -193,7 +193,7 @@ public class ParallelismScalerTest {
 				1.1,
 				0,
 				0.1,
-				0,
+				1,
 				0.9,
 				0.1,
 				32
@@ -212,7 +212,7 @@ public class ParallelismScalerTest {
 				1.1,
 				0,
 				0.1,
-				0,
+				1,
 				0.9,
 				0.1,
 				32

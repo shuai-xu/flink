@@ -707,14 +707,16 @@ public class ParallelismScaler implements Resolver {
 				// init ratio to make sure we can cache up the delay.
 				double ratio = 1 / (1 - metric.delayIncreasingRate) * scaleTpsRatio;
 
-				if (metric.isParallelSource) {
+				// only when workload > 0
+				if (metric.isParallelSource && metric.workload > 0) {
 					double maxTps = 1.0 / Math.max(metric.partitionLatency, metric.taskLatencyPerRecord - metric.waitOutputPerRecord) * metric.partitionCount;
 
-					// limit target tps to be max tps.
-					if (maxTps / metric.getInputTps() < ratio) {
+					if (highDelaySymptom != null && highDelaySymptom.getSevereJobVertexIDs().contains(vertexId)) {
+						// use max tps when delay is severe.
 						ratio = maxTps / metric.getInputTps();
-					} else if (highDelaySymptom != null && highDelaySymptom.getSevereJobVertexIDs().contains(vertexId)) {
-						ratio = maxTps / metric.getInputTps();
+					} else if (maxTps / metric.getInputTps() * scaleTpsRatio < ratio) {
+						// limit target tps to be max tps.
+						ratio = maxTps / metric.getInputTps() * scaleTpsRatio;
 					}
 				}
 
@@ -848,10 +850,10 @@ public class ParallelismScaler implements Resolver {
 			int targetParallelism = vertexConfig.getParallelism();
 			int maxParallelism = vertexConfig.getMaxParallelism();
 
-			// limit thread of parallel reader.
 			if (targetParallelisms.containsKey(vertexId)) {
 				targetParallelism = targetParallelisms.get(vertexId);
 				if (isSource.get(vertexId) && sourcePartitionCountSubs.get(vertexId).getValue() != null) {
+					// limit thread of parallel reader.
 					double partitionCount = sourcePartitionCountSubs.get(vertexId).getValue().f1;
 					if (partitionCount / targetParallelism > maxPartitionPerTask) {
 						targetParallelism = (int) Math.ceil(partitionCount / maxPartitionPerTask);
@@ -863,7 +865,7 @@ public class ParallelismScaler implements Resolver {
 
 				if (1.0 * targetParallelism / vertexConfig.getParallelism() <= reservedParallelismRatio &&
 						1.0 * vertexConfig.getParallelism() / targetParallelism <= reservedParallelismRatio) {
-					LOGGER.debug("Do not need to scale since the target parallelism within in reserved ratio");
+					LOGGER.debug("Do not need to scale {} since the target parallelism within in reserved ratio", vertexId);
 					targetParallelism = vertexConfig.getParallelism();
 				}
 
