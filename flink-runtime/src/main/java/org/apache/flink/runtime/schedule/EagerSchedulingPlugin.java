@@ -25,9 +25,9 @@ import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
-
 import org.apache.flink.runtime.jobmaster.ExecutionSlotAllocator;
 import org.apache.flink.runtime.jobmaster.GraphManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
