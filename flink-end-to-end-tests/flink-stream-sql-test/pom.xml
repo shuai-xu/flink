@@ -24,7 +24,7 @@
 	<parent>
 		<artifactId>flink-end-to-end-tests</artifactId>
 		<groupId>com.alibaba.blink</groupId>
-		<version>release-3.2-SNAPSHOT</version>
+		<version>blink-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
 

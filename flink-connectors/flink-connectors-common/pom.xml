@@ -28,7 +28,7 @@
 	<parent>
 		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-connectors</artifactId>
-		<version>release-3.2-SNAPSHOT</version>
+		<version>blink-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
 

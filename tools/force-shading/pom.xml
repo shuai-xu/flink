@@ -49,7 +49,7 @@ under the License.
 
 	<groupId>com.alibaba.blink</groupId>
 	<artifactId>force-shading</artifactId>
-	<version>release-3.2-SNAPSHOT</version>
+	<version>blink-3.2-SNAPSHOT</version>
 
 	<packaging>jar</packaging>
 

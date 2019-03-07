@@ -27,7 +27,7 @@ under the License.
 	<parent>
 		<groupId>com.alibaba.blink</groupId>
 		<artifactId>flink-parent</artifactId>
-		<version>release-3.2-SNAPSHOT</version>
+		<version>blink-3.2-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
 
