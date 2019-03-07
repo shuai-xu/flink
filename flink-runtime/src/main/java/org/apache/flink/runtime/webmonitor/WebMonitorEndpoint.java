@@ -671,6 +671,13 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 			responseHeaders
 		);
 
+		final UpdatingJobHandlers.UpdatingStatusHandler updatingStatusHandler = updatingJobHandlers.new UpdatingStatusHandler(
+			restAddressFuture,
+			leaderRetriever,
+			timeout,
+			responseHeaders
+		);
+
 		JobVertexBackPressureHandler jobVertexBackPressureHandler = new JobVertexBackPressureHandler(
 			restAddressFuture,
 			leaderRetriever,
@@ -803,6 +810,7 @@ public class WebMonitorEndpoint<T extends RestfulGateway> extends RestServerEndp
 		handlers.add(Tuple2.of(rescalingTriggerHandler.getMessageHeaders(), rescalingTriggerHandler));
 		handlers.add(Tuple2.of(rescalingStatusHandler.getMessageHeaders(), rescalingStatusHandler));
 		handlers.add(Tuple2.of(updatingTriggerHandler.getMessageHeaders(), updatingTriggerHandler));
+		handlers.add(Tuple2.of(updatingStatusHandler.getMessageHeaders(), updatingStatusHandler));
 		handlers.add(Tuple2.of(savepointDisposalTriggerHandler.getMessageHeaders(), savepointDisposalTriggerHandler));
 		handlers.add(Tuple2.of(savepointDisposalStatusHandler.getMessageHeaders(), savepointDisposalStatusHandler));
 

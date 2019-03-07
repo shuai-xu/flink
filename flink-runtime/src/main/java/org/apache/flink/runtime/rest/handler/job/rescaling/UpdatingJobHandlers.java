@@ -26,10 +26,13 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
 import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.async.AbstractAsynchronousOperationHandlers;
+import org.apache.flink.runtime.rest.handler.async.AsynchronousOperationInfo;
 import org.apache.flink.runtime.rest.handler.job.AsynchronousJobOperationKey;
+import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.JobIDPathParameter;
 import org.apache.flink.runtime.rest.messages.JobMessageParameters;
 import org.apache.flink.runtime.rest.messages.TriggerId;
+import org.apache.flink.runtime.rest.messages.TriggerIdPathParameter;
 import org.apache.flink.runtime.rest.messages.job.UpdatingJobRequest;
 import org.apache.flink.runtime.update.JobUpdateRequest;
 import org.apache.flink.runtime.update.action.JobUpdateAction;
@@ -37,6 +40,7 @@ import org.apache.flink.runtime.update.action.JobVertexRescaleAction;
 import org.apache.flink.runtime.update.action.JobVertexResourcesUpdateAction;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
+import org.apache.flink.util.SerializedThrowable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,6 +100,43 @@ public class UpdatingJobHandlers extends AbstractAsynchronousOperationHandlers<A
 		protected AsynchronousJobOperationKey createOperationKey(HandlerRequest<UpdatingJobRequest, JobMessageParameters> request) {
 			final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
 			return AsynchronousJobOperationKey.of(new TriggerId(), jobId);
+		}
+	}
+
+	/**
+	 * Handler which reports the status of the updating operation.
+	 */
+	public class UpdatingStatusHandler extends StatusHandler<RestfulGateway, AsynchronousOperationInfo, RescalingStatusMessageParameters> {
+
+		public UpdatingStatusHandler(
+			CompletableFuture<String> localRestAddress,
+			GatewayRetriever<? extends RestfulGateway> leaderRetriever,
+			Time timeout,
+			Map<String, String> responseHeaders) {
+			super(
+				localRestAddress,
+				leaderRetriever,
+				timeout,
+				responseHeaders,
+				UpdatingStatusHeaders.getInstance());
+		}
+
+		@Override
+		protected AsynchronousJobOperationKey getOperationKey(HandlerRequest<EmptyRequestBody, RescalingStatusMessageParameters> request) {
+			final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
+			final TriggerId triggerId = request.getPathParameter(TriggerIdPathParameter.class);
+
+			return AsynchronousJobOperationKey.of(triggerId, jobId);
+		}
+
+		@Override
+		protected AsynchronousOperationInfo exceptionalOperationResultResponse(Throwable throwable) {
+			return AsynchronousOperationInfo.completeExceptional(new SerializedThrowable(throwable));
+		}
+
+		@Override
+		protected AsynchronousOperationInfo operationResultResponse(Acknowledge operationResult) {
+			return AsynchronousOperationInfo.complete();
 		}
 	}
 }

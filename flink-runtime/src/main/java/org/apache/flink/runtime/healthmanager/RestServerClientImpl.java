@@ -29,8 +29,13 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.rest.RestClient;
 import org.apache.flink.runtime.rest.RestClientConfiguration;
+import org.apache.flink.runtime.rest.handler.async.AsynchronousOperationInfo;
+import org.apache.flink.runtime.rest.handler.async.TriggerResponse;
+import org.apache.flink.runtime.rest.handler.job.rescaling.RescalingStatusMessageParameters;
+import org.apache.flink.runtime.rest.handler.job.rescaling.UpdatingStatusHeaders;
 import org.apache.flink.runtime.rest.handler.job.rescaling.UpdatingTriggerHeaders;
 import org.apache.flink.runtime.rest.messages.EmptyMessageParameters;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
@@ -48,6 +53,7 @@ import org.apache.flink.runtime.rest.messages.ResourceSpecInfo;
 import org.apache.flink.runtime.rest.messages.ResponseBody;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionInfosHeaders;
 import org.apache.flink.runtime.rest.messages.TotalResourceLimitExceptionsInfos;
+import org.apache.flink.runtime.rest.messages.TriggerId;
 import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointMessageParameters;
 import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatisticDetailsHeaders;
 import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
@@ -66,6 +72,8 @@ import org.apache.flink.runtime.rest.messages.job.metrics.JobVertexSubtasksCompo
 import org.apache.flink.runtime.rest.messages.job.metrics.Metric;
 import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsHeaders;
 import org.apache.flink.runtime.rest.messages.job.metrics.TaskManagersComponentMetricsMessageParameters;
+import org.apache.flink.runtime.rest.messages.queue.AsynchronouslyCreatedResource;
+import org.apache.flink.runtime.rest.messages.queue.QueueStatus;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExceptionsInfos;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerExecutionVertexIdsInfo;
@@ -73,6 +81,7 @@ import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagerMessagePara
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskManagersExecutionVertexIdsInfo;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagerAllSubtaskCurrentAttemptsInfoHeaders;
 import org.apache.flink.runtime.rest.messages.taskmanager.TaskmanagersAllSubtaskCurrentAttemptsInfoHeaders;
+import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +97,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -100,14 +114,16 @@ public class RestServerClientImpl implements RestServerClient {
 
 	private RestClient restClient;
 	private URI baseUri;
+	private ScheduledExecutorService retryExecutorService;
 
 	public RestServerClientImpl(
 			String baseUrl, Configuration config, Executor executor) throws Exception {
 
 		RestClientConfiguration restClientConfiguration =
 				RestClientConfiguration.fromConfiguration(config);
-		restClient = new RestClient(restClientConfiguration, executor);
-		baseUri = new URI(baseUrl);
+		this.restClient = new RestClient(restClientConfiguration, executor);
+		this.baseUri = new URI(baseUrl);
+		this.retryExecutorService = Executors.newSingleThreadScheduledExecutor(new ExecutorThreadFactory("Flink-HealthManager-RestServerClient"));
 	}
 
 	public <M extends MessageHeaders<R, P, U>, U extends MessageParameters, R extends RequestBody, P extends ResponseBody> CompletableFuture<P> sendRequest(
@@ -367,7 +383,7 @@ public class RestServerClientImpl implements RestServerClient {
 	}
 
 	@Override
-	public void rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) throws IOException {
+	public CompletableFuture<Acknowledge> rescale(JobID jobId, Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource) throws IOException {
 
 		final UpdatingTriggerHeaders header = UpdatingTriggerHeaders.getInstance();
 		final JobMessageParameters parameters = header.getUnresolvedMessageParameters();
@@ -395,7 +411,33 @@ public class RestServerClientImpl implements RestServerClient {
 		}
 		final UpdatingJobRequest updatingJobRequest = new UpdatingJobRequest(vertexParallelismResourceJsonMap);
 		parameters.jobPathParameter.resolve(jobId);
-		sendRequest(header, parameters, updatingJobRequest);
+		final CompletableFuture<TriggerResponse> updatingTriggerResponseFuture = sendRequest(header, parameters, updatingJobRequest);
+		final CompletableFuture<AsynchronousOperationInfo> updatingOperationFuture = updatingTriggerResponseFuture.thenCompose(
+			(TriggerResponse triggerResponse) -> {
+				final TriggerId triggerId = triggerResponse.getTriggerId();
+				final UpdatingStatusHeaders updatingStatusHeaders = UpdatingStatusHeaders.getInstance();
+				final RescalingStatusMessageParameters rescalingStatusMessageParameters = updatingStatusHeaders.getUnresolvedMessageParameters();
+
+				rescalingStatusMessageParameters.jobPathParameter.resolve(jobId);
+				rescalingStatusMessageParameters.triggerIdPathParameter.resolve(triggerId);
+
+				return pollResourceAsync(() -> {
+					try {
+						return sendRequest(updatingStatusHeaders, rescalingStatusMessageParameters, EmptyRequestBody.getInstance());
+					} catch (IOException e) {
+						throw new CompletionException(e.getCause());
+					}
+				});
+			});
+
+		return updatingOperationFuture.thenApply(
+			(AsynchronousOperationInfo asynchronousOperationInfo) -> {
+				if (asynchronousOperationInfo.getFailureCause() == null) {
+					return Acknowledge.get();
+				} else {
+					throw new CompletionException(asynchronousOperationInfo.getFailureCause());
+				}
+			});
 	}
 
 	@Override
@@ -473,5 +515,32 @@ public class RestServerClientImpl implements RestServerClient {
 			}
 		}
 		return result;
+	}
+
+	private <R, A extends AsynchronouslyCreatedResource<R>> CompletableFuture<R> pollResourceAsync(
+		final Supplier<CompletableFuture<A>> resourceFutureSupplier) {
+		return pollResourceAsync(resourceFutureSupplier, new CompletableFuture<>(), 0);
+	}
+
+	private <R, A extends AsynchronouslyCreatedResource<R>> CompletableFuture<R> pollResourceAsync(
+		final Supplier<CompletableFuture<A>> resourceFutureSupplier,
+		final CompletableFuture<R> resultFuture,
+		final long attempt) {
+
+		resourceFutureSupplier.get().whenComplete((asynchronouslyCreatedResource, throwable) -> {
+			if (throwable != null) {
+				resultFuture.completeExceptionally(throwable);
+			} else {
+				if (asynchronouslyCreatedResource.queueStatus().getId() == QueueStatus.Id.COMPLETED) {
+					resultFuture.complete(asynchronouslyCreatedResource.resource());
+				} else {
+					retryExecutorService.schedule(() -> {
+						pollResourceAsync(resourceFutureSupplier, resultFuture, attempt + 1);
+					}, attempt * 1000 + 1000, TimeUnit.MILLISECONDS);
+				}
+			}
+		});
+
+		return resultFuture;
 	}
 }
