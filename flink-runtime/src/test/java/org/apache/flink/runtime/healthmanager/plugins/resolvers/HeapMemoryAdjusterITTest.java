@@ -189,7 +189,9 @@ public class HeapMemoryAdjusterITTest {
 		config.setString(HealthMonitor.DETECTOR_CLASSES, FrequentFullGCDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
+		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_THRESHOLD, 2);
 		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_SEVERE_THRESHOLD, 3);
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL, 60 * 1000L);
 
 		JobTMMetricSubscription gcTimeSub = Mockito.mock(JobTMMetricSubscription.class);
 		Mockito.when(gcTimeSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {

@@ -55,10 +55,12 @@ public class FrequentFullGCDetector implements Detector {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(FrequentFullGCDetector.class);
 
+	private static final long MINUTE = 60 * 1000L;
+
 	public static final ConfigOption<Integer> FULL_GC_COUNT_THRESHOLD =
-		ConfigOptions.key("healthmonitor.full-gc-detector.count.threshold").defaultValue(3);
+		ConfigOptions.key("healthmonitor.full-gc-detector.threshold.perMin").defaultValue(5);
 	public static final ConfigOption<Integer> FULL_GC_COUNT_SEVERE_THRESHOLD =
-		ConfigOptions.key("healthmonitor.full-gc-detector.count.severe-threshold").defaultValue(10);
+		ConfigOptions.key("healthmonitor.full-gc-detector.severe-threshold.perMin").defaultValue(10);
 
 	private JobID jobID;
 	private RestServerClient restServerClient;
@@ -79,9 +81,9 @@ public class FrequentFullGCDetector implements Detector {
 		restServerClient = monitor.getRestServerClient();
 		metricProvider = monitor.getMetricProvider();
 
-		gcCountThreshold = monitor.getConfig().getInteger(FULL_GC_COUNT_THRESHOLD);
-		gcCountSevereThreshold = monitor.getConfig().getInteger(FULL_GC_COUNT_SEVERE_THRESHOLD);
 		gcCheckInterval = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL);
+		gcCountThreshold = (int) (monitor.getConfig().getInteger(FULL_GC_COUNT_THRESHOLD) * (gcCheckInterval / MINUTE));
+		gcCountSevereThreshold = (int) (monitor.getConfig().getInteger(FULL_GC_COUNT_SEVERE_THRESHOLD) * (gcCheckInterval / MINUTE));
 
 		gcMetricSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.FULL_GC_COUNT_METRIC, gcCheckInterval, TimelineAggType.RANGE);
 	}

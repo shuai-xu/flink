@@ -54,7 +54,7 @@ public class HealthMonitorOptions {
 	 * parallelism check interval.
 	 */
 	public static final ConfigOption<Long> PARALLELISM_SCALE_INTERVAL =
-			ConfigOptions.key("parallelism.scale.interval.ms").defaultValue(3 * 60 * 1000L);
+			ConfigOptions.key("parallelism.scale.interval.ms").defaultValue(10 * 60 * 1000L);
 
 	/**
 	 * parallelism stable time.
@@ -83,7 +83,7 @@ public class HealthMonitorOptions {
 	 * parallelism scale time out.
 	 */
 	public static final ConfigOption<Long> PARALLELISM_SCALE_TIME_OUT =
-			ConfigOptions.key("parallelism.scale.timeout.ms").defaultValue(180000L);
+			ConfigOptions.key("parallelism.scale.timeout.ms").defaultValue(10 * 60 * 1000L);
 
 	public static final ConfigOption<Long> PARALLELISM_SCALE_STATE_SIZE_THRESHOLD =
 			ConfigOptions.key("parallelism.scale.state.size.threshold").defaultValue(10L * 1024 * 1024 * 1024);
@@ -128,5 +128,5 @@ public class HealthMonitorOptions {
 	 * resource scale time out.
 	 */
 	public static final ConfigOption<Long> RESOURCE_SCALE_TIME_OUT =
-		ConfigOptions.key("resource.scale.timeout.ms").defaultValue(180000L);
+		ConfigOptions.key("resource.scale.timeout.ms").defaultValue(10 * 60 * 1000L);
 }
