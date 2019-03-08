@@ -26,15 +26,22 @@ import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.messages.Acknowledge;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
  * Adjust resource and parallelism config for given vertex.
  */
 public class AdjustJobConfig implements Action {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(AdjustJobConfig.class);
 
 	protected JobID jobID;
 	protected Map<JobVertexID, Integer> currentParallelism;
@@ -43,6 +50,7 @@ public class AdjustJobConfig implements Action {
 	protected Map<JobVertexID, ResourceSpec> targetResource;
 	protected long timeoutMs;
 	protected ActionMode actionMode;
+	private Exception rescaleException = null;
 
 	public AdjustJobConfig(JobID jobID, long timeoutMs) {
 		this(jobID, timeoutMs, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(), ActionMode.IMMEDIATE);
@@ -98,7 +106,12 @@ public class AdjustJobConfig implements Action {
 			vertexParallelismResource.put(jvId, new Tuple2<>(targetParallelism.get(jvId), targetResource.get(jvId)));
 		}
 		if (!vertexParallelismResource.isEmpty()) {
-			restServerClient.rescale(jobID, vertexParallelismResource);
+			CompletableFuture<Acknowledge> rescaleFuture = restServerClient.rescale(jobID, vertexParallelismResource);
+			rescaleFuture.whenComplete((ignored, throwable) -> {
+				if (throwable != null) {
+					rescaleException = new Exception("Execute action failed.", throwable);
+				}
+			});
 		}
 	}
 
@@ -107,6 +120,10 @@ public class AdjustJobConfig implements Action {
 		long start = System.currentTimeMillis();
 		while (true) {
 			Thread.sleep(timeoutMs / 10);
+			if (rescaleException != null) {
+				LOGGER.error("Action {} execute failed because: ", this.toString(), rescaleException.getMessage());
+				return false;
+			}
 			RestServerClient.JobStatus jobStatus = restServerClient.getJobStatus(jobID);
 			int i = 0;
 			for (Tuple2<Long, ExecutionState> time2state: jobStatus.getTaskStatus().values()) {

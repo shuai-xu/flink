@@ -34,6 +34,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.resourcemanager.exceptions.ResourceManagerException;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -50,6 +51,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 public class ExceedMaxResourceLimitResolverTest {
 
 	@Test
+	@Ignore
 	public void testResolveExceedMaxResourceLimit() throws Exception {
 		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
 
