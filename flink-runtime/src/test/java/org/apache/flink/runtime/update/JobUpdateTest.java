@@ -56,6 +56,7 @@ import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.rpc.TestingRpcService;
 import org.apache.flink.runtime.testutils.InMemorySubmittedJobGraphStore;
+import org.apache.flink.runtime.update.action.JobConfigUpdateAction;
 import org.apache.flink.runtime.update.action.JobGraphReplaceAction;
 import org.apache.flink.runtime.update.action.JobUpdateAction;
 import org.apache.flink.runtime.update.action.JobVertexRescaleAction;
@@ -373,6 +374,79 @@ public class JobUpdateTest extends TestLogger {
 			assertEquals(ejvs2.get(0).getJobVertex().getPreferredResources().getCpuCores(), 2, 0.00001);
 			assertEquals(ejvs2.get(0).getJobVertex().getPreferredResources().getHeapMemory(), 200);
 			assertEquals(ejvs2.get(0).getJobVertexId(), source.getID());
+
+			// check if a concurrent error occurred
+			testingFatalErrorHandler.rethrowError();
+
+		} finally {
+			RpcUtils.terminateRpcEndpoint(jobMaster, testingTimeout);
+		}
+	}
+
+	@Test
+	public void testUpdatingJobConfigs() throws Exception {
+		// build one node JobGraph
+		JobVertex source = new JobVertex("vertex1");
+		source.setParallelism(1);
+		source.setInvokableClass(AbstractInvokable.class);
+		final JobGraph jobGraph = new JobGraph(source);
+		jobGraph.setAllowQueuedScheduling(true);
+		jobGraph.getJobConfiguration().setString("config1", "1");
+		jobGraph.getJobConfiguration().setString("config2", "2");
+
+		configuration.setLong(ConfigConstants.RESTART_STRATEGY_FIXED_DELAY_ATTEMPTS, 1);
+		configuration.setString(ConfigConstants.RESTART_STRATEGY_FIXED_DELAY_DELAY, "0 s");
+		final JobManagerSharedServices jobManagerSharedServices =
+			new TestingJobManagerSharedServicesBuilder()
+				.setRestartStrategyFactory(RestartStrategyFactory.createRestartStrategyFactory(configuration))
+				.build();
+
+		submittedJobGraphStore.putJobGraph(new SubmittedJobGraph(jobGraph, null));
+
+		final JobMaster jobMaster = createJobMaster(
+			configuration,
+			jobGraph,
+			haServices,
+			jobManagerSharedServices);
+
+		CompletableFuture<Acknowledge> startFuture = jobMaster.start(jobMasterId, testingTimeout);
+
+		try {
+			// wait for the start to complete
+			startFuture.get(testingTimeout.toMilliseconds(), TimeUnit.MILLISECONDS);
+
+			final JobMasterGateway jobMasterGateway = jobMaster.getSelfGateway(JobMasterGateway.class);
+
+			ExecutionGraph eg = jobMaster.getExecutionGraph();
+			List<ExecutionJobVertex> ejvs = new ArrayList(eg.getAllVertices().values());
+			assertEquals(ejvs.size(), 1);
+			assertEquals(ejvs.get(0).getParallelism(), 1);
+			assertEquals(ejvs.get(0).getJobVertexId(), source.getID());
+
+			ExecutionGraphTestUtils.waitForAllExecutionsPredicate(
+				eg,
+				ExecutionGraphTestUtils.isInExecutionState(ExecutionState.SCHEDULED),
+				testingTimeout.toMilliseconds());
+
+			// Trigger job update
+			List<JobUpdateAction> actions = new ArrayList<>();
+			Configuration configuration = new Configuration();
+			configuration.setString("config2", "2.0");
+			configuration.setString("config3", "3");
+			actions.add(new JobConfigUpdateAction(configuration));
+			JobUpdateRequest request = new JobUpdateRequest(actions, false);
+			CompletableFuture<Acknowledge> updateFuture = jobMasterGateway.updateJob(request, testingTimeout);
+			updateFuture.get(testingTimeout.getSize(), testingTimeout.getUnit());
+
+			// Verify if the job is not restarted
+			assertEquals(eg, jobMaster.getExecutionGraph());
+
+			// Verify the new configurations
+			JobGraph persistedJobGraph = submittedJobGraphStore.recoverJobGraph(jobGraph.getJobID()).getJobGraph();
+			Configuration persistedConfiguration = persistedJobGraph.getJobConfiguration();
+			assertEquals("1", persistedConfiguration.getString("config1", ""));
+			assertEquals("2.0", persistedConfiguration.getString("config2", ""));
+			assertEquals("3", persistedConfiguration.getString("config3", ""));
 
 			// check if a concurrent error occurred
 			testingFatalErrorHandler.rethrowError();

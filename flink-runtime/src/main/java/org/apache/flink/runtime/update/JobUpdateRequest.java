@@ -31,11 +31,28 @@ public class JobUpdateRequest implements Serializable {
 
 	private List<JobUpdateAction> jobUpdateActions;
 
+	private boolean triggerJobReload;
+
 	public JobUpdateRequest(List<JobUpdateAction> actions) {
+		this(actions, true);
+	}
+
+	public JobUpdateRequest(List<JobUpdateAction> actions, boolean triggerJobReload) {
 		this.jobUpdateActions = actions;
+		this.triggerJobReload = triggerJobReload;
 	}
 
 	public List<JobUpdateAction> getJobUpdateActions() {
 		return jobUpdateActions;
+	}
+
+	public boolean shouldTriggerJobReload() {
+		return triggerJobReload;
+	}
+
+	@Override
+	public String toString() {
+		return "JobUpdateRequest{actions: " + jobUpdateActions
+			+ ", triggerJobReload: " + triggerJobReload + "}";
 	}
 }

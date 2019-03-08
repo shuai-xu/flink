@@ -546,6 +546,21 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		// Increase the job version
 		newJobGraph.setJobVersion(newJobGraph.getJobVersion() + 1);
 
+		// Persist new job graph and finish job update
+		if (!request.shouldTriggerJobReload()) {
+			try {
+				log.info("Persisting the new JobGraph...");
+				submittedJobGraphStore.putJobGraph(new SubmittedJobGraph(newJobGraph, null));
+
+				log.info("Job update finished successfully without restarting the job.");
+				return CompletableFuture.completedFuture(Acknowledge.get());
+			} catch (Throwable t) {
+				final String msg = "Failed to persist the new job graph of job " + newJobGraph.getJobID();
+				log.warn(msg, t);
+				return FutureUtils.completedExceptionally(new JobModificationException(msg, t));
+			}
+		}
+
 		// update the job with the new JobGraph
 		log.debug("Update original job graph {} with new job graph {}.", jobGraph, newJobGraph);
 		return updateJob(newJobGraph);
