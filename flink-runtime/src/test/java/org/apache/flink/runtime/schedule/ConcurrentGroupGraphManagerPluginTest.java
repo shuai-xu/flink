@@ -640,7 +640,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		}
 	}
 
-	class TestingExecutionSlotAllocator extends BestEffortExecutionSlotAllocator {
+	private class TestingExecutionSlotAllocator extends BestEffortExecutionSlotAllocator {
 
 		private Collection<ExecutionVertexID> scheduledVertices = new ArrayList<>();
 
