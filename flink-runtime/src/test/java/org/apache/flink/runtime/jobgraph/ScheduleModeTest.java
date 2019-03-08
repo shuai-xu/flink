@@ -24,6 +24,8 @@ import org.apache.flink.runtime.schedule.GraphManagerPlugin;
 import org.apache.flink.runtime.schedule.GraphManagerPluginFactory;
 import org.apache.flink.runtime.schedule.SchedulingConfig;
 import org.apache.flink.runtime.schedule.VertexScheduler;
+
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -36,6 +38,7 @@ public class ScheduleModeTest {
 	/**
 	 * Test that schedule modes set the lazy deployment flag correctly.
 	 */
+	@Ignore
 	@Test
 	public void testAllowLazyDeployment() throws Exception {
 		GraphManagerPlugin graphManagerPlugin;

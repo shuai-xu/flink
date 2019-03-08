@@ -100,7 +100,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		this.inputTracker = new VertexInputTracker(jobGraph, scheduler, schedulingConfig);
 		this.executionGraph = eg;
 		this.graphManager = graphManager;
-		this.allowGroupSplit = schedulingConfig.getConfiguration().getBoolean("", false);
+		this.allowGroupSplit = schedulingConfig.getConfiguration().getBoolean("job.scheduling.allow-auto-partition", false);
 		this.executionSlotAllocator = executionSlotAllocator;
 		initConcurrentSchedulingGroups();
 		buildStartOnFinishRelation(jobGraph);

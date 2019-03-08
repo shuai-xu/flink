@@ -20,7 +20,6 @@ package org.apache.flink.runtime.jobmaster;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.accumulators.Accumulator;
-import org.apache.flink.api.common.time.Time;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
@@ -114,7 +113,7 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 				new BestEffortExecutionSlotAllocator(
 						executionGraph.getSlotProvider(),
 						jobGraph.getAllowQueuedScheduling(),
-						Time.minutes(5)));
+						executionGraph.getAllocationTimeout()));
 	}
 
 	/**

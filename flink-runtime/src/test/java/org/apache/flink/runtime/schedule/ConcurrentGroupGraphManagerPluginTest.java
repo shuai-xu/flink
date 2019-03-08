@@ -524,6 +524,9 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		graphManagerPlugin.groupSplit(schedulingGroups.iterator().next());
 
 		assertEquals(5, graphManagerPlugin.getConcurrentSchedulingGroups().size());
+		assertEquals(ResultPartitionType.BLOCKING, eg.getAllVertices().get(v1.getID()).getProducedDataSets()[0].getResultType());
+		assertEquals(ResultPartitionType.BLOCKING, eg.getAllVertices().get(v2.getID()).getProducedDataSets()[0].getResultType());
+		assertEquals(ResultPartitionType.PIPELINED, eg.getAllVertices().get(v3.getID()).getProducedDataSets()[0].getResultType());
 	}
 
 	/**
