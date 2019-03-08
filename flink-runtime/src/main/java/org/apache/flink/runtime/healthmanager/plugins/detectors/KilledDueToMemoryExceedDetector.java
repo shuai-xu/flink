@@ -51,6 +51,7 @@ public class KilledDueToMemoryExceedDetector implements Detector {
 
 	private long lastDetectTime;
 	private Map<String, List<JobVertexID>> tmTasks;
+	private long hmInterval;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -60,6 +61,7 @@ public class KilledDueToMemoryExceedDetector implements Detector {
 
 		lastDetectTime = System.currentTimeMillis();
 		tmTasks = new HashMap<>();
+		hmInterval = monitor.getConfig().getLong(HealthMonitor.HEALTH_CHECK_INTERNAL);
 	}
 
 	@Override
@@ -72,8 +74,9 @@ public class KilledDueToMemoryExceedDetector implements Detector {
 		LOGGER.debug("Start detecting.");
 		long now = System.currentTimeMillis();
 
-		if (lastDetectTime < monitor.getJobStartExecutionTime()) {
-			lastDetectTime = monitor.getJobStartExecutionTime();
+		if (now - lastDetectTime > hmInterval * 2) {
+			LOGGER.debug("Long time since last detection, detect for recent exceptions.");
+			lastDetectTime = now - hmInterval * 2;
 		}
 
 		Map<String, List<Exception>> tmExceptions = restServerClient.getTaskManagerExceptions(lastDetectTime, now);
