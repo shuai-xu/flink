@@ -22,7 +22,6 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricAggType;
@@ -155,13 +154,14 @@ public class ParallelismScaler implements Resolver {
 		this.scaleTpsRatio = monitor.getConfig().getDouble(HealthMonitorOptions.PARALLELISM_MIN_RATIO);
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT);
 		this.checkInterval = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_INTERVAL);
-		this.maxCpuLimit = monitor.getConfig().getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE);
-		this.maxMemoryLimit = monitor.getConfig().getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB);
 		this.maxPartitionPerTask = monitor.getConfig().getInteger(MAX_PARTITION_PER_TASK);
 		this.reservedParallelismRatio = monitor.getConfig().getDouble(HealthMonitorOptions.RESERVED_PARALLELISM_RATIO);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STABLE_TIME);
 		this.stateSizeThreshold = monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_STATE_SIZE_THRESHOLD);
 		this.checkpointIntervalThreshold =  monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_CHECKPOINT_THRESHOLD);
+
+		this.maxCpuLimit = MaxResourceLimitUtil.getMaxCpu(monitor.getConfig());
+		this.maxMemoryLimit = MaxResourceLimitUtil.getMaxMem(monitor.getConfig());
 
 		inputTpsSubs = new HashMap<>();
 		outputTpsSubs = new HashMap<>();
@@ -1250,7 +1250,10 @@ public class ParallelismScaler implements Resolver {
 
 		for (JobVertexID vertexId : targetParallelisms.keySet()) {
 			RestServerClient.VertexConfig vertexConfig = jobConfig.getVertexConfigs().get(vertexId);
-			if (targetParallelisms.get(vertexId) == vertexConfig.getParallelism()) {
+			int targetParallelism = targetParallelisms.get(vertexId);
+			if (1.0 * targetParallelism / vertexConfig.getParallelism() <= reservedParallelismRatio &&
+				1.0 * vertexConfig.getParallelism() / targetParallelism <= reservedParallelismRatio) {
+				LOGGER.debug("Do not need to scale since the target parallelism within in reserved ratio");
 				continue;
 			}
 			rescaleJobParallelism.addVertex(
@@ -1286,17 +1289,23 @@ public class ParallelismScaler implements Resolver {
 					RestServerClient.VertexConfig originVertexConfig = jobConfig.getVertexConfigs().get(vertexId);
 					RestServerClient.VertexConfig adjustedVertexConfig = adjustedJobConfig.getVertexConfigs().get(
 						vertexId);
-					if (originVertexConfig.getParallelism() != adjustedVertexConfig.getParallelism()) {
-						rescaleJobParallelism.addVertex(vertexId,
-							originVertexConfig.getParallelism(),
-							adjustedVertexConfig.getParallelism(),
-							originVertexConfig.getResourceSpec(),
-							adjustedVertexConfig.getResourceSpec());
+					if (1.0 * adjustedVertexConfig.getParallelism() / originVertexConfig.getParallelism() <= reservedParallelismRatio &&
+						1.0 * originVertexConfig.getParallelism() / adjustedVertexConfig.getParallelism() <= reservedParallelismRatio) {
+						LOGGER.debug("Do not need to scale since the target parallelism within in reserved ratio");
+						continue;
 					}
+					rescaleJobParallelism.addVertex(vertexId,
+						originVertexConfig.getParallelism(),
+						adjustedVertexConfig.getParallelism(),
+						originVertexConfig.getResourceSpec(),
+						adjustedVertexConfig.getResourceSpec());
 				}
 			}
 		}
 
+		RestServerClient.JobConfig appliedJobConfig = rescaleJobParallelism.getAppliedJobConfig(jobConfig);
+		LOGGER.debug("Resource applying generated action: <cpu, memory>=<{}, {}>.",
+			appliedJobConfig.getJobTotalCpuCores(), appliedJobConfig.getJobTotalMemoryMb());
 		return rescaleJobParallelism;
 	}
 

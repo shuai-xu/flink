@@ -18,6 +18,9 @@
 
 package org.apache.flink.runtime.healthmanager.plugins.utils;
 
+import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ResourceManagerOptions;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -26,11 +29,30 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
+import static org.apache.flink.configuration.ConfigOptions.key;
+
 /**
  * Util for max resource limit.
  */
 public class MaxResourceLimitUtil {
 	private static final Logger LOGGER = LoggerFactory.getLogger(MaxResourceLimitUtil.class);
+
+	/**
+	 * JM cpu cores.
+	 * This option is a duplicate of YarnConfigOptions.JOB_APP_MASTER_CORE, to avoid
+	 * circular dependency between flink-runtime and flink-yanr.
+	 */
+	public static final ConfigOption<Integer> JM_CPU = key("job.app-master-core").defaultValue(1);
+
+	public static double getMaxCpu(Configuration config) {
+		return config.getDouble(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_CPU_CORE)
+			- config.getInteger(JM_CPU);
+	}
+
+	public static int getMaxMem(Configuration config) {
+		return (int) (config.getInteger(ResourceManagerOptions.MAX_TOTAL_RESOURCE_LIMIT_MEMORY_MB)
+			* (1 - config.getDouble(HealthMonitorOptions.FRAMEWORK_MEMORY_RATIO)));
+	}
 
 	public static RestServerClient.JobConfig scaleDownJobConfigToMaxResourceLimit(
 		RestServerClient.JobConfig jobConfig,
@@ -81,6 +103,7 @@ public class MaxResourceLimitUtil {
 
 				adjustedJobConfig.getVertexConfigs().put(vertexId, adjustedVertexConfig);
 			}
+			LOGGER.debug("Resource after scaling down: <cpu, memory>=<{}, {}>.", adjustedJobConfig.getJobTotalCpuCores(), adjustedJobConfig.getJobTotalMemoryMb());
 		}
 
 		return adjustedJobConfig;

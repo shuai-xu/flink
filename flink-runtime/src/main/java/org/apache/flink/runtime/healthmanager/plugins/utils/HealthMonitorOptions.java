@@ -129,4 +129,7 @@ public class HealthMonitorOptions {
 	 */
 	public static final ConfigOption<Long> RESOURCE_SCALE_TIME_OUT =
 		ConfigOptions.key("resource.scale.timeout.ms").defaultValue(10 * 60 * 1000L);
+
+	public static final ConfigOption<Double> FRAMEWORK_MEMORY_RATIO =
+		ConfigOptions.key("resource.memory.framework.ratio").defaultValue(0.2);
 }

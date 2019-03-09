@@ -586,7 +586,17 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 						errMsg,
 						false)) {
 						resourceManagerClient.releaseAssignedContainer(container.getId());
-						priorityToBlockedWorkers.put(priority, priorityToBlockedWorkers.getOrDefault(priority, 0) + 1);
+						synchronized (spareSlotsAndBlockedWorkersLock) {
+							int slotNum = priorityToResourceAndTagsMap.get(priority).f0.getSlotNum();
+							int spareSlot = priorityToSpareSlots.get(priority);
+							if (spareSlot >= slotNum) {
+								priorityToSpareSlots.put(priority, spareSlot - slotNum);
+							} else {
+								priorityToSpareSlots.put(priority, 0);
+								priorityToBlockedWorkers.put(priority,
+									priorityToBlockedWorkers.getOrDefault(priority, 0) + slotNum - spareSlot);
+							}
+						}
 						continue;
 					}
 
@@ -1001,7 +1011,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	private int findFeasibleBlockedWorkerPriority() {
 		for (Map.Entry<Integer, Integer> entry : priorityToBlockedWorkers.entrySet()) {
 			Resource resource = generateContainerResource(priorityToResourceAndTagsMap.get(entry.getKey()).f0);
-			if (checkAllocateNewResourceExceedTotalResourceLimit(
+			if (!checkAllocateNewResourceExceedTotalResourceLimit(
 				resource.getVirtualCores() / yarnVcoreRatio, resource.getMemory(), null, true)) {
 				return entry.getKey();
 			}
