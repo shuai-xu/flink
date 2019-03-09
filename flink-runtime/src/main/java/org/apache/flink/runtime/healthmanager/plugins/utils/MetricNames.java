@@ -42,8 +42,8 @@ public class MetricNames {
 	public static final String TM_CPU_USAGE = "Status.ProcessTree.CPU.Usage";
 	public static final String TM_MEM_CAPACITY = "Status.ProcessTree.Memory.Allocated";
 	public static final String TM_MEM_USAGE_TOTAL = "Status.ProcessTree.Memory.RSS";
-	public static final String TM_MEM_HEAP_USED = "Status.JVM.Memory.Heap.Used";
-	public static final String TM_MEM_NON_HEAP_USED = "Status.JVM.Memory.NonHeap.Used";
+	public static final String TM_MEM_HEAP_COMMITTED = "Status.JVM.Memory.Heap.Committed";
+	public static final String TM_MEM_NON_HEAP_COMMITTED = "Status.JVM.Memory.NonHeap.Committed";
 	public static final String FULL_GC_COUNT_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Count";
 	public static final String FULL_GC_TIME_METRIC = "Status.JVM.GarbageCollector.ConcurrentMarkSweep.Time";
 }

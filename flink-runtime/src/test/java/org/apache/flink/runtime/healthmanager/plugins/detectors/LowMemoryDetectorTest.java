@@ -153,7 +153,7 @@ public class LowMemoryDetectorTest extends DetectorTestBase {
 		JobTMMetricSubscription heapUsageSub = Mockito.mock(JobTMMetricSubscription.class);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
 			Mockito.eq(jobID),
-			Mockito.eq(MetricNames.TM_MEM_HEAP_USED),
+			Mockito.eq(MetricNames.TM_MEM_HEAP_COMMITTED),
 			Mockito.anyLong(),
 			Mockito.eq(TimelineAggType.AVG)))
 			.thenReturn(heapUsageSub);
@@ -180,7 +180,7 @@ public class LowMemoryDetectorTest extends DetectorTestBase {
 		JobTMMetricSubscription nonHeapUsageSub = Mockito.mock(JobTMMetricSubscription.class);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
 			Mockito.eq(jobID),
-			Mockito.eq(MetricNames.TM_MEM_NON_HEAP_USED),
+			Mockito.eq(MetricNames.TM_MEM_NON_HEAP_COMMITTED),
 			Mockito.anyLong(),
 			Mockito.eq(TimelineAggType.AVG)))
 			.thenReturn(nonHeapUsageSub);

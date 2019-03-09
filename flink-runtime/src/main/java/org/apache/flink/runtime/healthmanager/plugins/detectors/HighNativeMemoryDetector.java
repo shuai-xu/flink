@@ -88,9 +88,9 @@ public class HighNativeMemoryDetector implements Detector {
 			overuseCheckInterval, TimelineAggType.MAX);
 		tmMemUsageTotalSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_USAGE_TOTAL,
 			overuseCheckInterval, TimelineAggType.MAX);
-		tmMemUsageHeapSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_HEAP_USED,
+		tmMemUsageHeapSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_HEAP_COMMITTED,
 			overuseCheckInterval, TimelineAggType.MAX);
-		tmMemUsageNonHeapSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_NON_HEAP_USED,
+		tmMemUsageNonHeapSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_NON_HEAP_COMMITTED,
 			overuseCheckInterval, TimelineAggType.MAX);
 	}
 

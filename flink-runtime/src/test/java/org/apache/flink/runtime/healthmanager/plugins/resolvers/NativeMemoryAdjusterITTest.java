@@ -193,10 +193,10 @@ public class NativeMemoryAdjusterITTest {
 			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_CAPACITY), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(capacitySub);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_HEAP_USED), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_HEAP_COMMITTED), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(zeroSub);
 		Mockito.when(metricProvider.subscribeAllTMMetric(
-			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_NON_HEAP_USED), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
+			Mockito.any(JobID.class), Mockito.eq(MetricNames.TM_MEM_NON_HEAP_COMMITTED), Mockito.anyLong(), Mockito.any(TimelineAggType.class)))
 			.thenReturn(zeroSub);
 
 		Mockito.when(restServerClient.getTaskManagerTasks(Mockito.eq("tmId")))

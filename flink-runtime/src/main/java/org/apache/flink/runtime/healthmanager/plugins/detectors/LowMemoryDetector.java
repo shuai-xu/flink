@@ -88,8 +88,8 @@ public class LowMemoryDetector implements Detector {
 
 		tmMemAllocatedSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_CAPACITY, checkInterval, TimelineAggType.AVG);
 		tmMemTotalUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_USAGE_TOTAL, checkInterval, TimelineAggType.AVG);
-		tmMemHeapUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_HEAP_USED, checkInterval, TimelineAggType.AVG);
-		tmMemNonHeapUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_NON_HEAP_USED, checkInterval, TimelineAggType.AVG);
+		tmMemHeapUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_HEAP_COMMITTED, checkInterval, TimelineAggType.AVG);
+		tmMemNonHeapUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_MEM_NON_HEAP_COMMITTED, checkInterval, TimelineAggType.AVG);
 
 		lowMemSince = new HashMap<>();
 		maxHeapUtility = new HashMap<>();
