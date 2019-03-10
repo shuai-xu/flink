@@ -117,6 +117,7 @@ public class CpuAdjusterITTest {
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
+			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
 		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);

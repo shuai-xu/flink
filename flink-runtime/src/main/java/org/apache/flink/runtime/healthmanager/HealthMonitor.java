@@ -46,7 +46,6 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStuckDetector
 import org.apache.flink.runtime.healthmanager.plugins.detectors.KilledDueToMemoryExceedDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LongTimeFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowCpuDetector;
-import org.apache.flink.runtime.healthmanager.plugins.detectors.LowDelayDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowMemoryDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
 import org.apache.flink.runtime.healthmanager.plugins.resolvers.CpuAdjuster;
@@ -77,6 +76,9 @@ import java.util.concurrent.TimeUnit;
 public class HealthMonitor {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(HealthMonitor.class);
+
+	public static final ConfigOption<Boolean> HEALTH_MONITOR_ENABLED =
+			ConfigOptions.key("healthmonitor.enabled").defaultValue(true);
 
 	public static final ConfigOption<Long> HEALTH_CHECK_INTERNAL =
 			ConfigOptions.key("healthmonitor.health.check.interval.ms").defaultValue(10000L);
@@ -110,6 +112,8 @@ public class HealthMonitor {
 
 	private volatile long successActionCount = 0;
 	private volatile long failedActionCount = 0;
+
+	private boolean isEnabled;
 
 	@VisibleForTesting
 	public HealthMonitor(
@@ -145,12 +149,14 @@ public class HealthMonitor {
 			this.config.setString(key , getJobConfig().getConfig().getString(key, null));
 		}
 
+		isEnabled = config.getBoolean(HEALTH_MONITOR_ENABLED);
+		if (isEnabled) {
+			loadPlugins();
+		}
+
 		long checkInterval = config.getLong(HEALTH_CHECK_INTERNAL);
 
 		if (checkInterval > 0) {
-			loadDetectors();
-			loadResolvers();
-			loadActionSelector();
 			timedTaskHandler = executorService.scheduleAtFixedRate(
 					new HealthChecker(), 0, checkInterval, TimeUnit.MILLISECONDS);
 		}
@@ -172,14 +178,27 @@ public class HealthMonitor {
 		}
 	}
 
+	@VisibleForTesting
+	public void loadPlugins() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+		loadDetectors();
+		loadResolvers();
+		loadActionSelector();
+	}
+
 	public void stop() {
 
 		if (timedTaskHandler != null) {
 			timedTaskHandler.cancel(true);
 		}
+		closePlugins();
+	}
+
+	@VisibleForTesting
+	public void closePlugins() {
 
 		if (this.actionSelector != null) {
 			this.actionSelector.close();
+			this.actionSelector = null;
 		}
 
 		if (detectors != null) {
@@ -187,6 +206,7 @@ public class HealthMonitor {
 				detector.close();
 			}
 			detectors.clear();
+			detectors = null;
 		}
 
 		if (resolvers != null) {
@@ -194,8 +214,8 @@ public class HealthMonitor {
 				resolver.close();
 			}
 			resolvers.clear();
+			resolvers = null;
 		}
-
 	}
 
 	private void loadActionSelector() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
@@ -211,13 +231,17 @@ public class HealthMonitor {
 			detectorClazzs.addAll(Arrays.asList(config.getString(DETECTOR_CLASSES).split(",")));
 		} else {
 			if (config.getBoolean(HealthMonitorOptions.ENABLE_PARALLELISM_RESCALE)) {
+				// detector which will trigger rescale
 				detectorClazzs.add(HighDelayDetector.class.getCanonicalName());
-				detectorClazzs.add(LowDelayDetector.class.getCanonicalName());
 				detectorClazzs.add(DelayIncreasingDetector.class.getCanonicalName());
 				detectorClazzs.add(OverParallelizedDetector.class.getCanonicalName());
-				detectorClazzs.add(FailoverDetector.class.getCanonicalName());
+
+				// detectors which will check state of job
 				detectorClazzs.add(JobStableDetector.class.getCanonicalName());
 				detectorClazzs.add(JobStuckDetector.class.getCanonicalName());
+				detectorClazzs.add(FailoverDetector.class.getCanonicalName());
+				detectorClazzs.add(FrequentFullGCDetector.class.getCanonicalName());
+				detectorClazzs.add(LongTimeFullGCDetector.class.getCanonicalName());
 			}
 			if (config.getBoolean(HealthMonitorOptions.ENABLE_RESOURCE_RESCALE)) {
 				detectorClazzs.add(HighCpuDetector.class.getCanonicalName());
@@ -310,8 +334,44 @@ public class HealthMonitor {
 
 		@Override
 		public void run() {
+			try {
+				check();
+			} catch (Throwable e) {
+				LOGGER.warn("Fail to check job status", e);
+			}
+		}
+
+		public void check() {
 
 			LOGGER.debug("Start to check job {}.", jobID);
+
+			Configuration newConfig = getJobConfig().getConfig();
+			if (isEnabled && !newConfig.getBoolean(HEALTH_MONITOR_ENABLED)) {
+				LOGGER.info("Disabling health monitor");
+				closePlugins();
+				isEnabled = false;
+				return;
+			}
+
+			if (!isEnabled && newConfig.getBoolean(HEALTH_MONITOR_ENABLED)) {
+				try {
+					// reload configuration.
+					for (String key : newConfig.keySet()) {
+						config.setString(key , newConfig.getString(key, null));
+					}
+					loadPlugins();
+					isEnabled = true;
+				} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+					LOGGER.error("Fail to load plugins", e);
+					closePlugins();
+					return;
+				}
+			}
+
+			if (!isEnabled) {
+				LOGGER.debug("Health monitor disabled.");
+				return;
+			}
 
 			List<Symptom> symptoms = new LinkedList<>();
 
