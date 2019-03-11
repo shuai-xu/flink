@@ -59,6 +59,11 @@ public class BaseRowTypeInfo extends TupleTypeInfoBase<BaseRow> {
 		this.fieldNames = Arrays.copyOf(fieldNames, fieldNames.length);
 	}
 
+	@Deprecated // Deprecated from 3.x version.
+	public BaseRowTypeInfo(Class<?> clazz, TypeInformation<?>[] types, String[] fieldNames) {
+		this(types, fieldNames);
+	}
+
 	private static String[] getFieldNames(TypeInformation<?>[] types) {
 		String[] fieldNames = new String[types.length];
 		for (int i = 0; i < types.length; i++) {

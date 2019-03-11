@@ -78,7 +78,9 @@ object ScalarSqlFunction {
         val parameters = getOperandType(opBinding).toArray
 
         val arguments = sqlTypes.indices.map(i =>
-          if (opBinding.isOperandLiteral(i, false)) {
+          if (opBinding.isOperandNull(i, false)) {
+            null
+          } else if (opBinding.isOperandLiteral(i, false)) {
             opBinding.getOperandLiteralValue(
               i, TypeUtils.getExternalClassForType(parameters(i))).asInstanceOf[AnyRef]
           } else {
