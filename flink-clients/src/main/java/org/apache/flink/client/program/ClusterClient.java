@@ -449,7 +449,7 @@ public abstract class ClusterClient<T> {
 
 	private void setDriverModeContext(PackagedProgram prog) {
 		//it is in driver mode.
-		if (DriverProgram.class.isAssignableFrom(prog.getMainClass())) {
+		if (prog.getMainClass() != null && DriverProgram.class.isAssignableFrom(prog.getMainClass())) {
 			DriverProgram prg = InstantiationUtil.instantiate(prog.getMainClass().asSubclass(DriverProgram.class), DriverProgram.class);
 			prg.setParameter(prog);
 			try {
@@ -479,7 +479,7 @@ public abstract class ClusterClient<T> {
 	}
 
 	private void unsetDriverModeContext(PackagedProgram prog) {
-		if (DriverProgram.class.isAssignableFrom(prog.getMainClass())) {
+		if (prog.getMainClass() != null && DriverProgram.class.isAssignableFrom(prog.getMainClass())) {
 			DriverProgram prg = InstantiationUtil.instantiate(prog.getMainClass().asSubclass(DriverProgram.class), DriverProgram.class);
 			prg.setParameter(null);
 			prg.setClusterInfo(null, -1);
