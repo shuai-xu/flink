@@ -231,8 +231,9 @@ public class CliFrontend {
 
 			final ClusterClient<T> client;
 
-			// directly deploy the job if the cluster is started in job mode and detached
-			if (isNewMode && clusterId == null && runOptions.getDetachedMode()) {
+			// Only detached mode supports submit optimization
+			if (isNewMode && clusterId == null && runOptions.getDetachedMode()
+				&& !runOptions.isSubmitOptimizationDisabled()) {
 				int parallelism = runOptions.getParallelism() == -1 ? defaultParallelism : runOptions.getParallelism();
 
 				final JobGraph jobGraph = PackagedProgramUtils.createJobGraph(program, configuration, parallelism);

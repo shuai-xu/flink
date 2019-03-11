@@ -36,6 +36,7 @@ import static org.apache.flink.client.cli.CliFrontendParser.ARGS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.CLASSPATH_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.CLASS_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.DETACHED_OPTION;
+import static org.apache.flink.client.cli.CliFrontendParser.DISABLE_SUBMIT_OPTIMIZATION;
 import static org.apache.flink.client.cli.CliFrontendParser.DRIVER_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.FILES_OPTION;
 import static org.apache.flink.client.cli.CliFrontendParser.JAR_OPTION;
@@ -70,6 +71,8 @@ public abstract class ProgramOptions extends CommandLineOptions {
 	private final boolean detachedMode;
 
 	private final boolean driverMode;
+
+	private final boolean disableSubmitOptimization;
 
 	private final SavepointRestoreSettings savepointSettings;
 
@@ -164,6 +167,8 @@ public abstract class ProgramOptions extends CommandLineOptions {
 		detachedMode = line.hasOption(DETACHED_OPTION.getOpt()) || line.hasOption(
 			YARN_DETACHED_OPTION.getOpt()) || driverMode;
 
+		disableSubmitOptimization = line.hasOption(DISABLE_SUBMIT_OPTIMIZATION.getOpt());
+
 		if (line.hasOption(SAVEPOINT_PATH_OPTION.getOpt()) && line.hasOption(RESUME_PATH_OPTION.getOpt())) {
 			throw new CliArgsException("Please only offer either savepoint path or resume path.");
 		}
@@ -214,6 +219,10 @@ public abstract class ProgramOptions extends CommandLineOptions {
 
 	public boolean isDriverMode() {
 		return driverMode;
+	}
+
+	public boolean isSubmitOptimizationDisabled() {
+		return disableSubmitOptimization;
 	}
 
 	public SavepointRestoreSettings getSavepointRestoreSettings() {

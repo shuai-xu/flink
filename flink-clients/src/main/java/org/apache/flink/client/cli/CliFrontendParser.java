@@ -65,6 +65,10 @@ public class CliFrontendParser {
 	public static final Option DRIVER_OPTION = new Option("D", "driver", false, "If present, runs " +
 			"the job in driver mode");
 
+	public static final Option DISABLE_SUBMIT_OPTIMIZATION = new Option("b", "disableSubmitOptimization", false, "If present," +
+		"the jobgraph/userjars/libjars/files will be transferred by blob server. " +
+		"Otherwise, they will be transferred by distributed cache in Yarn or image in Kubernetes for optimization.");
+
 	/**
 	 * @deprecated use non-prefixed variant {@link #DETACHED_OPTION} for both YARN and non-YARN deployments
 	 */
@@ -158,6 +162,8 @@ public class CliFrontendParser {
 
 		DRIVER_OPTION.setRequired(false);
 
+		DISABLE_SUBMIT_OPTIMIZATION.setRequired(false);
+
 		ADDRESS_OPTION.setRequired(false);
 		ADDRESS_OPTION.setArgName("host:port");
 
@@ -227,6 +233,7 @@ public class CliFrontendParser {
 		options.addOption(LIBJARS_OPTION);
 		options.addOption(FILES_OPTION);
 		options.addOption(DRIVER_OPTION);
+		options.addOption(DISABLE_SUBMIT_OPTIMIZATION);
 		options.addOption(PYFILES_OPTION);
 		options.addOption(PYMOD_OPTION);
 		return options;
@@ -241,6 +248,7 @@ public class CliFrontendParser {
 		options.addOption(LIBJARS_OPTION);
 		options.addOption(FILES_OPTION);
 		options.addOption(DRIVER_OPTION);
+		options.addOption(DISABLE_SUBMIT_OPTIMIZATION);
 		options.addOption(PYFILES_OPTION);
 		options.addOption(PYMOD_OPTION);
 		return options;
