@@ -442,6 +442,13 @@ public class JobUpdateTest extends TestLogger {
 			assertEquals(eg, jobMaster.getExecutionGraph());
 
 			// Verify the new configurations
+			JobGraph newJobGraph = jobMaster.requestJobGraph(testingTimeout).get();
+			Configuration newConfiguration = newJobGraph.getJobConfiguration();
+			assertEquals("1", newConfiguration.getString("config1", ""));
+			assertEquals("2.0", newConfiguration.getString("config2", ""));
+			assertEquals("3", newConfiguration.getString("config3", ""));
+
+			// Verify the persisted configurations
 			JobGraph persistedJobGraph = submittedJobGraphStore.recoverJobGraph(jobGraph.getJobID()).getJobGraph();
 			Configuration persistedConfiguration = persistedJobGraph.getJobConfiguration();
 			assertEquals("1", persistedConfiguration.getString("config1", ""));

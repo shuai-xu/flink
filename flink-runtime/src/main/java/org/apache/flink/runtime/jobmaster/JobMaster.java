@@ -549,6 +549,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 		// Persist new job graph and finish job update
 		if (!request.shouldTriggerJobReload()) {
 			try {
+				this.jobGraph = newJobGraph;
+
 				log.info("Persisting the new JobGraph...");
 				submittedJobGraphStore.putJobGraph(new SubmittedJobGraph(newJobGraph, null));
 
