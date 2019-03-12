@@ -131,6 +131,9 @@ public final class BaseRowUtil {
 	}
 
 	public static Object get(BaseRow row, int ordinal, TypeInformation type, TypeSerializer serializer) {
+		if (row instanceof GenericRow) {
+			return ((GenericRow) row).getField(ordinal);
+		}
 		if (type.equals(Types.BOOLEAN)) {
 			return row.getBoolean(ordinal);
 		} else if (type.equals(Types.BYTE)) {
@@ -174,6 +177,9 @@ public final class BaseRowUtil {
 	}
 
 	public static Object get(BaseRow row, int ordinal, DataType type) {
+		if (row instanceof GenericRow) {
+			return ((GenericRow) row).getField(ordinal);
+		}
 		if (type.equals(DataTypes.BOOLEAN)) {
 			return row.getBoolean(ordinal);
 		} else if (type.equals(DataTypes.BYTE)) {

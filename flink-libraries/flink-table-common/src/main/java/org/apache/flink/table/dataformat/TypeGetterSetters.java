@@ -177,6 +177,9 @@ public interface TypeGetterSetters {
 	void setDecimal(int ordinal, Decimal value, int precision, int scale);
 
 	static Object get(TypeGetterSetters row, int ordinal, InternalType type) {
+		if (row instanceof GenericRow) {
+			return ((GenericRow) row).getField(ordinal);
+		}
 		if (type.equals(Types.BOOLEAN)) {
 			return row.getBoolean(ordinal);
 		} else if (type.equals(Types.BYTE)) {
