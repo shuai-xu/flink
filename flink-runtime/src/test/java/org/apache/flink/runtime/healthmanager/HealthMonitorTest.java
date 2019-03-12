@@ -58,6 +58,7 @@ public class HealthMonitorTest {
 		Whitebox.setInternalState(healthMonitor, "isEnabled", true);
 		healthChecker.run();
 		assertEquals(false, Whitebox.getInternalState(healthMonitor, "isEnabled"));
+		assertEquals(null, Whitebox.getInternalState(healthMonitor, "jobConfig"));
 
 		config2.setBoolean(HEALTH_MONITOR_ENABLED, true);
 		config2.setBoolean("test-key", false);

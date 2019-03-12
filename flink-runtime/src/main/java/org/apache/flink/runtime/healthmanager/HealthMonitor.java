@@ -113,7 +113,7 @@ public class HealthMonitor {
 	private volatile long successActionCount = 0;
 	private volatile long failedActionCount = 0;
 
-	private boolean isEnabled;
+	private volatile boolean isEnabled;
 
 	@VisibleForTesting
 	public HealthMonitor(
@@ -180,6 +180,10 @@ public class HealthMonitor {
 
 	@VisibleForTesting
 	public void loadPlugins() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+		// try to close old plugins first.
+		closePlugins();
+
+		// load new plugins.
 		loadDetectors();
 		loadResolvers();
 		loadActionSelector();
@@ -336,6 +340,8 @@ public class HealthMonitor {
 		public void run() {
 			try {
 				check();
+				// reset job config.
+				jobConfig = null;
 			} catch (Throwable e) {
 				LOGGER.warn("Fail to check job status", e);
 			}
@@ -355,6 +361,7 @@ public class HealthMonitor {
 
 			if (!isEnabled && newConfig.getBoolean(HEALTH_MONITOR_ENABLED)) {
 				try {
+					LOGGER.info("Enabling health monitor");
 					// reload configuration.
 					for (String key : newConfig.keySet()) {
 						config.setString(key , newConfig.getString(key, null));
@@ -363,7 +370,6 @@ public class HealthMonitor {
 					isEnabled = true;
 				} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
 					LOGGER.error("Fail to load plugins", e);
-					closePlugins();
 					return;
 				}
 			}
@@ -375,8 +381,6 @@ public class HealthMonitor {
 
 			List<Symptom> symptoms = new LinkedList<>();
 
-			// reset job config.
-			jobConfig = null;
 			jobStartExecutionTime = Long.MAX_VALUE;
 
 			// 1. check abnormal symptoms.

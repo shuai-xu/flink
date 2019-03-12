@@ -102,7 +102,6 @@ public class NativeMemoryAdjusterITTest {
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
 		Map<String, Tuple2<Long, Double>> usage1 = new HashMap<>();

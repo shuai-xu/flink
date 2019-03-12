@@ -115,7 +115,6 @@ public class HeapMemoryAdjusterITTest {
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
 		Map<JobVertexID, List<JobException>> exceptions = new HashMap<>();
@@ -311,7 +310,6 @@ public class HeapMemoryAdjusterITTest {
 		inputNodes.put(vertex2, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));
 
