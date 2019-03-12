@@ -104,10 +104,10 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	/** The heartbeat interval while the resource master is waiting for containers. */
 	private static final int FAST_YARN_HEARTBEAT_INTERVAL_MS = 500;
 
-	/** The min cpu core of a task executor. */
+	/** The min cpu core of a task executor, used to decide how many slots can be placed on a task executor. */
 	private final double minCorePerContainer;
 
-	/** The min memory of task executor to allocate (in MB). */
+	/** The min memory of task executor to allocate (in MB), used to decide how many slots can be placed on a task executor. */
 	private final int minMemoryPerContainer;
 
 	/** The max cpu core of a task executor, used to decide how many slots can be placed on a task executor. */
@@ -115,6 +115,9 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 	/** The max memory of a task executor, used to decide how many slots can be placed on a task executor. */
 	private final int maxMemoryPerContainer;
+
+	/** The min extended resource of a task executor, used to decide how many slots can be placed on a task executor. */
+	private final Map<String, Double> minExtendedResourcePerContainer;
 
 	/** The max extended resource of a task executor, used to decide how many slots can be placed on a task executor. */
 	private final Map<String, Double> maxExtendedResourcePerContainer;
@@ -238,11 +241,24 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 		this.yarnVcoreRatio = flinkConfig.getInteger(YarnConfigOptions.YARN_VCORE_RATIO);
 
-		this.minCorePerContainer = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_CORE);
-		this.minMemoryPerContainer = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY);
-		this.maxCorePerContainer = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE);
-		this.maxMemoryPerContainer = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_MEMORY);
-		this.maxExtendedResourcePerContainer = loadExtendedResourceConstrains(flinkConfig);
+		this.minCorePerContainer = Math.max(flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_CORE),
+			yarnConfig.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+				YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES) / yarnVcoreRatio);
+
+		this.minMemoryPerContainer = Math.max(flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY),
+			yarnConfig.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+				YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
+
+		this.maxCorePerContainer = Math.min(flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE),
+			yarnConfig.getInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+				YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES) / yarnVcoreRatio);
+
+		this.maxMemoryPerContainer = Math.min(flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_MEMORY),
+			yarnConfig.getInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+				YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+
+		this.minExtendedResourcePerContainer = loadExtendedResourceConstrains(flinkConfig, true);
+		this.maxExtendedResourcePerContainer = loadExtendedResourceConstrains(flinkConfig, false);
 
 		this.webInterfaceUrl = webInterfaceUrl;
 	}
@@ -891,9 +907,14 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	}
 
 	@VisibleForTesting
-	static Map<String, Double> loadExtendedResourceConstrains(Configuration config) {
-		String[] constrains = config.getString(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_EXTENDED_RESOURCES)
-			.split(",");
+	static Map<String, Double> loadExtendedResourceConstrains(Configuration config, boolean loadMin) {
+		String constraintsStr;
+		if (loadMin) {
+			constraintsStr = config.getString(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_EXTENDED_RESOURCES);
+		} else {
+			constraintsStr = config.getString(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_EXTENDED_RESOURCES);
+		}
+		String[] constrains = constraintsStr.split(",");
 		Map<String, Double> extendedResourceConstrains = new HashMap<>(constrains.length);
 		for (String constrain : constrains) {
 			String[] kv = constrain.split("=");
@@ -916,29 +937,31 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			return 1;
 		}
 		else {
-			if (resourceProfile.getCpuCores() > maxCorePerContainer) {
-				return 1;
-			}
-			if (resourceProfile.getMemoryInMB() > maxMemoryPerContainer) {
-				return 1;
-			}
-			int slot = Math.min((int) (maxCorePerContainer / resourceProfile.getCpuCores()),
-				(maxMemoryPerContainer / resourceProfile.getMemoryInMB()));
+			int minSlot = Math.max((int) Math.ceil(minCorePerContainer / resourceProfile.getCpuCores()),
+				(int) Math.ceil(1.0 * minMemoryPerContainer / resourceProfile.getMemoryInMB()));
+			int maxSlot = Math.min((int) Math.floor(maxCorePerContainer / resourceProfile.getCpuCores()),
+				(int) Math.floor(1.0 * maxMemoryPerContainer / resourceProfile.getMemoryInMB()));
 
 			for (org.apache.flink.api.common.resources.Resource extendedResource : resourceProfile.getExtendedResources().values()) {
 				// Skip floating memory, it has been added to memory
 				if (extendedResource.getName().equals(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME)) {
 					continue;
 				}
+
+				Double minPerContainer = minExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());
+				if (minPerContainer != null) {
+					minSlot = Math.max(minSlot, (int) Math.ceil(minPerContainer / extendedResource.getValue()));
+				}
+
 				Double maxPerContainer = maxExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());
 				if (maxPerContainer != null) {
-					if (extendedResource.getValue() > maxPerContainer) {
-						return 1;
-					}
-					slot = Math.min(slot, (int) (maxPerContainer / extendedResource.getValue()));
+					maxSlot = Math.min(maxSlot, (int) Math.floor(maxPerContainer / extendedResource.getValue()));
 				}
 			}
-			return slot;
+
+			// if container's max resource constraints conflict with min resource constraints,
+			// follow the max resource constraints
+			return Math.min(minSlot, maxSlot);
 		}
 	}
 

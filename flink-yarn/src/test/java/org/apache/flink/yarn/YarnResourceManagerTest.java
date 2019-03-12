@@ -751,4 +751,22 @@ public class YarnResourceManagerTest extends TestLogger {
 				.addContainerRequest(any(AMRMClient.ContainerRequest.class));
 		}};
 	}
+
+	@Test
+	public void testCalculateSlotNumber() throws Exception {
+		Configuration conf = new Configuration(flinkConfig);
+		conf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_CORE, 1.0);
+		conf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE, 4.0);
+		conf.setInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY, 1 * 1024);
+		conf.setInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_MEMORY, 8 * 1024);
+
+		new Context(conf) {{
+			startResourceManager();
+
+			assertEquals(4, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 512)));
+			assertEquals(5, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 250)));
+			assertEquals(4, resourceManager.calculateSlotNumber(new ResourceProfile(0.2, 2 * 1024)));
+			assertEquals(2, resourceManager.calculateSlotNumber(new ResourceProfile(2, 256)));
+		}};
+	}
 }

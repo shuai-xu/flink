@@ -73,7 +73,7 @@ public class YarnResourceRequestAdapterITCase extends YarnTestBase {
 		// disable slot sharing group
 		configuration.setBoolean(JobManagerOptions.SLOT_ENABLE_SHARED_SLOT, false);
 		final YarnClient yarnClient = getYarnClient();
-		ResourceSpec resourceSpec = new ResourceSpec.Builder().setCpuCores(1).setHeapMemoryInMB(100).build();
+		ResourceSpec resourceSpec = new ResourceSpec.Builder().setCpuCores(1).setHeapMemoryInMB(1024).build();
 		// add extended resources
 		resourceSpec.getExtendedResources().put(ResourceSpec.GPU_NAME,
 			new CommonExtendedResource(ResourceSpec.GPU_NAME, 1));

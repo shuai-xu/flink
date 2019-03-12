@@ -82,6 +82,7 @@ public class KubernetesRMTestBase extends TestLogger {
 		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NETTY_MEMORY, 10);
 		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_NATIVE_MEMORY, 10);
 		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_PROCESS_HEAP_MEMORY, 10);
+		flinkConf.setInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY, 0);
 	}
 
 	/**

@@ -234,7 +234,7 @@ public class KubernetesResourceManagerTest extends KubernetesRMTestBase {
 	public void testNormalProcessForMultiSlots() throws Exception {
 		// set max core=3 for multiple slots
 		Configuration newFlinkConf = new Configuration(flinkConf);
-		newFlinkConf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE, 4.0);
+		newFlinkConf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_CORE, 4.0);
 		KubernetesConnectionManager kubernetesConnectionManager =
 			new KubernetesRMTestBase.TestingKubernetesConnectionManager(newFlinkConf);
 		KubernetesResourceManager spyKubernetesRM =

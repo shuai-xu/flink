@@ -369,9 +369,14 @@ public class KubernetesRMUtils {
 		return extendedResources;
 	}
 
-	public static Map<String, Double> loadExtendedResourceConstrains(Configuration config) {
-		String[] constrains = config.getString(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_EXTENDED_RESOURCES)
-			.split(",");
+	public static Map<String, Double> loadExtendedResourceConstrains(Configuration config, boolean loadMin) {
+		String constraintsStr;
+		if (loadMin) {
+			constraintsStr = config.getString(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_EXTENDED_RESOURCES);
+		} else {
+			constraintsStr = config.getString(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_EXTENDED_RESOURCES);
+		}
+		String[] constrains = constraintsStr.split(",");
 		Map<String, Double> extendedResourceConstrains = new HashMap<>(constrains.length);
 		for (String constrain : constrains) {
 			String[] kv = constrain.split("=");

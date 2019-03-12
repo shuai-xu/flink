@@ -124,10 +124,10 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 
 	private Consumer<Exception> watcherCloseHandler;
 
-	/** The min cpu core of a task executor. */
+	/** The min cpu core of a task executor, used to decide how many slots can be placed on a task executor. */
 	private final double minCorePerContainer;
 
-	/** The min memory of task executor to allocate (in MB). */
+	/** The min memory of task executor to allocate (in MB), used to decide how many slots can be placed on a task executor. */
 	private final int minMemoryPerContainer;
 
 	/** The max cpu core of a task executor, used to decide how many slots can be placed on a task executor. */
@@ -135,6 +135,9 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 
 	/** The max memory of a task executor, used to decide how many slots can be placed on a task executor. */
 	private final int maxMemoryPerContainer;
+
+	/** The min extended resource of a task executor, used to decide how many slots can be placed on a task executor. */
+	private final Map<String, Double> minExtendedResourcePerContainer;
 
 	/** The max extended resource of a task executor, used to decide how many slots can be placed on a task executor. */
 	private final Map<String, Double> maxExtendedResourcePerContainer;
@@ -204,7 +207,9 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 		minMemoryPerContainer = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY);
 		maxCorePerContainer = flinkConfig.getDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE);
 		maxMemoryPerContainer = flinkConfig.getInteger(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_MEMORY);
-		maxExtendedResourcePerContainer = KubernetesRMUtils.loadExtendedResourceConstrains(flinkConfig);
+
+		minExtendedResourcePerContainer = KubernetesRMUtils.loadExtendedResourceConstrains(flinkConfig, true);
+		maxExtendedResourcePerContainer = KubernetesRMUtils.loadExtendedResourceConstrains(flinkConfig, false);
 
 		pendingWorkerNodes = new ConcurrentHashMap<>();
 		priorityToSpareSlots = new HashMap<>();
@@ -726,29 +731,31 @@ public class KubernetesResourceManager extends ResourceManager<KubernetesWorkerN
 			return 1;
 		}
 		else {
-			if (resourceProfile.getCpuCores() > maxCorePerContainer) {
-				return 1;
-			}
-			if (resourceProfile.getMemoryInMB() > maxMemoryPerContainer) {
-				return 1;
-			}
-			int slot = Math.min((int) (maxCorePerContainer / resourceProfile.getCpuCores()),
-				(maxMemoryPerContainer / resourceProfile.getMemoryInMB()));
+			int minSlot = Math.max((int) Math.ceil(minCorePerContainer / resourceProfile.getCpuCores()),
+				(int) Math.ceil(1.0 * minMemoryPerContainer / resourceProfile.getMemoryInMB()));
+			int maxSlot = Math.min((int) Math.floor(maxCorePerContainer / resourceProfile.getCpuCores()),
+				(int) Math.floor(1.0 * maxMemoryPerContainer / resourceProfile.getManagedMemoryInMB()));
 
 			for (org.apache.flink.api.common.resources.Resource extendedResource : resourceProfile.getExtendedResources().values()) {
 				// Skip floating memory, it has been added to memory
 				if (extendedResource.getName().equals(ResourceSpec.FLOATING_MANAGED_MEMORY_NAME)) {
 					continue;
 				}
+
+				Double minPerContainer = minExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());
+				if (minPerContainer != null) {
+					minSlot = Math.max(minSlot, (int) Math.ceil(minPerContainer / extendedResource.getValue()));
+				}
+
 				Double maxPerContainer = maxExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());
 				if (maxPerContainer != null) {
-					if (extendedResource.getValue() > maxPerContainer) {
-						return 1;
-					}
-					slot = Math.min(slot, (int) (maxPerContainer / extendedResource.getValue()));
+					maxSlot = Math.min(maxSlot, (int) Math.floor(maxPerContainer / extendedResource.getValue()));
 				}
 			}
-			return slot;
+
+			// if container's max resource constraints conflict with min resource constraints,
+			// follow the max resource constraints
+			return Math.min(minSlot, maxSlot);
 		}
 	}
 

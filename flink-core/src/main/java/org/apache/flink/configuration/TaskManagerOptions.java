@@ -116,46 +116,54 @@ public class TaskManagerOptions {
 			.withDescription("Ratio of young generation for persistent memory in task manager.");
 
 	/**
-	 * Cpu core limitation for a task manager, used to decide how many slots can be placed on a task manager.
+	 * Max cpu cores for a task manager, used to decide how many slots can be placed on a task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MULTI_SLOTS_MAX_CORE =
 			key("taskmanager.multi-slots.max.cpu.core")
-			.defaultValue(1.0)
-			.withDescription("Cpu core limitation, used to decide how many slots can be placed on a taskmanager.");
+			.defaultValue(16.0)
+			.withDescription("Max cpu cores for a task manager, used to decide how many slots can be placed on a task manager.");
 
 	/**
-	 * Memory limitation, used to decide how many slots can be placed on a task manager.
+	 * Max memory (in megabytes) for a task manager, used to decide how many slots can be placed on a task manager.
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_MULTI_SLOTS_MAX_MEMORY =
 			key("taskmanager.multi-slots.max.memory.mb")
-			.defaultValue(32768)
-			.withDescription("Memory (in megabytes) limitation, used to decide how many slots can be placed " +
-				"on a taskmanager.");
+			.defaultValue(65536)
+			.withDescription("Max memory (in megabytes) for a task manager, used to decide how many slots can be placed on a task manager.");
 
 	/**
-	 * Extended resources limitation, used to decide how many slots can be placed on a task manager.
+	 * Max extended resources for a task manager, used to decide how many slots can be placed on a task manager.
 	 */
 	public static final ConfigOption<String> TASK_MANAGER_MULTI_SLOTS_MAX_EXTENDED_RESOURCES =
-			key("taskmanager.multi-slots.max.extended-resources")
+		key("taskmanager.multi-slots.max.extended-resources")
 			.defaultValue("")
-			.withDescription("Extended resources limitation, used to decide how many slots can be placed " +
-				"on a taskmanger. String format is like \"GPU=10,FPGA=12\".");
+			.withDescription("Max extended resources for a task manager, used to decide how many slots can be placed "
+				+ "on a task manager. String format is like \"GPU=10,FPGA=12\".");
 
 	/**
-	 * Min cpu cores for a task manager.
+	 * Min extended resources for a task manager, used to decide how many slots can be placed on a task manager.
+	 */
+	public static final ConfigOption<String> TASK_MANAGER_MULTI_SLOTS_MIN_EXTENDED_RESOURCES =
+		key("taskmanager.multi-slots.min.extended-resources")
+			.defaultValue("")
+			.withDescription("Min extended resources for a task manager, used to decide how many slots can be placed "
+				+ "on a task manager. String format is like \"GPU=10,FPGA=12\".");
+
+	/**
+	 * Min cpu cores for a task manager, used to decide how many slots can be placed on a task manager.
 	 */
 	public static final ConfigOption<Double> TASK_MANAGER_MULTI_SLOTS_MIN_CORE =
 			key("taskmanager.multi-slots.min.cpu.core")
 			.defaultValue(1.0)
-			.withDescription("Min cpu core for a taskmanager.");
+			.withDescription("Min cpu cores for a task manager, used to decide how many slots can be placed on a task manager.");
 
 	/**
-	 * Min memory for a task manager.
+	 * Min memory (in megabytes) for a task manager, used to decide how many slots can be placed on a task manager.
 	 */
 	public static final ConfigOption<Integer> TASK_MANAGER_MULTI_SLOTS_MIN_MEMORY =
 			key("taskmanager.multi-slots.min.memory.mb")
 			.defaultValue(1024)
-			.withDescription("Min memory (in megabytes) for taskmanager.");
+			.withDescription("Min memory (in megabytes) for a task manager, used to decide how many slots can be placed on a task manager.");
 
 	/**
 	 * The resource profile for slots in a task executor.

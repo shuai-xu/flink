@@ -194,28 +194,33 @@
         </tr>
         <tr>
             <td><h5>taskmanager.multi-slots.max.cpu.core</h5></td>
-            <td style="word-wrap: break-word;">1.0</td>
-            <td>Cpu core limitation, used to decide how many slots can be placed on a taskmanager.</td>
+            <td style="word-wrap: break-word;">16.0</td>
+            <td>Max cpu cores for a task manager, used to decide how many slots can be placed on a task manager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.multi-slots.max.extended-resources</h5></td>
             <td style="word-wrap: break-word;">(none)</td>
-            <td>Extended resources limitation, used to decide how many slots can be placed on a taskmanger. String format is like "GPU=10,FPGA=12".</td>
+            <td>Max extended resources for a task manager, used to decide how many slots can be placed on a task manager. String format is like "GPU=10,FPGA=12".</td>
         </tr>
         <tr>
             <td><h5>taskmanager.multi-slots.max.memory.mb</h5></td>
-            <td style="word-wrap: break-word;">32768</td>
-            <td>Memory (in megabytes) limitation, used to decide how many slots can be placed on a taskmanager.</td>
+            <td style="word-wrap: break-word;">65536</td>
+            <td>Max memory (in megabytes) for a task manager, used to decide how many slots can be placed on a task manager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.multi-slots.min.cpu.core</h5></td>
             <td style="word-wrap: break-word;">1.0</td>
-            <td>Min cpu core for a taskmanager.</td>
+            <td>Min cpu cores for a task manager, used to decide how many slots can be placed on a task manager.</td>
+        </tr>
+        <tr>
+            <td><h5>taskmanager.multi-slots.min.extended-resources</h5></td>
+            <td style="word-wrap: break-word;">(none)</td>
+            <td>Min extended resources for a task manager, used to decide how many slots can be placed on a task manager. String format is like "GPU=10,FPGA=12".</td>
         </tr>
         <tr>
             <td><h5>taskmanager.multi-slots.min.memory.mb</h5></td>
             <td style="word-wrap: break-word;">1024</td>
-            <td>Min memory (in megabytes) for taskmanager.</td>
+            <td>Min memory (in megabytes) for a task manager, used to decide how many slots can be placed on a task manager.</td>
         </tr>
         <tr>
             <td><h5>taskmanager.native.memory.mb</h5></td>
