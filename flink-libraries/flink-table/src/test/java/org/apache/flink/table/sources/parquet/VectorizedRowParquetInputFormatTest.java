@@ -41,6 +41,7 @@ import java.util.Random;
 import java.util.UUID;
 
 import static junit.framework.TestCase.assertEquals;
+import static org.apache.flink.table.dataformat.BinaryString.fromString;
 import static org.apache.hadoop.hdfs.server.common.Storage.deleteDir;
 
 /**
@@ -74,7 +75,7 @@ public class VectorizedRowParquetInputFormatTest {
 				GenericRow r = new GenericRow(fieldNames.length);
 				r.update(0, random.nextBoolean());
 				r.update(1, (short) random.nextInt(100));
-				r.update(2, "testReadRow" + random.nextInt());
+				r.update(2, fromString("testReadRow" + random.nextInt()));
 				r.update(3, newRandomDecimal(random, 5, 1));
 				r.update(4, newRandomDecimal(random, 15, 9));
 				r.update(5, newRandomDecimal(random, 20, 4));
@@ -144,7 +145,7 @@ public class VectorizedRowParquetInputFormatTest {
 				GenericRow r = new GenericRow(fieldNames.length);
 				r.update(0, random.nextBoolean());
 				r.update(1, (short) random.nextInt(1024));
-				r.update(2, "testReadRow" + random.nextInt());
+				r.update(2, fromString("testReadRow" + random.nextInt()));
 				r.update(3, newRandomDecimal(random, 5, 1));
 				r.update(4, newRandomDecimal(random, 15, 9));
 				r.update(5, newRandomDecimal(random, 20, 4));

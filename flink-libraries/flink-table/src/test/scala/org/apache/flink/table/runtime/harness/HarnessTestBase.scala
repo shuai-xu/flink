@@ -31,7 +31,7 @@ import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, KeyedTwoInputStreamOperatorTestHarness, TestHarnessUtil}
 import org.apache.flink.table.dataformat.util.BaseRowUtil
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow, JoinedRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow, JoinedRow}
 import org.apache.flink.table.runtime.utils.StreamingTestBase
 import org.apache.flink.table.runtime.utils.StreamingWithStateTestBase.{HEAP_BACKEND, ROCKSDB_BACKEND, StateBackendMode}
 import org.apache.flink.table.types.{DataTypes, TypeConverters}
@@ -194,7 +194,10 @@ class HarnessTestBase(mode: StateBackendMode) extends StreamingTestBase {
   }
 
   def hOf(header: Byte, objects: Object*): GenericRow = {
-    val row = GenericRow.of(objects: _*)
+    val row = GenericRow.of(objects.map {
+      case str: String => BinaryString.fromString(str)
+      case o => o
+    }: _*)
     row.setHeader(header)
     row
   }

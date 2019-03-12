@@ -195,6 +195,8 @@ public class BaseRowSerializer<T extends BaseRow> extends AbstractRowSerializer<
 	private Object copyValueNotNull(Object o, int index) {
 		if (o instanceof BinaryString) {
 			return ((BinaryString) o).copy();
+		} else if (o instanceof String) {
+			return o;
 		} else if (o instanceof BinaryArray) {
 			return ((BinaryArray) o).copy();
 		} else if (o instanceof BinaryMap) {
