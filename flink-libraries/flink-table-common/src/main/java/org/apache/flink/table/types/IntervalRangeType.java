@@ -23,6 +23,8 @@ package org.apache.flink.table.types;
  */
 public class IntervalRangeType extends AtomicType {
 
+	private static final long serialVersionUID = 1L;
+
 	public static final IntervalRangeType INSTANCE = new IntervalRangeType();
 
 	private IntervalRangeType() {

@@ -23,6 +23,8 @@ package org.apache.flink.table.types;
  */
 public class StringType extends AtomicType {
 
+	private static final long serialVersionUID = 1L;
+
 	public static final StringType INSTANCE = new StringType();
 
 	private StringType() {

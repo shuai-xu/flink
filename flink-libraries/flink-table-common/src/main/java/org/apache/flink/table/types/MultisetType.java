@@ -23,6 +23,8 @@ package org.apache.flink.table.types;
  */
 public class MultisetType extends MapType {
 
+	private static final long serialVersionUID = 1L;
+
 	public MultisetType(DataType elementType) {
 		super(elementType, Types.INT);
 	}

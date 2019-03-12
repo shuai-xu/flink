@@ -26,6 +26,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 @Deprecated
 public class TypeInfoWrappedType extends TypeInfoWrappedDataType {
 
+	private static final long serialVersionUID = 1L;
+
 	public TypeInfoWrappedType(TypeInformation typeInfo) {
 		super(typeInfo);
 	}

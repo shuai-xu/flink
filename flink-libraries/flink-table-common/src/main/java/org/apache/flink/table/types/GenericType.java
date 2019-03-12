@@ -28,6 +28,8 @@ import org.apache.flink.api.java.typeutils.GenericTypeInfo;
  */
 public class GenericType<T> extends AtomicType {
 
+	private static final long serialVersionUID = 1L;
+
 	private TypeInformation<T> typeInfo;
 	private TypeSerializer<T> serializer;
 

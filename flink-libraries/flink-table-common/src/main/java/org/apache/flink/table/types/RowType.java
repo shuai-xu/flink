@@ -30,6 +30,8 @@ import java.util.Arrays;
  */
 public class RowType extends InternalType {
 
+	private static final long serialVersionUID = 1L;
+
 	/**
 	 * Use DataType instead of InternalType to convert to Row (if a Pojo in Row).
 	 */

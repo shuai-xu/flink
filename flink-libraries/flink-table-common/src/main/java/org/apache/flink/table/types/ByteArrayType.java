@@ -23,6 +23,8 @@ package org.apache.flink.table.types;
  */
 public class ByteArrayType extends AtomicType {
 
+	private static final long serialVersionUID = 1L;
+
 	public static final ByteArrayType INSTANCE = new ByteArrayType();
 
 	private ByteArrayType() {}

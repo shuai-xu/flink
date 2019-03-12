@@ -22,4 +22,5 @@ package org.apache.flink.table.types;
  * Primitive type.
  */
 public abstract class PrimitiveType extends AtomicType {
+	private static final long serialVersionUID = 1L;
 }

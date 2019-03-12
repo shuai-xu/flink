@@ -25,6 +25,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class ArrayType extends InternalType {
 
+	private static final long serialVersionUID = 1L;
+
 	private boolean isPrimitive;
 	private DataType elementType;
 

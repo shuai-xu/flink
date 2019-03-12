@@ -23,6 +23,8 @@ package org.apache.flink.table.types;
  */
 public class DateType extends AtomicType {
 
+	private static final long serialVersionUID = 1L;
+
 	public static final DateType DATE = new DateType(0, "DateType");
 	public static final DateType INTERVAL_MONTHS = new DateType(1, "IntervalMonths");
 

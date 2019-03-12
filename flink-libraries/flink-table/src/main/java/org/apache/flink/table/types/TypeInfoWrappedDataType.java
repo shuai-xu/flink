@@ -27,6 +27,8 @@ import org.apache.flink.table.utils.TypeStringUtils;
  */
 public class TypeInfoWrappedDataType implements ExternalType {
 
+	private static final long serialVersionUID = 1L;
+
 	private TypeInformation typeInfo;
 	private InternalType internalType;
 

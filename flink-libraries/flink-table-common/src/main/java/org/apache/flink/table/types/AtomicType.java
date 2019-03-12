@@ -23,6 +23,8 @@ package org.apache.flink.table.types;
  */
 public abstract class AtomicType extends InternalType {
 
+	private static final long serialVersionUID = 1L;
+
 	@Override
 	public boolean equals(Object o) {
 		return this == o || o != null && getClass() == o.getClass();

@@ -23,6 +23,8 @@ package org.apache.flink.table.types;
  */
 public abstract class InternalType implements DataType {
 
+	private static final long serialVersionUID = 1L;
+
 	/**
 	 * To give DataType a way to convert a DataType to a InternalType.
 	 */
