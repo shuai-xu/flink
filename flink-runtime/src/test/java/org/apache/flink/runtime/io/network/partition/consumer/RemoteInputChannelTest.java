@@ -39,25 +39,33 @@ import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
 
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import scala.Tuple2;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -287,6 +295,55 @@ public class RemoteInputChannelTest {
 		ch.onFailedPartitionRequest();
 
 		verify(inputGate).triggerPartitionStateCheck(eq(partitionId));
+	}
+
+	@Test
+	public void testOnFailedPreConnection() throws Exception {
+		final AtomicInteger counter = new AtomicInteger(0);
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		final PartitionRequestClient partitionRequestClient = mock(PartitionRequestClient.class);
+		final ConnectionManager connectionManager = mock(ConnectionManager.class);
+		when(connectionManager.createPartitionRequestClient(any(ConnectionID.class)))
+			.then(new Answer<PartitionRequestClient>() {
+					  @Override
+					  public PartitionRequestClient answer(InvocationOnMock invocationOnMock) throws Throwable {
+						  if (counter.get() < 1) {
+							  counter.incrementAndGet();
+							  latch.countDown();
+							  throw new IOException("Partition request client initialization failed.");
+						  }
+						  return partitionRequestClient;
+					  }
+				  }
+			);
+
+		final ResultPartitionID partitionId = new ResultPartitionID();
+		final SingleInputGate inputGate = createSingleInputGate();
+
+		final RemoteInputChannel ch = new RemoteInputChannel(
+			inputGate,
+			0,
+			partitionId,
+			mock(ConnectionID.class),
+			connectionManager,
+			UnregisteredMetricGroups.createUnregisteredTaskMetricGroup().getIOMetricGroup());
+
+		if (!latch.await(1000, TimeUnit.MILLISECONDS)) {
+			fail();
+		}
+
+		verify(connectionManager, times(1)).createPartitionRequestClient(any(ConnectionID.class));
+		assertEquals(1, counter.get());
+		ch.checkError();
+		Field field = ch.getClass().getDeclaredField("partitionRequestClient");
+		field.setAccessible(true);
+		assertNull(field.get(ch));
+
+		ch.requestSubpartition(0);
+
+		verify(connectionManager, times(2)).createPartitionRequestClient(any(ConnectionID.class));
+		verify(partitionRequestClient, times(1)).requestSubpartition(any(ResultPartitionID.class), anyInt(), any(RemoteInputChannel.class), anyInt());
 	}
 
 	@Test(expected = CancelTaskException.class)

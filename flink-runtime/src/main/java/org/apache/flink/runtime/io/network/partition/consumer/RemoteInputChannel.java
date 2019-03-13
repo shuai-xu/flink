@@ -148,18 +148,20 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 		inputGate.runAsync(new Runnable() {
 			@Override
 			public void run() {
-				createPartitionRequestClient();
+				createPartitionRequestClient(false);
 			}
 		});
 	}
 
-	private void createPartitionRequestClient() {
+	private void createPartitionRequestClient(boolean notifyError) {
 		synchronized (partitionRequestLock) {
 			if (partitionRequestClient == null) {
 				try {
 					partitionRequestClient = connectionManager.createPartitionRequestClient(connectionId);
 				} catch (Throwable t) {
-					setError(new DataConsumptionException(partitionId, t));
+					if (notifyError) {
+						setError(new DataConsumptionException(partitionId, t));
+					}
 				}
 			}
 		}
@@ -199,7 +201,7 @@ public class RemoteInputChannel extends InputChannel implements BufferRecycler, 
 	public void requestSubpartition(int subpartitionIndex) throws IOException, InterruptedException {
 		// initialize partitionRequestClient if not initialized yet
 		if (partitionRequestClient == null) {
-			createPartitionRequestClient();
+			createPartitionRequestClient(true);
 			// throw exception when errors occur
 			checkError();
 		}
