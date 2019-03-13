@@ -65,7 +65,7 @@ public class MetricUtils {
 		for (TaskMetricSubscription metric : metrics) {
 			Tuple2<Long, Double> val = metric.getValue();
 			if (val == null || val.f0 < monitor.getJobStartExecutionTime() ||
-					now - val.f0 > validInterval) {
+					validInterval > 1 && now - val.f0 > validInterval) {
 				return false;
 			}
 		}

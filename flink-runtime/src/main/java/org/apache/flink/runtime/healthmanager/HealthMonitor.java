@@ -44,6 +44,7 @@ import org.apache.flink.runtime.healthmanager.plugins.detectors.HighNativeMemory
 import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.JobStuckDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.KilledDueToMemoryExceedDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LargeTimerCountDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LongTimeFullGCDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowCpuDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.LowMemoryDetector;
@@ -238,6 +239,7 @@ public class HealthMonitor {
 				// detector which will trigger rescale
 				detectorClazzs.add(HighDelayDetector.class.getCanonicalName());
 				detectorClazzs.add(DelayIncreasingDetector.class.getCanonicalName());
+				detectorClazzs.add(LargeTimerCountDetector.class.getCanonicalName());
 				detectorClazzs.add(OverParallelizedDetector.class.getCanonicalName());
 
 				// detectors which will check state of job

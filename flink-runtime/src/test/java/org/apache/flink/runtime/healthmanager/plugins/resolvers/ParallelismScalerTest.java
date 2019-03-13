@@ -24,6 +24,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.checkpoint.CheckpointStatsStatus;
+import org.apache.flink.runtime.healthmanager.HealthMonitor;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.TaskMetricSubscription;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
@@ -143,6 +144,7 @@ public class ParallelismScalerTest {
 				true,
 				10,
 				0,
+				0,
 				1.1,
 				0,
 				0.1,
@@ -167,6 +169,7 @@ public class ParallelismScalerTest {
 				true,
 				10,
 				0,
+				0,
 				1.1,
 				0,
 				0.1,
@@ -190,6 +193,7 @@ public class ParallelismScalerTest {
 				false,
 				10,
 				0,
+				0,
 				1.1,
 				0,
 				0.1,
@@ -208,6 +212,7 @@ public class ParallelismScalerTest {
 				vertexID,
 				false,
 				10,
+				0,
 				0,
 				1.1,
 				0,
@@ -316,18 +321,38 @@ public class ParallelismScalerTest {
 		Whitebox.setInternalState(scaler, "maxPartitionPerTask", 2);
 		Whitebox.setInternalState(scaler, "stateSizeThreshold", 4);
 
+		Map<JobVertexID, ParallelismScaler.TaskMetrics> allMetrics = new HashMap<>();
+		ParallelismScaler.TaskMetrics taskMetrics = new ParallelismScaler.TaskMetrics(
+			vertex1,
+			true,
+			10,
+			0,
+			30000000,
+			1.1,
+			0,
+			0.1,
+			1,
+			0.9,
+			0.1,
+			32
+		);
+		allMetrics.put(vertex1, taskMetrics);
+
 		Map<JobVertexID, Integer> expectedMinParallelism = new HashMap<>();
-		expectedMinParallelism.put(vertex1, 4);
+		expectedMinParallelism.put(vertex1, 5);
 		expectedMinParallelism.put(vertex2, 2);
 		expectedMinParallelism.put(vertex3, 1);
 		expectedMinParallelism.put(vertex4, 1);
 		scaler.analyzeJobGraph(jobConfig);
-		assertEquals(expectedMinParallelism, scaler.getVertexMinParallelisms(jobConfig, checkpointInfo));
+		assertEquals(expectedMinParallelism, scaler.getVertexMinParallelisms(jobConfig, checkpointInfo, allMetrics));
 	}
 
 	@Test
 	public void testGetTargetParallelism() {
+		HealthMonitor monitor = new HealthMonitor(null, null, null, null, new Configuration());
 		ParallelismScaler scaler = new ParallelismScaler();
+		scaler.setMonitor(monitor);
+
 		Whitebox.setInternalState(scaler, "reservedParallelismRatio", 1.2);
 		Whitebox.setInternalState(scaler, "scaleTpsRatio", 2);
 		JobVertexID vertex1 = new JobVertexID();
@@ -357,13 +382,13 @@ public class ParallelismScalerTest {
 		Set<JobVertexID> scaleDownSet = new HashSet<>();
 		Map<JobVertexID, ParallelismScaler.TaskMetrics> metrics = new HashMap<>();
 		ParallelismScaler.TaskMetrics v1Metrics = new ParallelismScaler.TaskMetrics(
-				vertex1, true, 1, 1, 1, 1, 1, 256, 1, 1, 256);
+				vertex1, true, 1, 1, 18000000, 1, 1, 1, 256, 1, 1, 256);
 		ParallelismScaler.TaskMetrics v2Metrics = new ParallelismScaler.TaskMetrics(
-				vertex2, false, 1, 1,  1, 1, 1, 1, 1, 1, 1);
+				vertex2, false, 1, 1, 0,  1, 1, 1, 1, 1, 1, 1);
 		ParallelismScaler.TaskMetrics v3Metrics = new ParallelismScaler.TaskMetrics(
-				vertex3, false, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+				vertex3, false, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1);
 		ParallelismScaler.TaskMetrics v4Metrics = new ParallelismScaler.TaskMetrics(
-				vertex4, false, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+				vertex4, false, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1);
 		metrics.put(vertex1, v1Metrics);
 		metrics.put(vertex2, v2Metrics);
 		metrics.put(vertex3, v3Metrics);
@@ -371,7 +396,7 @@ public class ParallelismScalerTest {
 		scaleupRatio.clear();
 		scaleDownSet.clear();
 		Map<JobVertexID, Integer> expectedParallelism = new HashMap<>();
-		expectedParallelism.put(vertex1, 4);
+		expectedParallelism.put(vertex1, 6);
 		expectedParallelism.put(vertex2, 4);
 		expectedParallelism.put(vertex3, 4);
 		expectedParallelism.put(vertex4, 4);

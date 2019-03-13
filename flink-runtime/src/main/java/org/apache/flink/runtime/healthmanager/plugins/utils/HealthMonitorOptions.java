@@ -51,6 +51,12 @@ public class HealthMonitorOptions {
 			ConfigOptions.key("parallelism.scale.ratio.min").defaultValue(3.0);
 
 	/**
+	 * parallelism rescale ratio for massive timers detected.
+	 */
+	public static final ConfigOption<Double> TIMER_SCALE_RATIO =
+		ConfigOptions.key("timer.scale.ratio").defaultValue(2.0);
+
+	/**
 	 * parallelism check interval.
 	 */
 	public static final ConfigOption<Long> PARALLELISM_SCALE_INTERVAL =

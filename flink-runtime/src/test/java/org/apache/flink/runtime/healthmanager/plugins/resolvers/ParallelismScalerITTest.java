@@ -33,6 +33,7 @@ import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.BackPressureDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.DelayIncreasingDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.HighDelayDetector;
+import org.apache.flink.runtime.healthmanager.plugins.detectors.LargeTimerCountDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.OverParallelizedDetector;
 import org.apache.flink.runtime.healthmanager.plugins.detectors.TestingJobStableDetector;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
@@ -159,9 +160,9 @@ public class ParallelismScalerITTest {
 
 		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
 			v1InputTps, v1OutputTps, v1LatencyCountRange, v1LatencySumRange,
-			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, v1DelayRate,
+			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, v1DelayRate, zeroSub,
 			v2InputTps, v2OutputTps, v2LatencyCountRange, v2LatencySumRange,
-			v2WaitOutputCountRange, v2WaitOutputSumRange);
+			v2WaitOutputCountRange, v2WaitOutputSumRange, zeroSub);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
@@ -309,9 +310,9 @@ public class ParallelismScalerITTest {
 
 		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
 			v1InputTps, v1OutputTps, v1LatencyCountRange, v1LatencySumRange,
-			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, v1DelayRate,
+			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, v1DelayRate, zeroSub,
 			v2InputTps, v2OutputTps, v2LatencyCountRange, v2LatencySumRange,
-			v2WaitOutputCountRange, v2WaitOutputSumRange);
+			v2WaitOutputCountRange, v2WaitOutputSumRange, zeroSub);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
@@ -360,15 +361,120 @@ public class ParallelismScalerITTest {
 				Mockito.eq(vertexParallelismResource));
 	}
 
+	/**
+	 * test parallelism scale up for massive timer only.
+	 * Vertex v1 initial parallelism = 2, target parallelism = 1, do not rescale.
+	 * Vertex v2 initial parallelism = 1, target parallelism = 1,
+	 * rescale to 12000000 / 6000000 * 2 = 4.
+	 */
+	@Test
+	public void testScaleUpForMassiveTimer() throws Exception {
+		MetricProvider metricProvider = Mockito.mock(MetricProvider.class);
+		RestServerClient restServerClient = Mockito.mock(RestServerClient.class);
+		ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(
+			1, new ExecutorThreadFactory("health-manager"));
+
+		JobID jobID = new JobID();
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
+
+		// job level configuration.
+		Configuration config = new Configuration();
+		config.setLong(HealthMonitorOptions.PARALLELISM_SCALE_TIME_OUT, 10000);
+		config.setString(HealthMonitor.DETECTOR_CLASSES, LargeTimerCountDetector.class.getCanonicalName() + "," +
+			TestingJobStableDetector.class.getCanonicalName());
+		config.setString(HealthMonitor.RESOLVER_CLASSES, ParallelismScaler.class.getCanonicalName());
+
+		// initial job vertex config.
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs1 = new HashMap<>();
+		RestServerClient.VertexConfig vertex1Config1 = new RestServerClient.VertexConfig(
+			2, 8, new ResourceSpec.Builder().build());
+		RestServerClient.VertexConfig vertex2Config1 = new RestServerClient.VertexConfig(
+			1, 8, new ResourceSpec.Builder().build());
+		vertexConfigs1.put(vertex1, vertex1Config1);
+		vertexConfigs1.put(vertex2, vertex2Config1);
+
+		// job graph topology
+		Map<JobVertexID, List<Tuple2<JobVertexID, String>>> inputNodes = new HashMap<>();
+		inputNodes.put(vertex1, Collections.emptyList());
+		inputNodes.put(vertex2, Arrays.asList(Tuple2.of(vertex1, "HASH")));
+
+		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
+			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs1, inputNodes));
+
+		long now = System.currentTimeMillis();
+
+		TaskMetricSubscription zeroSub = Mockito.mock(TaskMetricSubscription.class);
+
+		// vertex1
+		TaskMetricSubscription v1TimerCount = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v1TimerCount.getValue()).thenReturn(new Tuple2<>(now, 5000000.0));
+
+		// vertex2
+		TaskMetricSubscription v2TimerCount = Mockito.mock(TaskMetricSubscription.class);
+		Mockito.when(v2TimerCount.getValue()).thenReturn(new Tuple2<>(now, 12000000.0));
+
+		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
+			zeroSub, zeroSub, zeroSub, zeroSub, zeroSub,
+			zeroSub, zeroSub, zeroSub, v1TimerCount, zeroSub,
+			zeroSub, zeroSub, zeroSub, zeroSub, zeroSub, v2TimerCount);
+
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
+		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(now, ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(now, ExecutionState.SCHEDULED));
+		RestServerClient.JobStatus jobStatus = new RestServerClient.JobStatus(allTaskStats);
+
+		allTaskStats.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(now, ExecutionState.RUNNING));
+		allTaskStats.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(now, ExecutionState.RUNNING));
+		RestServerClient.JobStatus jobStatus2 = new RestServerClient.JobStatus(allTaskStats);
+
+		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats2 = new HashMap<>();
+		allTaskStats2.put(new ExecutionVertexID(vertex1, 0),
+			Tuple2.of(now, ExecutionState.RUNNING));
+		allTaskStats2.put(new ExecutionVertexID(vertex2, 0),
+			Tuple2.of(now, ExecutionState.RUNNING));
+		RestServerClient.JobStatus jobStatus3 = new RestServerClient.JobStatus(allTaskStats2);
+
+		// mock slow scheduling.
+		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
+			.thenReturn(jobStatus).thenReturn(jobStatus2).thenReturn(jobStatus3);
+
+		HealthMonitor monitor = new HealthMonitor(
+			jobID,
+			metricProvider,
+			restServerClient,
+			executorService,
+			new Configuration()
+		);
+
+		monitor.start();
+
+		Thread.sleep(10000);
+
+		monitor.stop();
+
+		// verify rpc calls.
+		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
+		vertexParallelismResource.put(vertex2, new Tuple2<>(4, ResourceSpec.newBuilder().build()));
+		Mockito.verify(restServerClient, Mockito.times(1))
+			.rescale(
+				Mockito.eq(jobID),
+				Mockito.eq(vertexParallelismResource));
+	}
+
 	private void initMockMetrics(MetricProvider metricProvider, JobVertexID vertex1,
 		JobVertexID vertex2, TaskMetricSubscription zeroSub, TaskMetricSubscription v1InputCount,
 		TaskMetricSubscription v1OutputCount, TaskMetricSubscription v1LatencyCountRange,
 		TaskMetricSubscription v1LatencySumRange, TaskMetricSubscription v1WaitOutputCountRange,
 		TaskMetricSubscription v1WaitOutputSumRange, TaskMetricSubscription v1Delay,
-		TaskMetricSubscription v1DelayRate, TaskMetricSubscription v2InputCount,
+		TaskMetricSubscription v1DelayRate, TaskMetricSubscription v1TimerCount, TaskMetricSubscription v2InputCount,
 		TaskMetricSubscription v2OutputCount, TaskMetricSubscription v2LatencyCountRange,
 		TaskMetricSubscription v2LatencySumRange, TaskMetricSubscription v2WaitOutputCountRange,
-		TaskMetricSubscription v2WaitOutputSumRange) {
+		TaskMetricSubscription v2WaitOutputSumRange, TaskMetricSubscription v2TimerCount) {
 		Mockito.when(metricProvider.subscribeTaskMetric(
 			Mockito.any(JobID.class),
 			Mockito.any(JobVertexID.class),
@@ -385,6 +491,10 @@ public class ParallelismScalerITTest {
 				if (metricName.equals(MetricNames.TASK_INPUT_COUNT)) {
 					if (aggType.equals(TimelineAggType.RATE)) {
 						return v1InputCount;
+					}
+				} else if (metricName.equals(MetricNames.TASK_TIMER_COUNT)){
+					if (aggType.equals(TimelineAggType.LATEST)) {
+						return v1TimerCount;
 					}
 				} else if (metricName.equals(MetricNames.TASK_OUTPUT_COUNT)) {
 					if (aggType.equals(TimelineAggType.RATE)) {
@@ -429,6 +539,10 @@ public class ParallelismScalerITTest {
 				if (metricName.equals(MetricNames.TASK_INPUT_COUNT)) {
 					if (aggType.equals(TimelineAggType.RATE)) {
 						return v2InputCount;
+					}
+				} else if (metricName.equals(MetricNames.TASK_TIMER_COUNT)){
+					if (aggType.equals(TimelineAggType.LATEST)) {
+						return v2TimerCount;
 					}
 				} else if (metricName.equals(MetricNames.TASK_OUTPUT_COUNT)) {
 					if (aggType.equals(TimelineAggType.RATE)) {
@@ -574,9 +688,9 @@ public class ParallelismScalerITTest {
 
 		initMockMetrics(metricProvider, vertex1, vertex2, zeroSub,
 			v1InputCount, v1OutputCount, v1LatencyCountRange, v1LatencySumRange,
-			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, zeroSub,
+			v1WaitOutputCountRange, v1WaitOutputSumRange, v1Delay, zeroSub, zeroSub,
 			v2InputCount, v2OutputCount, v2LatencyCountRange, v2LatencySumRange,
-			v2WaitOutputCountRange, v2WaitOutputSumRange);
+			v2WaitOutputCountRange, v2WaitOutputSumRange, zeroSub);
 
 		Map<ExecutionVertexID, Tuple2<Long, ExecutionState>> allTaskStats = new HashMap<>();
 		allTaskStats.put(new ExecutionVertexID(vertex1, 0),

@@ -37,6 +37,7 @@ public class MetricNames {
 	public static final String WAIT_OUTPUT_COUNT = "waitOutput.count";
 	public static final String WAIT_OUTPUT_SUM = "waitOutput.sum";
 	public static final String TASK_INIT_TIME = "taskInitTimeMs";
+	public static final String TASK_TIMER_COUNT = "TimerCount.Total";
 
 	public static final String TM_CPU_CAPACITY = "Status.ProcessTree.CPU.Allocated";
 	public static final String TM_CPU_USAGE = "Status.ProcessTree.CPU.Usage";
