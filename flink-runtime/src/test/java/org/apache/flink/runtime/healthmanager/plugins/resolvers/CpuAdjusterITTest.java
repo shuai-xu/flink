@@ -35,6 +35,7 @@ import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions
 import org.apache.flink.runtime.healthmanager.plugins.utils.MetricUtils;
 import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 
 import org.junit.Test;
@@ -233,6 +234,11 @@ public class CpuAdjusterITTest {
 		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
 			.thenReturn(jobStatus).thenReturn(jobStatus2);
 
+		CheckpointStatistics checkpointStatistics = Mockito.mock(CheckpointStatistics.class);
+		Mockito.when(checkpointStatistics.getLatestAckTimestamp()).thenReturn(System.currentTimeMillis());
+		Mockito.when(restServerClient.getLatestCheckPointStates(Mockito.eq(jobID)))
+			.thenReturn(checkpointStatistics);
+
 		HealthMonitor monitor = new HealthMonitor(
 			jobID,
 			metricProvider,
@@ -379,6 +385,11 @@ public class CpuAdjusterITTest {
 		// mock slow scheduling.
 		Mockito.when(restServerClient.getJobStatus(Mockito.eq(jobID)))
 			.thenReturn(jobStatus).thenReturn(jobStatus2);
+
+		CheckpointStatistics checkpointStatistics = Mockito.mock(CheckpointStatistics.class);
+		Mockito.when(checkpointStatistics.getLatestAckTimestamp()).thenReturn(System.currentTimeMillis());
+		Mockito.when(restServerClient.getLatestCheckPointStates(Mockito.eq(jobID)))
+			.thenReturn(checkpointStatistics);
 
 		HealthMonitor monitor = new HealthMonitor(
 			jobID,

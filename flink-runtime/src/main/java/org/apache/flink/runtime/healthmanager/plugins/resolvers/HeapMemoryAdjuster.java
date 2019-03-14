@@ -35,6 +35,7 @@ import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowMemor
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.rest.messages.checkpoints.CheckpointStatistics;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +61,7 @@ public class HeapMemoryAdjuster implements Resolver {
 	private long timeout;
 	private long opportunisticActionDelay;
 	private long stableTime;
+	private long checkpointIntervalThreshold;
 
 	private double maxCpuLimit;
 	private int maxMemoryLimit;
@@ -82,6 +84,7 @@ public class HeapMemoryAdjuster implements Resolver {
 		this.timeout = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_TIME_OUT);
 		this.opportunisticActionDelay = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_OPPORTUNISTIC_ACTION_DELAY);
 		this.stableTime = monitor.getConfig().getLong(HealthMonitorOptions.RESOURCE_SCALE_STABLE_TIME);
+		this.checkpointIntervalThreshold =  monitor.getConfig().getLong(HealthMonitorOptions.PARALLELISM_SCALE_CHECKPOINT_THRESHOLD);
 
 		this.maxCpuLimit = MaxResourceLimitUtil.getMaxCpu(monitor.getConfig());
 		this.maxMemoryLimit = MaxResourceLimitUtil.getMaxMem(monitor.getConfig());
@@ -149,12 +152,24 @@ public class HeapMemoryAdjuster implements Resolver {
 		}
 
 		if (!adjustJobHeapMemory.isEmpty()) {
+			long lastCheckpointTime = 0;
+			try {
+				CheckpointStatistics completedCheckpointStats = monitor.getRestServerClient().getLatestCheckPointStates(monitor.getJobID());
+				if (completedCheckpointStats != null) {
+					lastCheckpointTime = completedCheckpointStats.getLatestAckTimestamp();
+				}
+			} catch (Exception e) {
+				// fail to get checkpoint info.
+			}
+
 			long now = System.currentTimeMillis();
 			if (jobVertexHeapOOM != null ||
 				(jobVertexFrequentFullGC != null && jobVertexFrequentFullGC.isSevere()) ||
 				(jobVertexLongTimeFullGC != null && jobVertexLongTimeFullGC.isSevere())) {
 				adjustJobHeapMemory.setActionMode(Action.ActionMode.IMMEDIATE);
-			} else if (opportunisticActionDelayStart > 0 &&  now - opportunisticActionDelayStart > opportunisticActionDelay) {
+			} else if (opportunisticActionDelayStart > 0 &&
+				now - opportunisticActionDelayStart > opportunisticActionDelay &&
+				now - lastCheckpointTime < checkpointIntervalThreshold) {
 				LOGGER.debug("Upgrade opportunistic action to immediate action.");
 				adjustJobHeapMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else {
