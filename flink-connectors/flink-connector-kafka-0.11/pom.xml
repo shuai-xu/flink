@@ -249,6 +249,8 @@ under the License.
 											<include>com.alibaba.blink:flink-connector-kafka-base_${scala.binary.version}</include>
 											<include>com.alibaba.blink:flink-connector-kafka-0.9_${scala.binary.version}</include>
 											<include>com.alibaba.blink:flink-connector-kafka-0.10_${scala.binary.version}</include>
+											<include>com.alibaba.blink:flink-connectors-common</include>
+											<include>com.alibaba.blink:flink-metrics-common</include>
 										</includes>
 									</artifactSet>
 									<filters>
