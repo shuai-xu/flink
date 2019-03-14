@@ -38,7 +38,7 @@ import org.apache.calcite.rel.{AbstractRelNode, BiRel, RelNode, SingleRel}
 import org.junit.Assert._
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.{After, Before, Test}
+import org.junit.{After, Before, Ignore, Test}
 import java.io.IOException
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
@@ -87,6 +87,7 @@ class CacheCsvTableFactory extends BatchTableSourceFactory[BaseRow]
     java.util.Collections.emptyList()
 }
 
+@Ignore
 @RunWith(classOf[Parameterized])
 class CacheAwareRelNodePlanBuilderTest(
   factory: TableFactory,
