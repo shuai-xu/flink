@@ -33,7 +33,6 @@ import org.apache.flink.runtime.io.network.partition.FixedLengthBufferPool;
 import org.apache.flink.runtime.io.network.partition.external.PersistentFileType;
 import org.apache.flink.runtime.io.network.partition.external.ExternalBlockShuffleUtils;
 import org.apache.flink.runtime.io.network.partition.external.PartitionIndex;
-import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +44,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
-import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /**
@@ -55,9 +53,6 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 	private static final Logger LOG = LoggerFactory.getLogger(PartitionHashFileWriter.class);
 
 	private final int numPartitions;
-
-	private final MemoryManager memoryManager;
-	private final List<MemorySegment> memory;
 
 	private final RecordSerializer<IOReadableWritable> recordSerializer;
 	private final SerializationDelegate<T> serializationDelegate;
@@ -73,18 +68,16 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 	public PartitionHashFileWriter(
 		int numPartitions,
 		String partitionDataRootPath,
-		MemoryManager memoryManager,
 		List<MemorySegment> memory,
 		IOManager ioManager,
 		TypeSerializer<T> serializer) throws IOException {
 
-		this(numPartitions, partitionDataRootPath, memoryManager, memory, ioManager, serializer, null, null);
+		this(numPartitions, partitionDataRootPath, memory, ioManager, serializer, null, null);
 	}
 
 	public PartitionHashFileWriter(
 		int numPartitions,
 		String partitionDataRootPath,
-		MemoryManager memoryManager,
 		List<MemorySegment> memory,
 		IOManager ioManager,
 		TypeSerializer<T> serializer,
@@ -101,10 +94,6 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 		checkArgument(memory.size() >= numPartitions,
 			"The number of memory segments should be more than that of subpartitions, but actually numMemory: "
 				+ memory.size() + ", numPartitions: " + numPartitions);
-
-
-		this.memoryManager = checkNotNull(memoryManager);
-		this.memory = memory;
 
 		this.recordSerializer = new SpanningRecordSerializer<>();
 		this.serializationDelegate = new SerializationDelegate<>(serializer);
@@ -163,7 +152,6 @@ public class PartitionHashFileWriter<T> implements PersistentFileWriter<T> {
 
 	@Override
 	public void clear() throws IOException {
-		memoryManager.release(memory);
 		bufferPool.lazyDestroy();
 	}
 

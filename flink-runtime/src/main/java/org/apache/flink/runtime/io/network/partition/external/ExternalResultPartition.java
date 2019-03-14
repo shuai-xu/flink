@@ -177,7 +177,6 @@ public class ExternalResultPartition<T> extends ResultPartition<T> {
 				fileWriter = new PartitionHashFileWriter<T>(
 					numberOfSubpartitions,
 					partitionRootPath,
-					memoryManager,
 					memory,
 					ioManager,
 					typeSerializer,

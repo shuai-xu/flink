@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -67,7 +68,7 @@ public class PushedUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 		return null;
 	}
 
-	public synchronized void add(E current) throws IOException {
+	public void add(E current) throws IOException {
 		checkArgument(!addingDone, "Adding already done!");
 		if (unhandledException != null) {
 			throw unhandledException;
@@ -89,7 +90,15 @@ public class PushedUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 				// grab the next buffer
 				while (currentBuffer == null) {
 					try {
-						currentBuffer = circularQueues.empty.take();
+						currentBuffer = circularQueues.empty.poll(500, TimeUnit.MILLISECONDS);
+
+						if (unhandledException != null) {
+							throw unhandledException;
+						}
+
+						if (currentBuffer == null) {
+							continue;
+						}
 
 						if (LOG.isDebugEnabled()) {
 							LOG.debug("Retrieved empty read buffer " + currentBuffer.id + ".");
@@ -165,7 +174,7 @@ public class PushedUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 		}
 	}
 
-	public synchronized void finishAdding() {
+	public void finishAdding() {
 		if (!addingDone) {
 			if (currentBuffer != null) {
 				circularQueues.sort.add(currentBuffer);
