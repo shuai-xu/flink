@@ -28,7 +28,9 @@ import org.apache.flink.runtime.healthmanager.plugins.Resolver;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.actions.AdjustJobCpu;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
 import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.healthmanager.plugins.utils.MaxResourceLimitUtil;
@@ -68,6 +70,8 @@ public class CpuAdjuster implements Resolver {
 	private JobVertexHighCpu jobVertexHighCpu;
 	private JobVertexLowCpu jobVertexLowCpu;
 	private JobStable jobStable;
+	private JobVertexFrequentFullGC jobVertexFrequentFullGC;
+	private JobVertexLongTimeFullGC jobVertexLongTimeFullGC;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -178,6 +182,8 @@ public class CpuAdjuster implements Resolver {
 		jobVertexHighCpu = null;
 		jobVertexLowCpu = null;
 		jobStable = null;
+		jobVertexFrequentFullGC = null;
+		jobVertexLongTimeFullGC = null;
 
 		for (Symptom symptom : symptomList) {
 			if (symptom instanceof JobStable) {
@@ -195,10 +201,26 @@ public class CpuAdjuster implements Resolver {
 				jobVertexLowCpu = (JobVertexLowCpu) symptom;
 				LOGGER.debug("Low cpu detected for vertices with max utilities {}.", jobVertexLowCpu.getUtilities());
 			}
+
+			if (symptom instanceof JobVertexFrequentFullGC) {
+				jobVertexFrequentFullGC = (JobVertexFrequentFullGC) symptom;
+				LOGGER.debug("Frequent full gc detected for vertices {}.", jobVertexFrequentFullGC.getJobVertexIDs());
+			}
+
+			if (symptom instanceof JobVertexLongTimeFullGC) {
+				jobVertexLongTimeFullGC = (JobVertexLongTimeFullGC) symptom;
+				LOGGER.debug("Long time full gc detected for vertices {}.", jobVertexLongTimeFullGC.getJobVertexIDs());
+			}
 		}
 
 		if (jobStable == null || jobStable.getStableTime() < stableTime) {
 			LOGGER.debug("Job unstable, should not rescale.");
+			return false;
+		}
+
+		if ((jobVertexFrequentFullGC != null && jobVertexFrequentFullGC.isSevere()) ||
+			(jobVertexLongTimeFullGC != null && jobVertexLongTimeFullGC.isSevere())) {
+			LOGGER.debug("GC is severe, should not rescale.");
 			return false;
 		}
 

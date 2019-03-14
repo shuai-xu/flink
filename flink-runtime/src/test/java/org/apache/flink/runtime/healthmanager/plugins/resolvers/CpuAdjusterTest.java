@@ -24,7 +24,9 @@ import org.apache.flink.mock.Whitebox;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobStable;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexFrequentFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexHighCpu;
+import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLongTimeFullGC;
 import org.apache.flink.runtime.healthmanager.plugins.symptoms.JobVertexLowCpu;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
@@ -56,6 +58,10 @@ public class CpuAdjusterTest {
 		JobStable jobStableLongTime = new JobStable(15L);
 		JobVertexHighCpu jobVertexHighCpu = new JobVertexHighCpu(new JobID(), Collections.emptyMap(), false);
 		JobVertexLowCpu jobVertexLowCpu = new JobVertexLowCpu(new JobID(), Collections.emptyMap());
+		JobVertexFrequentFullGC jobVertexFrequentFullGC = new JobVertexFrequentFullGC(new JobID(), Collections.emptyList(), false);
+		JobVertexFrequentFullGC jobVertexFrequentFullGCSevere = new JobVertexFrequentFullGC(new JobID(), Collections.emptyList(), true);
+		JobVertexLongTimeFullGC jobVertexLongTimeFullGC = new JobVertexLongTimeFullGC(new JobID(), Collections.emptyList(), false, false);
+		JobVertexLongTimeFullGC jobVertexLongTimeFullGCSevere = new JobVertexLongTimeFullGC(new JobID(), Collections.emptyList(), true, false);
 
 		List<Symptom> symptomList = new ArrayList<>();
 
@@ -85,9 +91,23 @@ public class CpuAdjusterTest {
 		symptomList.add(jobVertexHighCpu);
 		assertTrue(cpuAdjuster.diagnose(symptomList));
 
+		symptomList.add(jobVertexFrequentFullGCSevere);
+		assertFalse(cpuAdjuster.diagnose(symptomList));
+
+		symptomList.remove(jobVertexFrequentFullGCSevere);
+		symptomList.add(jobVertexLongTimeFullGCSevere);
+		assertFalse(cpuAdjuster.diagnose(symptomList));
+
+		symptomList.remove(jobVertexLongTimeFullGCSevere);
+		symptomList.add(jobVertexFrequentFullGC);
+		symptomList.add(jobVertexLongTimeFullGC);
+		assertTrue(cpuAdjuster.diagnose(symptomList));
+
 		assertEquals(jobStableLongTime, Whitebox.getInternalState(cpuAdjuster, "jobStable"));
 		assertEquals(jobVertexHighCpu, Whitebox.getInternalState(cpuAdjuster, "jobVertexHighCpu"));
 		assertEquals(jobVertexLowCpu, Whitebox.getInternalState(cpuAdjuster, "jobVertexLowCpu"));
+		assertEquals(jobVertexFrequentFullGC, Whitebox.getInternalState(cpuAdjuster, "jobVertexFrequentFullGC"));
+		assertEquals(jobVertexLongTimeFullGC, Whitebox.getInternalState(cpuAdjuster, "jobVertexLongTimeFullGC"));
 	}
 
 	@Test
