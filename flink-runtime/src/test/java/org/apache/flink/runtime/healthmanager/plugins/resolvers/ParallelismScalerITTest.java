@@ -460,7 +460,7 @@ public class ParallelismScalerITTest {
 		// verify rpc calls.
 		Map<JobVertexID, Tuple2<Integer, ResourceSpec>> vertexParallelismResource = new HashMap<>();
 		vertexParallelismResource.put(vertex2, new Tuple2<>(4, ResourceSpec.newBuilder().build()));
-		Mockito.verify(restServerClient, Mockito.times(1))
+		Mockito.verify(restServerClient, Mockito.atLeast(1))
 			.rescale(
 				Mockito.eq(jobID),
 				Mockito.eq(vertexParallelismResource));
