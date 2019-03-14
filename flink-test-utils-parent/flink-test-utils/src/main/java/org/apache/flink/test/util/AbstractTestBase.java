@@ -64,7 +64,7 @@ public abstract class AbstractTestBase extends TestBaseUtils {
 			new Configuration(),
 			1,
 			DEFAULT_PARALLELISM,
-			DEFAULT_PARALLELISM));
+			DEFAULT_PARALLELISM), true);
 
 	@ClassRule
 	public static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();

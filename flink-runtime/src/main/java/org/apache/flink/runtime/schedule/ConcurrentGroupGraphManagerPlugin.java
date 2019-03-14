@@ -123,12 +123,6 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		} else {
 			buildConcurrentSchedulingGroups(allJobVertices);
 		}
-
-		if (LOG.isDebugEnabled()) {
-			for (ConcurrentSchedulingGroup group : concurrentSchedulingGroups) {
-				LOG.debug("Concurrent group has {} with preceding {}", group.getExecutionVertices(), group.hasPrecedingGroup());
-			}
-		}
 	}
 
 	@Override
@@ -270,6 +264,12 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		LOG.info("{} concurrent group was built with {} vertices for job {}.",
 				schedulingGroups.size(), jobVerticesTopologically.size(), jobGraph.getJobID());
 
+		if (LOG.isDebugEnabled()) {
+			for (ConcurrentSchedulingGroup group : schedulingGroups) {
+				LOG.debug("Concurrent group has {} with preceding {}", group.getExecutionVertices(), group.hasPrecedingGroup());
+			}
+		}
+
 		return schedulingGroups;
 	}
 
@@ -277,7 +277,8 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			List<JobVertex> assignedJobVertices,
 			List<JobVertex> unAssignedJobVertices,
 			ConcurrentSchedulingGroup originalGroup) {
-		LOG.info("Split the scheduling group {} as resource is not enough.", originalGroup);
+		LOG.info("Split scheduling group {} as resource is not enough, assigned {}, unassigned {}.",
+				originalGroup, assignedJobVertices, unAssignedJobVertices);
 
 		concurrentSchedulingGroups.remove(originalGroup);
 
@@ -312,12 +313,18 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		// 5. Rebuild failover region.
 		// 6. Deploy the tasks.
 		for (ConcurrentSchedulingGroup group : newAssignedGroups) {
-			for (ExecutionVertex ev : group.getExecutionVertices()) {
-				try {
-					ev.getCurrentExecutionAttempt().deploy();
-				} catch (Exception e) {
-					LOG.info("Fail to deploy execution {}", ev, e);
-					ev.getCurrentExecutionAttempt().fail(e);
+			List<ExecutionVertex> evs = group.getExecutionVertices();
+			LOG.error("XXXX EV size is {}, resource is {}.", evs.size(), evs.get(0).getCurrentAssignedResource());
+			if (evs.size() == 1 && evs.get(0).getCurrentAssignedResource() == null) {
+				scheduleGroup(group);
+			} else {
+				for (ExecutionVertex ev : evs) {
+					try {
+						ev.getCurrentExecutionAttempt().deploy();
+					} catch (Exception e) {
+						LOG.info("Fail to deploy execution {}", ev, e);
+						ev.getCurrentExecutionAttempt().fail(e);
+					}
 				}
 			}
 		}
@@ -485,7 +492,6 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 								for (Execution execution : scheduledExecutions) {
 									execution.fail(ExceptionUtils.stripCompletionException(throwable));
 								}
-								throw new CompletionException(throwable);
 							} else {
 								boolean hasFailure = false;
 								for (Execution execution : scheduledExecutions) {
@@ -494,11 +500,12 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 									}
 									else if (execution.getAssignedResource() == null) {
 										hasFailure = true;
+										execution.rollbackToCreatedAndReleaseSlot();
 									}
 								}
 								groupSplit(schedulingGroup);
-								return null;
 							}
+							throw new CompletionException(throwable);
 						}
 				)
 				.handleAsync(
@@ -550,7 +557,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 							assignedJobVertices.get(assignedJobVertices.size() - 1).getID())) {
 				assignedJobVertices.add(executionVertices.get(i - 1).getJobVertex().getJobVertex());
 			}
-			if (ev.getExecutionState() == ExecutionState.SCHEDULED && ev.getCurrentAssignedResource() == null) {
+			if (ev.getCurrentAssignedResource() == null) {
 				break;
 			}
 		}

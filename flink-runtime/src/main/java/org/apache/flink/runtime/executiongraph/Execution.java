@@ -515,10 +515,14 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		// this method only works if the execution is in the state 'SCHEDULED'
 		if (transitionState(SCHEDULED, CREATED)) {
 
+			LogicalSlot slot = assignedResource;
 			ASSIGNED_SLOT_UPDATER.set(this, null);
 			taskManagerLocationFuture = new CompletableFuture<>();
 			assignedAllocationID = null;
-			LOG.info("{} is revoked assigned resource.", getVertexWithAttempt());
+			LOG.info("{} is revoked assigned resource {}.", getVertexWithAttempt(), slot);
+			if (slot != null) {
+				slot.releaseSlot();
+			}
 		} else {
 			// call race, already deployed, or already done
 			throw new IllegalExecutionStateException(this, SCHEDULED, state);
