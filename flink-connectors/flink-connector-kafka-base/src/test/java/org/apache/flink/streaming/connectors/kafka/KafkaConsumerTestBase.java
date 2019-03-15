@@ -1833,6 +1833,26 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			assertNonZeroCount(mBeanServer, producerMetricGroup + ".numBytesOut");
 			assertNonZeroCount(mBeanServer, producerMetricGroup + ".numRecordsOut");
 
+			// Assert existence of legacy metrics
+			assertNonZeroCount(mBeanServer, consumerMetricGroup + ".tps_counter");
+			assertNonZeroCount(mBeanServer, consumerMetricGroup + ".tps");
+			assertNonZeroCount(mBeanServer, consumerMetricGroup + ".parserTps");
+			assertNonZeroCount(mBeanServer, consumerMetricGroup + ".inBps_counter");
+			assertNonZeroCount(mBeanServer, consumerMetricGroup + ".inBps");
+
+			assertTrue(getMetric(mBeanServer, consumerMetricGroup + ".no_data_delay", "Value") >= 0);
+			if (timestampAvailable) {
+				assertTrue(getMetric(mBeanServer, consumerMetricGroup + ".fetched_delay", "Value") >= 0);
+				assertTrue(getMetric(mBeanServer, consumerMetricGroup + ".delay", "Value") >= 0);
+			}
+
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".inTps_counter");
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".inTps");
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".outTps_counter");
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".outTps");
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".outBps_counter");
+			assertNonZeroCount(mBeanServer, producerMetricGroup + ".outBps");
+
 			LOG.info("Found all JMX metrics. Cancelling job.");
 		} finally {
 			// cancel

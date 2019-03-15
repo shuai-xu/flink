@@ -18,6 +18,7 @@
 
 package org.apache.flink.streaming.connectors.kafka.internals.metrics;
 
+import org.apache.flink.connectors.metrics.LegacyMetricUtil;
 import org.apache.flink.connectors.metrics.SinkMetrics;
 import org.apache.flink.metrics.MetricGroup;
 
@@ -28,7 +29,23 @@ public class KafkaSinkMetrics extends SinkMetrics {
 
 	public static final String KAFKA_PRODUCER_GROUP = "KafkaProducer";
 
+	// The following metrics are legacy metrics for Blink.
+	private static final String LEGACY_SINK_IN_TPS_COUNTER = "inTps_counter";
+	private static final String LEGACY_SINK_IN_TPS = "inTps";
+	private static final String LEGACY_SINK_OUT_TPS_COUNTER = "outTps_counter";
+	private static final String LEGACY_SINK_OUT_TPS = "outTps";
+	private static final String LEGACY_SINK_OUT_BPS_COUNTER = "outBps_counter";
+	private static final String LEGACY_SINK_OUT_BPS = "outBps";
+
 	public KafkaSinkMetrics(MetricGroup metricGroup) {
 		super(metricGroup.addGroup(KAFKA_PRODUCER_GROUP));
+
+		// Report legacy metrics.
+		this.metricGroup().counter(LEGACY_SINK_IN_TPS_COUNTER, LegacyMetricUtil.wrap(getCounter(NUM_RECORDS_OUT)));
+		this.metricGroup().meter(LEGACY_SINK_IN_TPS, LegacyMetricUtil.wrap(getMeter(NUM_RECORDS_OUT_PER_SEC)));
+		this.metricGroup().counter(LEGACY_SINK_OUT_TPS_COUNTER, LegacyMetricUtil.wrap(getCounter(NUM_RECORDS_OUT)));
+		this.metricGroup().meter(LEGACY_SINK_OUT_TPS, LegacyMetricUtil.wrap(getMeter(NUM_RECORDS_OUT_PER_SEC)));
+		this.metricGroup().counter(LEGACY_SINK_OUT_BPS_COUNTER, LegacyMetricUtil.wrap(getCounter(NUM_BYTES_OUT)));
+		this.metricGroup().meter(LEGACY_SINK_OUT_BPS, LegacyMetricUtil.wrap(getMeter(NUM_BYTES_OUT_PER_SEC)));
 	}
 }

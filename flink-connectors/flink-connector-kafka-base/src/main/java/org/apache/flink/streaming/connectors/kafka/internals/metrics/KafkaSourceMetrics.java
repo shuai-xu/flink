@@ -18,6 +18,7 @@
 
 package org.apache.flink.streaming.connectors.kafka.internals.metrics;
 
+import org.apache.flink.connectors.metrics.LegacyMetricUtil;
 import org.apache.flink.connectors.metrics.SourceMetrics;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.MetricDef;
@@ -31,6 +32,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.flink.runtime.metrics.MetricNames.IO_NUM_TPS;
+
 /**
  * A class that holds all Kafka Source Metrics.
  */
@@ -43,6 +46,16 @@ public class KafkaSourceMetrics extends SourceMetrics {
 
 	public static final String COMMITS_FAILED_METRICS_COUNTER = "commitsFailed";
 	private static final String COMMITS_FAILED_METRICS_COUNTER_DOC = "The total number of failed offset commits.";
+
+	// The following metrics are legacy metrics in Blink
+	private static final String LEGACY_TPS_COUNTER = IO_NUM_TPS + "_counter";
+	private static final String LEGACY_TPS = IO_NUM_TPS;
+	private static final String LEGACY_RPS = "parserTps";
+	private static final String LEGACY_BPS_COUNTER = "inBps_counter";
+	private static final String LEGACY_BPS = "inBps";
+	private static final String LEGACY_DELAY = "delay";
+	private static final String LEGACY_FETCHED_DELAY = "fetched_delay";
+	private static final String LEGACY_NO_DATA_DELAY = "no_data_delay";
 
 	private static final MetricDef METRIC_DEF = new MetricDef()
 		.define(
@@ -71,6 +84,16 @@ public class KafkaSourceMetrics extends SourceMetrics {
 				() -> lastProcessedTime.isEmpty() ? -1L : System.currentTimeMillis() - Collections.min(lastProcessedTime.values()));
 		setGauge(CURRENT_FETCH_LATENCY,
 				() -> lastFetchedTime.isEmpty() ? -1L : System.currentTimeMillis() - Collections.min(lastFetchedTime.values()));
+
+		// Report legacy metrics for Blink.
+		this.metricGroup().counter(LEGACY_TPS_COUNTER, LegacyMetricUtil.wrap(getCounter(NUM_RECORDS_IN)));
+		this.metricGroup().meter(LEGACY_TPS, LegacyMetricUtil.wrap(getMeter(NUM_RECORDS_IN_PER_SEC)));
+		this.metricGroup().meter(LEGACY_RPS, LegacyMetricUtil.wrap(getMeter(NUM_RECORDS_IN_PER_SEC)));
+		this.metricGroup().counter(LEGACY_BPS_COUNTER, LegacyMetricUtil.wrap(getCounter(NUM_BYTES_IN)));
+		this.metricGroup().meter(LEGACY_BPS, LegacyMetricUtil.wrap(getMeter(NUM_BYTES_IN_PER_SEC)));
+		this.metricGroup().gauge(LEGACY_DELAY, LegacyMetricUtil.wrap(getGauge(CURRENT_LATENCY)));
+		this.metricGroup().gauge(LEGACY_FETCHED_DELAY, LegacyMetricUtil.wrap(getGauge(CURRENT_FETCH_LATENCY)));
+		this.metricGroup().gauge(LEGACY_NO_DATA_DELAY, LegacyMetricUtil.wrap(getGauge(IDLE_TIME)));
 	}
 
 	public void updateLastProcessTime(TopicPartition tp, long time) {
