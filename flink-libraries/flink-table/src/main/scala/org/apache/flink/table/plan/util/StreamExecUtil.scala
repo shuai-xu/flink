@@ -17,6 +17,9 @@
  */
 package org.apache.flink.table.plan.util
 
+import org.apache.flink.streaming.api.transformations.StreamTransformation
+import org.apache.flink.table.api.{TableConfig, TableConfigOptions}
+import org.apache.flink.table.plan.nodes.exec.StreamExecNode
 import org.apache.flink.table.runtime.{BaseRowKeySelector, BinaryRowKeySelector, NullBinaryRowKeySelector}
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
 
@@ -31,6 +34,16 @@ object StreamExecUtil {
     } else {
       new NullBinaryRowKeySelector
     }
+  }
+
+  def setUid(
+      tableConfig: TableConfig,
+      transformation: StreamTransformation[_],
+      physicalNode: StreamExecNode[_]): StreamTransformation[_] = {
+    if (tableConfig.getConf.getBoolean(TableConfigOptions.SQL_EXEC_STATE_REUSE)) {
+      ExecNodeUidCalculator.getUid(physicalNode).foreach(transformation.setUid)
+    }
+    transformation
   }
 }
 

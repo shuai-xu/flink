@@ -20,14 +20,14 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.annotation.VisibleForTesting
 import org.apache.flink.api.java.typeutils.ListTypeInfo
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.PartialFinalType
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.AggregateUtil.transformToStreamAggregateInfoList
@@ -142,7 +142,8 @@ class StreamExecGroupAggregate(
       groupings,
       getRowType,
       aggCalls,
-      Nil)))
+      Nil,
+      withOutputFieldNames = true)))
     values.add(Pair.of("aggWithRetract", util.Arrays.toString(needRetractionArray)))
     values
   }
@@ -152,6 +153,23 @@ class StreamExecGroupAggregate(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val tableConfig = cluster.getPlanner.getContext.unwrap(classOf[TableConfig])
+    val isMiniBatchEnabled = tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
+
+    pw.item("inputType", input.getRowType)
+      .item("isMiniBatchEnabled", isMiniBatchEnabled)
+      .itemIf("groupBy",
+        AggregateNameUtil.groupingToString(inputRelDataType, groupings), groupings.nonEmpty)
+      .item("select", AggregateNameUtil.streamAggregationToString(
+        inputRelDataType,
+        getRowType,
+        aggInfoList,
+        groupings,
+        withOutputFieldNames = false))
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -189,8 +207,9 @@ class StreamExecGroupAggregate(
     val aggValueTypes = aggInfoList.getActualValueTypes.map(_.toInternalType)
     val inputCountIndex = aggInfoList.getCount1AccIndex
 
-    val operator = if (tableConfig.getConf.contains(
-      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)) {
+    val isMiniBatchEnabled = tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
+    val operator = if (isMiniBatchEnabled) {
       val aggFunction = new MiniBatchGroupAggFunction(
         inputRowType.toInternalType,
         aggsHandler,

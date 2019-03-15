@@ -31,21 +31,20 @@ import org.apache.flink.table.api.functions.{AggregateFunction, ScalarFunction, 
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JBatchTableEnvironment, StreamTableEnvironment => JStreamTableEnvironment}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment, StreamTableEnvironment, _}
 import org.apache.flink.table.errorcode.TableErrors
-
 import java.util.{ArrayList => JArrayList, HashSet => JHashSet}
+
 import org.apache.flink.table.api.{Table, TableEnvironment, TableException, TableSchema, _}
 import org.apache.flink.table.calcite.CalciteConfig
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.metadata.FlinkRelMetadataQuery
-import org.apache.flink.table.plan.nodes.exec.BatchExecNode
+import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, StreamExecNode}
 import org.apache.flink.table.plan.nodes.process.ChainedDAGProcessors
 import org.apache.flink.table.plan.stats.TableStats
-import org.apache.flink.table.plan.util.{DeadlockBreakupProcessor, FlinkNodeOptUtil, FlinkRelOptUtil}
+import org.apache.flink.table.plan.util._
 import org.apache.flink.table.resource.batch.BatchRunningUnitBuildProcessor
 import org.apache.flink.table.sources.{BatchTableSource, LimitableTableSource, TableSource}
 import org.apache.flink.table.types.{DataType, DataTypes, InternalType, TypeConverters}
 import org.apache.flink.types.Row
-
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.sql.SqlExplainLevel
 import org.apache.calcite.util.ImmutableBitSet
@@ -59,6 +58,7 @@ import org.mockito.stubbing.Answer
 
 import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -251,6 +251,40 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
     assertEqualsOrExpand("plan", actualPlan, expand = false)
   }
 
+  def verifyUidIdentical(sql: String, newSql: String): Unit = {
+    val resultTable = tableEnv.sqlQuery(sql)
+    val newResultTable = tableEnv.sqlQuery(newSql)
+    verifyUidIdentical(resultTable, newResultTable)
+  }
+
+  def verifyUidIdentical(table: Table, newTable: Table): Unit = {
+    val oldPlan = tableEnv.optimize(table.getRelNode)
+    val newPlan = tableEnv.optimize(newTable.getRelNode)
+
+    val oldUids = mutable.HashSet[String]()
+    extractUids(oldPlan, oldUids)
+
+    val newUids = mutable.HashSet[String]()
+    extractUids(newPlan, newUids)
+
+    assertTrue(oldUids.forall(newUids.contains))
+  }
+
+  private def extractUids(plan: RelNode, uids: mutable.HashSet[String]): Unit = {
+    plan.getInputs.foreach(input => extractUids(input, uids))
+
+    val streamNode = plan.asInstanceOf[StreamExecNode[_]]
+    ExecNodeUidCalculator.getUid(streamNode).foreach(uids.add)
+  }
+
+  def verifyStateDigest(sql: String): Unit = verifyStateDigest(tableEnv.sqlQuery(sql))
+
+  def verifyStateDigest(resultTable: Table): Unit = {
+    val relNode = resultTable.getRelNode
+    val actualPlan = SystemUtils.LINE_SEPARATOR + getPlan(relNode, withStateUid = true)
+    assertEqualsOrExpand("stateDigest", actualPlan, expand = false)
+  }
+
   def verifyExplain(): Unit = doVerifyExplain()
 
   def verifyExplain(query: String): Unit = doVerifyExplain(Some(tableEnv.sqlQuery(query)))
@@ -323,6 +357,28 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil {
       case _ => tableEnv.explain()
     }
     assertEqualsOrExpand("explain", replaceStageId(explainResult), expand = false)
+  }
+
+  private def getPlan(
+      relNode: RelNode,
+      explainLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
+      withExecNodeId: Boolean = false,
+      withRetractTraits: Boolean = false,
+      withStateUid: Boolean = false): String = {
+    val optimized = tableEnv.optimize(relNode)
+    optimized match {
+      case streamExecNode: StreamExecNode[_] =>
+        val optimizedNodes = tableEnv.translateNodeDag(Seq(streamExecNode))
+        require(optimizedNodes.length == 1)
+        val optimizedNode = optimizedNodes.head
+
+        FlinkNodeOptUtil.treeToString(
+          optimizedNode,
+          detailLevel = explainLevel,
+          withExecNodeId = withExecNodeId,
+          withRetractTraits = withRetractTraits,
+          withStateUid = withStateUid)
+    }
   }
 }
 

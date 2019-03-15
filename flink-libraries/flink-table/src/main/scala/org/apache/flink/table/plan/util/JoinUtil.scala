@@ -35,11 +35,11 @@ import scala.collection.mutable.ArrayBuffer
 
 object JoinUtil {
 
-  private[flink] def joinSelectionToString(inputType: RelDataType): String = {
+  def joinSelectionToString(inputType: RelDataType): String = {
     inputType.getFieldNames.asScala.toList.mkString(", ")
   }
 
-  private[flink] def joinConditionToString(
+  def joinConditionToString(
       inputType: RelDataType,
       joinCondition: RexNode,
       expression: (RexNode, List[String], Option[List[RexNode]]) => String): String = {
@@ -47,7 +47,7 @@ object JoinUtil {
     expression(joinCondition, inFields, None)
   }
 
-  private[flink] def joinTypeToString(joinType: FlinkJoinRelType) = {
+  def joinTypeToString(joinType: FlinkJoinRelType) = {
     joinType match {
       case FlinkJoinRelType.INNER => "InnerJoin"
       case FlinkJoinRelType.LEFT=> "LeftOuterJoin"

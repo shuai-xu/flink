@@ -21,7 +21,7 @@ package org.apache.flink.table.plan.nodes.physical.stream
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.SortUtil
@@ -98,6 +98,16 @@ class StreamExecSort(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    SortUtil.sortExplainStateUid(
+      input,
+      getStateDigest(pw),
+      outputSchema.relDataType,
+      sortCollation,
+      offset,
+      fetch)
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

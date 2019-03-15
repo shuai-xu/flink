@@ -28,10 +28,12 @@ import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
+import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, StreamExecUtil, UpdatingPlanChecker}
+import org.apache.flink.table.plan.util.JoinUtil._
 import org.apache.flink.table.runtime.KeyedCoProcessOperatorWithWatermarkDelay
 import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.types.TypeConverters
@@ -124,6 +126,26 @@ class StreamExecWindowJoin(
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val windowBounds = s"leftLowerBound=$leftLowerBound, " +
+      s"leftUpperBound=$leftUpperBound, leftTimeIndex=$leftTimeIndex, " +
+      s"rightTimeIndex=$rightTimeIndex"
+
+    val joinInfo = JoinInfo.of(left, right, joinCondition)
+    val leftKeyFields = joinInfo.leftKeys.toIntArray.map(left.getRowType.getFieldNames.get(_))
+    val rightKeyFields = joinInfo.rightKeys.toIntArray.map(right.getRowType.getFieldNames.get(_))
+
+    pw.item("leftInputType", left.getRowType)
+      .item("rightInputType", right.getRowType)
+      .item("leftIsAccRetract", StreamExecRetractionRules.isAccRetract(left))
+      .item("rightIsAccRetract", StreamExecRetractionRules.isAccRetract(right))
+      .item("windowBounds", windowBounds)
+      .item("leftKeys", leftKeyFields.mkString(", "))
+      .item("rightKeys", rightKeyFields.mkString(", "))
+      .item("joinType", joinTypeToString(FlinkJoinRelType.toFlinkJoinRelType(joinType)))
+      .item("isRowtime", isRowTime)
+  }
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
@@ -162,7 +184,7 @@ class StreamExecWindowJoin(
       ruleDescription)
 
     val flinkJoinType = FlinkJoinRelType.toFlinkJoinRelType(joinType)
-     flinkJoinType match {
+    flinkJoinType match {
       case FlinkJoinRelType.INNER |
            FlinkJoinRelType.LEFT |
            FlinkJoinRelType.RIGHT |

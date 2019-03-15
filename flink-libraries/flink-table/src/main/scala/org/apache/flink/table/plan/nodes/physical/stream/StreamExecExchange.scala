@@ -25,7 +25,7 @@ import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonExchange
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.StreamExecUtil
 import org.apache.flink.table.typeutils.BaseRowTypeInfo
@@ -63,6 +63,8 @@ class StreamExecExchange(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = pw
 
   /**
     * Currently, PartitionTransformation wont been reused,

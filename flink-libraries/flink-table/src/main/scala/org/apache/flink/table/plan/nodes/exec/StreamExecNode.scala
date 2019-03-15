@@ -17,8 +17,47 @@
  */
 package org.apache.flink.table.plan.nodes.exec
 
+import org.apache.flink.streaming.api.transformations._
 import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.plan.nodes.physical.stream._
+import org.apache.flink.table.plan.util.StreamExecUtil
 
 trait StreamExecNode[T] extends ExecNode[StreamTableEnvironment, T] {
 
+  /**
+    * Describes the state digest of the ExecNode which is used to set the
+    * user-specified ID of the translated stream operator. The user-specified ID
+    * is used to assign the same operator ID across job restarts.
+    * It is important for the mapping of operator state to the operator.
+    *
+    * Note: Be careful to modify this method as it will affect the state reuse.
+    */
+  def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter
+
+  override def translateToPlan(tableEnv: StreamTableEnvironment): StreamTransformation[T] = {
+    val transformation = super.translateToPlan(tableEnv)
+
+    // set the uid if the translated stream operator has state
+    this match {
+      case source: StreamExecTableSourceScan =>
+        StreamExecUtil.setUid(
+          tableEnv.getConfig, getSourceTransformation(transformation), source)
+        transformation
+
+      case _ =>
+        StreamExecUtil.setUid(tableEnv.getConfig, transformation, this)
+          .asInstanceOf[StreamTransformation[T]]
+    }
+  }
+
+  private def getSourceTransformation(
+      transformation: StreamTransformation[_]): StreamTransformation[_] = {
+    transformation match {
+      case oneInputTransformation: OneInputTransformation[_, _] =>
+        getSourceTransformation(oneInputTransformation.getInput)
+      case partitionTransformation: PartitionTransformation[_] =>
+        getSourceTransformation(partitionTransformation.getInput)
+      case _: SourceTransformation[_] | _: SourceV2Transformation[_] => transformation
+    }
+  }
 }

@@ -188,11 +188,7 @@ abstract class CommonTemporalTableJoin(
                                                    .map { k => (k.target, k.source) }
                                                    .toMap
     val lookupableTableSource = tableSource.asInstanceOf[LookupableTableSource[_]]
-    val lookupConfig = if (lookupableTableSource.getLookupConfig != null) {
-      lookupableTableSource.getLookupConfig
-    } else {
-      new LookupConfig
-    }
+    val lookupConfig = getLookupConfig(lookupableTableSource)
     val leftOuterJoin = joinType == JoinRelType.LEFT
 
     val operator = if (lookupConfig.isAsyncEnabled) {
@@ -381,6 +377,14 @@ abstract class CommonTemporalTableJoin(
       operator,
       TypeConverters.toBaseRowTypeInfo(resultBaseRowType),
       inputTransformation.getParallelism)
+  }
+
+  def getLookupConfig(tableSource: LookupableTableSource[_]): LookupConfig = {
+    if (tableSource.getLookupConfig != null) {
+      tableSource.getLookupConfig
+    } else {
+      new LookupConfig
+    }
   }
 
   private def rowTypeEquals(expected: TypeInformation[_], actual: TypeInformation[_]): Boolean = {

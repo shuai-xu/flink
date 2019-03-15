@@ -32,33 +32,39 @@ import scala.collection.JavaConverters._
 
 trait CommonMatchRecognize {
 
-  private def partitionKeysToString(
+  def partitionKeysToString(
       keys: JList[RexNode],
       fieldNames: List[String],
       expression: (RexNode, List[String], Option[List[RexNode]]) => String)
     : String =
     keys.asScala.map(k => expression(k, fieldNames, None)).mkString(", ")
 
-  private def orderingToString(orders: RelCollation, fieldNames: Seq[String]): String =
+  def orderingToString(orders: RelCollation, fieldNames: Seq[String]): String =
     orders.getFieldCollations.asScala.map {
       x => s"${fieldNames(x.getFieldIndex)} ${directionToOrder(x.direction).getShortName}"
     }.mkString(", ")
 
-  private def measuresDefineToString(
+  def measuresDefineToString(
       measures: ImmutableMap[String, RexNode],
       fieldNames: List[String],
-      expression: (RexNode, List[String], Option[List[RexNode]]) => String)
+      expression: (RexNode, List[String], Option[List[RexNode]]) => String,
+      withOutputFieldNames: Boolean = true)
     : String =
     measures.asScala.map {
-      case (k, v) => s"${expression(v, fieldNames, None)} AS $k"
+      case (k, v) =>
+        if (withOutputFieldNames) {
+          s"${expression(v, fieldNames, None)} AS $k"
+        } else {
+          s"${expression(v, fieldNames, None)}"
+        }
     }.mkString(", ")
 
-  private def subsetToString(subset: ImmutableMap[String, JSortedSet[String]]): String =
+  def subsetToString(subset: ImmutableMap[String, JSortedSet[String]]): String =
     subset.asScala.map {
       case (k, v) => s"$k = (${v.asScala.mkString(", ")})"
     }.mkString(", ")
 
-  private def afterMatchToString(
+  def afterMatchToString(
       after: RexNode,
       fieldNames: List[String])
     : String =

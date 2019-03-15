@@ -28,7 +28,7 @@ import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
 import org.apache.flink.table.expressions.ExpressionUtils.{isTimeIntervalLiteral, _}
 import org.apache.flink.table.plan.logical._
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -42,7 +42,6 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.tools.RelBuilder
 import java.time.Duration
-import java.util.Calendar
 
 import org.apache.flink.table.runtime.window.aligned.{BufferedAlignedWindowAggregator, InternalAlignedWindowTriggers}
 import org.apache.flink.table.runtime.window.assigners.{SlidingWindowAssigner, TumblingWindowAssigner}
@@ -129,7 +128,8 @@ class StreamExecGroupWindowAggregate(
           grouping,
           outputSchema.relDataType,
           aggCalls,
-          namedProperties))
+          namedProperties,
+          withOutputFieldNames = true))
       .itemIf("emit", emitStrategy, !emitStrategy.toString.isEmpty)
   }
 
@@ -138,6 +138,27 @@ class StreamExecGroupWindowAggregate(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val tableConfig = cluster.getPlanner.getContext.unwrap(classOf[TableConfig])
+    val isMiniBatchEnabled = isWindowMiniBatchEnabled(tableConfig)
+
+    pw.item("inputType", input.getRowType)
+      .item("isMiniBatchEnabled", isMiniBatchEnabled)
+      .itemIf("groupBy",
+        AggregateNameUtil.groupingToString(inputSchema.relDataType, grouping), grouping.nonEmpty)
+      .item("window", window)
+      .itemIf("properties", namedProperties.map(_.name).mkString(", "), namedProperties.nonEmpty)
+      .item("select",
+        AggregateNameUtil.aggregationToString(
+          inputSchema.relDataType,
+          grouping,
+          outputSchema.relDataType,
+          aggCalls,
+          namedProperties,
+          withOutputFieldNames = false))
+      .itemIf("emit", emitStrategy, !emitStrategy.toString.isEmpty)
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
@@ -176,7 +197,8 @@ class StreamExecGroupWindowAggregate(
       grouping,
       outputSchema.relDataType,
       aggCalls,
-      namedProperties)
+      namedProperties,
+      withOutputFieldNames = true)
 
     val timeIdx = if (isRowtimeAttribute(window.timeAttribute)) {
       if (inputTimestampIndex < 0) {
@@ -271,6 +293,16 @@ class StreamExecGroupWindowAggregate(
     transformation
   }
 
+  private def isWindowMiniBatchEnabled(config: TableConfig): Boolean = {
+    val needRetraction = StreamExecRetractionRules.isAccRetract(getInput)
+    val aggInfoList = AggregateUtil.transformToStreamAggregateInfoList(
+      aggCalls,
+      inputSchema.relDataType,
+      Array.fill(aggCalls.size)(needRetraction),
+      needInputCount = needRetraction,
+      isStateBackendDataViews = true)
+    isWindowMiniBatchEnabled(config, aggInfoList.aggInfos)
+  }
 
   private def createAggsHandler(
       aggInfoList: AggregateInfoList,

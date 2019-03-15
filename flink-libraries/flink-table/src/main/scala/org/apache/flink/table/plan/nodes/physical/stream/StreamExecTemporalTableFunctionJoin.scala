@@ -30,7 +30,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext.DEFAULT_COLLECTOR_TER
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.JoinUtil.{joinConditionToString, joinSelectionToString, joinTypeToString}
@@ -116,6 +116,8 @@ class StreamExecTemporalTableFunctionJoin(
   override def isDeterministic: Boolean = FlinkRexUtil.isDeterministicOperator(joinCondition)
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = pw
 
   override def translateToPlanInternal(
     tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

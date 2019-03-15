@@ -19,7 +19,7 @@ package org.apache.flink.table.plan.util
 
 import org.apache.flink.api.common.operators.ResourceSpec
 import org.apache.flink.table.plan.`trait`.{AccModeTraitDef, UpdateAsRetractionTraitDef}
-import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode}
+import org.apache.flink.table.plan.nodes.exec.{BatchExecNode, ExecNode, StreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.batch.{BatchExecHashJoinBase, BatchExecNestedLoopJoinBase, BatchExecScan}
 import org.apache.flink.table.plan.nodes.physical.stream.StreamPhysicalRel
 import org.apache.flink.table.plan.util.FlinkNodeOptUtil.ReuseInfoBuilder
@@ -46,6 +46,7 @@ class NodeTreeWriterImpl(
     withResource: Boolean = false,
     withExecNodeId: Boolean = false,
     withRetractTraits: Boolean = false,
+    withStateUid: Boolean = false,
     stopExplainNodes: Option[util.Set[ExecNode[_, _]]] = None,
     reuseInfoMap: Option[util.IdentityHashMap[ExecNode[_, _], (Integer, Boolean)]] = None)
   extends RelWriterImpl(pw, explainLevel, false) {
@@ -188,6 +189,14 @@ class NodeTreeWriterImpl(
                 traitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE)))
             printValues.add(
               Pair.of("accMode", traitSet.getTrait(AccModeTraitDef.INSTANCE)))
+          case _ => // ignore
+        }
+      }
+
+      if (withStateUid) {
+        rel match {
+          case execNode: StreamExecNode[_] =>
+            printValues.add(Pair.of("uid", ExecNodeUidCalculator.getStateDigest(execNode).orNull))
           case _ => // ignore
         }
       }

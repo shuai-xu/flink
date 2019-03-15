@@ -17,9 +17,13 @@
  */
 package org.apache.flink.table.api.stream.sql
 
+import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.scala._
+import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfigOptions}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.nodes.physical.stream.{StreamExecGlobalGroupAggregate, StreamExecGroupAggregate, StreamExecJoin, StreamExecLocalGroupAggregate}
+import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff}
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.{MiniBatchMode, MiniBatchOff, MiniBatchOn}
 import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
 
 import org.apache.calcite.rel.RelNode
@@ -31,10 +35,41 @@ import org.apache.commons.lang3.SystemUtils
 import java.io.{PrintWriter, StringWriter}
 import java.util.{List => JList}
 
-abstract class StreamPlanTestBase extends TableTestBase {
+import org.junit.Before
+
+abstract class StreamPlanTestBase(
+    aggMode: AggMode = LocalGlobalOff,
+    miniBatch: MiniBatchMode = MiniBatchOff) extends TableTestBase {
   protected val streamUtil: StreamTableTestUtil = streamTestUtil()
   streamUtil.addTable[(Int, Long, Long)]("A", 'a1, 'a2, 'a3)
   streamUtil.addTable[(Int, Long, Long)]("B", 'b1, 'b2, 'b3)
+
+  @Before
+  def before(): Unit = {
+    val tableConfig = streamUtil.tableEnv.getConfig
+    miniBatch match {
+      case MiniBatchOn =>
+        tableConfig.getConf.setBoolean(
+          TableConfigOptions.SQL_EXEC_MINI_BATCH_WINDOW_ENABLED, true)
+        tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, true)
+        tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
+        tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_SIZE, 3L)
+      case MiniBatchOff =>
+        tableConfig.getConf.setBoolean(
+          TableConfigOptions.SQL_EXEC_MINI_BATCH_WINDOW_ENABLED, false)
+        tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED, false)
+        tableConfig.getConf.remove(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
+    }
+
+    streamUtil.tableEnv.getConfig.withIdleStateRetentionTime(Time.hours(1), Time.hours(2))
+    if (aggMode.isLocalAggEnabled) {
+      streamUtil.tableEnv.getConfig.getConf.setString(
+        TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, AggPhaseEnforcer.TWO_PHASE.toString)
+    } else {
+      streamUtil.tableEnv.getConfig.getConf.setString(
+        TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, AggPhaseEnforcer.ONE_PHASE.toString)
+    }
+  }
 
   def verifyPlanAndTrait(sql: String): Unit = {
     val table = streamUtil.tableEnv.sqlQuery(sql)

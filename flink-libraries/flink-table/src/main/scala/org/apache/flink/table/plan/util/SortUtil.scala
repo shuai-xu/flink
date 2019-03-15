@@ -22,6 +22,7 @@ import org.apache.flink.api.common.operators.Order
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.codegen.SortCodeGenerator
+import org.apache.flink.table.plan.nodes.exec.ExecNodeWriter
 import org.apache.flink.table.plan.nodes.physical.batch.BatchPhysicalRel
 import org.apache.flink.table.runtime.sort.BinaryIndexedSortable
 import org.apache.flink.table.typeutils.BinaryRowSerializer
@@ -181,6 +182,19 @@ object SortUtil {
       sortOffset: RexNode,
       sortFetch: RexNode): RelWriter = {
     pw.item("orderBy", sortFieldsToString(sortCollation, rowRelDataType))
+      .itemIf("offset", offsetToString(sortOffset), sortOffset != null)
+      .itemIf("fetch", fetchToString(sortFetch, sortOffset), sortFetch != null)
+  }
+
+  def sortExplainStateUid(
+      input: RelNode,
+      pw: ExecNodeWriter,
+      rowRelDataType: RelDataType,
+      sortCollation: RelCollation,
+      sortOffset: RexNode,
+      sortFetch: RexNode): ExecNodeWriter = {
+    pw.item("inputType", input.getRowType)
+      .item("orderBy", sortFieldsToString(sortCollation, rowRelDataType))
       .itemIf("offset", offsetToString(sortOffset), sortOffset != null)
       .itemIf("fetch", fetchToString(sortFetch, sortOffset), sortFetch != null)
   }

@@ -21,17 +21,15 @@ import org.apache.flink.streaming.api.transformations.StreamTransformation
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonTemporalTableJoin
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.TemporalJoinUtil
-import org.apache.flink.table.sources.TableSource
-
+import org.apache.flink.table.sources.{LookupableTableSource, TableSource}
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
 import org.apache.calcite.rex.{RexNode, RexProgram}
-
 import java.util
 
 class StreamExecTemporalTableJoin(
@@ -80,6 +78,14 @@ class StreamExecTemporalTableJoin(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val lookupConfig = getLookupConfig(tableSource.asInstanceOf[LookupableTableSource[_]])
+    if (lookupConfig.isAsyncEnabled) {
+      pw.item("inputType", input.getRowType)
+    }
+    pw
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

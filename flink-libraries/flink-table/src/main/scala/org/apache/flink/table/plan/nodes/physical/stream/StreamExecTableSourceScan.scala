@@ -26,6 +26,7 @@ import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.common.CommonScan
+import org.apache.flink.table.plan.nodes.exec.ExecNodeWriter
 import org.apache.flink.table.plan.nodes.physical.{FlinkPhysicalRel, PhysicalTableSourceScan}
 import org.apache.flink.table.plan.schema.FlinkRelOptTable
 import org.apache.flink.table.sources.wmstrategies.{PeriodicWatermarkAssigner, PreserveWatermarks, PunctuatedWatermarkAssigner}
@@ -75,6 +76,10 @@ class StreamExecTableSourceScan(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    pw.item("TableSourceScan", String.join(", ", relOptTable.names))
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

@@ -24,7 +24,7 @@ import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -133,6 +133,32 @@ class StreamExecOverAggregate(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val overWindow: Group = logicWindow.groups.get(0)
+    val orderKey = overWindow.orderKeys.getFieldCollations.get(0)
+    val timeType = outputSchema.fieldTypeInfos(orderKey.getFieldIndex)
+    val isRowtime = FlinkTypeFactory.isRowtimeIndicatorType(timeType)
+    val constants: Seq[RexLiteral] = logicWindow.constants.asScala
+    val partitionKeys: Array[Int] = overWindow.keys.toArray
+    val namedAggregates: Seq[CalcitePair[AggregateCall, String]] = generateNamedAggregates
+
+    pw.item("inputType", input.getRowType)
+      .item("isRowtime", isRowtime)
+      .itemIf("partitionBy", OverAggregateUtil.partitionToString(
+        outputSchema.relDataType, partitionKeys), partitionKeys.nonEmpty)
+      .item("orderBy",
+        OverAggregateUtil.orderingToString(
+          outputSchema.relDataType, overWindow.orderKeys.getFieldCollations))
+      .item("window", OverAggregateUtil.windowRangeToString(logicWindow, overWindow))
+      .item("select",
+        OverAggregateUtil.aggregationToString(
+          inputSchema.relDataType,
+          constants,
+          outputSchema.relDataType,
+          namedAggregates,
+          withOutputFieldNames = false))
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

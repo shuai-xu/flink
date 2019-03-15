@@ -25,7 +25,7 @@ import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.PartialFinalType
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, FlinkRexUtil, StreamExecUtil}
@@ -138,6 +138,19 @@ class StreamExecGlobalGroupAggregate(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    pw.item("inputType", input.getRowType)
+      .itemIf("groupBy",
+        AggregateNameUtil.groupingToString(inputNode.getRowType, groupings), groupings.nonEmpty)
+      .item("select", AggregateNameUtil.streamAggregationToString(
+        inputNode.getRowType,
+        getRowType,
+        globalAggInfoList,
+        groupings,
+        isGlobal = true,
+        withOutputFieldNames = false))
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

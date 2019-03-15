@@ -23,7 +23,7 @@ import org.apache.flink.table.api.{StreamTableEnvironment, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.schema.BaseRowSchema
 import org.apache.flink.table.plan.util.SortUtil
@@ -90,6 +90,20 @@ class StreamExecTemporalSort(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val timeType = SortUtil.getFirstSortField(sortCollation, outputSchema.relDataType).getType
+    val isRowtime = FlinkTypeFactory.isRowtimeIndicatorType(timeType)
+
+    SortUtil.sortExplainStateUid(
+      input,
+      pw,
+      outputSchema.relDataType,
+      sortCollation,
+      null,
+      null)
+      .item("isRowtime", isRowtime)
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

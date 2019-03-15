@@ -93,6 +93,7 @@ object OverAggregateUtil {
       rowType: RelDataType,
       namedAggregates: Seq[CalcitePair[AggregateCall, String]],
       outputInputName: Boolean = true,
+      withOutputFieldNames: Boolean = true,
       rowTypeOffset: Int = 0): String = {
 
     val inFields = inputType.getFieldNames.asScala
@@ -126,7 +127,7 @@ object OverAggregateUtil {
       case (f, o) => if (f == o) {
         f
       } else {
-        s"$f AS $o"
+        if (withOutputFieldNames) s"$f AS $o" else f
       }
     }.mkString(", ")
   }

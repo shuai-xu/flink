@@ -162,9 +162,16 @@ object AggregateNameUtil {
       grouping: Array[Int],
       rowType: RelDataType,
       aggCalls: Seq[AggregateCall],
-      namedProperties: Seq[NamedWindowProperty]): String = {
+      namedProperties: Seq[NamedWindowProperty],
+      withOutputFieldNames: Boolean): String = {
     buildAggregationToString(
-      inputType, grouping, Array.empty[Int], rowType, aggCalls, namedProperties)
+      inputType,
+      grouping,
+      Array.empty[Int],
+      rowType,
+      aggCalls,
+      namedProperties,
+      withOutputFieldNames)
   }
 
   private def buildAggregationToString(
@@ -173,7 +180,8 @@ object AggregateNameUtil {
       auxGrouping: Array[Int],
       rowType: RelDataType,
       aggs: Seq[AggregateCall],
-      namedProperties: Seq[NamedWindowProperty]): String = {
+      namedProperties: Seq[NamedWindowProperty],
+      withOutputFieldNames: Boolean = true): String = {
 
     val inFields = inputType.getFieldNames.asScala
     val outFields = rowType.getFieldNames.asScala
@@ -204,7 +212,7 @@ object AggregateNameUtil {
       case (f, o) => if (f == o) {
         f
       } else {
-        s"$f AS $o"
+        if (withOutputFieldNames) s"$f AS $o" else f
       }
     }.mkString(", ")
   }
@@ -216,7 +224,8 @@ object AggregateNameUtil {
       grouping: Array[Int],
       shuffleKey: Option[Array[Int]] = None,
       isLocal: Boolean = false,
-      isGlobal: Boolean = false): String = {
+      isGlobal: Boolean = false,
+      withOutputFieldNames: Boolean = true): String = {
 
     val aggInfos = aggInfoList.aggInfos
     val distincts = aggInfoList.distinctInfos
@@ -265,7 +274,7 @@ object AggregateNameUtil {
 
     (groupingStrings ++ aggStrings).zip(outputFieldNames).map {
       case (f, o) if f == o => f
-      case (f, o) => s"$f AS $o"
+      case (f, o) => if (withOutputFieldNames) s"$f AS $o" else f
     }.mkString(", ")
   }
 

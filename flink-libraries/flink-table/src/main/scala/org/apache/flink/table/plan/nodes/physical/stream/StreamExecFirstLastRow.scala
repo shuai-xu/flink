@@ -19,11 +19,11 @@
 package org.apache.flink.table.plan.nodes.physical.stream
 
 import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfigOptions, TableException}
+import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.errorcode.TableErrors
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -94,6 +94,21 @@ class StreamExecFirstLastRow(
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val tableConfig = cluster.getPlanner.getContext.unwrap(classOf[TableConfig])
+    val isMiniBatchEnabled = tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
+
+    val fieldNames = getRowType.getFieldNames
+    val orderString = if (isRowtime) "ROWTIME" else "PROCTIME"
+
+    pw.item("inputType", input.getRowType)
+      .item("isMiniBatchEnabled", isMiniBatchEnabled)
+      .item("key", uniqueKeys.map(fieldNames.get).mkString(", "))
+      .item("order", orderString)
+      .item("mode", if (isLastRowMode) "LastRow" else "FirstRow")
+  }
+
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {
 
@@ -124,8 +139,9 @@ class StreamExecFirstLastRow(
 
     val tableConfig = tableEnv.getConfig
 
-    val operator = if (tableConfig.getConf.contains(
-      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)) {
+    val isMiniBatchEnabled = tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
+    val operator = if (isMiniBatchEnabled) {
       val processFunction = new MiniBatchFirstLastRowFunction(
         rowTypeInfo,
         generateRetraction,

@@ -37,7 +37,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.logical.MatchRecognize
 import org.apache.flink.table.plan.nodes.common.CommonMatchRecognize
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -84,7 +84,7 @@ class StreamExecMatch(
   override def requireWatermark: Boolean = {
     val rowtimeFields = getInput.getRowType.getFieldList
       .filter(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
-    return rowtimeFields.nonEmpty
+    rowtimeFields.nonEmpty
   }
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
@@ -135,6 +135,40 @@ class StreamExecMatch(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val timeType = SortUtil.getFirstSortField(
+      logicalMatch.orderKeys, inputSchema.relDataType).getType
+    val isRowtime = FlinkTypeFactory.isRowtimeIndicatorType(timeType)
+    val fieldNames = inputSchema.fieldNames.toList
+
+    pw.item("inputType", input.getRowType)
+      .item("isRowtime", isRowtime)
+      .itemIf("partitionBy",
+        partitionKeysToString(logicalMatch.partitionKeys, fieldNames, getExpressionString),
+        !logicalMatch.partitionKeys.isEmpty)
+      .itemIf("orderBy",
+        orderingToString(logicalMatch.orderKeys, fieldNames),
+        !logicalMatch.orderKeys.getFieldCollations.isEmpty)
+      .itemIf("measures",
+        measuresDefineToString(
+          logicalMatch.measures, fieldNames, getExpressionString, withOutputFieldNames = false),
+        !logicalMatch.measures.isEmpty)
+      .itemIf("rowsPerMatch", logicalMatch.rowsPerMatch, logicalMatch.rowsPerMatch != null)
+      .item("after", afterMatchToString(logicalMatch.after, fieldNames))
+      .item("pattern", logicalMatch.pattern.toString)
+      .itemIf("within interval",
+        if (logicalMatch.interval != null) {
+          logicalMatch.interval.toString
+        } else {
+          null
+        },
+        logicalMatch.interval != null)
+      .itemIf("subset",
+        subsetToString(logicalMatch.subsets),
+        !logicalMatch.subsets.isEmpty)
+      .item("define", logicalMatch.patternDefinitions)
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

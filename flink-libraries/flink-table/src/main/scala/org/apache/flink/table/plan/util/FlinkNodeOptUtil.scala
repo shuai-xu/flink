@@ -39,6 +39,7 @@ object FlinkNodeOptUtil {
     * @param withExecNodeId     whether including ID of ExecNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode corresponding to
     *                           an ExecNode (only apply to StreamPhysicalRel node at present)
+    * @param withStateUid       whether including state uid of ExecNode
     * @return                   explain plan of ExecNode
     */
   def treeToString(
@@ -46,13 +47,15 @@ object FlinkNodeOptUtil {
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       withResource: Boolean = false,
       withExecNodeId: Boolean = false,
-      withRetractTraits: Boolean = false): String = {
+      withRetractTraits: Boolean = false,
+      withStateUid: Boolean = false): String = {
     doConvertTreeToString(
       node,
       detailLevel = detailLevel,
       withResource = withResource,
       withExecNodeId = withExecNodeId,
-      withRetractTraits = withRetractTraits)
+      withRetractTraits = withRetractTraits,
+      withStateUid = withStateUid)
   }
 
   /**
@@ -65,6 +68,7 @@ object FlinkNodeOptUtil {
     * @param withExecNodeId     whether including ID of ExecNode
     * @param withRetractTraits  whether including Retraction Traits of RelNode corresponding to
     *                           an ExecNode (only apply to StreamPhysicalRel node at present)
+    * @param withStateUid       whether including state uid of ExecNode
     * @return                   explain plan of ExecNode
     */
   def dagToString(
@@ -72,14 +76,16 @@ object FlinkNodeOptUtil {
       detailLevel: SqlExplainLevel = SqlExplainLevel.EXPPLAN_ATTRIBUTES,
       withResource: Boolean = false,
       withExecNodeId: Boolean = false,
-      withRetractTraits: Boolean = false): String = {
+      withRetractTraits: Boolean = false,
+      withStateUid: Boolean = false): String = {
     if (nodes.length == 1) {
       return treeToString(
         nodes.head,
         detailLevel,
         withResource = withResource,
         withExecNodeId = withExecNodeId,
-        withRetractTraits = withRetractTraits)
+        withRetractTraits = withRetractTraits,
+        withStateUid = withStateUid)
     }
 
     val reuseInfoBuilder = new ReuseInfoBuilder()
@@ -112,6 +118,7 @@ object FlinkNodeOptUtil {
             withResource = withResource,
             withExecNodeId = withExecNodeId,
             withRetractTraits = withRetractTraits,
+            withStateUid = withStateUid,
             stopExplainNodes = Some(stopExplainNodes),
             reuseInfoMap = Some(reuseInfoMap))
           sb.append(reusePlan).append(System.lineSeparator)
@@ -139,6 +146,7 @@ object FlinkNodeOptUtil {
       withResource: Boolean = false,
       withExecNodeId: Boolean = false,
       withRetractTraits: Boolean = false,
+      withStateUid: Boolean = false,
       stopExplainNodes: Option[util.Set[ExecNode[_, _]]] = None,
       reuseInfoMap: Option[util.IdentityHashMap[ExecNode[_, _], (Integer, Boolean)]] = None
   ): String = {
@@ -151,6 +159,7 @@ object FlinkNodeOptUtil {
       withResource = withResource,
       withExecNodeId = withExecNodeId,
       withRetractTraits = withRetractTraits,
+      withStateUid = withStateUid,
       stopExplainNodes = stopExplainNodes,
       reuseInfoMap = reuseInfoMap)
     node.getFlinkPhysicalRel.explain(planWriter)

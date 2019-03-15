@@ -17,6 +17,7 @@
  */
 package org.apache.flink.table.runtime.utils
 
+import java.io.File
 import java.util
 
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
@@ -47,20 +48,24 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
     case ROCKSDB_BACKEND => true
   }
 
+  var baseCheckpointPath: File = _
+
   @Before
   override def before(): Unit = {
     super.before()
     // set state backend
+    baseCheckpointPath = tempFolder.newFolder().getAbsoluteFile
     state match {
       case HEAP_BACKEND =>
         val conf = new Configuration()
         conf.setBoolean(CheckpointingOptions.ASYNC_SNAPSHOTS, true)
-        env.setStateBackend(new MemoryStateBackend().configure(conf))
+        env.setStateBackend(new MemoryStateBackend(
+          "file://" + baseCheckpointPath, null).configure(conf))
       case ROCKSDB_BACKEND =>
         val conf = new Configuration()
         conf.setBoolean(CheckpointingOptions.INCREMENTAL_CHECKPOINTS, true)
         env.setStateBackend(new RocksDBStateBackend(
-          "file://" + tempFolder.newFolder().getAbsoluteFile).configure(conf))
+          "file://" + baseCheckpointPath).configure(conf))
     }
     this.tEnv = TableEnvironment.getTableEnvironment(env)
     FailingCollectionSource.failedBefore = true
@@ -102,6 +107,32 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
   /**
     * Creates a DataStream from the given non-empty [[Seq]].
     */
+  def retainStateDataSource[T: TypeInformation](data: Seq[T]): DataStream[T] = {
+    env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE)
+    env.setRestartStrategy(RestartStrategies.noRestart())
+    env.setParallelism(1)
+    // reset failedBefore flag to false
+    FailingCollectionSource.reset()
+
+    require(data != null, "Data must not be null.")
+    val typeInfo = implicitly[TypeInformation[T]]
+
+    val collection = scala.collection.JavaConversions.asJavaCollection(data)
+    // must not have null elements and mixed elements
+    FromElementsFunction.checkCollection(data, typeInfo.getTypeClass)
+
+    val function = new FailingCollectionSource[T](
+      typeInfo.createSerializer(env.getConfig),
+      collection,
+      data.length,
+      true)
+
+    env.addSource(function)(typeInfo).setMaxParallelism(1)
+  }
+
+  /**
+    * Creates a DataStream from the given non-empty [[Seq]].
+    */
   def failingDataSource[T: TypeInformation](data: Seq[T]): DataStream[T] = {
     env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE)
     env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0))
@@ -119,7 +150,8 @@ class StreamingWithStateTestBase(state: StateBackendMode) extends StreamingTestB
     val function = new FailingCollectionSource[T](
       typeInfo.createSerializer(env.getConfig),
       collection,
-      data.length / 2) // fail after half elements
+      data.length / 2, // fail after half elements
+      false)
 
     env.addSource(function)(typeInfo).setMaxParallelism(1)
   }

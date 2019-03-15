@@ -19,11 +19,13 @@
 package org.apache.flink.table.plan.rules.logical
 
 import java.util
+
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.{AggPhaseEnforcer, TableConfigOptions}
+import org.apache.flink.table.api.TableConfigOptions
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.stream.sql.StreamPlanTestBase
 import org.apache.flink.table.runtime.utils.StreamingWithAggTestBase.{AggMode, LocalGlobalOff, LocalGlobalOn}
-import org.apache.flink.table.util.{StreamTableTestUtil, TableTestBase}
+import org.apache.flink.table.runtime.utils.StreamingWithMiniBatchTestBase.MiniBatchOn
 
 import org.junit.{Before, Test}
 import org.junit.runner.RunWith
@@ -32,25 +34,15 @@ import org.junit.runners.Parameterized
 import scala.collection.JavaConversions._
 
 @RunWith(classOf[Parameterized])
-class SplitAggregateTest(aggMode: AggMode) extends TableTestBase {
-
-  private var streamUtil: StreamTableTestUtil = _
+class SplitAggregateTest(aggMode: AggMode) extends StreamPlanTestBase(aggMode, MiniBatchOn) {
 
   @Before
-  def before(): Unit = {
-    streamUtil= streamTestUtil()
+  override def before(): Unit = {
+    super.before()
     streamUtil.addTable[(Long, Int, String)](
       "MyTable", 'a, 'b, 'c)
     val tableConfig = streamUtil.tableEnv.getConfig
-    tableConfig.getConf.setLong(TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY, 1000L)
     tableConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, true)
-
-    aggMode match {
-      case LocalGlobalOn => tableConfig.getConf.setString(
-        TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, AggPhaseEnforcer.TWO_PHASE.toString)
-      case LocalGlobalOff => tableConfig.getConf.setString(
-        TableConfigOptions.SQL_OPTIMIZER_AGG_PHASE_ENFORCER, AggPhaseEnforcer.ONE_PHASE.toString)
-    }
   }
 
   @Test

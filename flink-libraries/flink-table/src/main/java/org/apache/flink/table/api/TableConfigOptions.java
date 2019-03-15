@@ -354,6 +354,11 @@ public class TableConfigOptions {
 				"State will be cleared and removed if it was not updated for the defined " +
 				"period of time.");
 
+	public static final ConfigOption<Boolean> SQL_EXEC_STATE_REUSE =
+		key("sql.exec.state.reuse.enabled")
+			.defaultValue(false)
+			.withDescription("Whether to enable state reuse");
+
 	// ------------------------------------------------------------------------
 	//  Other Exec Options
 	// ------------------------------------------------------------------------

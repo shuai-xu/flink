@@ -85,10 +85,14 @@ public class FailingCollectionSource<T>
 	/** The last successful checkpointed number of emitted elements. */
 	private volatile int lastCheckpointedEmittedNum = 0;
 
+	/** Whether to perform a checkpoint before job finished. */
+	private final boolean performCheckpointBeforeJobFinished;
+
 	public FailingCollectionSource(
 		TypeSerializer<T> serializer,
 		Iterable<T> elements,
-		int failureAfterNumElements) throws IOException {
+		int failureAfterNumElements,
+		boolean performCheckpointBeforeJobFinished) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		DataOutputViewStreamWrapper wrapper = new DataOutputViewStreamWrapper(baos);
 
@@ -108,6 +112,7 @@ public class FailingCollectionSource<T>
 		this.numElements = count;
 		checkArgument(failureAfterNumElements > 0);
 		this.failureAfterNumElements = failureAfterNumElements;
+		this.performCheckpointBeforeJobFinished = performCheckpointBeforeJobFinished;
 		this.checkpointedEmittedNums = new HashMap<>();
 	}
 
@@ -124,7 +129,7 @@ public class FailingCollectionSource<T>
 			)
 		);
 
-		if (context.isRestored()) {
+		if (failedBefore && context.isRestored()) {
 			List<Integer> retrievedStates = new ArrayList<>();
 			for (Integer entry : this.checkpointedState.get()) {
 				retrievedStates.add(entry);
@@ -195,6 +200,19 @@ public class FailingCollectionSource<T>
 			} else {
 				// if our work is done, delay a bit to prevent busy waiting
 				Thread.sleep(1);
+			}
+		}
+
+		if (performCheckpointBeforeJobFinished) {
+			while (isRunning) {
+				// wait until the latest checkpoint records everything
+				if (lastCheckpointedEmittedNum < numElements) {
+					// delay a bit to prevent busy waiting
+					Thread.sleep(1);
+				} else {
+					// cause a failure to retain the last checkpoint
+					throw new Exception("Job finished normally");
+				}
 			}
 		}
 	}

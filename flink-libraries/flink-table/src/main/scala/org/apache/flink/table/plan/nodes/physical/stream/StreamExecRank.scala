@@ -22,7 +22,7 @@ import org.apache.flink.streaming.api.transformations.{OneInputTransformation, S
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig, TableConfigOptions, TableException}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.nodes.calcite.Rank
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.schema.BaseRowSchema
@@ -130,6 +130,17 @@ class StreamExecRank(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    pw.item("inputType", input.getRowType)
+      .item("rankFunction", rankFunction.getKind)
+      .itemIf("partitionBy",
+        partitionFieldsToString(partitionKey, schema.relDataType),
+        partitionKey.nonEmpty)
+      .item("orderBy", Rank.sortFieldsToString(sortCollation, schema.relDataType))
+      .item("rankRange", rankRange.toString(inputSchema.fieldNames))
+      .item("strategy", getStrategy())
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

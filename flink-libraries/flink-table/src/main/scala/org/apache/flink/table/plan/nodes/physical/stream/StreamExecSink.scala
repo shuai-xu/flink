@@ -25,6 +25,8 @@ import org.apache.flink.table.api.{StreamTableEnvironment, Table, TableException
 import org.apache.flink.table.plan.`trait`.{AccMode, AccModeTraitDef}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
 import org.apache.flink.table.plan.nodes.calcite.Sink
+import org.apache.flink.table.plan.nodes.exec.{BaseStreamExecNode, ExecNodeWriter, RowStreamExecNode}
+import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.configuration.Configuration
@@ -36,12 +38,11 @@ import org.apache.flink.table.runtime.AbstractProcessStreamOperator
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.typeutils.{BaseRowTypeInfo, TypeUtils}
 import org.apache.flink.table.util.NodeResourceUtil
+
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.RelNode
-import java.util
 
-import org.apache.flink.table.plan.nodes.exec.{BaseStreamExecNode, RowStreamExecNode}
-import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
+import java.util
 
 import scala.collection.JavaConversions._
 
@@ -76,6 +77,10 @@ class StreamExecSink[T](
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    pw.item("sink", sinkName)
+  }
 
   /**
     * Translates the FlinkRelNode into a Flink operator.

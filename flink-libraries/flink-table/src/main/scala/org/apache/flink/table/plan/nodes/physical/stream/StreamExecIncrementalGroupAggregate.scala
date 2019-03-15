@@ -23,7 +23,7 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.agg.AggsHandlerCodeGenerator
 import org.apache.flink.table.codegen.{CodeGeneratorContext, GeneratedAggsHandleFunction}
 import org.apache.flink.table.dataformat.BaseRow
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.util.{AggregateInfoList, AggregateNameUtil, AggregateUtil, FlinkRexUtil, StreamExecUtil}
 import org.apache.flink.table.runtime.aggregate.MiniBatchIncrementalGroupAggFunction
@@ -116,6 +116,19 @@ class StreamExecIncrementalGroupAggregate(
   //~ ExecNode methods -----------------------------------------------------------
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
+
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    pw.item("inputType", input.getRowType)
+      .item("shuffleKey", AggregateNameUtil.groupingToString(inputNode.getRowType, shuffleKey))
+      .item("groupKey", AggregateNameUtil.groupingToString(inputNode.getRowType, groupKey))
+      .item("select", AggregateNameUtil.streamAggregationToString(
+        inputNode.getRowType,
+        getRowType,
+        finalAggInfoList,
+        groupKey,
+        shuffleKey = Some(shuffleKey),
+        withOutputFieldNames = false))
+  }
 
   override def translateToPlanInternal(
       tableEnv: StreamTableEnvironment): StreamTransformation[BaseRow] = {

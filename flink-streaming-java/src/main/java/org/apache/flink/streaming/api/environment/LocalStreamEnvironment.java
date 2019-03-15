@@ -91,6 +91,7 @@ public class LocalStreamEnvironment extends StreamExecutionEnvironment {
 		streamGraph.setJobName(jobName);
 		// transform the streaming program into a JobGraph
 		JobGraph jobGraph = streamGraph.getJobGraph();
+		jobGraph.setSavepointRestoreSettings(savepointRestoreSettings);
 		jobGraph.setAllowQueuedScheduling(true);
 		MiniCluster miniCluster = prepareMiniCluster(jobGraph);
 

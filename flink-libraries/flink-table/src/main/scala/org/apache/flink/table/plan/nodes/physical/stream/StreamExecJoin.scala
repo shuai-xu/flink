@@ -29,7 +29,7 @@ import org.apache.flink.table.codegen.ProjectionCodeGenerator.generateProjection
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.plan.FlinkJoinRelType
-import org.apache.flink.table.plan.nodes.exec.RowStreamExecNode
+import org.apache.flink.table.plan.nodes.exec.{ExecNodeWriter, RowStreamExecNode}
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 import org.apache.flink.table.plan.rules.physical.stream.StreamExecRetractionRules
 import org.apache.flink.table.plan.util.{FlinkRexUtil, JoinUtil, StreamExecUtil}
@@ -139,6 +139,10 @@ class StreamExecJoin(
   }
 
   override def needsUpdatesAsRetraction(input: RelNode): Boolean = {
+    !pkContainsJoinKey(input)
+  }
+
+  private def pkContainsJoinKey(input: RelNode): Boolean = {
     def getCurrentRel(node: RelNode): RelNode = {
       node match {
         case _: HepRelVertex => node.asInstanceOf[HepRelVertex].getCurrentRel
@@ -154,12 +158,11 @@ class StreamExecJoin(
       } else {
         keyPairs.map(_.target).toArray
       }
-      val pkContainJoinKey = inputUniqueKeys.exists {
+      inputUniqueKeys.exists {
         uniqueKey => joinKeys.forall(uniqueKey.toArray.contains(_))
       }
-      if (pkContainJoinKey) false else true
     } else {
-      true
+      false
     }
   }
 
@@ -198,6 +201,29 @@ class StreamExecJoin(
 
   override def getFlinkPhysicalRel: FlinkPhysicalRel = this
 
+  override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
+    val tableConfig = cluster.getPlanner.getContext.unwrap(classOf[TableConfig])
+    val isMiniBatchEnabled = isJoinMiniBatchEnabled(tableConfig)
+    val (leftKeys, rightKeys) =
+      JoinUtil.checkAndGetKeys(keyPairs, getLeft, getRight, allowEmpty = true)
+    val leftKeyFields = leftKeys.map(left.getRowType.getFieldNames.get(_))
+    val rightKeyFields = rightKeys.map(right.getRowType.getFieldNames.get(_))
+
+    pw.item("leftInputType", left.getRowType)
+      .item("rightInputType", right.getRowType)
+      .item("isMiniBatchEnabled", isMiniBatchEnabled)
+      .item("leftIsAccRetract", StreamExecRetractionRules.isAccRetract(left))
+      .item("rightIsAccRetract", StreamExecRetractionRules.isAccRetract(right))
+      .item("leftPkContainJoinKey", pkContainsJoinKey(leftNode))
+      .item("rightPkContainJoinKey", pkContainsJoinKey(rightNode))
+      .item("isEqual", joinInfo.isEqui)
+      .itemIf("leftKeys", leftKeyFields.mkString(", "), joinType == FlinkJoinRelType.INNER)
+      .itemIf("rightKeys", rightKeyFields.mkString(", "), joinType == FlinkJoinRelType.INNER)
+      .itemIf("where", joinConditionToString, joinType != FlinkJoinRelType.INNER)
+      .item("joinType", joinTypeToString)
+      .itemIf("joinHint", joinHint, joinHint != null)
+  }
+
   /**
    * Translates the StreamExecNode into a Flink operator.
    *
@@ -230,16 +256,14 @@ class StreamExecJoin(
     val lPkProj = generatePrimaryKeyProjection(tableConfig, left, leftType, leftKeys.toArray)
     val rPkProj = generatePrimaryKeyProjection(tableConfig, right, rightType, rightKeys.toArray)
 
-    val isMiniBatchEnabled = tableConfig.getConf.contains(
-      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY)
+    val isMiniBatchEnabled = isJoinMiniBatchEnabled(tableConfig)
     val (lStateType, lMatchStateType, rStateType, rMatchStateType) =
       getJoinAllStateType(isMiniBatchEnabled)
     val condFunc = generateConditionFunction(tableConfig, leftType, rightType)
     val leftIsAccRetract = StreamExecRetractionRules.isAccRetract(left)
     val rightIsAccRetract = StreamExecRetractionRules.isAccRetract(right)
 
-    val operator = if (isMiniBatchEnabled && tableConfig.getConf.getBoolean(
-      TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED)) {
+    val operator = if (isMiniBatchEnabled) {
       joinType match {
         case FlinkJoinRelType.INNER =>
           new MiniBatchInnerJoinStreamOperator(
@@ -588,6 +612,13 @@ class StreamExecJoin(
           JoinMatchStateHandler.Type.WITHOUT_PRIMARY_KEY_MATCH
       }
     }
+  }
+
+  private[flink] def isJoinMiniBatchEnabled(tableConfig: TableConfig): Boolean = {
+    tableConfig.getConf.contains(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_ALLOW_LATENCY) &&
+    tableConfig.getConf.getBoolean(
+      TableConfigOptions.SQL_EXEC_MINIBATCH_JOIN_ENABLED)
   }
 }
 
