@@ -220,6 +220,9 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 		}
 	}
 
+	public boolean hasToBeScheduledVertices() {
+		return !executionVerticesToBeScheduled.isEmpty();
+	}
 	// --------------------------------------------------------------------------------------------
 	//  Implements of Replayable, for recovery after jm failover.
 	// --------------------------------------------------------------------------------------------

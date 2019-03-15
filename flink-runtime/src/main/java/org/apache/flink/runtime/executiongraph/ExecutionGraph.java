@@ -1321,7 +1321,7 @@ public class ExecutionGraph implements AccessExecutionGraph {
 								break;
 							}
 						}
-						if (allCreated) {
+						if (allCreated && !graphManager.hasToBeScheduledVertices()) {
 							if (!transitionState(JobStatus.RECONCILING, JobStatus.CREATED)) {
 								LOG.error("When reconcile finish, the job is in {}, this is a logical error.", state);
 							}
