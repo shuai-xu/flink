@@ -45,6 +45,7 @@ class StateReuseTest(
     streamUtil.addTable[(Long, Int, Long, Long, Long)](
       "MyTable2", 'a, 'b, 'c, 'd, 'e, 'proctime.proctime, 'rowtime.rowtime)
     val tableConfig = streamUtil.tableEnv.getConfig
+    tableConfig.getConf.setBoolean(TableConfigOptions.SQL_EXEC_STATE_REUSE, true)
     tableConfig.getConf.setBoolean(TableConfigOptions.SQL_OPTIMIZER_DATA_SKEW_DISTINCT_AGG, true)
   }
 

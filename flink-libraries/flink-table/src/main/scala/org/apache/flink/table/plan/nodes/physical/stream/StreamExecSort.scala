@@ -102,7 +102,7 @@ class StreamExecSort(
   override def getStateDigest(pw: ExecNodeWriter): ExecNodeWriter = {
     SortUtil.sortExplainStateUid(
       input,
-      getStateDigest(pw),
+      pw,
       outputSchema.relDataType,
       sortCollation,
       offset,
