@@ -405,6 +405,10 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	public void startNewWorker(ResourceProfile resourceProfile, Set<SlotTag> tags) {
 		// Priority for worker containers - priorities are intra-application
 		int slotNumber = calculateSlotNumber(resourceProfile);
+		if (slotNumber < 1) {
+			log.warn("Resource profile of requested slot exceeds max resource limit per TaskExecutor. Could not start new worker.");
+			return;
+		}
 		TaskManagerResource tmResource = TaskManagerResource.fromConfiguration(flinkConfig, resourceProfile, slotNumber);
 		int priority = generatePriority(tmResource, tags);
 		Resource containerResource = generateContainerResource(tmResource);
@@ -937,7 +941,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 			return 1;
 		}
 		else {
-			int minSlot = Math.max((int) Math.ceil(minCorePerContainer / resourceProfile.getCpuCores()),
+			int minSlot = Math.min((int) Math.ceil(minCorePerContainer / resourceProfile.getCpuCores()),
 				(int) Math.ceil(1.0 * minMemoryPerContainer / resourceProfile.getMemoryInMB()));
 			int maxSlot = Math.min((int) Math.floor(maxCorePerContainer / resourceProfile.getCpuCores()),
 				(int) Math.floor(1.0 * maxMemoryPerContainer / resourceProfile.getMemoryInMB()));
@@ -950,7 +954,7 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 
 				Double minPerContainer = minExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());
 				if (minPerContainer != null) {
-					minSlot = Math.max(minSlot, (int) Math.ceil(minPerContainer / extendedResource.getValue()));
+					minSlot = Math.min(minSlot, (int) Math.ceil(minPerContainer / extendedResource.getValue()));
 				}
 
 				Double maxPerContainer = maxExtendedResourcePerContainer.get(extendedResource.getName().toLowerCase());

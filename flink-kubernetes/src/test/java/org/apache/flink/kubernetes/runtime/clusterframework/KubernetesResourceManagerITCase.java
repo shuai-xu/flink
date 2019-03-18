@@ -131,7 +131,6 @@ public class KubernetesResourceManagerITCase extends KubernetesRMTestBase {
 	public void setup() {
 		super.setup();
 		flinkConf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MIN_CORE, 0.01);
-		flinkConf.setDouble(TaskManagerOptions.TASK_MANAGER_MULTI_SLOTS_MAX_CORE, 0.01);
 		if (!USE_MOCK_K8S_CLIENT) {
 			// init kubernetes testing env
 			// 1. create testing service

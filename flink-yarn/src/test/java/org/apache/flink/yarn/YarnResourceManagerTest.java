@@ -763,10 +763,8 @@ public class YarnResourceManagerTest extends TestLogger {
 		new Context(conf) {{
 			startResourceManager();
 
-			assertEquals(4, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 512)));
-			assertEquals(5, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 250)));
-			assertEquals(4, resourceManager.calculateSlotNumber(new ResourceProfile(0.2, 2 * 1024)));
-			assertEquals(2, resourceManager.calculateSlotNumber(new ResourceProfile(2, 256)));
+			assertEquals(2, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 512)));
+			assertEquals(4, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 250)));
 		}};
 	}
 }
