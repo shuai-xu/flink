@@ -202,8 +202,8 @@ public class ConcatPartitionedFileMerger<T> implements SortedDataFileMerger<Tupl
 				heap.adjustTop();
 			}
 
-			// now read the specific counts of buffers
-			int readLength = 0;
+			// now read the specific length of data
+			long readLength = 0;
 			while (readLength < partitionIndex.getLength()) {
 				Buffer buffer = headStream.getReader().getNextBufferBlocking();
 				readLength += buffer.getSize();
