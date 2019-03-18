@@ -154,6 +154,11 @@ public class LowMemoryDetector implements Detector {
 			double nonHeapUsage = tmNonHeapUsages.get(tmId).f1 / 1024 / 1024;
 			double nativeUsage = totalUsage - heapUsage - nonHeapUsage;
 
+			if (nativeUsage < 0.0) {
+				LOGGER.debug("Skip tm {}, abnormal native usage {}.", tmId, nativeUsage);
+				continue;
+			}
+
 			double totalCapacity = tmCapacities.get(tmId).f1 / 1024 / 1024;
 			double heapCapacity = 0.0;
 			double nonHeapCapacity = 0.0;

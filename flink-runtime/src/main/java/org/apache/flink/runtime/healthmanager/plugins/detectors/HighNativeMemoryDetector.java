@@ -165,6 +165,11 @@ public class HighNativeMemoryDetector implements Detector {
 			}
 
 			double nativeUsage = (totalUsage - heapUsage - nonHeapUsage) / 1024 / 1024;
+			if (nativeUsage < 0.0) {
+				LOGGER.debug("Skip tm {}, abnormal native usage {}.", tmId, nativeUsage);
+				continue;
+			}
+
 			double nativeCapacity = 0.0;
 			for (ExecutionVertexID executionVertexID : jobExecutionVertexIds) {
 				JobVertexID jobVertexID = executionVertexID.getJobVertexID();
