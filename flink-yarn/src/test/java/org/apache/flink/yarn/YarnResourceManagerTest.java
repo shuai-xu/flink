@@ -29,6 +29,7 @@ import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
+import org.apache.flink.runtime.clusterframework.types.TaskManagerResource;
 import org.apache.flink.runtime.concurrent.ScheduledExecutor;
 import org.apache.flink.runtime.concurrent.ScheduledExecutorServiceAdapter;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
@@ -94,8 +95,10 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -765,6 +768,26 @@ public class YarnResourceManagerTest extends TestLogger {
 
 			assertEquals(2, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 512)));
 			assertEquals(4, resourceManager.calculateSlotNumber(new ResourceProfile(0.3, 250)));
+		}};
+	}
+
+	@Test
+	public void testGeneratePriority() throws Exception {
+		new Context() {{
+			startResourceManager();
+			ResourceProfile resourceProfile1 = new ResourceProfile(1.0, 1024);
+			ResourceProfile resourceProfile2 = new ResourceProfile(1.0, 1024);
+			TaskManagerResource taskManagerResource1 = TaskManagerResource.fromConfiguration(new Configuration(), resourceProfile1, 1);
+			TaskManagerResource taskManagerResource2 = TaskManagerResource.fromConfiguration(new Configuration(), resourceProfile2, 1);
+			SlotTag slotTag1 = new SlotTag("tag", new JobID(0L, 1L));
+			SlotTag slotTag2 = new SlotTag("tag", new JobID(0L, 1L));
+			Set<SlotTag> tagSet1 = new HashSet();
+			Set<SlotTag> tagSet2 = new HashSet();
+			tagSet1.add(slotTag1);
+			tagSet2.add(slotTag2);
+			int priority1 = resourceManager.generatePriority(taskManagerResource1, tagSet1);
+			int priority2 = resourceManager.generatePriority(taskManagerResource2, tagSet2);
+			assertEquals(priority1, priority2);
 		}};
 	}
 }

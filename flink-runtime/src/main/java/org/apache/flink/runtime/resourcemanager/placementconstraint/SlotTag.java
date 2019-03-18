@@ -20,6 +20,8 @@ package org.apache.flink.runtime.resourcemanager.placementconstraint;
 
 import org.apache.flink.api.common.JobID;
 
+import java.util.Objects;
+
 import static org.apache.flink.runtime.resourcemanager.placementconstraint.SlotTagScope.JOB;
 
 /**
@@ -64,5 +66,10 @@ public class SlotTag implements java.io.Serializable {
 	@Override
 	public String toString() {
 		return "tag(" + jobId + ", " + tagName + ")";
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(tagName, jobId);
 	}
 }

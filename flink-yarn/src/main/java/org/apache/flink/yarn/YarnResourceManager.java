@@ -869,7 +869,8 @@ public class YarnResourceManager extends ResourceManager<YarnWorkerNode> impleme
 	 * @param tmResource The resource profile of a request
 	 * @return The priority of this resource profile.
 	 */
-	private int generatePriority(TaskManagerResource tmResource, Set<SlotTag> tags) {
+	@VisibleForTesting
+	int generatePriority(TaskManagerResource tmResource, Set<SlotTag> tags) {
 		Tuple2<TaskManagerResource, Set<SlotTag>> tuple = new Tuple2<>(tmResource, tags);
 		Integer priority = resourceAndTagsToPriorityMap.get(tuple);
 		if (priority != null) {
