@@ -148,6 +148,8 @@ public class CpuAdjuster implements Resolver {
 			}
 		}
 
+		adjustJobCpu.exculdeMinorDiffVertices(monitor.getConfig());
+
 		if (!adjustJobCpu.isEmpty()) {
 			long lastCheckpointTime = 0;
 			try {

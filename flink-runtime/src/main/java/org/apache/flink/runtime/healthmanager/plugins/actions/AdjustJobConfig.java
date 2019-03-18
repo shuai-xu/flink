@@ -21,10 +21,12 @@ package org.apache.flink.runtime.healthmanager.plugins.actions;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.MetricProvider;
 import org.apache.flink.runtime.healthmanager.plugins.Action;
+import org.apache.flink.runtime.healthmanager.plugins.utils.HealthMonitorOptions;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.messages.Acknowledge;
 
@@ -32,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -97,6 +100,55 @@ public class AdjustJobConfig implements Action {
 
 	public boolean isEmpty() {
 		return currentParallelism.isEmpty();
+	}
+
+	public void exculdeMinorDiffVertices(Configuration conf) {
+		double minDiffParallelismRatio = conf.getDouble(HealthMonitorOptions.PARALLELISM_SCALE_MIN_DIFF_RATIO);
+		double minDiffResourceRatio = conf.getDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO);
+		double minDiffCpuCore = conf.getDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_CPU);
+		int minDiffMemMB = conf.getInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_MEM);
+
+		HashSet<JobVertexID> vertexToRemove = new HashSet<>();
+		for (JobVertexID vertexID : currentParallelism.keySet()) {
+			int curPara = currentParallelism.get(vertexID);
+			int tarPara = targetParallelism.get(vertexID);
+			ResourceSpec curRes = currentResource.get(vertexID);
+			ResourceSpec tarRes = targetResource.get(vertexID);
+
+			if (Math.abs(curPara - tarPara) >= minDiffParallelismRatio * curPara) {
+				continue;
+			}
+
+			if (Math.abs(curRes.getCpuCores() - tarRes.getCpuCores()) >= minDiffResourceRatio * curRes.getCpuCores() &&
+				Math.abs(curRes.getCpuCores() - tarRes.getCpuCores()) >= minDiffCpuCore) {
+				continue;
+			}
+
+			if (Math.abs(curRes.getHeapMemory() - tarRes.getHeapMemory()) >= minDiffResourceRatio * curRes.getHeapMemory() &&
+				Math.abs(curRes.getHeapMemory() - tarRes.getHeapMemory()) >= minDiffMemMB) {
+				continue;
+			}
+
+			if (Math.abs(curRes.getDirectMemory() - tarRes.getDirectMemory()) >= minDiffResourceRatio * curRes.getDirectMemory() &&
+				Math.abs(curRes.getDirectMemory() - tarRes.getDirectMemory()) >= minDiffMemMB) {
+				continue;
+			}
+
+			if (Math.abs(curRes.getNativeMemory() - tarRes.getNativeMemory()) >= minDiffResourceRatio * curRes.getNativeMemory() &&
+				Math.abs(curRes.getNativeMemory() - tarRes.getNativeMemory()) >= minDiffMemMB) {
+				continue;
+			}
+
+			vertexToRemove.add(vertexID);
+		}
+
+		for (JobVertexID vertexID : vertexToRemove) {
+			LOGGER.debug("Removing vertex with minor difference, vertex id: {}", vertexID);
+			currentParallelism.remove(vertexID);
+			targetParallelism.remove(vertexID);
+			currentResource.remove(vertexID);
+			targetResource.remove(vertexID);
+		}
 	}
 
 	@Override

@@ -151,6 +151,8 @@ public class HeapMemoryAdjuster implements Resolver {
 			}
 		}
 
+		adjustJobHeapMemory.exculdeMinorDiffVertices(monitor.getConfig());
+
 		if (!adjustJobHeapMemory.isEmpty()) {
 			long lastCheckpointTime = 0;
 			try {

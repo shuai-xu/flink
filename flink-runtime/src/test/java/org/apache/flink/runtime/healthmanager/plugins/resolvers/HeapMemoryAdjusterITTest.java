@@ -90,6 +90,8 @@ public class HeapMemoryAdjusterITTest {
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_UP_RATIO, 2.0);
 		config.setString(HealthMonitor.DETECTOR_CLASSES, HeapOOMDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO, 0);
+		config.setInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_MEM, 0);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
@@ -191,6 +193,8 @@ public class HeapMemoryAdjusterITTest {
 		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_THRESHOLD, 2);
 		config.setInteger(FrequentFullGCDetector.FULL_GC_COUNT_SEVERE_THRESHOLD, 3);
 		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_INTERVAL, 60 * 1000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO, 0);
+		config.setInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_MEM, 0);
 
 		JobTMMetricSubscription gcTimeSub = Mockito.mock(JobTMMetricSubscription.class);
 		Mockito.when(gcTimeSub.getValue()).thenAnswer(new Answer<Map<String, Tuple2<Long, Double>>>() {
@@ -226,6 +230,8 @@ public class HeapMemoryAdjusterITTest {
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, HeapMemoryAdjuster.class.getCanonicalName());
 		config.setLong(LongTimeFullGCDetector.FULL_GC_TIME_SEVERE_THRESHOLD, 5000L);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO, 0);
+		config.setInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_MEM, 0);
 
 		// mock subscribing JM GC time metric
 		JobTMMetricSubscription gcTimeSub = Mockito.mock(JobTMMetricSubscription.class);

@@ -138,4 +138,16 @@ public class HealthMonitorOptions {
 
 	public static final ConfigOption<Double> FRAMEWORK_MEMORY_RATIO =
 		ConfigOptions.key("resource.memory.framework.ratio").defaultValue(0.2);
+
+	public static final ConfigOption<Double> RESOURCE_SCALE_MIN_DIFF_RATIO =
+		ConfigOptions.key("resource.scale.min-diff.ratio").defaultValue(0.1);
+
+	public static final ConfigOption<Double> RESOURCE_SCALE_MIN_DIFF_CPU =
+		ConfigOptions.key("resource.scale.min-diff.cpu.core").defaultValue(0.1);
+
+	public static final ConfigOption<Integer> RESOURCE_SCALE_MIN_DIFF_MEM =
+		ConfigOptions.key("resource.scale.min-diff.mem.mb").defaultValue(100);
+
+	public static final ConfigOption<Double> PARALLELISM_SCALE_MIN_DIFF_RATIO =
+		ConfigOptions.key("parallelism.scale.min-diff.ratio").defaultValue(0.1);
 }

@@ -91,6 +91,8 @@ public class CpuAdjusterITTest {
 		config.setString(HealthMonitor.DETECTOR_CLASSES, HighCpuDetector.class.getCanonicalName() + "," +
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO, 0);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_CPU, 0);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
@@ -297,6 +299,8 @@ public class CpuAdjusterITTest {
 		config.setString(HealthMonitor.DETECTOR_CLASSES, LowCpuDetector.class.getCanonicalName() + ","
 			+ TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, CpuAdjuster.class.getCanonicalName());
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO, 0);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_CPU, 0);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
@@ -321,7 +325,6 @@ public class CpuAdjusterITTest {
 		inputNodes.put(vertex2, Collections.emptyList());
 
 		Mockito.when(restServerClient.getJobConfig(Mockito.eq(jobID)))
-			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs, inputNodes))
 			.thenReturn(new RestServerClient.JobConfig(config, vertexConfigs2, inputNodes));

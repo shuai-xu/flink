@@ -147,6 +147,8 @@ public class NativeMemoryAdjuster implements Resolver {
 			}
 		}
 
+		adjustJobNativeMemory.exculdeMinorDiffVertices(monitor.getConfig());
+
 		if (!adjustJobNativeMemory.isEmpty()) {
 			long lastCheckpointTime = 0;
 			try {

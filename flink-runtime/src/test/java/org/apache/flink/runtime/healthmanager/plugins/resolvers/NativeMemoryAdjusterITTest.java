@@ -77,6 +77,8 @@ public class NativeMemoryAdjusterITTest {
 			TestingJobStableDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, NativeMemoryAdjuster.class.getCanonicalName());
 		config.setDouble(HighNativeMemoryDetector.HIGH_NATIVE_MEM_SEVERE_THRESHOLD, 1.0);
+		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO, 0);
+		config.setInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_MEM, 0);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();

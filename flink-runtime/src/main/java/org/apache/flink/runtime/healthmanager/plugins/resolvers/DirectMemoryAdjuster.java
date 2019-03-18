@@ -142,6 +142,8 @@ public class DirectMemoryAdjuster implements Resolver {
 			}
 		}
 
+		adjustJobDirectMemory.exculdeMinorDiffVertices(monitor.getConfig());
+
 		if (!adjustJobDirectMemory.isEmpty()) {
 			long lastCheckpointTime = 0;
 			try {

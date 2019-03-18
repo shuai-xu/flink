@@ -1398,11 +1398,6 @@ public class ParallelismScaler implements Resolver {
 					RestServerClient.VertexConfig originVertexConfig = jobConfig.getVertexConfigs().get(vertexId);
 					RestServerClient.VertexConfig adjustedVertexConfig = adjustedJobConfig.getVertexConfigs().get(
 						vertexId);
-					if (1.0 * adjustedVertexConfig.getParallelism() / originVertexConfig.getParallelism() <= reservedParallelismRatio &&
-						1.0 * originVertexConfig.getParallelism() / adjustedVertexConfig.getParallelism() <= reservedParallelismRatio) {
-						LOGGER.debug("Do not need to scale since the target parallelism within in reserved ratio");
-						continue;
-					}
 					rescaleJobParallelism.addVertex(vertexId,
 						originVertexConfig.getParallelism(),
 						adjustedVertexConfig.getParallelism(),
@@ -1415,6 +1410,7 @@ public class ParallelismScaler implements Resolver {
 		RestServerClient.JobConfig appliedJobConfig = rescaleJobParallelism.getAppliedJobConfig(jobConfig);
 		LOGGER.debug("Resource applying generated action: <cpu, memory>=<{}, {}>.",
 			appliedJobConfig.getJobTotalCpuCores(), appliedJobConfig.getJobTotalMemoryMb());
+		rescaleJobParallelism.exculdeMinorDiffVertices(monitor.getConfig());
 		return rescaleJobParallelism;
 	}
 
