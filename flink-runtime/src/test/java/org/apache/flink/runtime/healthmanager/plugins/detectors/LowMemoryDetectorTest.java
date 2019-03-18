@@ -213,4 +213,113 @@ public class LowMemoryDetectorTest extends DetectorTestBase {
 		Symptom symptom4 = lowMemoryDetector.detect();
 		assertNull(symptom4);
 	}
+
+	@Test
+	public void testDetectConfigUpdated() throws Exception {
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_DOWN_WAIT_TIME, 0);
+		config.setDouble(LowMemoryDetector.LOW_MEM_THRESHOLD, 0.6);
+
+		String tmId1 = "tmId1";
+		String tmId2 = "tmId2";
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
+
+		Mockito.when(restClient.getTaskManagerTasks(Mockito.eq(tmId1))).thenReturn(
+			Lists.newArrayList(new ExecutionVertexID(vertex1, 0), new ExecutionVertexID(vertex1, 1)));
+		Mockito.when(restClient.getTaskManagerTasks(Mockito.eq(tmId2))).thenReturn(
+			Lists.newArrayList(new ExecutionVertexID(vertex2, 0), new ExecutionVertexID(vertex2, 1)));
+
+		// set vertex config
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs1 = new HashMap<>();
+		vertexConfigs1.put(vertex1, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setHeapMemoryInMB(512).build()));
+		vertexConfigs1.put(vertex2, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setHeapMemoryInMB(512).build()));
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs2 = new HashMap<>();
+		vertexConfigs2.put(vertex1, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setHeapMemoryInMB(512).build()));
+		vertexConfigs2.put(vertex2, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setHeapMemoryInMB(256).build()));
+
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs1);
+
+		// set capacity
+
+		Map<String, Tuple2<Long, Double>> capacities = new HashMap<>();
+		capacities.put(tmId1, new Tuple2<>(0L, 1.0 * GB));
+		capacities.put(tmId2, new Tuple2<>(0L, 1.0 * GB));
+
+		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.eq(jobID),
+			Mockito.eq(MetricNames.TM_MEM_CAPACITY),
+			Mockito.anyLong(),
+			Mockito.eq(TimelineAggType.AVG)))
+			.thenReturn(capacitySub);
+		Mockito.when(capacitySub.getValue()).thenReturn(capacities);
+
+		// set total usage
+
+		Map<String, Tuple2<Long, Double>> totalUsage = new HashMap<>();
+		totalUsage.put(tmId1, new Tuple2<>(0L, 0.5 * GB));
+		totalUsage.put(tmId2, new Tuple2<>(0L, 0.5 * GB));
+
+		JobTMMetricSubscription totalUsageSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.eq(jobID),
+			Mockito.eq(MetricNames.TM_MEM_USAGE_TOTAL),
+			Mockito.anyLong(),
+			Mockito.eq(TimelineAggType.AVG)))
+			.thenReturn(totalUsageSub);
+		Mockito.when(totalUsageSub.getValue()).thenReturn(totalUsage);
+
+		// set heap usage
+
+		Map<String, Tuple2<Long, Double>> heapUsage = new HashMap<>();
+		heapUsage.put(tmId1, new Tuple2<>(0L, 0.5 * GB));
+		heapUsage.put(tmId2, new Tuple2<>(0L, 0.5 * GB));
+
+		JobTMMetricSubscription heapUsageSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.eq(jobID),
+			Mockito.eq(MetricNames.TM_MEM_HEAP_COMMITTED),
+			Mockito.anyLong(),
+			Mockito.eq(TimelineAggType.AVG)))
+			.thenReturn(heapUsageSub);
+		Mockito.when(heapUsageSub.getValue()).thenReturn(heapUsage);
+
+		// set non heap usage
+
+		Map<String, Tuple2<Long, Double>> nonHeapUsage = new HashMap<>();
+		nonHeapUsage.put(tmId1, new Tuple2<>(0L, 0.0 * GB));
+		nonHeapUsage.put(tmId2, new Tuple2<>(0L, 0.5 * GB));
+
+		JobTMMetricSubscription nonHeapUsageSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.eq(jobID),
+			Mockito.eq(MetricNames.TM_MEM_NON_HEAP_COMMITTED),
+			Mockito.anyLong(),
+			Mockito.eq(TimelineAggType.AVG)))
+			.thenReturn(nonHeapUsageSub);
+		Mockito.when(nonHeapUsageSub.getValue()).thenReturn(nonHeapUsage);
+
+		// verify detections
+
+		LowMemoryDetector lowMemoryDetector = new LowMemoryDetector();
+		lowMemoryDetector.open(monitor);
+
+		Symptom symptom1 = lowMemoryDetector.detect();
+		assertNull(symptom1);
+
+		// update config
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs2);
+
+		Symptom symptom2 = lowMemoryDetector.detect();
+		assertNotNull(symptom2);
+		JobVertexLowMemory jobVertexLowMemory = (JobVertexLowMemory) symptom2;
+		assertEquals(1, jobVertexLowMemory.getHeapUtilities().size());
+		assertEquals(Double.valueOf(0.5), jobVertexLowMemory.getHeapUtilities().get(vertex1));
+	}
 }

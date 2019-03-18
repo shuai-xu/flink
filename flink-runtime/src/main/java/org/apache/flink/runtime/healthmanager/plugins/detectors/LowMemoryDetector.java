@@ -40,8 +40,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -74,6 +76,7 @@ public class LowMemoryDetector implements Detector {
 	private Map<JobVertexID, Double> maxHeapUtility;
 	private Map<JobVertexID, Double> maxNonHeapUtility;
 	private Map<JobVertexID, Double> maxNativeUtility;
+	private Map<JobVertexID, Double> maxMemUsage;
 
 	@Override
 	public void open(HealthMonitor monitor) {
@@ -95,6 +98,7 @@ public class LowMemoryDetector implements Detector {
 		maxHeapUtility = new HashMap<>();
 		maxNonHeapUtility = new HashMap<>();
 		maxNativeUtility = new HashMap<>();
+		maxMemUsage = new HashMap<>();
 	}
 
 	@Override
@@ -132,6 +136,8 @@ public class LowMemoryDetector implements Detector {
 			tmNonHeapUsages == null || tmNonHeapUsages.isEmpty()) {
 			return null;
 		}
+
+		removeOutdatedMaxUsage();
 
 		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 
@@ -198,11 +204,16 @@ public class LowMemoryDetector implements Detector {
 		for (JobVertexID vertexID : vertexTaskMaxTotalUtility.keySet()) {
 			if (vertexTaskMaxTotalUtility.get(vertexID) >= threshold) {
 				lowMemSince.put(vertexID, Long.MAX_VALUE);
+				maxMemUsage.remove(vertexID);
 				maxHeapUtility.remove(vertexID);
 				maxNonHeapUtility.remove(vertexID);
 				maxNativeUtility.remove(vertexID);
 			} else {
+				ResourceSpec resourceSpec = jobConfig.getVertexConfigs().get(vertexID).getResourceSpec();
+				double usage = vertexTaskMaxHeapUtility.get(vertexID) *
+					(resourceSpec.getHeapMemory() + resourceSpec.getDirectMemory() + resourceSpec.getNativeMemory());
 				lowMemSince.put(vertexID, Math.min(now, lowMemSince.getOrDefault(vertexID, Long.MAX_VALUE)));
+				maxMemUsage.put(vertexID, Math.max(usage, maxMemUsage.getOrDefault(vertexID, 0.0)));
 				maxHeapUtility.put(vertexID, Math.max(
 					vertexTaskMaxHeapUtility.get(vertexID), maxHeapUtility.getOrDefault(vertexID, 0.0)));
 				maxNonHeapUtility.put(vertexID, Math.max(
@@ -210,13 +221,14 @@ public class LowMemoryDetector implements Detector {
 				maxNativeUtility.put(vertexID, Math.max(
 					vertexTaskMaxNativeUtility.get(vertexID), maxNativeUtility.getOrDefault(vertexID, 0.0)));
 			}
-			LOGGER.debug("Vertex {}, total utility {}, lowMemSince {}, maxHeapUtility {}, maxNonHeapUtility {}, maxNativeUtility {}.",
+			LOGGER.debug("Vertex {}, total utility {}, lowMemSince {}, maxHeapUtility {}, maxNonHeapUtility {}, maxNativeUtility {}, maxMemUsage {}.",
 				vertexID,
 				vertexTaskMaxTotalUtility.get(vertexID),
 				lowMemSince.get(vertexID),
-				maxHeapUtility.get(vertexID),
-				maxNonHeapUtility.get(vertexID),
-				maxNativeUtility.get(vertexID));
+				maxHeapUtility.getOrDefault(vertexID, 0.0),
+				maxNonHeapUtility.getOrDefault(vertexID, 0.0),
+				maxNativeUtility.getOrDefault(vertexID, 0.0),
+				maxMemUsage.getOrDefault(vertexID, 0.0));
 		}
 
 		JobVertexLowMemory jobVertexLowMemory = new JobVertexLowMemory(jobID);
@@ -233,5 +245,23 @@ public class LowMemoryDetector implements Detector {
 
 		LOGGER.info("Memory low detected: {}.", jobVertexLowMemory);
 		return jobVertexLowMemory;
+	}
+
+	private void removeOutdatedMaxUsage() {
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
+		Set<JobVertexID> verticeToRemove = new HashSet<>();
+		for (JobVertexID vertexID : maxMemUsage.keySet()) {
+			ResourceSpec resourceSpec = jobConfig.getVertexConfigs().get(vertexID).getResourceSpec();
+			double maxUsage = maxMemUsage.get(vertexID);
+			double capacity = resourceSpec.getHeapMemory() + resourceSpec.getDirectMemory() + resourceSpec.getNativeMemory();
+			if (maxUsage / capacity >= threshold) {
+				verticeToRemove.add(vertexID);
+				LOGGER.debug("Remove outdated max usage for vertex {}, maxUsage: {}, capacity: {}.", vertexID, maxUsage, capacity);
+			}
+		}
+		for (JobVertexID vertexID : verticeToRemove) {
+			lowMemSince.put(vertexID, Long.MAX_VALUE);
+			maxMemUsage.remove(vertexID);
+		}
 	}
 }

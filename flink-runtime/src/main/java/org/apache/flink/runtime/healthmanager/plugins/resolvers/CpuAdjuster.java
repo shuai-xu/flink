@@ -162,7 +162,9 @@ public class CpuAdjuster implements Resolver {
 			}
 
 			long now = System.currentTimeMillis();
-			if (opportunisticActionDelayStart > 0 &&
+			if (jobVertexLowCpu != null) {
+				adjustJobCpu.setActionMode(Action.ActionMode.IMMEDIATE);
+			} else if (opportunisticActionDelayStart > 0 &&
 				now - opportunisticActionDelayStart > opportunisticActionDelay &&
 				now - lastCheckpointTime < checkpointIntervalThreshold) {
 				LOGGER.debug("Upgrade opportunistic action to immediate action.");

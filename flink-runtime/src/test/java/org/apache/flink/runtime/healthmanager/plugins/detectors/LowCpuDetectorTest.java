@@ -18,7 +18,9 @@
 
 package org.apache.flink.runtime.healthmanager.plugins.detectors;
 
+import org.apache.flink.api.common.operators.ResourceSpec;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.healthmanager.RestServerClient;
 import org.apache.flink.runtime.healthmanager.metrics.JobTMMetricSubscription;
 import org.apache.flink.runtime.healthmanager.metrics.timeline.TimelineAggType;
 import org.apache.flink.runtime.healthmanager.plugins.Symptom;
@@ -69,6 +71,15 @@ public class LowCpuDetectorTest extends DetectorTestBase {
 			Lists.newArrayList(new ExecutionVertexID(vertex1, 0), new ExecutionVertexID(vertex1, 1)));
 		Mockito.when(restClient.getTaskManagerTasks(Mockito.eq(tmId2))).thenReturn(
 			Lists.newArrayList(new ExecutionVertexID(vertex2, 0), new ExecutionVertexID(vertex2, 1)));
+
+		// set vertex config
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();
+		vertexConfigs.put(vertex1, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build()));
+		vertexConfigs.put(vertex2, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build()));
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs);
 
 		// set capacity
 
@@ -140,5 +151,97 @@ public class LowCpuDetectorTest extends DetectorTestBase {
 		Set<JobVertexID> vertices4 = ((JobVertexLowCpu) symptom4).getUtilities().keySet();
 		assertEquals(1, vertices4.size());
 		assertTrue(vertices4.contains(vertex2));
+	}
+
+	/**
+	 * Test detect when vertex config is updated.
+	 * Cpu remain low in 2 or more consecutive will be detected.
+	 * vertex1 (tm1): Low, Low
+	 * vertex2 (tm2): Low, High (config updated)
+	 * detection: (), (1)
+	 * @throws Exception
+	 */
+	@Test
+	public void testDetectConfigUpdated() throws Exception {
+		config.setLong(HealthMonitorOptions.RESOURCE_SCALE_DOWN_WAIT_TIME, 0);
+		config.setDouble(LowCpuDetector.LOW_CPU_THRESHOLD, 0.6);
+
+		String tmId1 = "tmId1";
+		String tmId2 = "tmId2";
+		JobVertexID vertex1 = new JobVertexID();
+		JobVertexID vertex2 = new JobVertexID();
+
+		Mockito.when(restClient.getTaskManagerTasks(Mockito.eq(tmId1))).thenReturn(
+			Lists.newArrayList(new ExecutionVertexID(vertex1, 0), new ExecutionVertexID(vertex1, 1)));
+		Mockito.when(restClient.getTaskManagerTasks(Mockito.eq(tmId2))).thenReturn(
+			Lists.newArrayList(new ExecutionVertexID(vertex2, 0), new ExecutionVertexID(vertex2, 1)));
+
+		// set vertex config
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs1 = new HashMap<>();
+		vertexConfigs1.put(vertex1, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build()));
+		vertexConfigs1.put(vertex2, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build()));
+
+		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs2 = new HashMap<>();
+		vertexConfigs2.put(vertex1, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(1.0).build()));
+		vertexConfigs2.put(vertex2, new RestServerClient.VertexConfig(
+			1, 1, ResourceSpec.newBuilder().setCpuCores(0.5).build()));
+
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs1);
+
+		// set capacity
+
+		Map<String, Tuple2<Long, Double>> capacities = new HashMap<>();
+		capacities.put(tmId1, new Tuple2<>(0L, 1.0));
+		capacities.put(tmId2, new Tuple2<>(0L, 1.0));
+
+		JobTMMetricSubscription capacitySub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(capacitySub.getValue()).thenReturn(capacities);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.eq(jobID),
+			Mockito.eq(MetricNames.TM_CPU_CAPACITY),
+			Mockito.anyLong(),
+			Mockito.eq(TimelineAggType.AVG)))
+			.thenReturn(capacitySub);
+
+		// set usage
+
+		Map<String, Tuple2<Long, Double>> usages1 = new HashMap<>();
+		usages1.put(tmId1, new Tuple2<>(0L, 0.5));
+		usages1.put(tmId2, new Tuple2<>(0L, 0.5));
+
+		Map<String, Tuple2<Long, Double>> usages2 = new HashMap<>();
+		usages2.put(tmId1, new Tuple2<>(0L, 0.5));
+		usages2.put(tmId2, new Tuple2<>(0L, 0.5));
+
+		JobTMMetricSubscription usageSub = Mockito.mock(JobTMMetricSubscription.class);
+		Mockito.when(usageSub.getValue()).thenReturn(usages1).thenReturn(usages2);
+		Mockito.when(metricProvider.subscribeAllTMMetric(
+			Mockito.eq(jobID),
+			Mockito.eq(MetricNames.TM_CPU_USAGE),
+			Mockito.anyLong(),
+			Mockito.eq(TimelineAggType.AVG)))
+			.thenReturn(usageSub);
+
+		// verify detections
+
+		LowCpuDetector lowCpuDetector = new LowCpuDetector();
+		lowCpuDetector.open(monitor);
+
+		Symptom symptom1 = lowCpuDetector.detect();
+		assertNull(symptom1);
+
+		// update config
+		Mockito.when(jobConfig.getVertexConfigs()).thenReturn(vertexConfigs2);
+
+		Symptom symptom2 = lowCpuDetector.detect();
+		assertNotNull(symptom2);
+		assertTrue(symptom2 instanceof JobVertexLowCpu);
+		Set<JobVertexID> vertices2 = ((JobVertexLowCpu) symptom2).getUtilities().keySet();
+		assertEquals(1, vertices2.size());
+		assertTrue(vertices2.contains(vertex1));
 	}
 }

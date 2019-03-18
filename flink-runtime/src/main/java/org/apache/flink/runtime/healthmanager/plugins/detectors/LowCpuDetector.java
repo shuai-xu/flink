@@ -40,8 +40,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * LowCpuDetector detects low cpu usage of a job.
@@ -68,6 +70,7 @@ public class LowCpuDetector implements Detector {
 	private JobTMMetricSubscription tmCpuUsageSubscription;
 
 	private Map<JobVertexID, Long> lowCpuSince;
+	private Map<JobVertexID, Double> maxCpuUsage;
 	private Map<JobVertexID, Double> maxCpuUtility;
 
 	@Override
@@ -85,6 +88,7 @@ public class LowCpuDetector implements Detector {
 		tmCpuUsageSubscription = metricProvider.subscribeAllTMMetric(jobID, MetricNames.TM_CPU_USAGE, checkInterval, TimelineAggType.AVG);
 
 		lowCpuSince = new HashMap<>();
+		maxCpuUsage = new HashMap<>();
 		maxCpuUtility = new HashMap<>();
 	}
 
@@ -112,6 +116,8 @@ public class LowCpuDetector implements Detector {
 			return null;
 		}
 
+		removeOutdatedMaxUsage();
+
 		Map<JobVertexID, Double> vertexTaskMaxUtility = new HashMap<>();
 		for (String tmId : tmCapacities.keySet()) {
 			if (!MetricUtils.validateTmMetric(monitor, checkInterval * 2, tmCapacities.get(tmId), tmUsages.get(tmId))) {
@@ -137,18 +143,22 @@ public class LowCpuDetector implements Detector {
 			}
 		}
 
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
 		for (Map.Entry<JobVertexID, Double> entry : vertexTaskMaxUtility.entrySet()) {
 			JobVertexID vertexID = entry.getKey();
 			double utility = entry.getValue();
 			if (utility >= threshold) {
 				lowCpuSince.put(vertexID, Long.MAX_VALUE);
+				maxCpuUsage.remove(vertexID);
 				maxCpuUtility.remove(vertexID);
 			} else {
+				double usage = jobConfig.getVertexConfigs().get(vertexID).getResourceSpec().getCpuCores() * utility;
 				lowCpuSince.put(vertexID, Math.min(now, lowCpuSince.getOrDefault(vertexID, Long.MAX_VALUE)));
+				maxCpuUsage.put(vertexID, Math.max(usage, maxCpuUsage.getOrDefault(vertexID, 0.0)));
 				maxCpuUtility.put(vertexID, Math.max(utility, maxCpuUtility.getOrDefault(vertexID, 0.0)));
 			}
-			LOGGER.debug("Vertex {}, utility {}, lowCpuSince {}, maxCpuUtility {}.",
-				vertexID, utility, lowCpuSince.get(vertexID), maxCpuUtility.getOrDefault(vertexID, 0.0));
+			LOGGER.debug("Vertex {}, utility {}, lowCpuSince {}, maxCpuUsage {}.",
+				vertexID, utility, lowCpuSince.get(vertexID), maxCpuUsage.getOrDefault(vertexID, 0.0));
 		}
 
 		Map<JobVertexID, Double> vertexMaxUtility = new HashMap<>();
@@ -163,5 +173,23 @@ public class LowCpuDetector implements Detector {
 			return new JobVertexLowCpu(jobID, vertexMaxUtility);
 		}
 		return null;
+	}
+
+	private void removeOutdatedMaxUsage() {
+		RestServerClient.JobConfig jobConfig = monitor.getJobConfig();
+		Set<JobVertexID> verticeToRemove = new HashSet<>();
+		for (JobVertexID vertexID : maxCpuUsage.keySet()) {
+			double maxUsage = maxCpuUsage.get(vertexID);
+			double capacity = jobConfig.getVertexConfigs().get(vertexID).getResourceSpec().getCpuCores();
+			if (maxUsage / capacity >= threshold) {
+				verticeToRemove.add(vertexID);
+				LOGGER.debug("Remove outdated max usage for vertex {}, maxUsage: {}, capacity: {}.", vertexID, maxUsage, capacity);
+			}
+		}
+		for (JobVertexID vertexID : verticeToRemove) {
+			lowCpuSince.put(vertexID, Long.MAX_VALUE);
+			maxCpuUsage.remove(vertexID);
+			maxCpuUtility.remove(vertexID);
+		}
 	}
 }

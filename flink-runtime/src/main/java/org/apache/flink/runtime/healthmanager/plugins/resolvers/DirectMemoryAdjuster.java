@@ -156,7 +156,7 @@ public class DirectMemoryAdjuster implements Resolver {
 			}
 
 			long now = System.currentTimeMillis();
-			if (jobVertexDirectOOM != null) {
+			if (jobVertexDirectOOM != null || jobVertexLowMemory != null) {
 				adjustJobDirectMemory.setActionMode(Action.ActionMode.IMMEDIATE);
 			} else if (opportunisticActionDelayStart > 0 &&
 				now - opportunisticActionDelayStart > opportunisticActionDelay &&
