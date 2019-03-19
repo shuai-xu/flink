@@ -128,7 +128,7 @@ public class HealthMonitorOptions {
 	 * resource opportunistic action delay.
 	 */
 	public static final ConfigOption<Long> RESOURCE_OPPORTUNISTIC_ACTION_DELAY =
-		ConfigOptions.key("resource.opportunistic-action.delay.second").defaultValue(24 * 60 * 60 * 1000L);
+		ConfigOptions.key("resource.opportunistic-action.delay.ms").defaultValue(24 * 60 * 60 * 1000L);
 
 	/**
 	 * resource scale time out.
