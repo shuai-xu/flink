@@ -37,7 +37,8 @@ class BatchExecPushProjectIntoCorrelateRule extends RelOptRule(
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val calc = call.rel[BatchExecCalc](0)
-    projectable(calc.getProgram)
+    val correlate: BatchExecCorrelate = call.rel(1)
+    projectable(calc.getProgram, correlate.projectProgram)
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {

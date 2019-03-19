@@ -46,7 +46,7 @@ class BatchExecCorrelate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inputNode: RelNode,
-    projectProgram: Option[RexProgram],
+    val projectProgram: Option[RexProgram],
     val scan: FlinkLogicalTableFunctionScan,
     val condition: Option[RexNode],
     relRowType: RelDataType,

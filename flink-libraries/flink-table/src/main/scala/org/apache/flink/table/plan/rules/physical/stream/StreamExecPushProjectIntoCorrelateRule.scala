@@ -37,7 +37,8 @@ class StreamExecPushProjectIntoCorrelateRule extends RelOptRule(
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val calc: StreamExecCalc = call.rel(0)
-    projectable(calc.getProgram)
+    val correlate: StreamExecCorrelate = call.rel(1)
+    projectable(calc.getProgram, correlate.projectProgram)
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {

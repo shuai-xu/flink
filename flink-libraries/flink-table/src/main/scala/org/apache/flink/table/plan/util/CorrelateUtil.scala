@@ -22,7 +22,7 @@ import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl}
-import org.apache.calcite.rex.{RexBuilder, RexCall, RexNode, RexProgram, RexProgramBuilder}
+import org.apache.calcite.rex.{RexBuilder, RexCall, RexInputRef, RexNode, RexProgram, RexProgramBuilder}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -33,7 +33,7 @@ import scala.collection.mutable.ListBuffer
   */
 object CorrelateUtil {
 
-  def projectable(downsideCalc: RexProgram): Boolean = {
+  def projectable(downsideCalc: RexProgram, correlateProgram: Option[RexProgram]): Boolean = {
     val refs = downsideCalc.getReferenceCounts
     // if the correlate output any unused column to the calc
     val calcInputFieldCnt = downsideCalc.getInputRowType.getFieldCount
@@ -42,21 +42,22 @@ object CorrelateUtil {
         refCnt == 0
       case _ => false
     }
-    projectable
+    // If correlate.projectProgram.nonEmpty, that means this rule has matched before,
+    // We should merge the top calc with the correlate program if we want to crop
+    // the top unused projections and push used one into the correlate.
+    // This is not supported yet, so we do a short-cut and return early.
+    // TODO: add case for pattern that we need a RexProgram merge.
+    projectable && correlateProgram.isEmpty
   }
 
   def getProjectableFieldSet(
       refs: Seq[Int],
       calcProgram: RexProgram,
       leftInputFieldCnt: Int): Set[Int] = {
-    val leftProjectable = new ListBuffer[Int]
-    val rightProjectable = new ListBuffer[Int]
-    // calculate left/right projectable field(s)' index
-    calcProgram.getExprList.zipWithIndex.filter { case (_, index: Int) => refs(index) == 0 }.map {
-      case (_, index) if index < leftInputFieldCnt => leftProjectable += index
-      case (_, index) if index >= leftInputFieldCnt => rightProjectable += index
-    }
-    (leftProjectable ++ rightProjectable).toSet
+    // calculate left/right projectable field(s)' index, only crop input refs.
+    calcProgram.getExprList.zipWithIndex.filter { case (expr, index: Int) =>
+      refs(index) == 0 && expr.isInstanceOf[RexInputRef]
+    }.map(_._1.asInstanceOf[RexInputRef].getIndex).toSet
   }
 
   def projectCorrelateOutputType(

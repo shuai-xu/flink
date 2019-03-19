@@ -41,7 +41,7 @@ class StreamExecCorrelate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     child: RelNode,
-    projectProgram: Option[RexProgram],
+    val projectProgram: Option[RexProgram],
     scan: FlinkLogicalTableFunctionScan,
     condition: Option[RexNode],
     relDataType: RelDataType,
