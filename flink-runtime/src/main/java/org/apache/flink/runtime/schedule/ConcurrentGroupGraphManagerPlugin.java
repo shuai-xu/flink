@@ -39,6 +39,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.SchedulingMode;
 import org.apache.flink.runtime.jobmaster.ExecutionSlotAllocator;
 import org.apache.flink.runtime.jobmaster.GraphManager;
+import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
 
@@ -56,7 +57,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 /**
  * A Scheduler plugin which schedules tasks in a concurrent group at the same time.
@@ -137,7 +137,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 	@Override
 	public void onSchedulingStarted() {
-		concurrentSchedulingGroups.stream().forEach(
+		// To avoid concurrent modification as the groups may change due to group split.
+		List<ConcurrentSchedulingGroup> groups = new ArrayList<>(concurrentSchedulingGroups);
+		groups.stream().forEach(
 				(group) -> {
 					if (!group.hasPrecedingGroup()) {
 						scheduleGroup(group);
@@ -273,7 +275,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		return schedulingGroups;
 	}
 
-	public void resplitSchedulingGroup(
+	private void splitGroupAndContinueScheduling(
 			List<JobVertex> assignedJobVertices,
 			List<JobVertex> unAssignedJobVertices,
 			ConcurrentSchedulingGroup originalGroup) {
@@ -285,11 +287,11 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		// 1. Build groups for the job vertices that have been assigned resource.
 		List<ConcurrentSchedulingGroup> newAssignedGroups = buildConcurrentSchedulingGroups(assignedJobVertices);
 		// 2. Update the result partition.
-		Set<JobVertex> visistedJobVertices = new HashSet<>();
+		Set<JobVertex> visitedJobVertices = new HashSet<>();
 		for (ConcurrentSchedulingGroup group: newAssignedGroups) {
 			for (ExecutionVertex ev : group.getExecutionVertices()) {
 				JobVertex jobVertex = ev.getJobVertex().getJobVertex();
-				if (visistedJobVertices.add(jobVertex)) {
+				if (visitedJobVertices.add(jobVertex)) {
 					for (int i = 0; i < jobVertex.getProducedDataSets().size(); i++) {
 						IntermediateDataSet output = jobVertex.getProducedDataSets().get(i);
 						if (!output.getConsumers().isEmpty()) {
@@ -314,7 +316,6 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		// 6. Deploy the tasks.
 		for (ConcurrentSchedulingGroup group : newAssignedGroups) {
 			List<ExecutionVertex> evs = group.getExecutionVertices();
-			LOG.error("XXXX EV size is {}, resource is {}.", evs.size(), evs.get(0).getCurrentAssignedResource());
 			if (evs.size() == 1 && evs.get(0).getCurrentAssignedResource() == null) {
 				scheduleGroup(group);
 			} else {
@@ -483,53 +484,147 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 				scheduledExecutions.add(ev.getCurrentExecutionAttempt());
 			}
 		}
-		CompletableFuture<Collection<Void>> allocationFuture =
+		CompletableFuture<Collection<LogicalSlot>> allocationFuture =
 				executionSlotAllocator.allocateSlotsFor(scheduledExecutions);
-		CompletableFuture<Void> currentSchedulingFuture = allocationFuture
-				.exceptionally(
-						throwable -> {
-							if (!allowGroupSplit) {
-								for (Execution execution : scheduledExecutions) {
-									execution.fail(ExceptionUtils.stripCompletionException(throwable));
-								}
-							} else {
-								boolean hasFailure = false;
-								for (Execution execution : scheduledExecutions) {
-									if (hasFailure) {
-										execution.rollbackToCreatedAndReleaseSlot();
-									}
-									else if (execution.getAssignedResource() == null) {
-										hasFailure = true;
-										execution.rollbackToCreatedAndReleaseSlot();
-									}
-								}
-								groupSplit(schedulingGroup);
+		CompletableFuture<Void> currentSchedulingFuture = allocationFuture.handleAsync(
+				(Collection<LogicalSlot> slots, Throwable throwable) -> {
+					if (throwable == null) {
+						int failedNumber = 0;
+						for (LogicalSlot slot : slots) {
+							if (slot == null) {
+								failedNumber++;
 							}
-							throw new CompletionException(throwable);
 						}
-				)
-				.handleAsync(
-						(ignored, throwable) -> {
-							if (throwable != null) {
-								throw new CompletionException(throwable);
-							} else {
-								boolean hasFailure = false;
-								for (int i = 0; i <  scheduledExecutions.size(); i++) {
-									try {
-										scheduledExecutions.get(i).deploy();
-									} catch (Exception e) {
-										hasFailure = true;
-										LOG.info("Fail to deploy execution {}", scheduledExecutions.get(i), e);
-										scheduledExecutions.get(i).fail(e);
-									}
+						Throwable strippedThrowable = new Exception("Batch request " + scheduledExecutions.size() +
+								", but " + failedNumber + " does not return.");
+						if (failedNumber > 0 && (!allowGroupSplit || executionVertices.size() < 2)) {
+							for (LogicalSlot slot : slots) {
+								if (slot != null) {
+									slot.releaseSlot(strippedThrowable);
 								}
-								if (hasFailure) {
-									throw new CompletionException(
-											new FlinkException("Fail to deploy some executions."));
-								}
+							}
+							for (Execution execution : scheduledExecutions) {
+								execution.fail(strippedThrowable);
 							}
 							return null;
-						}, executionGraph.getFutureExecutor());
+						} else if (failedNumber > 0) {
+							int i = 0;
+							int index = -1;
+							boolean hasFailure = false;
+							// Find the index from which resource is not assigned.
+							for (LogicalSlot slot : slots) {
+								if (slot == null && !hasFailure) {
+									hasFailure = true;
+									index = i;
+									scheduledExecutions.get(i).rollbackToCreatedAndReleaseSlot();
+									LOG.debug("The first failed slot request is {}.", index);
+								} else if (hasFailure) {
+									if (slot != null) {
+										slot.releaseSlot(strippedThrowable);
+									}
+									scheduledExecutions.get(i).rollbackToCreatedAndReleaseSlot();
+								}
+								i++;
+							}
+							if (index < 0) {
+								LOG.info("All allocations is assigned, but the request fail, this is strange.", throwable);
+							} else {
+								List<JobVertex> assignedJobVertices = new ArrayList<>();
+								List<JobVertex> unAssignedJobVertices = new ArrayList<>();
+								if (index == 0) {
+									assignedJobVertices.add(executionVertices.get(0).getJobVertex().getJobVertex());
+									for (int j = 1; j < executionVertices.size(); j++) {
+										JobVertexID jobVertexID = executionVertices.get(j).getJobvertexId();
+										if (!jobVertexID.equals(assignedJobVertices.get(assignedJobVertices.size() - 1).getID())
+												&& (unAssignedJobVertices.isEmpty() ||
+												!jobVertexID.equals(unAssignedJobVertices.get(unAssignedJobVertices.size() - 1).getID()))) {
+											unAssignedJobVertices.add(executionVertices.get(j).getJobVertex().getJobVertex());
+										}
+									}
+								} else {
+									boolean lastAssignedVertexFulfilled = false;
+									boolean firstVertexFullyAssigned = true;
+									if (!scheduledExecutions.get(index).getVertex().getJobvertexId().equals(
+											scheduledExecutions.get(index - 1).getVertex().getJobvertexId())) {
+										lastAssignedVertexFulfilled = true;
+										LOG.debug("The last assigned vertex is fully filled.");
+									}
+									if (scheduledExecutions.get(index).getVertex().getJobvertexId().equals(
+											executionVertices.get(0).getJobvertexId())) {
+										firstVertexFullyAssigned = false;
+										LOG.debug("The first vertex is not fully filled.");
+									}
+									i = 0;
+									for (LogicalSlot slot : slots) {
+										if (lastAssignedVertexFulfilled) {
+											assignResourceElseFail(scheduledExecutions.get(i), slot);
+										} else {
+											if (firstVertexFullyAssigned) {
+												if (executionVertices.get(i).getJobvertexId().equals(
+														scheduledExecutions.get(index).getVertex().getJobvertexId())) {
+													slot.releaseSlot(strippedThrowable);
+													scheduledExecutions.get(i).rollbackToCreatedAndReleaseSlot();
+												} else {
+													assignResourceElseFail(scheduledExecutions.get(i), slot);
+												}
+											} else {
+												assignResourceElseFail(scheduledExecutions.get(i), slot);
+											}
+										}
+										i++;
+										if (i >= index) {
+											break;
+										}
+									}
+									assignedJobVertices.add(executionVertices.get(0).getJobVertex().getJobVertex());
+									boolean enterUnAssigned = false;
+									for (int j = 0; j < executionVertices.size(); j++) {
+										JobVertex jobVertex = executionVertices.get(j).getJobVertex().getJobVertex();
+										if (!enterUnAssigned) {
+											if (jobVertex.getID().equals(
+													scheduledExecutions.get(index).getVertex().getJobvertexId())) {
+												if (!jobVertex.getID().equals(assignedJobVertices.get(0).getID())) {
+													unAssignedJobVertices.add(jobVertex);
+												}
+												enterUnAssigned = true;
+											} else if (!jobVertex.getID().equals(
+													assignedJobVertices.get(assignedJobVertices.size() - 1).getID())) {
+												assignedJobVertices.add(jobVertex);
+											}
+										} else if (!jobVertex.getID().equals(assignedJobVertices.get(0).getID()) &&
+												(unAssignedJobVertices.isEmpty() || !jobVertex.getID().equals(
+														unAssignedJobVertices.get(unAssignedJobVertices.size() - 1).getID()))) {
+											unAssignedJobVertices.add(jobVertex);
+										}
+									}
+								}
+								splitGroupAndContinueScheduling(assignedJobVertices, unAssignedJobVertices, schedulingGroup);
+								return null;
+							}
+						}
+						int i = 0;
+						for (LogicalSlot slot : slots) {
+							if (!scheduledExecutions.get(i).tryAssignResource(slot)) {
+								// release the slot
+								Exception e = new FlinkException("Could not assign logical slot to execution " + scheduledExecutions.get(i) + '.');
+								slot.releaseSlot(e);
+								scheduledExecutions.get(i).fail(e);
+							}
+							i++;
+						}
+						for (i = 0; i <  scheduledExecutions.size(); i++) {
+							try {
+								scheduledExecutions.get(i).deploy();
+							} catch (Exception e) {
+								LOG.info("Fail to deploy execution {}", scheduledExecutions.get(i), e);
+								scheduledExecutions.get(i).fail(e);
+							}
+						}
+					}
+					return null;
+				}, executionGraph.getFutureExecutor());
+
+		executionGraph.registerSchedulingFuture(currentSchedulingFuture);
 
 		currentSchedulingFuture.whenComplete(
 				(Void ignored, Throwable throwable) -> {
@@ -540,7 +635,16 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 					}
 					executionGraph.unregisterSchedulingFuture(currentSchedulingFuture);
 				});
-		executionGraph.registerSchedulingFuture(currentSchedulingFuture);
+	}
+
+	private void assignResourceElseFail(Execution execution, LogicalSlot slot) {
+
+		if (!execution.tryAssignResource(slot)) {
+			// release the slot
+			Exception e = new FlinkException("Could not assign logical slot to execution " + execution + '.');
+			slot.releaseSlot(e);
+			execution.fail(e);
+		}
 	}
 
 	@VisibleForTesting
@@ -589,6 +693,6 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			}
 		}
 
-		resplitSchedulingGroup(assignedJobVertices, unAssignedJobVertices, group);
+		splitGroupAndContinueScheduling(assignedJobVertices, unAssignedJobVertices, group);
 	}
 }

@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -61,7 +62,7 @@ public class BestEffortExecutionSlotAllocator implements ExecutionSlotAllocator{
 	}
 
 	@Override
-	public CompletableFuture<Collection<Void>> allocateSlotsFor(Collection<Execution> executions) {
+	public CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions) {
 
 		// Important: reserve all the space we need up front.
 		// that way we do not have any operation that can fail between allocating the slots
@@ -92,7 +93,6 @@ public class BestEffortExecutionSlotAllocator implements ExecutionSlotAllocator{
 
 		List<CompletableFuture<LogicalSlot>> allocationFutures =
 				slotProvider.allocateSlots(slotRequestIds, scheduledUnits, queued, slotProfiles, allocationTimeout);
-		List<CompletableFuture<Void>> assignFutures = new ArrayList<>(slotRequestIds.size());
 		for (int i = 0; i < allocationFutures.size(); i++) {
 			final int index = i;
 			allocationFutures.get(i).whenComplete(
@@ -106,36 +106,57 @@ public class BestEffortExecutionSlotAllocator implements ExecutionSlotAllocator{
 						}
 					}
 			);
-			assignFutures.add(allocationFutures.get(i).thenAccept(
-					(LogicalSlot logicalSlot) -> {
-						if (!scheduledExecutions.get(index).tryAssignResource(logicalSlot)) {
-							// release the slot
-							Exception e = new FlinkException("Could not assign logical slot to execution " + scheduledExecutions.get(index) + '.');
-							logicalSlot.releaseSlot(e);
-							throw new CompletionException(e);
-						}
-					})
-			);
 		}
 		// this future is complete once all slot futures are complete.
 		// the future fails once one slot future fails.
-		final FutureUtils.ConjunctFuture<Collection<Void>> allAssignFutures = FutureUtils.combineAll(assignFutures);
+		final FutureUtils.ConjunctFuture<Collection<LogicalSlot>> allAllocationFutures = FutureUtils.combineAllInOrder(allocationFutures);
 
-		allAssignFutures
-				.exceptionally(
-						throwable -> {
-							LOG.info("Batch request {} slots, but only {} are fulfilled.",
-									allAssignFutures.getNumFuturesTotal(), allAssignFutures.getNumFuturesCompleted());
+		CompletableFuture<Collection<LogicalSlot>> returnFuture = allAllocationFutures
+				.handle(
+						(slots, throwable) -> {
+							if (throwable != null) {
+								LOG.info("Batch request {} slots, but only {} are fulfilled.",
+										allAllocationFutures.getNumFuturesTotal(), allAllocationFutures.getNumFuturesCompleted());
 
-							// Complete all futures first, or else the execution fail may cause global failover,
-							// and other executions may fail first without clear the pending request.
-							for (int i = 0; i < allocationFutures.size(); i++) {
-								allocationFutures.get(i).completeExceptionally(throwable);
+								// Complete all futures first, or else the execution fail may cause global failover,
+								// and other executions may fail first without clear the pending request.
+								List<LogicalSlot> returnSlots = new ArrayList<>(allocationFutures.size());
+								for (int i = 0; i < allocationFutures.size(); i++) {
+									if (allocationFutures.get(i).completeExceptionally(throwable)) {
+										returnSlots.add(i, null);
+									} else {
+										try {
+											returnSlots.add(i, allocationFutures.get(i).get());
+										} catch (Exception e) {
+											returnSlots.add(i, null);
+										}
+									}
+								}
+								return returnSlots;
+							} else {
+								return slots;
 							}
-							throw new CompletionException(throwable);
 						}
 				);
-
-		return allAssignFutures;
+		returnFuture.exceptionally(
+				throwable -> {
+					if (throwable instanceof CancellationException) {
+						for (int i = 0; i < allocationFutures.size(); i++) {
+							if (!allocationFutures.get(i).completeExceptionally(throwable)) {
+								try {
+									LogicalSlot slot = allocationFutures.get(i).get();
+									if (slot != null) {
+										slot.releaseSlot(throwable);
+									}
+								} catch (Exception e) {
+								}
+							}
+						}
+						return null;
+					} else {
+						throw new CompletionException(throwable);
+					}
+				});
+		return returnFuture;
 	}
 }

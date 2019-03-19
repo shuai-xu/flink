@@ -34,6 +34,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.executiongraph.IntermediateResultPartition;
 import org.apache.flink.runtime.executiongraph.restart.NoRestartStrategy;
 import org.apache.flink.runtime.executiongraph.utils.SimpleAckingTaskManagerGateway;
+import org.apache.flink.runtime.executiongraph.utils.SimpleSlotProvider;
 import org.apache.flink.runtime.instance.SimpleSlot;
 import org.apache.flink.runtime.instance.SimpleSlotContext;
 import org.apache.flink.runtime.instance.Slot;
@@ -76,6 +77,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.waitUntilExecutionVertexState;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
@@ -502,7 +504,9 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		v4.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 
 		final JobGraph jobGraph = new JobGraph(jobId, "test group split job", v1, v2, v3, v4);
-		final SlotProvider slotProvider = new BestEffortSlotProvider(jobId, 5);
+		jobGraph.getSchedulingConfiguration().setBoolean("job.scheduling.allow-auto-partition", true);
+
+		final SlotProvider slotProvider = new SimpleSlotProvider(jobId, 5);
 		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
 				jobGraph,
 				slotProvider,
@@ -521,12 +525,67 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		assertEquals(1, schedulingGroups.size());
 
 		graphManagerPlugin.onSchedulingStarted();
-		graphManagerPlugin.groupSplit(schedulingGroups.iterator().next());
+		waitUntilExecutionVertexState(eg.getJobVertex(v1.getID()).getTaskVertices()[0], ExecutionState.DEPLOYING, 2000L);
 
 		assertEquals(5, graphManagerPlugin.getConcurrentSchedulingGroups().size());
 		assertEquals(ResultPartitionType.BLOCKING, eg.getAllVertices().get(v1.getID()).getProducedDataSets()[0].getResultType());
 		assertEquals(ResultPartitionType.BLOCKING, eg.getAllVertices().get(v2.getID()).getProducedDataSets()[0].getResultType());
 		assertEquals(ResultPartitionType.PIPELINED, eg.getAllVertices().get(v3.getID()).getProducedDataSets()[0].getResultType());
+	}
+
+	/**
+	 * Tests that resource will be returned to resource manager when a group is cancelled when scheduling.
+	 */
+	@Test
+	public void testResourceWillBeReturnedIfGroupIsCancelled() throws Exception {
+
+		final JobID jobId = new JobID();
+		final JobVertex v1 = new JobVertex("vertex1");
+		final JobVertex v2 = new JobVertex("vertex2");
+		final JobVertex v3 = new JobVertex("vertex3");
+		final JobVertex v4 = new JobVertex("vertex4");
+		v1.setParallelism(2);
+		v2.setParallelism(2);
+		v3.setParallelism(2);
+		v4.setParallelism(2);
+		v1.setInvokableClass(AbstractInvokable.class);
+		v2.setInvokableClass(AbstractInvokable.class);
+		v3.setInvokableClass(AbstractInvokable.class);
+		v4.setInvokableClass(AbstractInvokable.class);
+		v3.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v3.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v4.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v4.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+
+		final JobGraph jobGraph = new JobGraph(jobId, "test group split job", v1, v2, v3, v4);
+		jobGraph.getSchedulingConfiguration().setBoolean("job.scheduling.allow-auto-partition", true);
+
+		final BestEffortSlotProvider slotProvider = new BestEffortSlotProvider(jobId, 5);
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
+				jobGraph,
+				slotProvider,
+				new NoRestartStrategy());
+
+		final ConcurrentGroupGraphManagerPlugin graphManagerPlugin = new ConcurrentGroupGraphManagerPlugin();
+		graphManagerPlugin.open(
+				new TestExecutionVertexScheduler(eg, Collections.EMPTY_LIST),
+				jobGraph,
+				new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+				eg,
+				null,
+				new TestingExecutionSlotAllocator(eg.getSlotProvider()));
+
+		Set<ConcurrentSchedulingGroup> schedulingGroups = graphManagerPlugin.getConcurrentSchedulingGroups();
+		assertEquals(1, schedulingGroups.size());
+
+		graphManagerPlugin.onSchedulingStarted();
+		waitUntilExecutionVertexState(eg.getJobVertex(v1.getID()).getTaskVertices()[0], ExecutionState.SCHEDULED, 2000L);
+		assertEquals(0, slotProvider.getNumberOfAvailableSlots());
+
+		eg.failGlobal(new Exception("Test scheduling cancelled."));
+		waitUntilExecutionVertexState(eg.getJobVertex(v1.getID()).getTaskVertices()[0], ExecutionState.CANCELED, 2000L);
+
+		assertEquals(5, slotProvider.getNumberOfAvailableSlots());
 	}
 
 	/**
@@ -649,7 +708,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		}
 
 		@Override
-		public CompletableFuture<Collection<Void>> allocateSlotsFor(Collection<Execution> executions) {
+		public CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions) {
 			for (Execution execution: executions) {
 				scheduledVertices.add(execution.getVertex().getExecutionVertexID());
 			}

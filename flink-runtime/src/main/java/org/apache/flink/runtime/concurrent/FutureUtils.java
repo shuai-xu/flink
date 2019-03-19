@@ -31,6 +31,7 @@ import akka.dispatch.OnComplete;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -470,6 +471,24 @@ public class FutureUtils {
 	}
 
 	/**
+	 * Creates a future that is complete once multiple other futures completed.
+	 * The future fails (completes exceptionally) once one of the futures in the
+	 * conjunction fails. Upon successful completion, the future returns the
+	 * collection of the futures' results in order.
+	 *
+	 * <p>The ConjunctFutureInOrder gives access to how many Futures in the conjunction have already
+	 * completed successfully, via {@link ConjunctFuture#getNumFuturesCompleted()}.
+	 *
+	 * @param futures The futures that make up the conjunction. No null entries are allowed.
+	 * @return The ConjunctFutureInOrder that completes once all given futures are complete (or one fails).
+	 */
+	public static <T> ConjunctFuture<Collection<T>> combineAllInOrder(List<? extends CompletableFuture<? extends T>> futures) {
+		checkNotNull(futures, "futures");
+
+		return new ResultConjunctFutureInOrder(futures);
+	}
+
+	/**
 	 * Creates a future that is complete once all of the given futures have completed.
 	 * The future fails (completes exceptionally) once one of the given futures
 	 * fails.
@@ -574,6 +593,68 @@ public class FutureUtils {
 			else {
 				for (CompletableFuture<? extends T> future : resultFutures) {
 					future.whenComplete(this::handleCompletedFuture);
+				}
+			}
+		}
+
+		@Override
+		public int getNumFuturesTotal() {
+			return numTotal;
+		}
+
+		@Override
+		public int getNumFuturesCompleted() {
+			return numCompleted.get();
+		}
+
+		@Override
+		protected Collection<? extends CompletableFuture<?>> getConjunctFutures() {
+			return resultFutures;
+		}
+	}
+
+	/**
+	 * The implementation of the {@link ConjunctFuture}
+	 * which returns its Futures' result as a collection same order with the futures added.
+	 */
+	private static class ResultConjunctFutureInOrder<T> extends ConjunctFuture<List<T>> {
+
+		private final List<? extends CompletableFuture<? extends T>> resultFutures;
+
+		/** The total number of futures in the conjunction. */
+		private final int numTotal;
+
+		/** The number of futures in the conjunction that are already complete. */
+		private final AtomicInteger numCompleted = new AtomicInteger(0);
+
+		/** The set of collected results so far. */
+		private volatile T[] results;
+
+		@SuppressWarnings("unchecked")
+		ResultConjunctFutureInOrder(List<? extends CompletableFuture<? extends T>> resultFutures) {
+			this.resultFutures = checkNotNull(resultFutures);
+			this.numTotal = resultFutures.size();
+			results = (T[]) new Object[numTotal];
+
+			if (resultFutures.isEmpty()) {
+				complete(Collections.emptyList());
+			}
+			else {
+				int i = 0;
+				for (CompletableFuture<? extends T> future : resultFutures) {
+					final int index = i++;
+					future.whenComplete(
+							(value, throwable) -> {
+								if (throwable != null) {
+									completeExceptionally(throwable);
+								} else {
+									results[index] = value;
+									if (numCompleted.incrementAndGet() == numTotal) {
+										complete(Arrays.asList(results));
+									}
+								}
+							}
+					);
 				}
 			}
 		}

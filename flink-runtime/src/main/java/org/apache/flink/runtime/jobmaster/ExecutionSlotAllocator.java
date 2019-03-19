@@ -34,5 +34,5 @@ public interface ExecutionSlotAllocator {
 	 * @param executions to allocate slots
 	 * @return Future which is completed if the slots could be returned, otherwise with exception
 	 */
-	CompletableFuture<Collection<Void>> allocateSlotsFor(Collection<Execution> executions);
+	CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions);
 }
