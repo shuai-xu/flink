@@ -382,7 +382,7 @@ public class ParallelismScalerTest {
 		Set<JobVertexID> scaleDownSet = new HashSet<>();
 		Map<JobVertexID, ParallelismScaler.TaskMetrics> metrics = new HashMap<>();
 		ParallelismScaler.TaskMetrics v1Metrics = new ParallelismScaler.TaskMetrics(
-				vertex1, true, 1, 1, 18000000, 1, 1, 1, 256, 1, 1, 256);
+				vertex1, true, 1, 1, 18000000, 1, 1, 1, 1, 1, 1, 256);
 		ParallelismScaler.TaskMetrics v2Metrics = new ParallelismScaler.TaskMetrics(
 				vertex2, false, 1, 1, 0,  1, 1, 1, 1, 1, 1, 1);
 		ParallelismScaler.TaskMetrics v3Metrics = new ParallelismScaler.TaskMetrics(
@@ -409,7 +409,7 @@ public class ParallelismScalerTest {
 		expectedParallelism.clear();
 
 		scaleDownSet.add(vertex1);
-		expectedParallelism.put(vertex1, 512);
+		expectedParallelism.put(vertex1, 2);
 		assertEquals(expectedParallelism, scaler.getVertexTargetParallelisms(scaleupRatio, scaleDownSet, metrics));
 
 		scaleDownSet.clear();

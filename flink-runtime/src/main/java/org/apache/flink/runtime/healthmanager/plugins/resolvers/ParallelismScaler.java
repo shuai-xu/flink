@@ -716,10 +716,9 @@ public class ParallelismScaler implements Resolver {
 				double partitionLatencySum = sourcePartitionLatencySumRangeSub.getValue().f1;
 				partitionLatency = partitionLatencyCount <= 0.0 ? 0.0 : partitionLatencySum / partitionLatencyCount / 1.0e9;
 				partitionCount = sourcePartitionCountSub.getValue().f1;
-				workload = partitionLatency <= 0.0 ? 0.0 : partitionCount * (taskLatency - waitOutputPerInputRecord) / partitionLatency;
-			} else {
-				workload = (taskLatency - waitOutputPerInputRecord) * inputTps;
 			}
+
+			workload = (taskLatency - waitOutputPerInputRecord) * inputTps;
 
 			double delayIncreasingRate = 0;
 			if (sourceDelayIncreasingRateSub != null) {
@@ -865,14 +864,8 @@ public class ParallelismScaler implements Resolver {
 			for (JobVertexID vertexId : subDagRoot2SubDagVertex.get(subDagRoot)) {
 				TaskMetrics metric = taskMetrics.get(vertexId);
 				if (metric.getWorkload() > 0) {
-					if (taskMetrics.get(vertexId).isParallelSource) {
-						// source workload means parallelism to reach max tps.
-						double maxTps = 1.0 / Math.max(metric.partitionLatency, metric.taskLatencyPerRecord - metric.waitOutputPerRecord) * metric.partitionCount;
-						double sourceRatio = ratio / (maxTps / metric.getInputTps());
-						targetParallelisms.put(vertexId, (int) Math.floor(metric.getWorkload() * sourceRatio));
-					} else {
-						targetParallelisms.put(vertexId, (int) Math.floor(metric.getWorkload() * ratio));
-					}
+					targetParallelisms.put(vertexId, (int) Math.floor(metric.getWorkload() * ratio));
+
 					// timer count should be considered as well.
 					int newParallelism = (int) Math.ceil(taskMetrics.get(vertexId).getTimerCount() /
 						monitor.getConfig().getLong(LargeTimerCountDetector.LARGE_TIMER_COUNT_THRESHOLD) *
