@@ -50,21 +50,21 @@ public class AdjustJobConfigTest {
 		JobVertexID vertex3 = new JobVertexID();
 		adjustJobConfig.addVertex(vertex3, 1, 1,
 			ResourceSpec.newBuilder().setHeapMemoryInMB(100).build(),
-			ResourceSpec.newBuilder().setHeapMemoryInMB(150).build());
+			ResourceSpec.newBuilder().setHeapMemoryInMB(105).build());
 
 		JobVertexID vertex4 = new JobVertexID();
 		adjustJobConfig.addVertex(vertex4, 1, 1,
-			ResourceSpec.newBuilder().setDirectMemoryInMB(2000).build(),
-			ResourceSpec.newBuilder().setDirectMemoryInMB(2150).build());
+			ResourceSpec.newBuilder().setDirectMemoryInMB(100).build(),
+			ResourceSpec.newBuilder().setDirectMemoryInMB(150).build());
 
 		JobVertexID vertex5 = new JobVertexID();
 		adjustJobConfig.addVertex(vertex5, 1, 1,
 			ResourceSpec.newBuilder().setNativeMemoryInMB(100).build(),
-			ResourceSpec.newBuilder().setNativeMemoryInMB(200).build());
+			ResourceSpec.newBuilder().setNativeMemoryInMB(150).build());
 
 		adjustJobConfig.exculdeMinorDiffVertices(new Configuration());
 
 		assertEquals(1, adjustJobConfig.currentParallelism.size());
-		assertTrue(adjustJobConfig.currentParallelism.containsKey(vertex5));
+		assertTrue(adjustJobConfig.currentParallelism.containsKey(vertex4));
 	}
 }

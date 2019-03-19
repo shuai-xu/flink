@@ -72,7 +72,7 @@ public class DirectMemoryAdjusterITTest {
 		config.setString(HealthMonitor.DETECTOR_CLASSES, DirectOOMDetector.class.getCanonicalName());
 		config.setString(HealthMonitor.RESOLVER_CLASSES, DirectMemoryAdjuster.class.getCanonicalName());
 		config.setDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO, 0);
-		config.setInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_MEM, 0);
+		config.setInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_NATIVE_MEM, 0);
 
 		// initial job vertex config.
 		Map<JobVertexID, RestServerClient.VertexConfig> vertexConfigs = new HashMap<>();

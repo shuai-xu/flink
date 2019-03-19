@@ -145,7 +145,7 @@ public class HealthMonitorOptions {
 	public static final ConfigOption<Double> RESOURCE_SCALE_MIN_DIFF_CPU =
 		ConfigOptions.key("resource.scale.min-diff.cpu.core").defaultValue(0.1);
 
-	public static final ConfigOption<Integer> RESOURCE_SCALE_MIN_DIFF_MEM =
+	public static final ConfigOption<Integer> RESOURCE_SCALE_MIN_DIFF_NATIVE_MEM =
 		ConfigOptions.key("resource.scale.min-diff.mem.mb").defaultValue(100);
 
 	public static final ConfigOption<Double> PARALLELISM_SCALE_MIN_DIFF_RATIO =

@@ -106,7 +106,7 @@ public class AdjustJobConfig implements Action {
 		double minDiffParallelismRatio = conf.getDouble(HealthMonitorOptions.PARALLELISM_SCALE_MIN_DIFF_RATIO);
 		double minDiffResourceRatio = conf.getDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_RATIO);
 		double minDiffCpuCore = conf.getDouble(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_CPU);
-		int minDiffMemMB = conf.getInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_MEM);
+		int minDiffNativeMemMB = conf.getInteger(HealthMonitorOptions.RESOURCE_SCALE_MIN_DIFF_NATIVE_MEM);
 
 		HashSet<JobVertexID> vertexToRemove = new HashSet<>();
 		for (JobVertexID vertexID : currentParallelism.keySet()) {
@@ -115,27 +115,25 @@ public class AdjustJobConfig implements Action {
 			ResourceSpec curRes = currentResource.get(vertexID);
 			ResourceSpec tarRes = targetResource.get(vertexID);
 
-			if (Math.abs(curPara - tarPara) >= minDiffParallelismRatio * curPara) {
+			if (Math.abs(curPara - tarPara) > minDiffParallelismRatio * curPara) {
 				continue;
 			}
 
-			if (Math.abs(curRes.getCpuCores() - tarRes.getCpuCores()) >= minDiffResourceRatio * curRes.getCpuCores() &&
-				Math.abs(curRes.getCpuCores() - tarRes.getCpuCores()) >= minDiffCpuCore) {
+			if (Math.abs(curRes.getCpuCores() - tarRes.getCpuCores()) > minDiffResourceRatio * curRes.getCpuCores() &&
+				Math.abs(curRes.getCpuCores() - tarRes.getCpuCores()) > minDiffCpuCore) {
 				continue;
 			}
 
-			if (Math.abs(curRes.getHeapMemory() - tarRes.getHeapMemory()) >= minDiffResourceRatio * curRes.getHeapMemory() &&
-				Math.abs(curRes.getHeapMemory() - tarRes.getHeapMemory()) >= minDiffMemMB) {
+			if (Math.abs(curRes.getHeapMemory() - tarRes.getHeapMemory()) > minDiffResourceRatio * curRes.getHeapMemory()) {
 				continue;
 			}
 
-			if (Math.abs(curRes.getDirectMemory() - tarRes.getDirectMemory()) >= minDiffResourceRatio * curRes.getDirectMemory() &&
-				Math.abs(curRes.getDirectMemory() - tarRes.getDirectMemory()) >= minDiffMemMB) {
+			if (Math.abs(curRes.getDirectMemory() - tarRes.getDirectMemory()) > minDiffResourceRatio * curRes.getDirectMemory()) {
 				continue;
 			}
 
-			if (Math.abs(curRes.getNativeMemory() - tarRes.getNativeMemory()) >= minDiffResourceRatio * curRes.getNativeMemory() &&
-				Math.abs(curRes.getNativeMemory() - tarRes.getNativeMemory()) >= minDiffMemMB) {
+			if (Math.abs(curRes.getNativeMemory() - tarRes.getNativeMemory()) > minDiffResourceRatio * curRes.getNativeMemory() &&
+				Math.abs(curRes.getNativeMemory() - tarRes.getNativeMemory()) > minDiffNativeMemMB) {
 				continue;
 			}
 
