@@ -87,18 +87,21 @@ public class StepwiseSchedulingPlugin implements GraphManagerPlugin {
 		for (int i = 0; i < consumerVertices.size(); i++) {
 			Collection<ExecutionVertexID> executionVertexIDs = consumerVertices.get(i);
 
-			if (dataSet.getConsumers().get(i).getDistributionPattern() == DistributionPattern.ALL_TO_ALL) {
-				// For ALL-to-ALL edges, all downstream tasks of a certain job vertex should be all fulfilled
-				// at the same time, otherwise none of them is fulfilled
-				if (executionVertexIDs.size() > 0 && isReadyToSchedule(executionVertexIDs.iterator().next())) {
-					verticesToSchedule.addAll(executionVertexIDs);
-				}
-			} else {
-				// For POINTWISE edges, check the downstream tasks one by one
-				for (ExecutionVertexID executionVertexID : executionVertexIDs) {
-					if (isReadyToSchedule(executionVertexID)) {
-						verticesToSchedule.add(executionVertexID);
-					}
+			if (executionVertexIDs.size() <= 0) {
+				continue;
+			}
+
+			// This is a shortcut to improve the input check performance
+			if (dataSet.getConsumers().get(i).getDistributionPattern() == DistributionPattern.ALL_TO_ALL &&
+				!inputTracker.isInputReady(executionVertexIDs.iterator().next(), dataSet.getId())) {
+				// For an ALL-to-ALL job edge, if any of its downstream vertices fail to pass the edge's input check
+				// Then none of the downstream vertices can pass
+				continue;
+			}
+
+			for (ExecutionVertexID executionVertexID : executionVertexIDs) {
+				if (isReadyToSchedule(executionVertexID)) {
+					verticesToSchedule.add(executionVertexID);
 				}
 			}
 		}

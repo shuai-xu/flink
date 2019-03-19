@@ -40,6 +40,7 @@ import java.util.Map;
 
 import static org.apache.flink.configuration.ConfigOptions.key;
 import static org.apache.flink.util.Preconditions.checkNotNull;
+import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * Tracks the input readiness of vertices.
@@ -131,6 +132,12 @@ public class VertexInputTracker {
 			}
 			return false;
 		}
+	}
+
+	public boolean isInputReady(ExecutionVertexID vertexID, IntermediateDataSetID dataSetID) {
+		checkState(vertexInputsMap.containsKey(vertexID));
+
+		return vertexInputsMap.get(vertexID).get(dataSetID).isConsumable(scheduler);
 	}
 
 	/**

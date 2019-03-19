@@ -951,4 +951,134 @@ public class StepwiseSchedulingPluginTest extends GraphManagerPluginTestBase {
 		}
 		scheduler.clearScheduledVertices();
 	}
+
+	/**
+	 * Tests stepwise scheduling with configured input consumable status.
+	 * Using percentile threshold and input constraints. Pointwise edges and All-to-All edges are all introduced.
+	 */
+	@Test
+	public void testStepwiseSchedulingConsideringInputStatusWithMixedEdges() throws Exception {
+
+		int parallelism = 1;
+
+		final JobID jobId = new JobID();
+		final JobVertex v1 = new JobVertex("vertex1");
+		final JobVertex v2 = new JobVertex("vertex2");
+		final JobVertex v3 = new JobVertex("vertex3");
+		v1.setParallelism(parallelism * 2);
+		v2.setParallelism(parallelism * 2);
+		v3.setParallelism(parallelism * 2);
+		v1.setInvokableClass(AbstractInvokable.class);
+		v2.setInvokableClass(AbstractInvokable.class);
+		v3.setInvokableClass(AbstractInvokable.class);
+		v3.connectNewDataSetAsInput(v1, DistributionPattern.POINTWISE, ResultPartitionType.BLOCKING);
+		v3.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
+
+		final JobGraph jobGraph = new JobGraph(jobId, "test job", new JobVertex[] {v1, v2, v3});
+		jobGraph.setScheduleMode(ScheduleMode.LAZY_FROM_SOURCES);
+
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
+			jobGraph,
+			new SimpleAckingTaskManagerGateway(),
+			new NoRestartStrategy());
+
+		final List<ExecutionVertex> executionVertices = new ArrayList<>();
+		final List<ExecutionVertexID> vertices = new ArrayList<>();
+		for (ExecutionJobVertex ejv : eg.getVerticesTopologically()) {
+			for (ExecutionVertex ev : ejv.getTaskVertices()) {
+				executionVertices.add(ev);
+				vertices.add(ev.getExecutionVertexID());
+			}
+		}
+
+		final Iterator<ExecutionJobVertex> ejvIterator = eg.getVerticesTopologically().iterator();
+		final ExecutionJobVertex ejv1 = ejvIterator.next();
+		final List<ExecutionVertexID> vertices1 = new ArrayList<>();
+		for (ExecutionVertex ev : ejv1.getTaskVertices()) {
+			vertices1.add(ev.getExecutionVertexID());
+		}
+
+		final ExecutionJobVertex ejv2 = ejvIterator.next();
+		final List<ExecutionVertexID> vertices2 = new ArrayList<>();
+		for (ExecutionVertex ev : ejv2.getTaskVertices()) {
+			vertices2.add(ev.getExecutionVertexID());
+		}
+
+		final List<ExecutionVertexID> sourceVertices = new ArrayList<>();
+		sourceVertices.addAll(vertices1);
+		sourceVertices.addAll(vertices2);
+
+		final ExecutionJobVertex ejv3 = ejvIterator.next();
+		final List<ExecutionVertexID> vertices3 = new ArrayList<>();
+		for (ExecutionVertex ev : ejv3.getTaskVertices()) {
+			vertices3.add(ev.getExecutionVertexID());
+		}
+
+		final TestExecutionVertexScheduler scheduler = new TestExecutionVertexScheduler(eg, executionVertices);
+
+		double pipelinedConsumableThreshold = Double.MIN_VALUE;
+		double blockingConsumableThreshold = 1;
+		VertexInputTracker.VertexInputTrackerConfig inputTrackerConfig =
+			new VertexInputTracker.VertexInputTrackerConfig(
+				VertexInputTracker.InputDependencyConstraint.ALL,
+				pipelinedConsumableThreshold,
+				blockingConsumableThreshold
+			);
+		try {
+			InstantiationUtil.writeObjectToConfig(inputTrackerConfig, jobGraph.getSchedulingConfiguration(),
+				VertexInputTracker.VertexInputTrackerOptions.VERTEX_INPUT_TRACKER_CONFIG);
+		} catch (IOException e) {
+			throw new FlinkRuntimeException("Could not serialize job vertex to stream node map", e);
+		}
+
+		final GraphManagerPlugin graphManagerPlugin = new StepwiseSchedulingPlugin();
+		graphManagerPlugin.open(
+			scheduler,
+			jobGraph,
+			new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()));
+
+		graphManagerPlugin.onSchedulingStarted();
+		assertTrue(compareVertices(scheduler.getScheduledVertices(), sourceVertices));
+		scheduler.clearScheduledVertices();
+
+		// finish ev11
+		ExecutionJobVertex ejv = ejv1;
+		for (IntermediateResultPartition partition : eg.getAllVertices().get(ejv.getJobVertexId())
+			.getTaskVertices()[0].getProducedPartitions().values()) {
+			partition.markFinished();
+		}
+		graphManagerPlugin.onResultPartitionConsumable(
+			new ResultPartitionConsumableEvent(ejv.getProducedDataSets()[0].getId(), 0));
+		assertTrue(scheduler.getScheduledVertices().size() == 0);
+
+		// finish ev21
+		ejv = ejv2;
+		for (IntermediateResultPartition partition : eg.getAllVertices().get(ejv.getJobVertexId())
+			.getTaskVertices()[0].getProducedPartitions().values()) {
+			partition.markFinished();
+		}
+		graphManagerPlugin.onResultPartitionConsumable(
+			new ResultPartitionConsumableEvent(ejv.getProducedDataSets()[0].getId(), 0));
+		assertTrue(scheduler.getScheduledVertices().size() == 0);
+
+		// finish ev22
+		ejv = ejv2;
+		for (IntermediateResultPartition partition : eg.getAllVertices().get(ejv.getJobVertexId())
+			.getTaskVertices()[1].getProducedPartitions().values()) {
+			partition.markFinished();
+		}
+		graphManagerPlugin.onResultPartitionConsumable(
+			new ResultPartitionConsumableEvent(ejv.getProducedDataSets()[0].getId(), 1));
+		assertTrue(scheduler.getScheduledVertices().size() == 1);
+
+		// finish ev12
+		ejv = ejv1;
+		for (IntermediateResultPartition partition : eg.getAllVertices().get(ejv.getJobVertexId())
+			.getTaskVertices()[1].getProducedPartitions().values()) {
+			partition.markFinished();
+		}
+		graphManagerPlugin.onResultPartitionConsumable(
+			new ResultPartitionConsumableEvent(ejv.getProducedDataSets()[0].getId(), 1));
+		assertTrue(scheduler.getScheduledVertices().size() == 2);
+	}
 }
