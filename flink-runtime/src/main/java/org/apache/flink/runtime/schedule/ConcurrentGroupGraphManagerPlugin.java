@@ -309,7 +309,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			}
 		}
 		// 3. Build groups for the job vertices that have not been assigned resource.
-		buildConcurrentSchedulingGroups(unAssignedJobVertices);
+		List<ConcurrentSchedulingGroup> newUnAssignedGroups = buildConcurrentSchedulingGroups(unAssignedJobVertices);
 		// 4. Rebuild virtual relations.
 		buildStartOnFinishRelation(jobGraph);
 		// 5. Rebuild failover region.
@@ -325,6 +325,19 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 					} catch (Exception e) {
 						LOG.info("Fail to deploy execution {}", ev, e);
 						ev.getCurrentExecutionAttempt().fail(e);
+					}
+				}
+			}
+		}
+		for (ConcurrentSchedulingGroup group : newUnAssignedGroups) {
+			if (!group.hasPrecedingGroup()) {
+				scheduleGroup(group);
+			} else {
+				List<ExecutionVertex> evs = group.getExecutionVertices();
+				for (ExecutionVertex ev : evs) {
+					if (isReadyToSchedule(ev.getExecutionVertexID())) {
+						scheduleGroup(group);
+						break;
 					}
 				}
 			}
