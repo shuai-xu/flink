@@ -40,19 +40,35 @@ public class ConcurrentJobVertexGroup {
 
 	private boolean hasPrecedingGroup = false;
 
-	public ConcurrentJobVertexGroup(Collection<JobVertex> jobVertices) {
-		this.vertices.addAll(sortJobVertexTopologically(jobVertices));
+	private boolean hasInputVertex = false;
+
+	private List<JobVertex> predecessorVertices = new ArrayList<>();
+
+	public ConcurrentJobVertexGroup(Collection<JobVertex> jobVertices, Set<JobControlEdge> ignoredControlEdges) {
+		this.vertices.addAll(sortJobVertexTopologically(jobVertices, ignoredControlEdges));
 	}
 
 	public List<JobVertex> getVertices() {
 		return vertices;
 	}
 
+	public List<JobVertex> getPredecessorVertices() {
+		return this.predecessorVertices;
+	}
+
 	public boolean hasPrecedingGroup() {
 		return hasPrecedingGroup;
 	}
 
-	private List<JobVertex> sortJobVertexTopologically(Collection<JobVertex> jobVertices) {
+	public void noPrecedingGroup() {
+		this.hasPrecedingGroup = false;
+	}
+
+	public  boolean hasInputVertex() {
+		return this.hasInputVertex;
+	}
+
+	private List<JobVertex> sortJobVertexTopologically(Collection<JobVertex> jobVertices, Set<JobControlEdge> ignoredControlEdges) {
 		List<JobVertex> jobVerticesTopologically = new ArrayList<>(jobVertices.size());
 
 		Set<JobVertex> remaining = new LinkedHashSet<>(jobVertices);
@@ -64,6 +80,10 @@ public class ConcurrentJobVertexGroup {
 
 			while (iter.hasNext()) {
 				JobVertex jobVertex = iter.next();
+
+				if (jobVertex.isInputVertex()) {
+					hasInputVertex = true;
+				}
 
 				boolean allPredecessorAdded = true;
 				boolean hasPredecessorInThisGroup = false;
@@ -78,12 +98,17 @@ public class ConcurrentJobVertexGroup {
 				}
 				for (JobControlEdge controlEdge : jobVertex.getInControlEdges()) {
 					if (controlEdge.getControlType() == ControlType.START_ON_FINISH &&
-							!jobVertices.contains(controlEdge.getSource())) {
+							!jobVertices.contains(controlEdge.getSource()) &&
+							!ignoredControlEdges.contains(controlEdge)) {
 						hasPrecedingGroup = true;
+						predecessorVertices.add(controlEdge.getSource());
 					}
 				}
 				if (!hasPredecessorInThisGroup && jobVertex.getNumberOfInputs() > 0) {
 					hasPrecedingGroup = true;
+					for (JobEdge jobEdge : jobVertex.getInputs()) {
+						predecessorVertices.add(jobEdge.getSource().getProducer());
+					}
 				}
 				if (allPredecessorAdded) {
 					jobVerticesTopologically.add(jobVertex);

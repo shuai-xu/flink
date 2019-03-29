@@ -506,24 +506,14 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	}
 
 	/**
-	 * Rollback from SCHEDULED to CREATED and release assigned slot. This is for group scheduling.
+	 * Rollback from SCHEDULED to CREATED when resource is not enough. This is for group scheduling.
 	 *
-	 * @throws IllegalExecutionStateException if this method has been called while not being in the SCHEDULED state
+	 * @throws IllegalExecutionStateException if this method is called while not being in the SCHEDULED state
 	 */
-	public void rollbackToCreatedAndReleaseSlot() throws IllegalStateException {
+	public void rollbackToCreated() throws IllegalStateException {
 
 		// this method only works if the execution is in the state 'SCHEDULED'
-		if (transitionState(SCHEDULED, CREATED)) {
-
-			LogicalSlot slot = assignedResource;
-			ASSIGNED_SLOT_UPDATER.set(this, null);
-			taskManagerLocationFuture = new CompletableFuture<>();
-			assignedAllocationID = null;
-			LOG.info("{} is revoked assigned resource {}.", getVertexWithAttempt(), slot);
-			if (slot != null) {
-				slot.releaseSlot();
-			}
-		} else {
+		if (!transitionState(SCHEDULED, CREATED)) {
 			// call race, already deployed, or already done
 			throw new IllegalExecutionStateException(this, SCHEDULED, state);
 		}

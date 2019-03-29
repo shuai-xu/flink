@@ -487,9 +487,10 @@ public class ExecutionJobVertex implements AccessExecutionJobVertex, Archiveable
 					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via ID %s, %s.",
 							num, jobVertex.getID(), jobVertex.getName(), edge.getSourceId(), edge.getDistributionPattern()));
 				} else {
-					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via predecessor %s (%s), %s, %s",
+					LOG.debug(String.format("Connecting input %d of vertex %s (%s) to intermediate result referenced via predecessor %s (%s), %s, %s, %s",
 							num, jobVertex.getID(), jobVertex.getName(), edge.getSource().getProducer().getID(),
-							edge.getSource().getProducer().getName(), edge.getDistributionPattern(), edge.getSource().getResultType()));
+							edge.getSource().getProducer().getName(), edge.getDistributionPattern(),
+							edge.getSource().getResultType(), edge.getSchedulingMode()));
 				}
 			}
 

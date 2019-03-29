@@ -46,6 +46,7 @@ import org.apache.flink.runtime.jobgraph.ExecutionVertexID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.SchedulingMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
@@ -74,6 +75,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -81,6 +83,7 @@ import static org.apache.flink.runtime.executiongraph.ExecutionGraphTestUtils.wa
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -586,6 +589,129 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		waitUntilExecutionVertexState(eg.getJobVertex(v1.getID()).getTaskVertices()[0], ExecutionState.CANCELED, 2000L);
 
 		assertEquals(5, slotProvider.getNumberOfAvailableSlots());
+	}
+
+	/**
+	 * Tests that the circle dependencies will be broken when building groups.
+	 */
+	@Test
+	public void testBreakCircleDependenciesInGroups() throws Exception {
+
+		final JobID jobId = new JobID();
+		final JobVertex v1 = new JobVertex("vertex1");
+		final JobVertex v2 = new JobVertex("vertex2");
+		final JobVertex v3 = new JobVertex("vertex3");
+		final JobVertex v4 = new JobVertex("vertex4");
+		final JobVertex v5 = new JobVertex("vertex5");
+		v1.setParallelism(2);
+		v2.setParallelism(2);
+		v3.setParallelism(1);
+		v4.setParallelism(1);
+		v5.setParallelism(1);
+		v1.setInvokableClass(AbstractInvokable.class);
+		v2.setInvokableClass(AbstractInvokable.class);
+		v3.setInvokableClass(AbstractInvokable.class);
+		v4.setInvokableClass(AbstractInvokable.class);
+		v5.setInvokableClass(AbstractInvokable.class);
+		v2.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v3.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
+		v4.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.BLOCKING);
+		v5.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+
+		v2.connectControlEdge(v4, ControlType.START_ON_FINISH);
+
+		final JobGraph jobGraph = new JobGraph(jobId, "test break circle dependency", v1, v2, v3, v4, v5);
+
+		final BestEffortSlotProvider slotProvider = new BestEffortSlotProvider(jobId, 5);
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
+				jobGraph,
+				slotProvider,
+				new NoRestartStrategy());
+
+		final ConcurrentGroupGraphManagerPlugin graphManagerPlugin = new ConcurrentGroupGraphManagerPlugin();
+		graphManagerPlugin.open(
+				new TestExecutionVertexScheduler(eg, Collections.EMPTY_LIST),
+				jobGraph,
+				new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+				eg,
+				null,
+				new TestingExecutionSlotAllocator(eg.getSlotProvider()));
+
+		Set<ConcurrentSchedulingGroup> schedulingGroups = graphManagerPlugin.getConcurrentSchedulingGroups();
+		assertEquals(4, schedulingGroups.size());
+
+		for (ConcurrentSchedulingGroup group : schedulingGroups) {
+			if (group.getExecutionVertices().size() < 2) {
+				assertTrue(group.hasPrecedingGroup());
+			} else {
+				assertFalse(group.hasPrecedingGroup());
+			}
+		}
+	}
+
+	/**
+	 * Tests that the circle dependencies will be broken when building groups.
+	 */
+	@Test
+	public void testBreakCircleDependenciesInVertices() throws Exception {
+
+		final JobID jobId = new JobID();
+		final JobVertex v1 = new JobVertex("vertex1");
+		final JobVertex v2 = new JobVertex("vertex2");
+		final JobVertex v3 = new JobVertex("vertex3");
+		final JobVertex v4 = new JobVertex("vertex4");
+		final JobVertex v5 = new JobVertex("vertex5");
+		v1.setParallelism(1);
+		v2.setParallelism(1);
+		v3.setParallelism(1);
+		v4.setParallelism(1);
+		v5.setParallelism(1);
+		v1.setInvokableClass(AbstractInvokable.class);
+		v2.setInvokableClass(AbstractInvokable.class);
+		v3.setInvokableClass(AbstractInvokable.class);
+		v4.setInvokableClass(AbstractInvokable.class);
+		v5.setInvokableClass(AbstractInvokable.class);
+		v3.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v3.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v4.connectNewDataSetAsInput(v1, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v5.connectNewDataSetAsInput(v4, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+		v5.connectNewDataSetAsInput(v3, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
+
+		v1.connectControlEdge(v2, ControlType.START_ON_FINISH);
+		v3.connectControlEdge(v4, ControlType.START_ON_FINISH);
+
+		final JobGraph jobGraph = new JobGraph(jobId, "test break circle dependency", v1, v2, v3, v4, v5);
+
+		final BestEffortSlotProvider slotProvider = new BestEffortSlotProvider(jobId, 5);
+		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
+				jobGraph,
+				slotProvider,
+				new NoRestartStrategy());
+
+		final ConcurrentGroupGraphManagerPlugin graphManagerPlugin = new ConcurrentGroupGraphManagerPlugin();
+		graphManagerPlugin.open(
+				new TestExecutionVertexScheduler(eg, Collections.EMPTY_LIST),
+				jobGraph,
+				new SchedulingConfig(jobGraph.getSchedulingConfiguration(), this.getClass().getClassLoader()),
+				eg,
+				null,
+				new TestingExecutionSlotAllocator(eg.getSlotProvider()));
+
+		Set<ConcurrentSchedulingGroup> schedulingGroups = graphManagerPlugin.getConcurrentSchedulingGroups();
+		assertEquals(2, schedulingGroups.size());
+
+		for (ConcurrentSchedulingGroup group : schedulingGroups) {
+			if (group.getExecutionVertices().size() < 3) {
+				assertFalse(group.hasPrecedingGroup());
+			} else {
+				assertTrue(group.hasPrecedingGroup());
+			}
+		}
+		Map<JobVertexID, Set<JobVertex>> predecessorToSuccessors = graphManagerPlugin.getPredecessorToSuccessors();
+		assertEquals(1, predecessorToSuccessors.size());
+
+		Map<JobVertexID, Set<JobVertexID>> successorToPredecessors = graphManagerPlugin.getSuccessorsToPredecessor();
+		assertEquals(1, successorToPredecessors.size());
 	}
 
 	/**

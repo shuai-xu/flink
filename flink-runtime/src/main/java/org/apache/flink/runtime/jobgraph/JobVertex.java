@@ -574,13 +574,6 @@ public class JobVertex implements java.io.Serializable {
 	}
 
 	public JobControlEdge connectControlEdge(JobVertex sourceVertex, ControlType controlType) {
-		if (controlType == ControlType.START_ON_FINISH) {
-			for (JobControlEdge existingEdge : inControlEdges) {
-				if (existingEdge.getControlType() == ControlType.START_ON_FINISH) {
-					throw new IllegalArgumentException("Target should only have one start on finish control edge.");
-				}
-			}
-		}
 		JobControlEdge controlEdge = new JobControlEdge(sourceVertex, this, controlType);
 		sourceVertex.outControlEdges.add(controlEdge);
 		this.inControlEdges.add(controlEdge);

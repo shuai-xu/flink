@@ -71,7 +71,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 	private Map<JobVertexID, Set<JobVertex>> predecessorToSuccessors = new HashMap<>();
 
-	private Map<JobVertexID, JobVertexID> successorToPredecessors = new HashMap<>();
+	private Map<JobVertexID, Set<JobVertexID>> successorToPredecessors = new HashMap<>();
+
+	private Set<JobControlEdge> ignoredControlEdges = new HashSet<>();
 
 	private VertexInputTracker inputTracker;
 
@@ -103,7 +105,6 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		this.allowGroupSplit = schedulingConfig.getConfiguration().getBoolean("job.scheduling.allow-auto-partition", false);
 		this.executionSlotAllocator = executionSlotAllocator;
 		initConcurrentSchedulingGroups();
-		buildStartOnFinishRelation(jobGraph);
 	}
 
 	private void initConcurrentSchedulingGroups() {
@@ -117,10 +118,11 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			for (ExecutionVertex ev : executionGraph.getAllExecutionVertices()) {
 				allExecutionVertices.add(ev);
 			}
-			concurrentJobVertexGroups.add(new ConcurrentJobVertexGroup(allJobVertices));
+			concurrentJobVertexGroups.add(new ConcurrentJobVertexGroup(allJobVertices, ignoredControlEdges));
 			this.concurrentSchedulingGroups.add(
 					new ConcurrentSchedulingGroup(allExecutionVertices, false));
 		} else {
+			buildStartOnFinishRelation(jobGraph);
 			buildConcurrentSchedulingGroups(allJobVertices);
 		}
 	}
@@ -229,28 +231,33 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 				List<JobVertex> concurrentVertices = new ArrayList<>();
 				concurrentVertices.add(jobVertex);
 
-				if (jobVertex.getInControlEdges().isEmpty()) {
-					for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
-						if (output.getConsumers().size() > 0) {
-							JobEdge jobEdge = output.getConsumers().get(0);
-							if (jobVerticesTopologically.contains(jobEdge.getTarget()) &&
-									!visitedJobVertices.contains(jobEdge.getTarget()) &&
-									jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT) {
-								visitedJobVertices.add(jobEdge.getTarget());
-								concurrentVertices.add(jobEdge.getTarget());
-								concurrentVertices.addAll(
-										getAllConcurrentVertices(jobEdge.getTarget(), jobVerticesTopologically, visitedJobVertices));
-							}
+				for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
+					for (JobEdge jobEdge : output.getConsumers()) {
+						if (jobVerticesTopologically.contains(jobEdge.getTarget()) &&
+								!visitedJobVertices.contains(jobEdge.getTarget()) &&
+								jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT &&
+								!isStartOnFinishedEdge(jobEdge)) {
+							visitedJobVertices.add(jobEdge.getTarget());
+							concurrentVertices.add(jobEdge.getTarget());
+							concurrentVertices.addAll(
+									getAllConcurrentVertices(jobEdge.getTarget(), jobVerticesTopologically, visitedJobVertices));
 						}
 					}
 				}
-				if (!concurrentVertices.isEmpty()) {
-					concurrentJobVertexGroups.add(new ConcurrentJobVertexGroup(concurrentVertices));
-				}
+
+				concurrentJobVertexGroups.add(new ConcurrentJobVertexGroup(concurrentVertices, ignoredControlEdges));
 			}
 		}
 
 		LOG.debug("{} vertex group was built with {} vertices.", concurrentJobVertexGroups.size(), jobVerticesTopologically.size());
+
+		breakCircleDependencies(concurrentJobVertexGroups);
+
+		if (LOG.isDebugEnabled()) {
+			for (ConcurrentJobVertexGroup group : concurrentJobVertexGroups) {
+				LOG.debug("Concurrent vertex group has {} with preceding {}", group.getVertices(), group.hasPrecedingGroup());
+			}
+		}
 
 		for (ConcurrentJobVertexGroup regionGroup : concurrentJobVertexGroups) {
 			schedulingGroups.addAll(buildSchedulingGroupsFromJobVertexGroup(regionGroup));
@@ -266,12 +273,6 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		LOG.info("{} concurrent group was built with {} vertices for job {}.",
 				schedulingGroups.size(), jobVerticesTopologically.size(), jobGraph.getJobID());
 
-		if (LOG.isDebugEnabled()) {
-			for (ConcurrentSchedulingGroup group : schedulingGroups) {
-				LOG.debug("Concurrent group has {} with preceding {}", group.getExecutionVertices(), group.hasPrecedingGroup());
-			}
-		}
-
 		return schedulingGroups;
 	}
 
@@ -284,34 +285,31 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 		concurrentSchedulingGroups.remove(originalGroup);
 
-		// 1. Build groups for the job vertices that have been assigned resource.
-		List<ConcurrentSchedulingGroup> newAssignedGroups = buildConcurrentSchedulingGroups(assignedJobVertices);
-		// 2. Update the result partition.
+		// 1. Update the result partition.
 		Set<JobVertex> visitedJobVertices = new HashSet<>();
-		for (ConcurrentSchedulingGroup group: newAssignedGroups) {
-			for (ExecutionVertex ev : group.getExecutionVertices()) {
-				JobVertex jobVertex = ev.getJobVertex().getJobVertex();
-				if (visitedJobVertices.add(jobVertex)) {
-					for (int i = 0; i < jobVertex.getProducedDataSets().size(); i++) {
-						IntermediateDataSet output = jobVertex.getProducedDataSets().get(i);
-						if (!output.getConsumers().isEmpty()) {
-							JobEdge jobEdge = output.getConsumers().get(0);
-							for (ExecutionVertex executionVertex : executionGraph.getJobVertex(jobEdge.getTarget().getID()).getTaskVertices()) {
-								if (executionVertex.getExecutionState() == ExecutionState.CREATED) {
-									jobEdge.setSchedulingMode(SchedulingMode.SEQUENTIAL);
-									ev.getJobVertex().getProducedDataSets()[i].setResultType(ResultPartitionType.BLOCKING);
-									break;
-								}
+		for (JobVertex jobVertex : assignedJobVertices) {
+			if (visitedJobVertices.add(jobVertex)) {
+				for (int i = 0; i < jobVertex.getProducedDataSets().size(); i++) {
+					IntermediateDataSet output = jobVertex.getProducedDataSets().get(i);
+					if (!output.getConsumers().isEmpty()) {
+						JobEdge jobEdge = output.getConsumers().get(0);
+						for (ExecutionVertex executionVertex : executionGraph.getJobVertex(jobEdge.getTarget().getID()).getTaskVertices()) {
+							if (executionVertex.getExecutionState() == ExecutionState.CREATED) {
+								jobEdge.setSchedulingMode(SchedulingMode.SEQUENTIAL);
+								executionGraph.getJobVertex(jobVertex.getID()).getProducedDataSets()[i].setResultType(ResultPartitionType.BLOCKING);
+								break;
 							}
 						}
 					}
 				}
 			}
 		}
-		// 3. Build groups for the job vertices that have not been assigned resource.
-		List<ConcurrentSchedulingGroup> newUnAssignedGroups = buildConcurrentSchedulingGroups(unAssignedJobVertices);
-		// 4. Rebuild virtual relations.
+		// 2. Rebuild virtual relations.
 		buildStartOnFinishRelation(jobGraph);
+		// 3. Build groups for the job vertices that have been assigned resource.
+		List<ConcurrentSchedulingGroup> newAssignedGroups = buildConcurrentSchedulingGroups(assignedJobVertices);
+		// 4. Build groups for the job vertices that have not been assigned resource.
+		List<ConcurrentSchedulingGroup> newUnAssignedGroups = buildConcurrentSchedulingGroups(unAssignedJobVertices);
 		// 5. Rebuild failover region.
 		// 6. Deploy the tasks.
 		for (ConcurrentSchedulingGroup group : newAssignedGroups) {
@@ -329,6 +327,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 				}
 			}
 		}
+		// 7. Trigger groups that have no preceding
 		for (ConcurrentSchedulingGroup group : newUnAssignedGroups) {
 			if (!group.hasPrecedingGroup()) {
 				scheduleGroup(group);
@@ -349,6 +348,16 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		return concurrentSchedulingGroups;
 	}
 
+	@VisibleForTesting
+	Map<JobVertexID, Set<JobVertex>> getPredecessorToSuccessors() {
+		return predecessorToSuccessors;
+	}
+
+	@VisibleForTesting
+	Map<JobVertexID, Set<JobVertexID>> getSuccessorsToPredecessor() {
+		return successorToPredecessors;
+	}
+
 	private Set<JobVertex> getAllConcurrentVertices(
 			JobVertex jobVertex,
 			List<JobVertex> allJobVerticesTopologically,
@@ -357,25 +366,37 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 		for (JobEdge jobEdge : jobVertex.getInputs()) {
 			if (jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT &&
-					allJobVerticesTopologically.contains(jobEdge.getSource().getProducer()) &&
-					jobEdge.getSource().getProducer().getInControlEdges().isEmpty() &&
-					jobEdge.getSource().getProducer().getOutControlEdges().isEmpty()) {
-
-				visitedJobVertices.add(jobEdge.getSource().getProducer());
-				concurrentVertices.add(jobEdge.getSource().getProducer());
-				concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getSource().getProducer(), allJobVerticesTopologically, visitedJobVertices));
+					allJobVerticesTopologically.contains(jobEdge.getSource().getProducer())) {
+				boolean noControlEdge = true;
+				for (JobControlEdge controlEdge : jobEdge.getSource().getProducer().getInControlEdges()) {
+					if (!ignoredControlEdges.contains(controlEdge)) {
+						noControlEdge = false;
+						break;
+					}
+				}
+				for (JobControlEdge controlEdge : jobEdge.getSource().getProducer().getOutControlEdges()) {
+					if (!ignoredControlEdges.contains(controlEdge)) {
+						noControlEdge = false;
+						break;
+					}
+				}
+				if (noControlEdge) {
+					visitedJobVertices.add(jobEdge.getSource().getProducer());
+					concurrentVertices.add(jobEdge.getSource().getProducer());
+					concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getSource().getProducer(), allJobVerticesTopologically, visitedJobVertices));
+				}
 			}
 		}
-		if (jobVertex.getInControlEdges().isEmpty()) {
-			for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
-				if (output.getConsumers().size() > 0) {
-					JobEdge jobEdge = output.getConsumers().get(0);
-					if (!visitedJobVertices.contains(jobEdge.getTarget()) &&
-							jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT) {
-						visitedJobVertices.add(jobEdge.getTarget());
-						concurrentVertices.add(jobEdge.getTarget());
-						concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getTarget(), allJobVerticesTopologically, visitedJobVertices));
-					}
+		for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
+			for (JobEdge jobEdge : output.getConsumers()) {
+				if (allJobVerticesTopologically.contains(jobEdge.getTarget()) &&
+						!visitedJobVertices.contains(jobEdge.getTarget()) &&
+						jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT &&
+						!isStartOnFinishedEdge(jobEdge)) {
+					visitedJobVertices.add(jobEdge.getTarget());
+					concurrentVertices.add(jobEdge.getTarget());
+					concurrentVertices.addAll(
+							getAllConcurrentVertices(jobEdge.getTarget(), allJobVerticesTopologically, visitedJobVertices));
 				}
 			}
 		}
@@ -434,9 +455,13 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			return false;
 		}
 
-		JobVertexID predecessorId = successorToPredecessors.get(vertexID.getJobVertexID());
-		if (predecessorId != null && scheduler.getExecutionJobVertexStatus(predecessorId) != ExecutionState.FINISHED) {
-			return false;
+		Set<JobVertexID> predecessorIds = successorToPredecessors.get(vertexID.getJobVertexID());
+		if (predecessorIds != null) {
+			for (JobVertexID predecessorId : predecessorIds) {
+				if (scheduler.getExecutionJobVertexStatus(predecessorId) != ExecutionState.FINISHED) {
+					return false;
+				}
+			}
 		}
 
 		// source vertices can be scheduled at once
@@ -458,12 +483,24 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 						controlEdge.getSource().getID(), controlEdge.getTarget().getID(), controlEdge.getControlType());
 				if (controlEdge.getControlType() == ControlType.START_ON_FINISH) {
 					Set<JobVertex> concurrentAncestors = getAllConcurrentAncestors(controlEdge.getTarget());
+					boolean hasCircleDependency = false;
 					for (JobVertex ancestor : concurrentAncestors) {
-						successorToPredecessors.put(ancestor.getID(), jobVertex.getID());
+						if (hasCircleDependencyInVertices(ancestor, jobVertex)) {
+							hasCircleDependency = true;
+							ignoredControlEdges.add(controlEdge);
+							break;
+						}
 					}
-					Set<JobVertex> existingSuccessors = predecessorToSuccessors.putIfAbsent(jobVertex.getID(), concurrentAncestors);
-					if (existingSuccessors != null) {
-						existingSuccessors.addAll(concurrentAncestors);
+					if (!hasCircleDependency) {
+						for (JobVertex ancestor : concurrentAncestors) {
+							Set<JobVertexID> existingPredecessors = successorToPredecessors.computeIfAbsent(ancestor.getID(), k -> new HashSet<>());
+							existingPredecessors.add(jobVertex.getID());
+						}
+
+						Set<JobVertex> existingSuccessors = predecessorToSuccessors.putIfAbsent(jobVertex.getID(), concurrentAncestors);
+						if (existingSuccessors != null) {
+							existingSuccessors.addAll(concurrentAncestors);
+						}
 					}
 				}
 			}
@@ -529,13 +566,13 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 								if (slot == null && !hasFailure) {
 									hasFailure = true;
 									index = i;
-									scheduledExecutions.get(i).rollbackToCreatedAndReleaseSlot();
+									scheduledExecutions.get(i).rollbackToCreated();
 									LOG.debug("The first failed slot request is {}.", index);
 								} else if (hasFailure) {
 									if (slot != null) {
 										slot.releaseSlot(strippedThrowable);
 									}
-									scheduledExecutions.get(i).rollbackToCreatedAndReleaseSlot();
+									scheduledExecutions.get(i).rollbackToCreated();
 								}
 								i++;
 							}
@@ -576,7 +613,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 												if (executionVertices.get(i).getJobvertexId().equals(
 														scheduledExecutions.get(index).getVertex().getJobvertexId())) {
 													slot.releaseSlot(strippedThrowable);
-													scheduledExecutions.get(i).rollbackToCreatedAndReleaseSlot();
+													scheduledExecutions.get(i).rollbackToCreated();
 												} else {
 													assignResourceElseFail(scheduledExecutions.get(i), slot);
 												}
@@ -660,52 +697,103 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		}
 	}
 
-	@VisibleForTesting
-	void groupSplit(ConcurrentSchedulingGroup group) {
-		List<ExecutionVertex> executionVertices = group.getExecutionVertices();
-		List<JobVertex> assignedJobVertices = new ArrayList<>();
-		assignedJobVertices.add(executionVertices.get(0).getJobVertex().getJobVertex());
-
-		int i = 1;
-		for (; i < executionVertices.size(); i++) {
-			ExecutionVertex ev = executionVertices.get(i);
-			if (!ev.getJobvertexId().equals(executionVertices.get(i - 1).getJobvertexId()) &&
-					!executionVertices.get(i - 1).getJobvertexId().equals(
-							assignedJobVertices.get(assignedJobVertices.size() - 1).getID())) {
-				assignedJobVertices.add(executionVertices.get(i - 1).getJobVertex().getJobVertex());
-			}
-			if (ev.getCurrentAssignedResource() == null) {
-				break;
+	private void breakCircleDependencies(List<ConcurrentJobVertexGroup> jobVertexGroups) {
+		Map<JobVertex, ConcurrentJobVertexGroup> vertexToConcurrentGroupMap = new HashMap<>();
+		for (ConcurrentJobVertexGroup jobVertexGroup : jobVertexGroups) {
+			List<JobVertex> vertices = jobVertexGroup.getVertices();
+			for (JobVertex vertex : vertices) {
+				vertexToConcurrentGroupMap.put(vertex, jobVertexGroup);
 			}
 		}
-		if (assignedJobVertices.size() == 1) {
-			if (executionVertices.get(i).getJobvertexId().equals(assignedJobVertices.get(0).getID())) {
-				for (; i < executionVertices.size(); i++) {
-					if (!executionVertices.get(i).getJobvertexId().equals(assignedJobVertices.get(0).getID())) {
-						break;
+		for (ConcurrentJobVertexGroup jobVertexGroup : jobVertexGroups) {
+			if (hasCircleDependencyInGroups(jobVertexGroup, vertexToConcurrentGroupMap) &&
+					jobVertexGroup.hasInputVertex()) {
+				jobVertexGroup.noPrecedingGroup();
+			}
+		}
+	}
+
+	private boolean hasCircleDependencyInGroups(
+			ConcurrentJobVertexGroup jobVertexGroup,
+			Map<JobVertex, ConcurrentJobVertexGroup> vertexToConcurrentGroupMap) {
+
+		List<JobVertex> predecessors = jobVertexGroup.getPredecessorVertices();
+		if (predecessors.size() > 0) {
+			List<JobVertex> ancestors = new ArrayList<>();
+			Set<ConcurrentJobVertexGroup> visitedGroups = new HashSet<>();
+			for (JobVertex predecessor : predecessors) {
+				ConcurrentJobVertexGroup group = vertexToConcurrentGroupMap.get(predecessor);
+				if (group != null) {
+					ancestors.addAll(group.getPredecessorVertices());
+					if (!visitedGroups.contains(group)) {
+						visitedGroups.add(group);
+					}
+				}
+			}
+			while (!ancestors.isEmpty()) {
+				List<JobVertex> newAddedAncestors = new ArrayList<>();
+				for (JobVertex ancestor : ancestors) {
+					ConcurrentJobVertexGroup group = vertexToConcurrentGroupMap.get(ancestor);
+					if (group == jobVertexGroup) {
+						return true;
+					} else {
+						if (!visitedGroups.contains(group)) {
+							visitedGroups.add(group);
+							newAddedAncestors.addAll(group.getPredecessorVertices());
+						}
+					}
+				}
+				ancestors = newAddedAncestors;
+			}
+		}
+		return false;
+	}
+
+	private boolean hasCircleDependencyInVertices(JobVertex successor, JobVertex predecessor) {
+		List<JobVertex> ancestors = new ArrayList<>();
+		Set<JobVertexID> virtualPredecessors = successorToPredecessors.get(predecessor.getID());
+		if (virtualPredecessors != null) {
+			for (JobVertexID virtualPredecessor : virtualPredecessors) {
+				ancestors.add(executionGraph.getJobVertex(virtualPredecessor).getJobVertex());
+			}
+		}
+		for (JobEdge jobEdge : predecessor.getInputs()) {
+			ancestors.add(jobEdge.getSource().getProducer());
+		}
+		while (!ancestors.isEmpty()) {
+			List<JobVertex> newAddedAncestors = new ArrayList<>();
+			for (JobVertex ancestor : ancestors) {
+				if (ancestor.equals(successor)) {
+					return true;
+				} else {
+					Set<JobVertexID> newVirtualPredecessors = successorToPredecessors.get(ancestor.getID());
+					if (newVirtualPredecessors != null) {
+						for (JobVertexID newVirtualPredecessor : newVirtualPredecessors) {
+							newAddedAncestors.add(executionGraph.getJobVertex(newVirtualPredecessor).getJobVertex());
+						}
+					}
+					for (JobEdge jobEdge : ancestor.getInputs()) {
+						newAddedAncestors.add(jobEdge.getSource().getProducer());
+					}
+				}
+			}
+			ancestors = newAddedAncestors;
+		}
+		return false;
+	}
+
+	private boolean isStartOnFinishedEdge(JobEdge jobEdge) {
+		JobVertex source = jobEdge.getSource().getProducer();
+		for (JobControlEdge controlEdge : source.getInControlEdges()) {
+			JobVertex controlEdgeSource = controlEdge.getSource();
+			for (IntermediateDataSet output : controlEdgeSource.getProducedDataSets()) {
+				for (JobEdge outputEdge : output.getConsumers()) {
+					if (outputEdge.getTarget().equals(jobEdge.getTarget())) {
+						return true;
 					}
 				}
 			}
 		}
-		for (i = i - 1; i > 0; i--) {
-			if (executionVertices.get(i).getExecutionState() == ExecutionState.SCHEDULED &&
-					executionVertices.get(i).getCurrentAssignedResource() != null) {
-				executionVertices.get(i).getCurrentExecutionAttempt().rollbackToCreatedAndReleaseSlot();
-			}
-			if (executionVertices.get(i - 1).getJobvertexId().equals(
-					assignedJobVertices.get(assignedJobVertices.size() - 1).getID())) {
-				break;
-			}
-		}
-		List<JobVertex> unAssignedJobVertices = new ArrayList<>();
-		for (; i < executionVertices.size(); i++) {
-			if (unAssignedJobVertices.isEmpty() ||
-					!unAssignedJobVertices.get(unAssignedJobVertices.size() - 1).getID().equals(
-							executionVertices.get(i).getJobvertexId())) {
-				unAssignedJobVertices.add(executionVertices.get(i).getJobVertex().getJobVertex());
-			}
-		}
-
-		splitGroupAndContinueScheduling(assignedJobVertices, unAssignedJobVertices, group);
+		return false;
 	}
 }
