@@ -702,8 +702,10 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 
 		for (ConcurrentSchedulingGroup group : schedulingGroups) {
 			if (group.getExecutionVertices().size() < 3) {
+				assertEquals(2, group.getExecutionVertices().size());
 				assertFalse(group.hasPrecedingGroup());
 			} else {
+				assertEquals(3, group.getExecutionVertices().size());
 				assertTrue(group.hasPrecedingGroup());
 			}
 		}

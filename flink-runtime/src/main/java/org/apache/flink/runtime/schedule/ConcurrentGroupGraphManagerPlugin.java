@@ -366,25 +366,13 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 		for (JobEdge jobEdge : jobVertex.getInputs()) {
 			if (jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT &&
-					allJobVerticesTopologically.contains(jobEdge.getSource().getProducer())) {
-				boolean noControlEdge = true;
-				for (JobControlEdge controlEdge : jobEdge.getSource().getProducer().getInControlEdges()) {
-					if (!ignoredControlEdges.contains(controlEdge)) {
-						noControlEdge = false;
-						break;
-					}
-				}
-				for (JobControlEdge controlEdge : jobEdge.getSource().getProducer().getOutControlEdges()) {
-					if (!ignoredControlEdges.contains(controlEdge)) {
-						noControlEdge = false;
-						break;
-					}
-				}
-				if (noControlEdge) {
-					visitedJobVertices.add(jobEdge.getSource().getProducer());
-					concurrentVertices.add(jobEdge.getSource().getProducer());
-					concurrentVertices.addAll(getAllConcurrentVertices(jobEdge.getSource().getProducer(), allJobVerticesTopologically, visitedJobVertices));
-				}
+					allJobVerticesTopologically.contains(jobEdge.getSource().getProducer()) &&
+					!visitedJobVertices.contains(jobEdge.getSource().getProducer()) &&
+					!isStartOnFinishedEdge(jobEdge)) {
+				visitedJobVertices.add(jobEdge.getSource().getProducer());
+				concurrentVertices.add(jobEdge.getSource().getProducer());
+				concurrentVertices.addAll(getAllConcurrentVertices(
+							jobEdge.getSource().getProducer(), allJobVerticesTopologically, visitedJobVertices));
 			}
 		}
 		for (IntermediateDataSet output : jobVertex.getProducedDataSets()) {
