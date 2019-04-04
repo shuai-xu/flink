@@ -20,6 +20,7 @@ package org.apache.flink.runtime.schedule;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
@@ -561,7 +562,7 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		v4.connectNewDataSetAsInput(v2, DistributionPattern.ALL_TO_ALL, ResultPartitionType.PIPELINED);
 
 		final JobGraph jobGraph = new JobGraph(jobId, "test group split job", v1, v2, v3, v4);
-		jobGraph.getSchedulingConfiguration().setBoolean("job.scheduling.allow-auto-partition", true);
+		jobGraph.getSchedulingConfiguration().setBoolean(JobManagerOptions.ALLOW_GROUP_SPLIT, true);
 
 		final BestEffortSlotProvider slotProvider = new BestEffortSlotProvider(jobId, 5);
 		final ExecutionGraph eg = ExecutionGraphTestUtils.createExecutionGraph(
@@ -832,15 +833,15 @@ public class ConcurrentGroupGraphManagerPluginTest extends GraphManagerPluginTes
 		private Collection<ExecutionVertexID> scheduledVertices = new ArrayList<>();
 
 		TestingExecutionSlotAllocator(SlotProvider slotProvider) {
-			super(slotProvider, true, Time.minutes(1));
+			super(slotProvider, true);
 		}
 
 		@Override
-		public CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions) {
+		public CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions, Time allocationTimeout) {
 			for (Execution execution: executions) {
 				scheduledVertices.add(execution.getVertex().getExecutionVertexID());
 			}
-			return super.allocateSlotsFor(executions);
+			return super.allocateSlotsFor(executions, Time.minutes(1));
 		}
 
 		public Collection<ExecutionVertexID> getScheduledVertices() {

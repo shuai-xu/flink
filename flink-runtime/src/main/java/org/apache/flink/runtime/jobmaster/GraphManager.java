@@ -112,8 +112,7 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 				this,
 				new BestEffortExecutionSlotAllocator(
 						executionGraph.getSlotProvider(),
-						jobGraph.getAllowQueuedScheduling(),
-						executionGraph.getAllocationTimeout()));
+						jobGraph.getAllowQueuedScheduling()));
 	}
 
 	/**

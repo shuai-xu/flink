@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.jobmaster;
 
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.executiongraph.Execution;
 
 import java.util.Collection;
@@ -34,5 +35,5 @@ public interface ExecutionSlotAllocator {
 	 * @param executions to allocate slots
 	 * @return Future which is completed if the slots could be returned, otherwise with exception
 	 */
-	CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions);
+	CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions, Time allocationTimeout);
 }

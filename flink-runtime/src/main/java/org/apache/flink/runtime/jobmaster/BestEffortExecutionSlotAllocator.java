@@ -49,19 +49,15 @@ public class BestEffortExecutionSlotAllocator implements ExecutionSlotAllocator{
 
 	private final boolean allowQueuedScheduling;
 
-	private final Time allocationTimeout;
-
 	public BestEffortExecutionSlotAllocator(
 			SlotProvider slotProvider,
-			boolean allowQueuedScheduling,
-			Time allocationTimeout){
+			boolean allowQueuedScheduling){
 		this.slotProvider = slotProvider;
 		this.allowQueuedScheduling = allowQueuedScheduling;
-		this.allocationTimeout = allocationTimeout;
 	}
 
 	@Override
-	public CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions) {
+	public CompletableFuture<Collection<LogicalSlot>> allocateSlotsFor(Collection<Execution> executions, Time allocationTimeout) {
 
 		// Important: reserve all the space we need up front.
 		// that way we do not have any operation that can fail between allocating the slots
@@ -89,6 +85,8 @@ public class BestEffortExecutionSlotAllocator implements ExecutionSlotAllocator{
 		if (slotRequestIds.isEmpty()) {
 			return CompletableFuture.completedFuture(null);
 		}
+
+		LOG.info("Request {} slots in a group.", slotRequestIds.size());
 
 		List<CompletableFuture<LogicalSlot>> allocationFutures =
 				slotProvider.allocateSlots(slotRequestIds, scheduledUnits, queued, slotProfiles, allocationTimeout);

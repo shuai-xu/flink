@@ -20,6 +20,8 @@ package org.apache.flink.runtime.schedule;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.JobType;
+import org.apache.flink.api.common.time.Time;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.event.ExecutionVertexFailoverEvent;
 import org.apache.flink.runtime.event.ExecutionVertexStateChangedEvent;
 import org.apache.flink.runtime.event.ResultPartitionConsumableEvent;
@@ -89,6 +91,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 	private boolean allowGroupSplit;
 
+	private Time allocationLongTimeout;
 	@Override
 	public void open(
 			VertexScheduler scheduler,
@@ -102,8 +105,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		this.inputTracker = new VertexInputTracker(jobGraph, scheduler, schedulingConfig);
 		this.executionGraph = eg;
 		this.graphManager = graphManager;
-		this.allowGroupSplit = schedulingConfig.getConfiguration().getBoolean("job.scheduling.allow-auto-partition", false);
+		this.allowGroupSplit = schedulingConfig.getConfiguration().getBoolean(JobManagerOptions.ALLOW_GROUP_SPLIT);
 		this.executionSlotAllocator = executionSlotAllocator;
+		this.allocationLongTimeout = Time.milliseconds(schedulingConfig.getConfiguration().getLong(JobManagerOptions.SLOT_REQUEST_LONG_TIMEOUT));
 		initConcurrentSchedulingGroups();
 	}
 
@@ -249,14 +253,12 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			}
 		}
 
-		LOG.debug("{} vertex group was built with {} vertices.", concurrentJobVertexGroups.size(), jobVerticesTopologically.size());
+		LOG.info("{} vertex group was built with {} vertices.", concurrentJobVertexGroups.size(), jobVerticesTopologically.size());
 
 		breakCircleDependencies(concurrentJobVertexGroups);
 
-		if (LOG.isDebugEnabled()) {
-			for (ConcurrentJobVertexGroup group : concurrentJobVertexGroups) {
-				LOG.debug("Concurrent vertex group has {} with preceding {}", group.getVertices(), group.hasPrecedingGroup());
-			}
+		for (ConcurrentJobVertexGroup group : concurrentJobVertexGroups) {
+			LOG.info("Concurrent vertex group has {} with preceding {}", group.getVertices(), group.hasPrecedingGroup());
 		}
 
 		for (ConcurrentJobVertexGroup regionGroup : concurrentJobVertexGroups) {
@@ -495,21 +497,22 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		}
 	}
 
-	private static Set<JobVertex> getAllConcurrentAncestors(JobVertex jobVertex) {
+	private Set<JobVertex> getAllConcurrentAncestors(JobVertex jobVertex) {
+		Set<JobVertex> ancestors = new HashSet<>();
 		if (jobVertex.isInputVertex()) {
-			return Collections.singleton(jobVertex);
+			ancestors.add(jobVertex);
 		} else {
-			Set<JobVertex> ancestors = new HashSet<>();
 			for (JobEdge jobEdge : jobVertex.getInputs()) {
-				if (jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT) {
+				if (jobEdge.getSchedulingMode() == SchedulingMode.CONCURRENT &&
+						!isStartOnFinishedEdge(jobEdge)) {
 					ancestors.addAll(getAllConcurrentAncestors(jobEdge.getSource().getProducer()));
 				}
 			}
 			if (ancestors.isEmpty()) {
 				ancestors.add(jobVertex);
 			}
-			return ancestors;
 		}
+		return ancestors;
 	}
 
 	public void scheduleGroup(ConcurrentSchedulingGroup schedulingGroup) {
@@ -522,8 +525,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 				scheduledExecutions.add(ev.getCurrentExecutionAttempt());
 			}
 		}
+		Time allocationTimeout = executionVertices.size() > 1 ? executionGraph.getAllocationTimeout() : allocationLongTimeout;
 		CompletableFuture<Collection<LogicalSlot>> allocationFuture =
-				executionSlotAllocator.allocateSlotsFor(scheduledExecutions);
+				executionSlotAllocator.allocateSlotsFor(scheduledExecutions, allocationTimeout);
 		CompletableFuture<Void> currentSchedulingFuture = allocationFuture.handleAsync(
 				(Collection<LogicalSlot> slots, Throwable throwable) -> {
 					if (throwable == null) {
@@ -770,6 +774,10 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		return false;
 	}
 
+	/**
+	 * Judge whether the job edge is the later read edge of a vertex.
+	 * @return
+	 */
 	private boolean isStartOnFinishedEdge(JobEdge jobEdge) {
 		JobVertex source = jobEdge.getSource().getProducer();
 		for (JobControlEdge controlEdge : source.getInControlEdges()) {

@@ -200,6 +200,16 @@ public class JobManagerOptions {
 					.defaultValue(3000)
 					.withDescription("The operation log store flush interval in ms.");
 
+	public static final ConfigOption<Boolean> ALLOW_GROUP_SPLIT =
+			key("job.scheduling.allow-group-split")
+					.defaultValue(false)
+					.withDescription("Whether allow group split when scheduling.");
+
+	public static final ConfigOption<Long> SLOT_REQUEST_LONG_TIMEOUT =
+			key("slot.request.long-timeout")
+					.defaultValue(3600000L)
+					.withDescription("The long timeout in milliseconds for requesting a slot from Slot Pool.");
+
 	// ---------------------------------------------------------------------------------------------
 
 	private JobManagerOptions() {

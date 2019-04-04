@@ -1558,6 +1558,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId> implements JobMast
 
 		Configuration jobConfig = jobGraph.getJobConfiguration();
 		Configuration configuration = new Configuration();
+		if (jobMasterConfiguration.getConfiguration() != null) {
+			configuration.addAll(jobMasterConfiguration.getConfiguration());
+		}
 		if (jobConfig != null) {
 			configuration.addAll(jobConfig);
 		}
