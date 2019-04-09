@@ -23,7 +23,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.clusterframework.types.SlotProfile;
 import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.executiongraph.Execution;
-import org.apache.flink.runtime.executiongraph.IllegalExecutionStateException;
 import org.apache.flink.runtime.jobmanager.scheduler.ScheduledUnit;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotProvider;
 
@@ -71,15 +70,11 @@ public class BestEffortExecutionSlotAllocator implements ExecutionSlotAllocator{
 		List<Execution> scheduledExecutions = new ArrayList<>(executions.size());
 
 		for (Execution exec : executions) {
-			try {
-				Tuple2<ScheduledUnit, SlotProfile> scheduleUnitAndSlotProfile = exec.enterScheduledAndPrepareSchedulingResources();
-				slotRequestIds.add(new SlotRequestId());
-				scheduledUnits.add(scheduleUnitAndSlotProfile.f0);
-				slotProfiles.add(scheduleUnitAndSlotProfile.f1);
-				scheduledExecutions.add(exec);
-			} catch (IllegalExecutionStateException e) {
-				LOG.info("The execution {} may be already scheduled by other thread.", exec.getVertex().getTaskNameWithSubtaskIndex(), e);
-			}
+			Tuple2<ScheduledUnit, SlotProfile> scheduleUnitAndSlotProfile = exec.prepareSchedulingResources();
+			slotRequestIds.add(new SlotRequestId());
+			scheduledUnits.add(scheduleUnitAndSlotProfile.f0);
+			slotProfiles.add(scheduleUnitAndSlotProfile.f1);
+			scheduledExecutions.add(exec);
 		}
 
 		if (slotRequestIds.isEmpty()) {

@@ -506,6 +506,54 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 	}
 
 	/**
+	 * Enter SCHEDULED from CREATED. This is for batch allocating slots.
+	 */
+	public boolean enterScheduled() throws IllegalStateException {
+
+		// this method only works if the execution is in the state 'CREATED'
+		return transitionState(CREATED, SCHEDULED);
+	}
+
+	/**
+	 * Get schedule unit and slot profile for scheduling this execution. This is for batch allocating slots.
+	 */
+	public Tuple2<ScheduledUnit, SlotProfile> prepareSchedulingResources() {
+
+		final SlotSharingGroup sharingGroup = vertex.getJobVertex().getSlotSharingGroup();
+		final CoLocationConstraint locationConstraint = vertex.getLocationConstraint();
+
+		// sanity check
+		if (locationConstraint != null && sharingGroup == null) {
+			throw new IllegalStateException(
+					"Trying to schedule with co-location constraint but without slot sharing allowed.");
+		}
+
+		final SlotSharingGroupId slotSharingGroupId = sharingGroup != null ? sharingGroup.getSlotSharingGroupId() : null;
+
+		ScheduledUnit toSchedule = locationConstraint == null ?
+				new ScheduledUnit(this, slotSharingGroupId) :
+				new ScheduledUnit(this, slotSharingGroupId, locationConstraint);
+
+		// try to extract previous allocation ids, if applicable, so that we can reschedule to the same slot
+		ExecutionVertex executionVertex = getVertex();
+		AllocationID lastAllocation = executionVertex.getLatestPriorAllocation();
+
+		Collection<AllocationID> previousAllocationIDs =
+				lastAllocation != null ? Collections.singletonList(lastAllocation) : Collections.emptyList();
+
+		// calculate the preferred locations only based on state.
+		Collection<CompletableFuture<TaskManagerLocation>> locationFuture = getVertex().getPreferredLocationsBasedOnState();
+		final Collection<TaskManagerLocation> preferredLocations =
+				locationFuture == null ? Collections.EMPTY_LIST : FutureUtils.combineAll(locationFuture).join();
+		return new Tuple2(toSchedule, new SlotProfile(
+				computeResource(sharingGroup),
+				preferredLocations,
+				previousAllocationIDs,
+				executionVertex.getJobVertex().getJobVertex().getTags()));
+
+	}
+
+	/**
 	 * Rollback from SCHEDULED to CREATED when resource is not enough. This is for group scheduling.
 	 *
 	 * @throws IllegalExecutionStateException if this method is called while not being in the SCHEDULED state

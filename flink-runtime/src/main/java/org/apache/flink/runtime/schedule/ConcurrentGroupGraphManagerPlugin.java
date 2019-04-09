@@ -127,7 +127,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 					new ConcurrentSchedulingGroup(allExecutionVertices, false));
 		} else {
 			buildStartOnFinishRelation(jobGraph);
-			buildConcurrentSchedulingGroups(allJobVertices);
+			buildConcurrentSchedulingGroups(allJobVertices, false);
 		}
 	}
 
@@ -148,7 +148,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		groups.stream().forEach(
 				(group) -> {
 					if (!group.hasPrecedingGroup()) {
-						scheduleGroup(group);
+						checkAndScheduleGroup(group);
 					}
 		});
 	}
@@ -186,7 +186,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 
 			for (ConcurrentSchedulingGroup group : groupToSchedule) {
 				if (!graphManager.cacheGroupIfReconciling(group)) {
-					scheduleGroup(group);
+					checkAndScheduleGroup(group);
 				}
 			}
 		}
@@ -223,7 +223,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		return true;
 	}
 
-	private List<ConcurrentSchedulingGroup> buildConcurrentSchedulingGroups(List<JobVertex> jobVerticesTopologically) {
+	private List<ConcurrentSchedulingGroup> buildConcurrentSchedulingGroups(
+			List<JobVertex> jobVerticesTopologically,
+			boolean scheduled) {
 		List<ConcurrentJobVertexGroup> concurrentJobVertexGroups = new ArrayList<>();
 		List<ConcurrentSchedulingGroup> schedulingGroups = new ArrayList<>();
 
@@ -262,7 +264,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		}
 
 		for (ConcurrentJobVertexGroup regionGroup : concurrentJobVertexGroups) {
-			schedulingGroups.addAll(buildSchedulingGroupsFromJobVertexGroup(regionGroup));
+			schedulingGroups.addAll(buildSchedulingGroupsFromJobVertexGroup(regionGroup, scheduled));
 		}
 
 		this.concurrentSchedulingGroups.addAll(schedulingGroups);
@@ -309,9 +311,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		// 2. Rebuild virtual relations.
 		buildStartOnFinishRelation(jobGraph);
 		// 3. Build groups for the job vertices that have been assigned resource.
-		List<ConcurrentSchedulingGroup> newAssignedGroups = buildConcurrentSchedulingGroups(assignedJobVertices);
+		List<ConcurrentSchedulingGroup> newAssignedGroups = buildConcurrentSchedulingGroups(assignedJobVertices, true);
 		// 4. Build groups for the job vertices that have not been assigned resource.
-		List<ConcurrentSchedulingGroup> newUnAssignedGroups = buildConcurrentSchedulingGroups(unAssignedJobVertices);
+		List<ConcurrentSchedulingGroup> newUnAssignedGroups = buildConcurrentSchedulingGroups(unAssignedJobVertices, false);
 		// 5. Rebuild failover region.
 		// 6. Deploy the tasks.
 		for (ConcurrentSchedulingGroup group : newAssignedGroups) {
@@ -332,12 +334,12 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		// 7. Trigger groups that have no preceding
 		for (ConcurrentSchedulingGroup group : newUnAssignedGroups) {
 			if (!group.hasPrecedingGroup()) {
-				scheduleGroup(group);
+				checkAndScheduleGroup(group);
 			} else {
 				List<ExecutionVertex> evs = group.getExecutionVertices();
 				for (ExecutionVertex ev : evs) {
 					if (isReadyToSchedule(ev.getExecutionVertexID())) {
-						scheduleGroup(group);
+						checkAndScheduleGroup(group);
 						break;
 					}
 				}
@@ -394,7 +396,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 	}
 
 	private List<ConcurrentSchedulingGroup> buildSchedulingGroupsFromJobVertexGroup(
-			ConcurrentJobVertexGroup jobVertexGroup) {
+			ConcurrentJobVertexGroup jobVertexGroup, boolean scheduled) {
 
 		final List<ConcurrentSchedulingGroup> schedulingGroups = new ArrayList<>();
 
@@ -404,7 +406,8 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 				schedulingGroups.add(
 						new ConcurrentSchedulingGroup(
 								Collections.singletonList(ev),
-								jobVertexGroup.hasPrecedingGroup()));
+								jobVertexGroup.hasPrecedingGroup(),
+								scheduled));
 			}
 		} else {
 			List<ExecutionVertex> executionVertices = new ArrayList<>();
@@ -415,7 +418,8 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 			}
 			schedulingGroups.add(new ConcurrentSchedulingGroup(
 					executionVertices,
-					jobVertexGroup.hasPrecedingGroup()));
+					jobVertexGroup.hasPrecedingGroup(),
+					scheduled));
 		}
 
 		return schedulingGroups;
@@ -432,7 +436,7 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		}
 		for (ConcurrentSchedulingGroup group : groupsToSchedule) {
 			if (!graphManager.cacheGroupIfReconciling(group)) {
-				scheduleGroup(group);
+				checkAndScheduleGroup(group);
 			}
 		}
 	}
@@ -515,14 +519,24 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		return ancestors;
 	}
 
-	public void scheduleGroup(ConcurrentSchedulingGroup schedulingGroup) {
+	public void checkAndScheduleGroup(ConcurrentSchedulingGroup schedulingGroup) {
+		if (!schedulingGroup.markScheduled()) {
+			LOG.info("Group {} has already been scheduled, will not schedule again.", schedulingGroup);
+			return;
+		}
+		scheduleGroup(schedulingGroup);
+	}
 
+	public void scheduleGroup(ConcurrentSchedulingGroup schedulingGroup) {
 		List<ExecutionVertex> executionVertices = schedulingGroup.getExecutionVertices();
 		List<Execution> scheduledExecutions = new ArrayList<>();
 
 		for (ExecutionVertex ev : executionVertices) {
-			if (ev.getExecutionState() == ExecutionState.CREATED) {
+			if (ev.getCurrentExecutionAttempt().enterScheduled()) {
 				scheduledExecutions.add(ev.getCurrentExecutionAttempt());
+			} else {
+				LOG.info("{} is in state {} while scheduled in group {}",
+						ev.getTaskNameWithSubtaskIndex(), ev.getExecutionState(), schedulingGroup);
 			}
 		}
 		Time allocationTimeout = executionVertices.size() > 1 ? executionGraph.getAllocationTimeout() : allocationLongTimeout;
@@ -531,6 +545,9 @@ public class ConcurrentGroupGraphManagerPlugin implements GraphManagerPlugin {
 		CompletableFuture<Void> currentSchedulingFuture = allocationFuture.handleAsync(
 				(Collection<LogicalSlot> slots, Throwable throwable) -> {
 					if (throwable == null) {
+						if (scheduledExecutions.size() != slots.size()) {
+							LOG.warn("Execution state change during allocating resource.");
+						}
 						int failedNumber = 0;
 						for (LogicalSlot slot : slots) {
 							if (slot == null) {

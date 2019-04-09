@@ -157,7 +157,7 @@ public class GraphManager implements Replayable, ExecutionStatusListener {
 			}
 			for (ConcurrentSchedulingGroup group : groupsToBeScheduled) {
 				if (graphManagerPlugin instanceof ConcurrentGroupGraphManagerPlugin) {
-					((ConcurrentGroupGraphManagerPlugin) graphManagerPlugin).scheduleGroup(group);
+					((ConcurrentGroupGraphManagerPlugin) graphManagerPlugin).checkAndScheduleGroup(group);
 				}
 			}
 			isReconciling = false;

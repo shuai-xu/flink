@@ -21,6 +21,7 @@ package org.apache.flink.runtime.schedule;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * ConcurrentSchedulingGroup contains the execution vertices which should be scheduled at the same time.
@@ -31,11 +32,21 @@ public class ConcurrentSchedulingGroup {
 
 	private final boolean hasPrecedingGroup;
 
+	private final AtomicBoolean scheduled;
+
 	ConcurrentSchedulingGroup(
 			List<ExecutionVertex> executionVertices,
 			boolean hasPrecedingGroup) {
+		this(executionVertices, hasPrecedingGroup, false);
+	}
+
+	ConcurrentSchedulingGroup(
+			List<ExecutionVertex> executionVertices,
+			boolean hasPrecedingGroup,
+			boolean scheduled) {
 		this.executionVertices = executionVertices;
 		this.hasPrecedingGroup = hasPrecedingGroup;
+		this.scheduled = new AtomicBoolean(scheduled);
 	}
 
 	public List<ExecutionVertex> getExecutionVertices() {
@@ -44,5 +55,9 @@ public class ConcurrentSchedulingGroup {
 
 	public boolean hasPrecedingGroup() {
 		return hasPrecedingGroup;
+	}
+
+	public boolean markScheduled() {
+		return scheduled.compareAndSet(false, true);
 	}
 }
