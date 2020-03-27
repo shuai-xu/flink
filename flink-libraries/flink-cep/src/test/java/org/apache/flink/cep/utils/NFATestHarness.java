@@ -103,14 +103,14 @@ public final class NFATestHarness {
 
 	public Collection<Map<String, List<Event>>> consumeRecord(StreamRecord<Event> inputEvent) throws Exception {
 		try (SharedBufferAccessor<Event> sharedBufferAccessor = sharedBuffer.getAccessor()) {
-			nfa.advanceTime(sharedBufferAccessor, nfaState, inputEvent.getTimestamp());
+			nfa.advanceTime(sharedBufferAccessor, nfaState, inputEvent.getTimestamp(), AfterMatchSkipStrategy.noSkip());
 			return nfa.process(
 				sharedBufferAccessor,
 				nfaState,
 				inputEvent.getValue(),
 				inputEvent.getTimestamp(),
 				afterMatchSkipStrategy,
-				timerService);
+				timerService).f0;
 		}
 	}
 

@@ -170,6 +170,16 @@ public class NFA<T> {
 		return stateObject.isFinal();
 	}
 
+	private boolean isPendingState(ComputationState state) {
+		State<T> stateObject = getState(state);
+		if (stateObject == null) {
+			throw new FlinkRuntimeException("State " + state.getCurrentStateName() + " does not exist in the NFA. NFA has states "
+				+ states.values());
+		}
+
+		return stateObject.isPending();
+	}
+
 	/**
 	 * Initialization method for the NFA. It is called before any element is passed and thus suitable for one time setup
 	 * work.
@@ -217,7 +227,7 @@ public class NFA<T> {
 	 * activated)
 	 * @throws Exception Thrown if the system cannot access the state.
 	 */
-	public Collection<Map<String, List<T>>> process(
+	public Tuple2<Collection<Map<String, List<T>>>, Long> process(
 			final SharedBufferAccessor<T> sharedBufferAccessor,
 			final NFAState nfaState,
 			final T event,
@@ -236,48 +246,61 @@ public class NFA<T> {
 	 * @param sharedBufferAccessor the accessor to SharedBuffer object that we need to work upon while processing
 	 * @param nfaState     The NFAState object that we need to affect while processing
 	 * @param timestamp    timestamp that indicates that there will be no more events with lower timestamp
-	 * @return all timed outed partial matches
+	 * @return match results and all timed outed partial matches
 	 * @throws Exception Thrown if the system cannot access the state.
 	 */
-	public Collection<Tuple2<Map<String, List<T>>, Long>> advanceTime(
+	public Tuple2<List<Map<String, List<T>>>, Collection<Tuple2<Map<String, List<T>>, Long>>> advanceTime(
 			final SharedBufferAccessor<T> sharedBufferAccessor,
 			final NFAState nfaState,
-			final long timestamp) throws Exception {
+			final long timestamp,
+			final AfterMatchSkipStrategy afterMatchSkipStrategy) throws Exception {
 
 		final Collection<Tuple2<Map<String, List<T>>, Long>> timeoutResult = new ArrayList<>();
 		final PriorityQueue<ComputationState> newPartialMatches = new PriorityQueue<>(NFAState.COMPUTATION_STATE_COMPARATOR);
+		final PriorityQueue<ComputationState> potentialMatches = new PriorityQueue<>(NFAState.COMPUTATION_STATE_COMPARATOR);
 
 		for (ComputationState computationState : nfaState.getPartialMatches()) {
 			if (isStateTimedOut(computationState, timestamp)) {
+				if (getState(computationState).isPending()) {
+					potentialMatches.add(computationState);
+					nfaState.setStateChanged();
+				} else {
+					if (handleTimeout) {
+						// extract the timed out event pattern
+						Map<String, List<T>> timedOutPattern = sharedBufferAccessor.materializeMatch(extractCurrentMatches(
+								sharedBufferAccessor,
+								computationState));
+						timeoutResult.add(Tuple2.of(timedOutPattern, computationState.getStartTimestamp() + windowTime));
+					}
 
-				if (handleTimeout) {
-					// extract the timed out event pattern
-					Map<String, List<T>> timedOutPattern = sharedBufferAccessor.materializeMatch(extractCurrentMatches(
-						sharedBufferAccessor,
-						computationState));
-					timeoutResult.add(Tuple2.of(timedOutPattern, computationState.getStartTimestamp() + windowTime));
+					sharedBufferAccessor.releaseNode(computationState.getPreviousBufferEntry());
+
+					nfaState.setStateChanged();
 				}
-
-				sharedBufferAccessor.releaseNode(computationState.getPreviousBufferEntry());
-
-				nfaState.setStateChanged();
 			} else {
 				newPartialMatches.add(computationState);
 			}
 		}
 
+		List<Map<String, List<T>>> result = processMatches(
+				sharedBufferAccessor,
+				nfaState,
+				afterMatchSkipStrategy,
+				potentialMatches,
+				newPartialMatches);
+
 		nfaState.setNewPartialMatches(newPartialMatches);
 
 		sharedBufferAccessor.advanceTime(timestamp);
 
-		return timeoutResult;
+		return new Tuple2<>(result, timeoutResult);
 	}
 
 	private boolean isStateTimedOut(final ComputationState state, final long timestamp) {
 		return !isStartState(state) && windowTime > 0L && timestamp - state.getStartTimestamp() >= windowTime;
 	}
 
-	private Collection<Map<String, List<T>>> doProcess(
+	private Tuple2<Collection<Map<String, List<T>>>, Long> doProcess(
 			final SharedBufferAccessor<T> sharedBufferAccessor,
 			final NFAState nfaState,
 			final EventWrapper event,
@@ -286,9 +309,11 @@ public class NFA<T> {
 
 		final PriorityQueue<ComputationState> newPartialMatches = new PriorityQueue<>(NFAState.COMPUTATION_STATE_COMPARATOR);
 		final PriorityQueue<ComputationState> potentialMatches = new PriorityQueue<>(NFAState.COMPUTATION_STATE_COMPARATOR);
+		Long nextTriggerTime = -1L;
 
 		// iterate over all current computations
 		for (ComputationState computationState : nfaState.getPartialMatches()) {
+			boolean stateChanged = false;
 			final Collection<ComputationState> newComputationStates = computeNextStates(
 				sharedBufferAccessor,
 				computationState,
@@ -296,8 +321,10 @@ public class NFA<T> {
 				timerService);
 
 			if (newComputationStates.size() != 1) {
+				stateChanged = true;
 				nfaState.setStateChanged();
 			} else if (!newComputationStates.iterator().next().equals(computationState)) {
+				stateChanged = true;
 				nfaState.setStateChanged();
 			}
 
@@ -314,6 +341,11 @@ public class NFA<T> {
 					shouldDiscardPath = true;
 					sharedBufferAccessor.releaseNode(newComputationState.getPreviousBufferEntry());
 				} else {
+					// calculate the next trigger time
+					if (isStartState(computationState) && stateChanged && windowTime > 0) {
+						nextTriggerTime = event.getTimestamp() + windowTime + 1;
+					}
+
 					// add new computation state; it will be processed once the next event arrives
 					statesToRetain.add(newComputationState);
 				}
@@ -334,30 +366,45 @@ public class NFA<T> {
 			nfaState.setStateChanged();
 		}
 
-		List<Map<String, List<T>>> result = new ArrayList<>();
-		if (afterMatchSkipStrategy.isSkipStrategy()) {
-			processMatchesAccordingToSkipStrategy(sharedBufferAccessor,
+		List<Map<String, List<T>>> result = processMatches(
+				sharedBufferAccessor,
 				nfaState,
 				afterMatchSkipStrategy,
 				potentialMatches,
-				newPartialMatches,
-				result);
+				newPartialMatches);
+
+		nfaState.setNewPartialMatches(newPartialMatches);
+
+		return new Tuple2<>(result, nextTriggerTime);
+	}
+
+	List<Map<String, List<T>>> processMatches(
+			SharedBufferAccessor<T> sharedBufferAccessor,
+			NFAState nfaState,
+			AfterMatchSkipStrategy afterMatchSkipStrategy,
+			PriorityQueue<ComputationState> potentialMatches,
+			PriorityQueue<ComputationState> partialMatches) throws Exception {
+		List<Map<String, List<T>>> result = new ArrayList<>();
+		if (afterMatchSkipStrategy.isSkipStrategy()) {
+			processMatchesAccordingToSkipStrategy(sharedBufferAccessor,
+					nfaState,
+					afterMatchSkipStrategy,
+					potentialMatches,
+					partialMatches,
+					result);
 		} else {
 			for (ComputationState match : potentialMatches) {
 				Map<String, List<T>> materializedMatch =
-					sharedBufferAccessor.materializeMatch(
-						sharedBufferAccessor.extractPatterns(
-							match.getPreviousBufferEntry(),
-							match.getVersion()).get(0)
-					);
+						sharedBufferAccessor.materializeMatch(
+								sharedBufferAccessor.extractPatterns(
+										match.getPreviousBufferEntry(),
+										match.getVersion()).get(0)
+						);
 
 				result.add(materializedMatch);
 				sharedBufferAccessor.releaseNode(match.getPreviousBufferEntry());
 			}
 		}
-
-		nfaState.setNewPartialMatches(newPartialMatches);
-
 		return result;
 	}
 

@@ -96,7 +96,7 @@ public class NFACompilerTest extends TestLogger {
 
 		// adjust the rule
 		expectedException.expect(MalformedPatternException.class);
-		expectedException.expectMessage("NotFollowedBy is not supported as a last part of a Pattern!");
+		expectedException.expectMessage("NotFollowedBy is not supported as a last part of a Pattern without window!");
 
 		Pattern<Event, ?> invalidPattern = Pattern.<Event>begin("start").where(new TestFilter())
 			.followedBy("middle").where(new TestFilter())
@@ -258,5 +258,24 @@ public class NFACompilerTest extends TestLogger {
 		NFACompiler.NFAFactoryCompiler<Event> factory = new NFACompiler.NFAFactoryCompiler<>(pattern);
 		factory.compileFactory();
 		assertEquals(0, factory.getWindowTime());
+	}
+
+	@Test
+	public void testEndWithNotFollow() {
+		final Pattern<Event, Event> pattern = Pattern.<Event>begin("start").where(startFilter)
+				.notFollowedBy("not").where(startFilter)
+				.notFollowedBy("end").where(endFilter).within(Time.seconds(10));
+
+		final NFACompiler.NFAFactoryCompiler<Event> nfaFactoryCompiler = new NFACompiler.NFAFactoryCompiler<>(pattern);
+		nfaFactoryCompiler.compileFactory();
+	}
+
+	@Test
+	public void testEndWithNotFollowWhileWindownInMiddle() {
+		final Pattern<Event, Event> pattern = Pattern.<Event>begin("start").where(startFilter).within(Time.seconds(10))
+				.notFollowedBy("end").where(endFilter);
+
+		final NFACompiler.NFAFactoryCompiler<Event> nfaFactoryCompiler = new NFACompiler.NFAFactoryCompiler<>(pattern);
+		nfaFactoryCompiler.compileFactory();
 	}
 }

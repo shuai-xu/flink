@@ -656,6 +656,51 @@ public class CEPOperatorTest extends TestLogger {
 	}
 
 	@Test
+	public void testCEPOperatorCleanupProcessingTimeAutomatically() throws Exception {
+
+		Event startEvent1 = new Event(62, "start", 1.0);
+		Event startEvent2 = new Event(61, "start", 2.0);
+		SubEvent middleEvent = new SubEvent(61, "foo1", 1.0, 10.0);
+		Event endEvent = new Event(61, "end", 1.0);
+
+		CepOperator<Event, Integer, Map<String, List<Event>>> operator =
+				getKeyedCepOperator(true);
+		OneInputStreamOperatorTestHarness<Event, Map<String, List<Event>>> harness =
+				CepOperatorTestUtilities.getCepTestHarness(operator);
+
+		try {
+			harness.open();
+
+			harness.setProcessingTime(0L);
+
+			harness.processElement(new StreamRecord<>(startEvent1, 1L));
+
+			harness.setProcessingTime(5L);
+
+			harness.processElement(new StreamRecord<>(startEvent2, 2L));
+
+			assertEquals(2, harness.numProcessingTimeTimers());
+
+			harness.setProcessingTime(12L);
+
+			assertEquals(1, harness.numProcessingTimeTimers());
+
+			assertFalse(operator.hasNonEmptySharedBuffer(62));
+
+			harness.processElement(new StreamRecord<>(middleEvent, 3L));
+			harness.processElement(new StreamRecord<>(endEvent, 3L));
+
+			verifyPattern(harness.getOutput().poll(), startEvent2, middleEvent, endEvent);
+
+			harness.setProcessingTime(20L);
+
+			assertEquals(0, harness.numProcessingTimeTimers());
+		} finally {
+			harness.close();
+		}
+	}
+
+	@Test
 	public void testCEPOperatorCleanupEventTimeWithSameElements() throws Exception {
 
 		Event startEvent = new Event(41, "c", 1.0);
@@ -878,7 +923,7 @@ public class CEPOperatorTest extends TestLogger {
 
 			harness.setProcessingTime(21L);
 
-			assertTrue(operator2.hasNonEmptySharedBuffer(42));
+			assertFalse(operator2.hasNonEmptySharedBuffer(42));
 
 			harness.processElement(new StreamRecord<>(startEvent1, 21L));
 			assertTrue(operator2.hasNonEmptySharedBuffer(42));

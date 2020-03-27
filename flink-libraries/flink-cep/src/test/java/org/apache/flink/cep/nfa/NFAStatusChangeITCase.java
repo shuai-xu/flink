@@ -131,14 +131,15 @@ public class NFAStatusChangeITCase {
 		// both the queue of ComputationStatus and eventSharedBuffer have not changed
 		// as the timestamp is within the window
 		nfaState.resetStateChanged();
-		nfa.advanceTime(sharedBufferAccessor, nfaState, 8L);
+		nfa.advanceTime(sharedBufferAccessor, nfaState, 8L, AfterMatchSkipStrategy.noSkip());
 		assertFalse("NFA status should not change as the timestamp is within the window", nfaState.isStateChanged());
 
 		// timeout ComputationStatus will be removed from the queue of ComputationStatus and timeout event will
 		// be removed from eventSharedBuffer as the timeout happens
 		nfaState.resetStateChanged();
-		Collection<Tuple2<Map<String, List<Event>>, Long>> timeoutResults = nfa.advanceTime(sharedBufferAccessor, nfaState, 12L);
-		assertTrue("NFA status should change as timeout happens", nfaState.isStateChanged() && !timeoutResults.isEmpty());
+		Tuple2<List<Map<String, List<Event>>>, Collection<Tuple2<Map<String, List<Event>>, Long>>> matchedAnnTimedOut =
+				nfa.advanceTime(sharedBufferAccessor, nfaState, 12L, AfterMatchSkipStrategy.noSkip());
+		assertTrue("NFA status should change as timeout happens", nfaState.isStateChanged() && !matchedAnnTimedOut.f1.isEmpty());
 	}
 
 	@Test
@@ -197,11 +198,11 @@ public class NFAStatusChangeITCase {
 		NFAState nfaState = nfa.createInitialNFAState();
 
 		nfaState.resetStateChanged();
-		nfa.advanceTime(sharedBufferAccessor, nfaState, 6L);
+		nfa.advanceTime(sharedBufferAccessor, nfaState, 6L, AfterMatchSkipStrategy.noSkip());
 		nfa.process(sharedBufferAccessor, nfaState, new Event(6, "start", 1.0), 6L, skipStrategy, timerService);
 
 		nfaState.resetStateChanged();
-		nfa.advanceTime(sharedBufferAccessor, nfaState, 17L);
+		nfa.advanceTime(sharedBufferAccessor, nfaState, 17L, AfterMatchSkipStrategy.noSkip());
 		assertTrue(nfaState.isStateChanged());
 	}
 }

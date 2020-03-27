@@ -36,6 +36,7 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
+import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.test.util.AbstractTestBase;
@@ -912,5 +913,60 @@ public class CEPITCase extends AbstractTestBase {
 		);
 
 		env.execute();
+	}
+
+	@Test
+	public void testEndWithNotFollow() throws Exception {
+
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(1);
+
+		DataStream<Event> input = env.addSource(new SourceFunction<Event>() {
+			@Override
+			public void run(SourceContext<Event> ctx) throws Exception {
+				//while (true) {
+				ctx.collect(new Event(2, "start", 2.0));
+				Thread.sleep(1000);
+				//}
+			}
+
+			@Override
+			public void cancel() {
+
+			}
+		}).keyBy(value -> value.getId());
+
+		Pattern<Event, ?> pattern = Pattern.<Event>begin("start", AfterMatchSkipStrategy.skipPastLastEvent())
+				.where(new SimpleCondition<Event>() {
+
+					@Override
+					public boolean filter(Event value) {
+						return value.getName().equals("start");
+					}
+				}).notFollowedBy("not").where(new SimpleCondition<Event>() {
+					@Override
+					public boolean filter(Event value) throws Exception {
+						return value.getName().equals("not");
+					}
+				}).within(Time.milliseconds(100));
+
+		DataStream<String> result = CEP.pattern(input, pattern).select(new PatternSelectFunction<Event, String>() {
+
+			@Override
+			public String select(Map<String, List<Event>> p) throws Exception {
+				System.out.println("Select " + p + " at " + System.currentTimeMillis() / 1000);
+				StringBuilder builder = new StringBuilder();
+
+				builder.append(p.get("start").get(0).getId());
+
+				return builder.toString();
+			}
+		});
+
+		List<String> resultList = new ArrayList<>();
+
+		DataStreamUtils.collect(result).forEachRemaining(resultList::add);
+
+		assertEquals(Arrays.asList("2"), resultList);
 	}
 }

@@ -149,9 +149,7 @@ public class NFACompiler {
 		 * multiple NFAs.
 		 */
 		void compileFactory() {
-			if (currentPattern.getQuantifier().getConsumingStrategy() == Quantifier.ConsumingStrategy.NOT_FOLLOW) {
-				throw new MalformedPatternException("NotFollowedBy is not supported as a last part of a Pattern!");
-			}
+			checkPatternConsumeStrategy();
 
 			checkPatternNameUniqueness();
 
@@ -175,6 +173,23 @@ public class NFACompiler {
 
 		long getWindowTime() {
 			return windowTime.orElse(0L);
+		}
+
+		private void checkPatternConsumeStrategy() {
+			if (currentPattern.getQuantifier().getConsumingStrategy() == Quantifier.ConsumingStrategy.NOT_FOLLOW) {
+				Pattern pattern = currentPattern;
+				while (pattern != null) {
+					if (pattern instanceof GroupPattern) {
+						pattern = ((GroupPattern) pattern).getRawPattern();
+					} else {
+						if (pattern.getWindowTime() != null) {
+							return;
+						}
+						pattern = pattern.getPrevious();
+					}
+				}
+				throw new MalformedPatternException("NotFollowedBy is not supported as a last part of a Pattern without window!");
+			}
 		}
 
 		/**
@@ -281,7 +296,20 @@ public class NFACompiler {
 			State<T> lastSink = sinkState;
 			while (currentPattern.getPrevious() != null) {
 
-				if (currentPattern.getQuantifier().getConsumingStrategy() == Quantifier.ConsumingStrategy.NOT_FOLLOW) {
+				if (currentPattern.getQuantifier().getConsumingStrategy() == Quantifier.ConsumingStrategy.NOT_FOLLOW
+						&& lastSink.isFinal()) {
+					//notFollow patterns in the end and with a window
+					final State<T> notNext = createState(currentPattern.getName(), State.StateType.Pending);
+					final IterativeCondition<T> notCondition = getTakeCondition(currentPattern);
+
+					final State<T> stopState = createStopState(notCondition, currentPattern.getName());
+					notNext.addProceed(stopState, notCondition);
+
+					notNext.addIgnore(new RichNotCondition<>(notCondition));
+					notNext.addProceed(lastSink, BooleanConditions.falseFunction());
+					addStopStates(notNext);
+					lastSink = notNext;
+				} else if (currentPattern.getQuantifier().getConsumingStrategy() == Quantifier.ConsumingStrategy.NOT_FOLLOW) {
 					//skip notFollow patterns, they are converted into edge conditions
 				} else if (currentPattern.getQuantifier().getConsumingStrategy() == Quantifier.ConsumingStrategy.NOT_NEXT) {
 					final State<T> notNext = createState(currentPattern.getName(), State.StateType.Normal);

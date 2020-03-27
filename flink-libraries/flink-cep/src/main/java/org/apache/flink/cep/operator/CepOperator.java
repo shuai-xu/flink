@@ -386,8 +386,10 @@ public class CepOperator<IN, KEY, OUT>
 			}
 			elementQueueState.remove(timestamp);
 		}
-
 		// STEP 3
+		advanceTime(nfa, timer.getTimestamp());
+
+		// STEP 4
 		updateNFA(nfa);
 	}
 
@@ -412,6 +414,12 @@ public class CepOperator<IN, KEY, OUT>
 		}
 	}
 
+	private void registerProcessingTimeTimerIfNeeded(Long triggerTime) {
+		if (isProcessingTime && triggerTime != null && triggerTime > 0) {
+			timerService.registerProcessingTimeTimer(VoidNamespace.INSTANCE, triggerTime);
+		}
+	}
+
 	private PriorityQueue<Long> getSortedTimestamps() throws Exception {
 		PriorityQueue<Long> sortedTimestamps = new PriorityQueue<>();
 		for (Long timestamp : elementQueueState.keys()) {
@@ -430,9 +438,10 @@ public class CepOperator<IN, KEY, OUT>
 	 */
 	private void processEvent(NFAState nfaState, IN event, long timestamp) throws Exception {
 		try (SharedBufferAccessor<IN> sharedBufferAccessor = partialMatches.getAccessor()) {
-			Collection<Map<String, List<IN>>> patterns =
+			Tuple2<Collection<Map<String, List<IN>>>, Long> patternsAndTriggerTime =
 				nfa.process(sharedBufferAccessor, nfaState, event, timestamp, afterMatchSkipStrategy, cepTimerService);
-			processMatchedSequences(patterns, timestamp);
+			processMatchedSequences(patternsAndTriggerTime.f0, timestamp);
+			registerProcessingTimeTimerIfNeeded(patternsAndTriggerTime.f1);
 		}
 	}
 
@@ -442,10 +451,11 @@ public class CepOperator<IN, KEY, OUT>
 	 */
 	private void advanceTime(NFAState nfaState, long timestamp) throws Exception {
 		try (SharedBufferAccessor<IN> sharedBufferAccessor = partialMatches.getAccessor()) {
-			Collection<Tuple2<Map<String, List<IN>>, Long>> timedOut =
-					nfa.advanceTime(sharedBufferAccessor, nfaState, timestamp);
-			if (!timedOut.isEmpty()) {
-				processTimedOutSequences(timedOut);
+			Tuple2<List<Map<String, List<IN>>>, Collection<Tuple2<Map<String, List<IN>>, Long>>> matchedAndTimedOut =
+					nfa.advanceTime(sharedBufferAccessor, nfaState, timestamp, afterMatchSkipStrategy);
+			processMatchedSequences(matchedAndTimedOut.f0, timestamp);
+			if (!matchedAndTimedOut.f1.isEmpty()) {
+				processTimedOutSequences(matchedAndTimedOut.f1);
 			}
 		}
 	}
@@ -538,6 +548,7 @@ public class CepOperator<IN, KEY, OUT>
 	@VisibleForTesting
 	boolean hasNonEmptySharedBuffer(KEY key) throws Exception {
 		setCurrentKey(key);
+		System.out.println("Partial match is " + partialMatches.toString());
 		return !partialMatches.isEmpty();
 	}
 

@@ -54,6 +54,9 @@ import java.util.Set;
 import static org.apache.flink.cep.utils.NFATestUtilities.comparePatterns;
 import static org.apache.flink.cep.utils.NFATestUtilities.feedNFA;
 import static org.apache.flink.cep.utils.NFAUtils.compile;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyLong;
 
@@ -414,18 +417,18 @@ public class NFAITCase extends TestLogger {
 
 		for (StreamRecord<Event> event: events) {
 
-			Collection<Tuple2<Map<String, List<Event>>, Long>> timeoutPatterns =
-				nfa.advanceTime(sharedBufferAccessor, nfaState, event.getTimestamp());
+			Tuple2<List<Map<String, List<Event>>>, Collection<Tuple2<Map<String, List<Event>>, Long>>> timeoutPatterns =
+				nfa.advanceTime(sharedBufferAccessor, nfaState, event.getTimestamp(), AfterMatchSkipStrategy.noSkip());
 			Collection<Map<String, List<Event>>> matchedPatterns =
 				nfa.process(sharedBufferAccessor,
 					nfaState,
 					event.getValue(),
 					event.getTimestamp(),
 					AfterMatchSkipStrategy.noSkip(),
-					new TestTimerService());
+					new TestTimerService()).f0;
 
 			resultingPatterns.addAll(matchedPatterns);
-			resultingTimeoutPatterns.addAll(timeoutPatterns);
+			resultingTimeoutPatterns.addAll(timeoutPatterns.f1);
 		}
 
 		assertEquals(1, resultingPatterns.size());
@@ -2359,7 +2362,7 @@ public class NFAITCase extends TestLogger {
 		nfaTestHarness.feedRecord(new StreamRecord<>(end1, 6));
 
 		//pruning element
-		nfa.advanceTime(sharedBufferAccessor, nfaState, 10);
+		nfa.advanceTime(sharedBufferAccessor, nfaState, 10, AfterMatchSkipStrategy.noSkip());
 
 		assertEquals(1, nfaState.getPartialMatches().size());
 		assertEquals("start", nfaState.getPartialMatches().peek().getCurrentStateName());
@@ -2404,7 +2407,7 @@ public class NFAITCase extends TestLogger {
 		nfaTestHarness.feedRecord(new StreamRecord<>(end1, 6));
 
 		//pruning element
-		nfa.advanceTime(sharedBufferAccessor, nfaState, 10);
+		nfa.advanceTime(sharedBufferAccessor, nfaState, 10, AfterMatchSkipStrategy.noSkip());
 
 		assertEquals(1, nfaState.getPartialMatches().size());
 		assertEquals("start", nfaState.getPartialMatches().peek().getCurrentStateName());
@@ -2451,7 +2454,7 @@ public class NFAITCase extends TestLogger {
 		nfaTestHarness.consumeRecord(new StreamRecord<>(end1, 6));
 
 		//pruning element
-		nfa.advanceTime(sharedBufferAccessor, nfaState, 10);
+		nfa.advanceTime(sharedBufferAccessor, nfaState, 10, AfterMatchSkipStrategy.noSkip());
 
 		assertEquals(1, nfaState.getPartialMatches().size());
 		assertEquals("start", nfaState.getPartialMatches().peek().getCurrentStateName());
@@ -2498,7 +2501,7 @@ public class NFAITCase extends TestLogger {
 		nfaTestHarness.consumeRecord(new StreamRecord<>(end1, 6));
 
 		//pruning element
-		nfa.advanceTime(sharedBufferAccessor, nfaState, 10);
+		nfa.advanceTime(sharedBufferAccessor, nfaState, 10, AfterMatchSkipStrategy.noSkip());
 
 		assertEquals(1, nfaState.getPartialMatches().size());
 		assertEquals("start", nfaState.getPartialMatches().peek().getCurrentStateName());
@@ -2840,8 +2843,106 @@ public class NFAITCase extends TestLogger {
 			nfa.process(accessor, nfa.createInitialNFAState(), b, 2, AfterMatchSkipStrategy.noSkip(),
 				timerService);
 			Mockito.verify(accessor, Mockito.never()).advanceTime(anyLong());
-			nfa.advanceTime(accessor, nfa.createInitialNFAState(), 2);
+			nfa.advanceTime(accessor, nfa.createInitialNFAState(), 2, AfterMatchSkipStrategy.noSkip());
 			Mockito.verify(accessor, Mockito.times(1)).advanceTime(2);
 		}
 	}
+
+	@Test
+	public void testTriggerTimeSetForStartStage() throws Exception {
+		Pattern<Event, ?> pattern = Pattern.<Event>begin("start").where(new SimpleCondition<Event>() {
+			@Override
+			public boolean filter(Event value) throws Exception {
+				return value.getName().equals("a");
+			}
+		}).followedBy("middle").where(new SimpleCondition<Event>() {
+			@Override
+			public boolean filter(Event value) throws Exception {
+				return value.getName().equals("b");
+			}
+		}).notFollowedBy("end").where(new SimpleCondition<Event>() {
+			@Override
+			public boolean filter(Event value) throws Exception {
+				return value.getName().equals("c");
+			}
+		}).within(Time.seconds(1));
+
+		Event a = new Event(30, "a", 1.0);
+		Event b = new Event(31, "b", 2.0);
+		Event d = new Event(32, "d", 3.0);
+
+		try (SharedBufferAccessor<Event> accessor = sharedBuffer.getAccessor()) {
+			NFA<Event> nfa = compile(pattern, false);
+			TestTimerService timerService = new TestTimerService();
+			NFAState nfaState = nfa.createInitialNFAState();
+			Long triggerTime1 = nfa.process(accessor, nfaState, a, 1, AfterMatchSkipStrategy.noSkip(), timerService).f1;
+			Long triggerTime2 = nfa.process(accessor, nfaState, b, 2, AfterMatchSkipStrategy.noSkip(), timerService).f1;
+			Long triggerTime3 = nfa.process(accessor, nfaState, d, 3, AfterMatchSkipStrategy.noSkip(), timerService).f1;
+
+			assertEquals(1002L, triggerTime1.longValue());
+			assertEquals(-1L, triggerTime2.longValue());
+			assertEquals(-1L, triggerTime3.longValue());
+		}
+	}
+
+	@Test
+	public void testNoTriggerTimeWithoutWindow() throws Exception {
+		Pattern<Event, ?> pattern = Pattern.<Event>begin("start").followedBy("end");
+
+		Event a = new Event(30, "a", 1.0);
+
+		try (SharedBufferAccessor<Event> accessor = sharedBuffer.getAccessor()) {
+			NFA<Event> nfa = compile(pattern, false);
+			TestTimerService timerService = new TestTimerService();
+			NFAState nfaState = nfa.createInitialNFAState();
+			Long triggerTime = nfa.process(accessor, nfaState, a, 1, AfterMatchSkipStrategy.noSkip(), timerService).f1;
+
+			assertEquals(-1L, triggerTime.longValue());
+		}
+	}
+
+	@Test
+	public void testEndWithNotFollowWithTimeStrict() throws Exception {
+		List<StreamRecord<Event>> inputEvents = new ArrayList<>();
+		Event a = new Event(40, "a", 1.0);
+		Event b = new Event(41, "b", 2.0);
+		inputEvents.add(new StreamRecord<>(a, 0));
+		inputEvents.add(new StreamRecord<>(b, 1));
+
+		Pattern<Event, ?> pattern = Pattern.<Event>begin("start").where(new SimpleCondition<Event>() {
+			@Override
+			public boolean filter(Event value) throws Exception {
+				return value.getName().equals("a");
+			}
+		}).notFollowedBy("end").where(new SimpleCondition<Event>() {
+			@Override
+			public boolean filter(Event value) throws Exception {
+				return value.getName().equals("c");
+			}
+		}).within(Time.seconds(1));
+
+		try (SharedBufferAccessor<Event> accessor = sharedBuffer.getAccessor()) {
+			NFA<Event> nfa = compile(pattern, false);
+			TestTimerService timerService = new TestTimerService();
+			NFAState nfaState = nfa.createInitialNFAState();
+
+			Collection<Map<String, List<Event>>> matches =
+					nfa.process(accessor, nfaState, a, 1, AfterMatchSkipStrategy.noSkip(), timerService).f0;
+			assertThat(matches, is(empty()));
+
+			matches = nfa.process(accessor, nfaState, b, 1, AfterMatchSkipStrategy.noSkip(), timerService).f0;
+			assertThat(matches, is(empty()));
+
+			Tuple2<List<Map<String, List<Event>>>, Collection<Tuple2<Map<String, List<Event>>, Long>>> matchedAndTimeouts =
+					nfa.advanceTime(accessor, nfaState, 3000L, AfterMatchSkipStrategy.noSkip());
+
+			assertThat(matches, is(empty()));
+			assertThat(matchedAndTimeouts.f1, is(empty()));
+			assertEquals(1, matchedAndTimeouts.f0.size());
+			Map<String, List<Event>> match = matchedAndTimeouts.f0.iterator().next();
+			assertEquals(1, match.size());
+			Assert.assertArrayEquals(match.get("start").toArray(), new Event[]{a});
+		}
+	}
+
 }

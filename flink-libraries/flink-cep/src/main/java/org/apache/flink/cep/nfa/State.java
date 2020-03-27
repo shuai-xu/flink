@@ -60,6 +60,10 @@ public class State<T> implements Serializable {
 		return stateType == StateType.Start;
 	}
 
+	public boolean isPending() {
+		return stateType == StateType.Pending;
+	}
+
 	public String getName() {
 		return name;
 	}
@@ -142,6 +146,7 @@ public class State<T> implements Serializable {
 		Start, // the state is a starting state for the NFA
 		Final, // the state is a final state for the NFA
 		Normal, // the state is neither a start nor a final state
-		Stop
+		Stop,
+		Pending // the state waiting for a timer to check whether it matches
 	}
 }
